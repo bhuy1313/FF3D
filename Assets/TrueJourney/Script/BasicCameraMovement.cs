@@ -1,5 +1,8 @@
 using UnityEngine;
 using System.Collections;
+using StarterAssets;
+using System;
+
 
 public class BasicCameraMovement : MonoBehaviour
 {
