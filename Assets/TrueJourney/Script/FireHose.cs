@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
 {
-        private Rigidbody cachedRigidbody;
+    private Rigidbody cachedRigidbody;
     public Rigidbody Rigidbody => cachedRigidbody;
 
     void Start()

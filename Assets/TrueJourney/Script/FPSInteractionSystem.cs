@@ -12,6 +12,7 @@ public class FPSInteractionSystem : MonoBehaviour
     [SerializeField] private KeyCode interactKey = KeyCode.E;
     [SerializeField] private KeyCode pickupKey = KeyCode.F;
     [SerializeField] private KeyCode useKey = KeyCode.R;
+    [SerializeField] private KeyCode dropKey = KeyCode.Q;
 
     [Header("References")]
     [SerializeField] private FPSInventorySystem inventory;
@@ -50,12 +51,6 @@ public class FPSInteractionSystem : MonoBehaviour
                 inventory.TryPickup(currentTarget, gameObject);
                 return;
             }
-
-            if (inventory.HasItem)
-            {
-                inventory.Drop(gameObject);
-                return;
-            }
         }
 
         if (Input.GetKeyDown(interactKey))
@@ -69,6 +64,11 @@ public class FPSInteractionSystem : MonoBehaviour
         if (Input.GetKeyDown(useKey) && inventory != null && inventory.HasItem)
         {
             inventory.UseHeld(gameObject);
+        }
+
+        if (Input.GetKeyDown(dropKey) && inventory != null && inventory.HasItem)
+        {
+            inventory.Drop(gameObject);
         }
 
         if (inventory != null && inventory.ItemCount > 0)

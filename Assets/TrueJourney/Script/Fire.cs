@@ -22,6 +22,11 @@ public class Fire : MonoBehaviour
     [Tooltip("Nếu true, khi tắt hẳn sẽ disable cả GameObject (cẩn thận vì sẽ không regrow/trigger nữa).")]
     [SerializeField] private bool disableGameObjectOnExtinguish = false;
 
+    [Header("Player Damage")]
+    [SerializeField] private float damagePerSecond = 10f;
+    [SerializeField] private string playerTag = "Player";
+    [SerializeField] private bool damageScalesWithIntensity = true;
+
     [Header("Visuals")]
     [SerializeField] private VisualEffect fireVfx;
     [SerializeField] private string vfxIntensityParam = "Intensity";
@@ -172,6 +177,18 @@ public class Fire : MonoBehaviour
     {
         if (!string.IsNullOrEmpty(waterTag) && other.CompareTag(waterTag))
             ApplyWater(waterExtinguishPerSecond * Time.deltaTime);
+
+        if (damagePerSecond <= 0f || currentIntensity <= 0f) return;
+        if (!string.IsNullOrEmpty(playerTag) && !other.CompareTag(playerTag)) return;
+
+        PlayerVitals vitals = other.GetComponentInParent<PlayerVitals>();
+        if (vitals == null || !vitals.IsAlive) return;
+
+        float t01 = (maxIntensity <= 0f) ? 0f : Mathf.Clamp01(currentIntensity / maxIntensity);
+        float scale = damageScalesWithIntensity ? t01 : 1f;
+        if (scale <= 0f) return;
+
+        vitals.TakeDamage(damagePerSecond * scale * Time.deltaTime);
     }
 
     private void OnParticleCollision(GameObject other)
