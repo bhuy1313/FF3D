@@ -12,6 +12,13 @@ namespace StarterAssets
 		public Vector2 look;
 		public bool jump;
 		public bool sprint;
+		public bool crouch;
+		public bool interact;
+		public bool pickup;
+		public bool use;
+		public bool drop;
+		public bool grab;
+		public int slot = -1;
 
 		[Header("Movement Settings")]
 		public bool analogMovement;
@@ -43,6 +50,43 @@ namespace StarterAssets
 		{
 			SprintInput(value.isPressed);
 		}
+
+		public void OnCrouch(InputValue value)
+		{
+			CrouchInput(value.isPressed);
+		}
+
+		public void OnInteract(InputValue value)
+		{
+			InteractInput(value.isPressed);
+		}
+
+		public void OnPickup(InputValue value)
+		{
+			PickupInput(value.isPressed);
+		}
+
+		public void OnUse(InputValue value)
+		{
+			UseInput(value.isPressed);
+		}
+
+		public void OnDrop(InputValue value)
+		{
+			DropInput(value.isPressed);
+		}
+
+		public void OnGrab(InputValue value)
+		{
+			GrabInput(value.isPressed);
+		}
+
+		public void OnSlot1(InputValue value) { SlotInput(0, value.isPressed); }
+		public void OnSlot2(InputValue value) { SlotInput(1, value.isPressed); }
+		public void OnSlot3(InputValue value) { SlotInput(2, value.isPressed); }
+		public void OnSlot4(InputValue value) { SlotInput(3, value.isPressed); }
+		public void OnSlot5(InputValue value) { SlotInput(4, value.isPressed); }
+		public void OnSlot6(InputValue value) { SlotInput(5, value.isPressed); }
 #endif
 
 
@@ -64,6 +108,56 @@ namespace StarterAssets
 		public void SprintInput(bool newSprintState)
 		{
 			sprint = newSprintState;
+		}
+
+		public void CrouchInput(bool newCrouchState)
+		{
+			crouch = newCrouchState;
+		}
+
+		public void InteractInput(bool newInteractState)
+		{
+			interact = newInteractState;
+		}
+
+		public void PickupInput(bool newPickupState)
+		{
+			pickup = newPickupState;
+		}
+
+		public void UseInput(bool newUseState)
+		{
+			use = newUseState;
+		}
+
+		public void DropInput(bool newDropState)
+		{
+			drop = newDropState;
+		}
+
+		public void GrabInput(bool newGrabState)
+		{
+			grab = newGrabState;
+		}
+
+		public void SlotInput(int slotIndex, bool isPressed)
+		{
+			if (!isPressed)
+			{
+				return;
+			}
+
+			slot = slotIndex;
+		}
+
+		private void LateUpdate()
+		{
+			// one-shot inputs: clear after being read this frame
+			interact = false;
+			pickup = false;
+			use = false;
+			drop = false;
+			slot = -1;
 		}
 		
 		private void OnApplicationFocus(bool hasFocus)

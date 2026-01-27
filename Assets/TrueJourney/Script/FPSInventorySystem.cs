@@ -4,7 +4,7 @@ public class FPSInventorySystem : MonoBehaviour
 {
     [Header("Pickup")]
     [SerializeField] private bool allowPickup = true;
-    [SerializeField] private int maxSlots = 4;
+    [SerializeField] private int maxSlots = 6;
     [SerializeField] private Transform viewPointTransform;
     [SerializeField] private Transform inventoryRoot;
     [SerializeField] private Vector3 viewPoint;

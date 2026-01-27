@@ -16,3 +16,7 @@ public interface IPickupable
     void OnPickup(GameObject picker);
     void OnDrop(GameObject dropper);
 }
+
+public interface IGrabbable
+{
+}

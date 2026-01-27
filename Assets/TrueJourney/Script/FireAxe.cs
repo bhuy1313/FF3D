@@ -29,6 +29,4 @@ public class FireAxe : MonoBehaviour, IInteractable, IPickupable, IUsable
     {
         Debug.Log("FireAxe Used!");
     }
-
-
 }

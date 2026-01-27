@@ -25,6 +25,16 @@ namespace StarterAssets
 		[Tooltip("Minimum stamina required to start sprinting")]
 		public float SprintMinStamina = 5.0f;
 
+		[Header("Crouch")]
+		[Tooltip("Crouch move speed of the character in m/s")]
+		public float CrouchSpeed = 2.0f;
+		[Tooltip("Controller height while crouching")]
+		public float CrouchHeight = 1.0f;
+		[Tooltip("Camera target local Y offset while crouching")]
+		public float CrouchCameraOffset = -0.5f;
+		[Tooltip("How fast to transition between stand and crouch")]
+		public float CrouchTransitionSpeed = 20.0f;
+
 		[Space(10)]
 		[Tooltip("The height the player can jump")]
 		public float JumpHeight = 1.2f;
@@ -79,6 +89,10 @@ namespace StarterAssets
 
 		private const float _threshold = 0.01f;
 		private bool _wantsSprint;
+		private bool _isCrouching;
+		private float _standHeight;
+		private Vector3 _standCenter;
+		private Vector3 _cameraTargetInitialLocalPos;
 
 		private bool IsCurrentDeviceMouse
 		{
@@ -115,6 +129,12 @@ namespace StarterAssets
 			// reset our timeouts on start
 			_jumpTimeoutDelta = JumpTimeout;
 			_fallTimeoutDelta = FallTimeout;
+
+			_standHeight = _controller.height;
+			_standCenter = _controller.center;
+			_cameraTargetInitialLocalPos = CinemachineCameraTarget != null
+				? CinemachineCameraTarget.transform.localPosition
+				: Vector3.zero;
 		}
 
 		private void Update()
@@ -122,6 +142,7 @@ namespace StarterAssets
 			UpdateSprintState();
 			JumpAndGravity();
 			GroundedCheck();
+			UpdateCrouch();
 			Move();
 		}
 
@@ -162,7 +183,7 @@ namespace StarterAssets
 		private void Move()
 		{
 			// set target speed based on move speed, sprint speed and if sprint is pressed
-			float targetSpeed = _wantsSprint ? SprintSpeed : MoveSpeed;
+			float targetSpeed = _isCrouching ? CrouchSpeed : (_wantsSprint ? SprintSpeed : MoveSpeed);
 
 			// a simplistic acceleration and deceleration designed to be easy to remove, replace, or iterate upon
 
@@ -208,6 +229,12 @@ namespace StarterAssets
 
 		private void UpdateSprintState()
 		{
+			if (_input.crouch || _isCrouching)
+			{
+				_wantsSprint = false;
+				return;
+			}
+
 			bool hasMoveInput = _input.move != Vector2.zero;
 			if (_vitals == null || !_input.sprint || !hasMoveInput)
 			{
@@ -223,6 +250,50 @@ namespace StarterAssets
 
 			float staminaCost = SprintStaminaCostPerSecond * Time.deltaTime;
 			_wantsSprint = _vitals.TryUseStamina(staminaCost);
+		}
+
+		private void UpdateCrouch()
+		{
+			bool wantsCrouch = _input.crouch;
+			float targetHeight = wantsCrouch ? CrouchHeight : (CanStandUp() ? _standHeight : _controller.height);
+			float heightDelta = _standHeight - targetHeight;
+			float targetCenterY = _standCenter.y - (heightDelta * 0.5f);
+
+			_controller.height = Mathf.Lerp(_controller.height, targetHeight, Time.deltaTime * CrouchTransitionSpeed);
+			_controller.center = Vector3.Lerp(
+				_controller.center,
+				new Vector3(_standCenter.x, targetCenterY, _standCenter.z),
+				Time.deltaTime * CrouchTransitionSpeed
+			);
+
+			_isCrouching = _controller.height < (_standHeight - 0.05f);
+
+			if (CinemachineCameraTarget != null)
+			{
+				float targetCameraY = _cameraTargetInitialLocalPos.y + (_isCrouching ? CrouchCameraOffset : 0.0f);
+				Vector3 targetCameraPos = new Vector3(
+					_cameraTargetInitialLocalPos.x,
+					targetCameraY,
+					_cameraTargetInitialLocalPos.z
+				);
+				CinemachineCameraTarget.transform.localPosition = Vector3.Lerp(
+					CinemachineCameraTarget.transform.localPosition,
+					targetCameraPos,
+					Time.deltaTime * CrouchTransitionSpeed
+				);
+			}
+		}
+
+		private bool CanStandUp()
+		{
+			if (_controller == null)
+			{
+				return true;
+			}
+
+			Vector3 bottom = transform.position + Vector3.up * _controller.radius;
+			Vector3 top = transform.position + Vector3.up * (_standHeight - _controller.radius);
+			return !Physics.CheckCapsule(bottom, top, _controller.radius, GroundLayers, QueryTriggerInteraction.Ignore);
 		}
 
 		private void JumpAndGravity()
