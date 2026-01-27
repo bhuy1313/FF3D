@@ -142,6 +142,7 @@ namespace StarterAssets
             if (Physics.Raycast(ray, out RaycastHit hit, interactDistance, interactMask, QueryTriggerInteraction.Ignore))
             {
                 IInteractable interactable = FindInteractable(hit.collider);
+                
                 if (interactable != null)
                 {
                     SetFocus(hit.collider.gameObject, interactable);
