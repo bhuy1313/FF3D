@@ -35,6 +35,16 @@ namespace StarterAssets
 		[Tooltip("How fast to transition between stand and crouch")]
 		public float CrouchTransitionSpeed = 20.0f;
 
+		[Header("Climb")]
+		[Tooltip("Climb speed in m/s while on ladders")]
+		public float ClimbSpeed = 3.0f;
+		[Tooltip("If true, pressing jump will exit climbing")]
+		public bool JumpToExitClimb = true;
+		[Tooltip("Step size used to raise the player when starting to climb")]
+		public float ClimbStartStep = 0.1f;
+		[Tooltip("Max steps to raise the player when starting to climb")]
+		public int ClimbStartMaxSteps = 5;
+
 		[Space(10)]
 		[Tooltip("The height the player can jump")]
 		public float JumpHeight = 1.2f;
@@ -87,9 +97,11 @@ namespace StarterAssets
 		private GameObject _mainCamera;
 		private PlayerVitals _vitals;
 
-		private const float _threshold = 0.000001f;
+		private const float _threshold = 0.00001f;
 		private bool _wantsSprint;
 		private bool _isCrouching;
+		private bool _isClimbing;
+		private Ladder _currentLadder;
 		private float _standHeight;
 		private Vector3 _standCenter;
 		private Vector3 _cameraTargetInitialLocalPos;
@@ -142,6 +154,14 @@ namespace StarterAssets
 			UpdateSprintState();
 			JumpAndGravity();
 			GroundedCheck();
+			if (_isClimbing && Grounded)
+			{
+				StopClimb();
+			}
+			if (_isClimbing && _currentLadder != null && transform.position.y >= _currentLadder.GetClimbMaxY())
+			{
+				StopClimb();
+			}
 			UpdateCrouch();
 			Move();
 		}
@@ -182,6 +202,12 @@ namespace StarterAssets
 
 		private void Move()
 		{
+			if (_isClimbing)
+			{
+				ClimbMove();
+				return;
+			}
+
 			// set target speed based on move speed, sprint speed and if sprint is pressed
 			float targetSpeed = _isCrouching ? CrouchSpeed : (_wantsSprint ? SprintSpeed : MoveSpeed);
 
@@ -298,6 +324,17 @@ namespace StarterAssets
 
 		private void JumpAndGravity()
 		{
+			if (_isClimbing)
+			{
+				_verticalVelocity = 0f;
+				if (JumpToExitClimb && _input.jump)
+				{
+					StopClimb();
+					_verticalVelocity = Mathf.Sqrt(JumpHeight * -2f * Gravity);
+				}
+				return;
+			}
+
 			if (Grounded)
 			{
 				// reset the fall timeout timer
@@ -341,6 +378,68 @@ namespace StarterAssets
 			if (_verticalVelocity < _terminalVelocity)
 			{
 				_verticalVelocity += Gravity * Time.deltaTime;
+			}
+		}
+
+		private void ClimbMove()
+		{
+			float verticalInput = _input.move.y;
+			if (_currentLadder != null && verticalInput > 0f && transform.position.y >= _currentLadder.GetClimbMaxY())
+			{
+				return;
+			}
+			Vector3 climbVelocity = Vector3.up * (verticalInput * ClimbSpeed);
+			_controller.Move(climbVelocity * Time.deltaTime);
+		}
+
+		public void StartClimb(Ladder ladder)
+		{
+			if (ladder == null)
+			{
+				return;
+			}
+
+			_currentLadder = ladder;
+			_isClimbing = true;
+			_verticalVelocity = 0f;
+		}
+
+		public void TryStartClimbFromInteract(Ladder ladder)
+		{
+			if (ladder == null)
+			{
+				return;
+			}
+
+			StartClimb(ladder);
+
+			if (Grounded)
+			{
+				RaiseUntilNotGrounded();
+			}
+		}
+
+		public void StopClimb()
+		{
+			_isClimbing = false;
+			_currentLadder = null;
+		}
+
+		private void RaiseUntilNotGrounded()
+		{
+			if (_controller == null || ClimbStartStep <= 0f || ClimbStartMaxSteps <= 0)
+			{
+				return;
+			}
+
+			for (int i = 0; i < ClimbStartMaxSteps; i++)
+			{
+				transform.position += Vector3.up * ClimbStartStep;
+				GroundedCheck();
+				if (!Grounded)
+				{
+					break;
+				}
 			}
 		}
 
