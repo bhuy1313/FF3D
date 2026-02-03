@@ -87,7 +87,7 @@ namespace StarterAssets
 		private GameObject _mainCamera;
 		private PlayerVitals _vitals;
 
-		private const float _threshold = 0.01f;
+		private const float _threshold = 0.000001f;
 		private bool _wantsSprint;
 		private bool _isCrouching;
 		private float _standHeight;

@@ -2,16 +2,23 @@ using UnityEngine;
 
 public class WoodenCrate : MonoBehaviour, IGrabbable, IInteractable
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    private Rigidbody rb;
+    void Awake()
+    {
+        rb = GetComponent<Rigidbody>();
+        if (rb == null)
+        {
+            Debug.LogError("Rigidbody component missing from Crate object.");
+        }
+    }
     void Start()
     {
-
+        //None
     }
 
-    // Update is called once per frame
     void Update()
     {
-
+        //None
     }
 
     public void Interact(GameObject interactor)

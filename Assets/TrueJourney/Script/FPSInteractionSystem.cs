@@ -38,6 +38,7 @@ namespace StarterAssets
         [SerializeField] private GameObject currentTarget;
 
         public GameObject CurrentTarget => currentTarget;
+        public float InteractDistance => interactDistance;
 
         private Rigidbody grabbedBody;
         private SpringJoint grabJoint;
