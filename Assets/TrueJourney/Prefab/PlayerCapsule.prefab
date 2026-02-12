@@ -24,7 +24,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 527394561171912091}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -264,6 +264,10 @@ MonoBehaviour:
   CrouchHeight: 1
   CrouchCameraOffset: -0.5
   CrouchTransitionSpeed: 40
+  ClimbSpeed: 3
+  JumpToExitClimb: 1
+  ClimbStartStep: 0.1
+  ClimbStartMaxSteps: 5
   JumpHeight: 1.2
   Gravity: -45
   JumpTimeout: 0.1
@@ -277,6 +281,7 @@ MonoBehaviour:
   CinemachineCameraTarget: {fileID: 2837220257102322015}
   TopClamp: 90
   BottomClamp: -90
+  CameraRotationSmoothTime: 0.05
 --- !u!114 &6667646138187766528
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -465,7 +470,7 @@ MonoBehaviour:
   maxSlots: 6
   viewPointTransform: {fileID: 5943277002950396306}
   inventoryRoot: {fileID: 5778681287040369742}
-  viewPoint: {x: 0.6, y: -0.6, z: 1.5}
+  viewPoint: {x: 0, y: 0, z: 0}
   hideStoredItems: 1
 --- !u!114 &3126292282646842754
 MonoBehaviour:

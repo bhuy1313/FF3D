@@ -23,13 +23,15 @@ namespace StarterAssets
 
         [Header("Physics Grab")]
         [SerializeField] private LayerMask grabMask = ~0;
-        [SerializeField] private float grabDistance = 4f;
+        [SerializeField] private float grabDistance = 3f;
         [SerializeField] private float holdDistance = 2.2f;
         [SerializeField] private float maxGrabMass = 50f;
         [SerializeField] private float grabSpring = 600f;
         [SerializeField] private float grabDamper = 50f;
         [SerializeField] private float heldDrag = 10f;
         [SerializeField] private float heldAngularDrag = 10f;
+        [SerializeField] private float holdSmoothTime = 0.05f;
+        [SerializeField] private float holdMaxSpeed = 30f;
 
         [Header("References")]
         [SerializeField] private FPSInventorySystem inventory;
@@ -44,6 +46,8 @@ namespace StarterAssets
         private SpringJoint grabJoint;
         private float grabbedOriginalDrag;
         private float grabbedOriginalAngularDrag;
+        private Vector3 smoothedHoldPoint;
+        private Vector3 holdPointVelocity;
         private bool previousInteract;
         private bool previousPickup;
         private bool previousUse;
@@ -66,6 +70,8 @@ namespace StarterAssets
             {
                 input = GetComponent<StarterAssetsInputs>();
             }
+
+            grabDistance = interactDistance;
         }
 
         private void Update()
@@ -77,26 +83,26 @@ namespace StarterAssets
 
             UpdateFocus();
 
-        bool currentGrab = input != null && input.grab;
-        GetButtonState(currentGrab, ref previousGrab, out bool grabPressed, out bool grabReleased);
+            bool currentGrab = input != null && input.grab;
+            GetButtonState(currentGrab, ref previousGrab, out bool grabPressed, out bool grabReleased);
 
-        if (grabPressed)
-        {
-            TryGrab();
-        }
-
-        if (grabReleased)
-        {
-            ReleaseGrab();
-        }
-
-        if (WasPressed(input != null && input.pickup, ref previousPickup) && inventory != null)
-        {
-            if (currentTarget != null)
+            if (grabPressed)
             {
-                inventory.TryPickup(currentTarget, gameObject);
-                return;
+                TryGrab();
             }
+
+            if (grabReleased)
+            {
+                ReleaseGrab();
+            }
+
+            if (WasPressed(input != null && input.pickup, ref previousPickup) && inventory != null)
+            {
+                if (currentTarget != null)
+                {
+                    inventory.TryPickup(currentTarget, gameObject);
+                    return;
+                }
             }
 
             if (WasPressed(input != null && input.interact, ref previousInteract))
@@ -117,23 +123,39 @@ namespace StarterAssets
                 inventory.Drop(gameObject);
             }
 
-        if (inventory != null && inventory.ItemCount > 0 && input != null && input.slot >= 0)
-        {
-            int maxSelectable = Mathf.Min(6, inventory.MaxSlots);
-            int slotIndex = Mathf.Clamp(input.slot, 0, maxSelectable - 1);
-            inventory.TrySelectSlot(slotIndex);
-            input.slot = -1;
-        }
+            if (inventory != null && inventory.ItemCount > 0 && input != null && input.slot >= 0)
+            {
+                int maxSelectable = Mathf.Min(6, inventory.MaxSlots);
+                int slotIndex = Mathf.Clamp(input.slot, 0, maxSelectable - 1);
+                inventory.TrySelectSlot(slotIndex);
+                input.slot = -1;
+            }
         }
 
         private void FixedUpdate()
         {
-            if (grabJoint == null)
+            if (grabJoint == null || viewCamera == null)
             {
                 return;
             }
 
-            grabJoint.connectedAnchor = GetHoldPoint();
+            Vector3 targetHoldPoint = GetHoldPoint();
+            if (holdSmoothTime <= 0f)
+            {
+                smoothedHoldPoint = targetHoldPoint;
+            }
+            else
+            {
+                smoothedHoldPoint = Vector3.SmoothDamp(
+                    smoothedHoldPoint,
+                    targetHoldPoint,
+                    ref holdPointVelocity,
+                    holdSmoothTime,
+                    holdMaxSpeed,
+                    Time.fixedDeltaTime);
+            }
+
+            grabJoint.connectedAnchor = smoothedHoldPoint;
         }
 
         private void UpdateFocus()
@@ -143,7 +165,7 @@ namespace StarterAssets
             if (Physics.Raycast(ray, out RaycastHit hit, interactDistance, interactMask, QueryTriggerInteraction.Ignore))
             {
                 IInteractable interactable = FindInteractable(hit.collider);
-                
+
                 if (interactable != null)
                 {
                     SetFocus(hit.collider.gameObject, interactable);
@@ -272,6 +294,9 @@ namespace StarterAssets
             grabJoint.minDistance = 0f;
             grabJoint.maxDistance = 0f;
             grabJoint.tolerance = 0f;
+
+            smoothedHoldPoint = GetHoldPoint();
+            holdPointVelocity = Vector3.zero;
         }
 
         private void ReleaseGrab()
@@ -289,6 +314,7 @@ namespace StarterAssets
 
             grabJoint = null;
             grabbedBody = null;
+            holdPointVelocity = Vector3.zero;
         }
 
         private Vector3 GetHoldPoint()
@@ -296,18 +322,18 @@ namespace StarterAssets
             return viewCamera.transform.position + viewCamera.transform.forward * holdDistance;
         }
 
-    private static bool WasPressed(bool current, ref bool previous)
-    {
-        bool pressed = current && !previous;
-        previous = current;
-        return pressed;
-    }
+        private static bool WasPressed(bool current, ref bool previous)
+        {
+            bool pressed = current && !previous;
+            previous = current;
+            return pressed;
+        }
 
-    private static void GetButtonState(bool current, ref bool previous, out bool pressed, out bool released)
-    {
-        pressed = current && !previous;
-        released = !current && previous;
-        previous = current;
+        private static void GetButtonState(bool current, ref bool previous, out bool pressed, out bool released)
+        {
+            pressed = current && !previous;
+            released = !current && previous;
+            previous = current;
+        }
     }
-}
 }

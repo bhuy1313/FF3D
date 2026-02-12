@@ -74,6 +74,8 @@ namespace StarterAssets
 		public float TopClamp = 90.0f;
 		[Tooltip("How far in degrees can you move the camera down")]
 		public float BottomClamp = -90.0f;
+		[Tooltip("Time in seconds to smooth camera rotation input. Set to 0 to disable.")]
+		public float CameraRotationSmoothTime = 0.05f;
 
 		// cinemachine
 		private float _cinemachineTargetPitch;
@@ -105,6 +107,8 @@ namespace StarterAssets
 		private float _standHeight;
 		private Vector3 _standCenter;
 		private Vector3 _cameraTargetInitialLocalPos;
+		private Vector2 _lookInputSmoothed;
+		private Vector2 _lookInputSmoothVelocity;
 
 		private bool IsCurrentDeviceMouse
 		{
@@ -180,14 +184,31 @@ namespace StarterAssets
 
 		private void CameraRotation()
 		{
+			Vector2 lookInput = _input.look;
+			if (CameraRotationSmoothTime > 0f)
+			{
+				_lookInputSmoothed = Vector2.SmoothDamp(
+					_lookInputSmoothed,
+					lookInput,
+					ref _lookInputSmoothVelocity,
+					CameraRotationSmoothTime
+				);
+				lookInput = _lookInputSmoothed;
+			}
+			else
+			{
+				_lookInputSmoothed = lookInput;
+				_lookInputSmoothVelocity = Vector2.zero;
+			}
+
 			// if there is an input
-			if (_input.look.sqrMagnitude >= _threshold)
+			if (lookInput.sqrMagnitude >= _threshold)
 			{
 				//Don't multiply mouse input by Time.deltaTime
 				float deltaTimeMultiplier = IsCurrentDeviceMouse ? 1.0f : Time.deltaTime;
 				
-				_cinemachineTargetPitch += _input.look.y * RotationSpeed * deltaTimeMultiplier;
-				_rotationVelocity = _input.look.x * RotationSpeed * deltaTimeMultiplier;
+				_cinemachineTargetPitch += lookInput.y * RotationSpeed * deltaTimeMultiplier;
+				_rotationVelocity = lookInput.x * RotationSpeed * deltaTimeMultiplier;
 
 				// clamp our pitch rotation
 				_cinemachineTargetPitch = ClampAngle(_cinemachineTargetPitch, BottomClamp, TopClamp);
