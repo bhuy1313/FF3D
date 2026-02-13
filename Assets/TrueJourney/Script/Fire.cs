@@ -1,25 +1,24 @@
 using UnityEngine;
-using UnityEngine.VFX;
 
 public class Fire : MonoBehaviour
 {
     [Header("Fire State")]
     [SerializeField] private float maxIntensity = 1f;
     [SerializeField] private float minIntensityToLive = 0.05f;
-    [Tooltip("Tốc độ hồi lửa mỗi giây (0 = không hồi).")]
+    [Tooltip("Regrow speed per second (0 = no regrow).")]
     [SerializeField] private float regrowRate = 0f;
 
-    [Tooltip("Nếu true, khi Enable mà currentIntensity <= 0 thì set lên maxIntensity (lửa bật sẵn).")]
+    [Tooltip("If true, when enabled and currentIntensity <= 0, set intensity back to max.")]
     [SerializeField] private bool startLitOnEnable = true;
 
-    [Tooltip("Nếu true, regrow vẫn chạy từ 0 (dù đã tắt).")]
+    [Tooltip("If true, regrow still works from 0 intensity.")]
     [SerializeField] private bool allowRegrowFromZero = false;
 
     [Header("Extinguish")]
     [SerializeField] private float waterExtinguishPerSecond = 0.5f;
     [SerializeField] private string waterTag = "Water";
 
-    [Tooltip("Nếu true, khi tắt hẳn sẽ disable cả GameObject (cẩn thận vì sẽ không regrow/trigger nữa).")]
+    [Tooltip("If true, disable the whole GameObject when fully extinguished.")]
     [SerializeField] private bool disableGameObjectOnExtinguish = false;
 
     [Header("Player Damage")]
@@ -28,10 +27,9 @@ public class Fire : MonoBehaviour
     [SerializeField] private bool damageScalesWithIntensity = true;
 
     [Header("Visuals")]
-    [SerializeField] private VisualEffect fireVfx;
-    [SerializeField] private string vfxIntensityParam = "Intensity";
-    [SerializeField] private bool invertVfxIntensity = false;   // <-- bật nếu graph của bạn đang ngược (0 mạnh, 1 tắt)
-    [SerializeField] private bool logMissingVfxParam = true;
+    [SerializeField] private ParticleSystem fireParticleSystem;
+    [SerializeField] private bool scaleParticleEmissionWithIntensity = true;
+    [SerializeField] private float maxEmissionRate = 50f;
 
     [SerializeField] private Light fireLight;
     [SerializeField] private bool scaleWithIntensity = true;
@@ -41,13 +39,9 @@ public class Fire : MonoBehaviour
     [Header("Runtime (Debug)")]
     [SerializeField] private float currentIntensity = 1f;
 
-    private bool missingParamLogged;
-    private bool vfxHasParamCached;
-    private bool vfxParamChecked;
-
     private void Awake()
     {
-        if (fireVfx == null) fireVfx = GetComponentInChildren<VisualEffect>();
+        if (fireParticleSystem == null) fireParticleSystem = GetComponentInChildren<ParticleSystem>();
         if (fireLight == null) fireLight = GetComponentInChildren<Light>();
     }
 
@@ -57,8 +51,6 @@ public class Fire : MonoBehaviour
             currentIntensity = maxIntensity;
 
         currentIntensity = Mathf.Clamp(currentIntensity, 0f, maxIntensity);
-
-        CheckVfxParamOnce();
         ApplyVisuals(forcePlayState: true);
     }
 
@@ -66,7 +58,6 @@ public class Fire : MonoBehaviour
     {
         if (regrowRate <= 0f) return;
 
-        // Regrow logic
         if (!allowRegrowFromZero && currentIntensity <= 0f) return;
         if (currentIntensity >= maxIntensity) return;
 
@@ -90,8 +81,6 @@ public class Fire : MonoBehaviour
     {
         if (amount <= 0f) return;
 
-        // Nếu object đã bị disable bởi disableGameObjectOnExtinguish,
-        // cần bật lại trước khi ApplyVisuals.
         if (!gameObject.activeSelf)
             gameObject.SetActive(true);
 
@@ -110,40 +99,25 @@ public class Fire : MonoBehaviour
 
     private void ApplyVisuals(bool forcePlayState = false)
     {
-        float t01 = (maxIntensity <= 0f) ? 0f : (currentIntensity / maxIntensity);
-        t01 = Mathf.Clamp01(t01);
+        float t01 = (maxIntensity <= 0f) ? 0f : Mathf.Clamp01(currentIntensity / maxIntensity);
 
-        // Nếu VFX graph đang ngược (0 mạnh, 1 tắt) thì bật invert
-        float vfxT = invertVfxIntensity ? (1f - t01) : t01;
-
-        if (fireVfx != null)
+        if (fireParticleSystem != null)
         {
-            if (!string.IsNullOrEmpty(vfxIntensityParam))
+            if (scaleParticleEmissionWithIntensity)
             {
-                CheckVfxParamOnce();
-
-                if (vfxHasParamCached)
-                {
-                    fireVfx.SetFloat(vfxIntensityParam, vfxT);
-                }
-                else if (logMissingVfxParam && !missingParamLogged)
-                {
-                    Debug.LogWarning($"Fire VFX param not found (Float): {vfxIntensityParam}", this);
-                    missingParamLogged = true;
-                }
+                var emission = fireParticleSystem.emission;
+                emission.rateOverTimeMultiplier = Mathf.Lerp(0f, maxEmissionRate, t01);
             }
 
-            // Chỉ play khi còn lửa, stop khi hết
-            if (forcePlayState)
+            bool shouldPlay = currentIntensity > 0f;
+            if (shouldPlay)
             {
-                if (currentIntensity > 0f) fireVfx.Play();
-                else fireVfx.Stop();
+                if (!fireParticleSystem.isPlaying)
+                    fireParticleSystem.Play(true);
             }
-            else
+            else if (forcePlayState || fireParticleSystem.isPlaying || fireParticleSystem.particleCount > 0)
             {
-                // Avoid spam: chỉ đổi trạng thái khi cần (đủ tốt trong đa số trường hợp)
-                if (currentIntensity > 0f) fireVfx.Play();
-                else fireVfx.Stop();
+                fireParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             }
         }
 
@@ -157,20 +131,6 @@ public class Fire : MonoBehaviour
             transform.localScale = Vector3.Lerp(Vector3.zero, maxScale, t01);
         else
             transform.localScale = maxScale;
-    }
-
-    private void CheckVfxParamOnce()
-    {
-        if (vfxParamChecked) return;
-        vfxParamChecked = true;
-
-        if (fireVfx == null || string.IsNullOrEmpty(vfxIntensityParam))
-        {
-            vfxHasParamCached = false;
-            return;
-        }
-
-        vfxHasParamCached = fireVfx.HasFloat(vfxIntensityParam);
     }
 
     private void OnTriggerStay(Collider other)
