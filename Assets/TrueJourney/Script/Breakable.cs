@@ -4,6 +4,15 @@ using UnityEngine.Events;
 [DisallowMultipleComponent]
 public class Breakable : MonoBehaviour, IDamageable
 {
+    public enum BreakableType
+    {
+        Wood,
+        Stone
+    }
+
+    [Header("Type")]
+    [SerializeField] private BreakableType breakableType = BreakableType.Wood;
+
     [Header("Health")]
     [SerializeField] private float maxHealth = 100f;
     [SerializeField] private float currentHealth = 100f;
@@ -25,6 +34,7 @@ public class Breakable : MonoBehaviour, IDamageable
 
     private bool isBroken;
 
+    public BreakableType Type => breakableType;
     public float CurrentHealth => currentHealth;
     public float MaxHealth => maxHealth;
     public bool IsBroken => isBroken;
