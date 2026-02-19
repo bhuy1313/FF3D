@@ -46,6 +46,7 @@ public class Fire : MonoBehaviour
 
     [Header("Visuals")]
     [SerializeField] private ParticleSystem fireParticleSystem;
+    [SerializeField] private bool includeChildParticleSystems = true;
     [SerializeField] private bool keepParticleWorldUp = false;
     [SerializeField] private ParticleUpAxis particleUpAxis = ParticleUpAxis.Forward;
     [SerializeField] private bool scaleParticleObjectWithIntensity = true;
@@ -60,8 +61,15 @@ public class Fire : MonoBehaviour
     private float spreadTimer;
     private Collider[] spreadBuffer;
     private readonly HashSet<Fire> spreadTargets = new HashSet<Fire>();
-    private Vector3 particleBaseLocalScale = Vector3.one;
-    private bool particleBaseScaleCached;
+    private readonly List<ParticleSystem> managedParticleSystems = new List<ParticleSystem>();
+    private readonly List<Transform> particleRootTransforms = new List<Transform>();
+    private readonly List<Vector3> particleRootBaseLocalScales = new List<Vector3>();
+    private readonly List<Vector3> managedParticleBaseLocalScales = new List<Vector3>();
+    private readonly List<float> managedParticleScaleExponents = new List<float>();
+    private readonly List<ParticleSystemScalingMode> particleScalingModes = new List<ParticleSystemScalingMode>();
+    private readonly List<bool> particleUses3DStartSize = new List<bool>();
+    private readonly List<float> particleBaseStartSizeMultipliers = new List<float>();
+    private readonly List<Vector3> particleBaseStartSize3DMultipliers = new List<Vector3>();
 
     private void Reset()
     {
@@ -205,19 +213,30 @@ public class Fire : MonoBehaviour
     {
         float t01 = (maxIntensity <= 0f) ? 0f : Mathf.Clamp01(currentIntensity / maxIntensity);
 
-        if (fireParticleSystem != null)
+        if (managedParticleSystems.Count > 0)
         {
             UpdateParticleObjectScale(t01);
 
             bool shouldPlay = currentIntensity > 0f;
-            if (shouldPlay)
+            for (int i = 0; i < managedParticleSystems.Count; i++)
             {
-                if (!fireParticleSystem.isPlaying)
-                    fireParticleSystem.Play(true);
-            }
-            else if (forcePlayState || fireParticleSystem.isPlaying || fireParticleSystem.particleCount > 0)
-            {
-                fireParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                ParticleSystem ps = managedParticleSystems[i];
+                if (ps == null)
+                {
+                    continue;
+                }
+
+                if (shouldPlay)
+                {
+                    if (!ps.isPlaying)
+                    {
+                        ps.Play(true);
+                    }
+                }
+                else if (forcePlayState || ps.isPlaying || ps.particleCount > 0)
+                {
+                    ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                }
             }
         }
 
@@ -236,14 +255,20 @@ public class Fire : MonoBehaviour
     private void KeepParticlesWorldUp()
     {
         if (!keepParticleWorldUp) return;
-        if (fireParticleSystem == null) return;
+        if (particleRootTransforms.Count == 0) return;
 
-        Transform psTransform = fireParticleSystem.transform;
-        if (psTransform == transform) return;
+        for (int i = 0; i < particleRootTransforms.Count; i++)
+        {
+            Transform psTransform = particleRootTransforms[i];
+            if (psTransform == null || psTransform == transform)
+            {
+                continue;
+            }
 
-        Vector3 selectedAxis = GetSelectedAxis(psTransform);
-        Quaternion correction = Quaternion.FromToRotation(selectedAxis, Vector3.up);
-        psTransform.rotation = correction * psTransform.rotation;
+            Vector3 selectedAxis = GetSelectedAxis(psTransform);
+            Quaternion correction = Quaternion.FromToRotation(selectedAxis, Vector3.up);
+            psTransform.rotation = correction * psTransform.rotation;
+        }
     }
 
     private Vector3 GetSelectedAxis(Transform t)
@@ -286,34 +311,224 @@ public class Fire : MonoBehaviour
     private void CacheReferences()
     {
         if (fireParticleSystem == null)
-            fireParticleSystem = GetComponentInChildren<ParticleSystem>();
-
-        CacheParticleBaseScale();
+        {
+            fireParticleSystem = GetComponentInChildren<ParticleSystem>(true);
+        }
+        CacheManagedParticleSystems();
+        CacheParticleRootsAndBaseScales();
 
         if (fireLight == null)
             fireLight = GetComponentInChildren<Light>();
     }
 
-    private void CacheParticleBaseScale()
+    private void CacheManagedParticleSystems()
     {
-        if (fireParticleSystem == null) return;
-        if (particleBaseScaleCached) return;
+        managedParticleSystems.Clear();
+        managedParticleBaseLocalScales.Clear();
+        managedParticleScaleExponents.Clear();
+        particleScalingModes.Clear();
+        particleUses3DStartSize.Clear();
+        particleBaseStartSizeMultipliers.Clear();
+        particleBaseStartSize3DMultipliers.Clear();
 
-        particleBaseLocalScale = fireParticleSystem.transform.localScale;
-        particleBaseScaleCached = true;
+        if (fireParticleSystem == null)
+        {
+            return;
+        }
+
+        if (!includeChildParticleSystems)
+        {
+            managedParticleSystems.Add(fireParticleSystem);
+            CacheParticleSizeData(fireParticleSystem);
+            CacheManagedTransformScaleData();
+            return;
+        }
+
+        ParticleSystem[] allSystems = fireParticleSystem.GetComponentsInChildren<ParticleSystem>(true);
+        for (int i = 0; i < allSystems.Length; i++)
+        {
+            ParticleSystem ps = allSystems[i];
+            if (ps != null)
+            {
+                managedParticleSystems.Add(ps);
+                CacheParticleSizeData(ps);
+            }
+        }
+
+        CacheManagedTransformScaleData();
+    }
+
+    private void CacheParticleSizeData(ParticleSystem ps)
+    {
+        ParticleSystem.MainModule main = ps.main;
+        particleScalingModes.Add(main.scalingMode);
+        if (main.startSize3D)
+        {
+            particleUses3DStartSize.Add(true);
+            particleBaseStartSizeMultipliers.Add(1f);
+            particleBaseStartSize3DMultipliers.Add(new Vector3(
+                main.startSizeXMultiplier,
+                main.startSizeYMultiplier,
+                main.startSizeZMultiplier));
+        }
+        else
+        {
+            particleUses3DStartSize.Add(false);
+            particleBaseStartSizeMultipliers.Add(main.startSizeMultiplier);
+            particleBaseStartSize3DMultipliers.Add(Vector3.one);
+        }
+    }
+
+    private void CacheManagedTransformScaleData()
+    {
+        managedParticleBaseLocalScales.Clear();
+        managedParticleScaleExponents.Clear();
+        if (managedParticleSystems.Count == 0)
+        {
+            return;
+        }
+
+        for (int i = 0; i < managedParticleSystems.Count; i++)
+        {
+            ParticleSystem ps = managedParticleSystems[i];
+            Transform t = ps != null ? ps.transform : null;
+            if (t == null)
+            {
+                managedParticleBaseLocalScales.Add(Vector3.one);
+                managedParticleScaleExponents.Add(1f);
+                continue;
+            }
+
+            managedParticleBaseLocalScales.Add(t.localScale);
+            managedParticleScaleExponents.Add(1f);
+        }
+    }
+
+    private void CacheParticleRootsAndBaseScales()
+    {
+        particleRootTransforms.Clear();
+        particleRootBaseLocalScales.Clear();
+        if (managedParticleSystems.Count == 0)
+        {
+            return;
+        }
+
+        HashSet<Transform> systemTransforms = new HashSet<Transform>();
+        for (int i = 0; i < managedParticleSystems.Count; i++)
+        {
+            ParticleSystem ps = managedParticleSystems[i];
+            if (ps != null)
+            {
+                systemTransforms.Add(ps.transform);
+            }
+        }
+
+        for (int i = 0; i < managedParticleSystems.Count; i++)
+        {
+            ParticleSystem ps = managedParticleSystems[i];
+            if (ps == null)
+            {
+                continue;
+            }
+
+            Transform candidate = ps.transform;
+            if (HasAncestorInSet(candidate.parent, systemTransforms))
+            {
+                continue;
+            }
+
+            if (particleRootTransforms.Contains(candidate))
+            {
+                continue;
+            }
+
+            particleRootTransforms.Add(candidate);
+            particleRootBaseLocalScales.Add(candidate.localScale);
+        }
     }
 
     private void UpdateParticleObjectScale(float intensity01)
     {
         if (!scaleParticleObjectWithIntensity) return;
-        if (fireParticleSystem == null) return;
-
-        CacheParticleBaseScale();
+        if (managedParticleSystems.Count == 0) return;
         minParticleObjectScaleMultiplier = Mathf.Max(0f, minParticleObjectScaleMultiplier);
         maxParticleObjectScaleMultiplier = Mathf.Max(minParticleObjectScaleMultiplier, maxParticleObjectScaleMultiplier);
 
-        float scaleMul = Mathf.Lerp(minParticleObjectScaleMultiplier, maxParticleObjectScaleMultiplier, intensity01);
-        fireParticleSystem.transform.localScale = particleBaseLocalScale * scaleMul;
+        float scaleMul = intensity01 <= 0f
+            ? 0f
+            : Mathf.Lerp(minParticleObjectScaleMultiplier, maxParticleObjectScaleMultiplier, intensity01);
+        int count = Mathf.Min(
+            managedParticleSystems.Count,
+            Mathf.Min(managedParticleBaseLocalScales.Count, managedParticleScaleExponents.Count));
+
+        for (int i = 0; i < count; i++)
+        {
+            ParticleSystem ps = managedParticleSystems[i];
+            if (ps == null)
+            {
+                continue;
+            }
+
+            float localScaleMul = Mathf.Pow(scaleMul, managedParticleScaleExponents[i]);
+            ps.transform.localScale = managedParticleBaseLocalScales[i] * localScaleMul;
+        }
+
+        UpdateShapeModeParticleSize(scaleMul);
+    }
+
+    private void UpdateShapeModeParticleSize(float scaleMul)
+    {
+        int count = Mathf.Min(
+            managedParticleSystems.Count,
+            Mathf.Min(
+                particleScalingModes.Count,
+                Mathf.Min(
+                    particleUses3DStartSize.Count,
+                    Mathf.Min(
+                        particleBaseStartSizeMultipliers.Count,
+                        particleBaseStartSize3DMultipliers.Count))));
+
+        for (int i = 0; i < count; i++)
+        {
+            if (particleScalingModes[i] != ParticleSystemScalingMode.Shape)
+            {
+                continue;
+            }
+
+            ParticleSystem ps = managedParticleSystems[i];
+            if (ps == null)
+            {
+                continue;
+            }
+
+            ParticleSystem.MainModule main = ps.main;
+            if (particleUses3DStartSize[i])
+            {
+                Vector3 baseSize = particleBaseStartSize3DMultipliers[i];
+                main.startSizeXMultiplier = baseSize.x * scaleMul;
+                main.startSizeYMultiplier = baseSize.y * scaleMul;
+                main.startSizeZMultiplier = baseSize.z * scaleMul;
+            }
+            else
+            {
+                main.startSizeMultiplier = particleBaseStartSizeMultipliers[i] * scaleMul;
+            }
+        }
+    }
+
+    private static bool HasAncestorInSet(Transform current, HashSet<Transform> set)
+    {
+        while (current != null)
+        {
+            if (set.Contains(current))
+            {
+                return true;
+            }
+
+            current = current.parent;
+        }
+
+        return false;
     }
 
     private void EnsureCollider()
