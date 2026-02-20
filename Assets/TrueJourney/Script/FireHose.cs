@@ -61,6 +61,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
     [Header("VFX/SFX")]
     [SerializeField] private ParticleSystem waterParticles;
     [SerializeField] private AudioSource sprayAudio;
+    [SerializeField] private float particleGravityModifier = 0.35f;
     [SerializeField] private string waterTag = "Water";
     [SerializeField] private bool setWaterTag = true;
     [SerializeField] private bool removeParticleBounce = true;
@@ -337,6 +338,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
         sprayRadius = Mathf.Max(0.01f, sprayRadius);
         applyWaterPerSecond = Mathf.Max(0f, applyWaterPerSecond);
         dischargePerSecond = Mathf.Max(0f, dischargePerSecond);
+        particleGravityModifier = Mathf.Max(0f, particleGravityModifier);
         pressureStep = Mathf.Max(0.01f, pressureStep);
         minPressureMultiplier = Mathf.Max(0.1f, minPressureMultiplier);
         maxPressureMultiplier = Mathf.Max(minPressureMultiplier, maxPressureMultiplier);
@@ -553,6 +555,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
         ParticleSystem.MainModule main = waterParticles.main;
         main.startSpeedMultiplier =
             baseParticleStartSpeedMultiplier * config.vfxSpeedMultiplier * pressureSpeedMultiplier;
+        main.gravityModifier = new ParticleSystem.MinMaxCurve(particleGravityModifier);
 
         ParticleSystem.ShapeModule shape = waterParticles.shape;
         shape.angle = baseParticleShapeAngle * config.vfxSpreadMultiplier * pressureSpreadMultiplier;
