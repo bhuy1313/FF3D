@@ -9,6 +9,11 @@ public class FPSInventorySystem : MonoBehaviour
     [SerializeField] private Transform inventoryRoot;
     [SerializeField] private Vector3 viewPoint;
     [SerializeField] private bool hideStoredItems = true;
+    [Header("ViewPoint Rotation Lag")]
+    [SerializeField] private bool useViewPointRotationLag = true;
+    [SerializeField] private float viewPointRotationFollowSpeed = 12f;
+    [SerializeField] private float viewPointRotationMaxAngle = 8f;
+    [SerializeField] private bool createRuntimeLagPivot = true;
 
     private class InventorySlot
     {
@@ -21,6 +26,8 @@ public class FPSInventorySystem : MonoBehaviour
 
     private readonly System.Collections.Generic.List<InventorySlot> slots = new System.Collections.Generic.List<InventorySlot>();
     private int activeIndex = -1;
+    private ChildRotationLag rotationLag;
+    private Transform runtimeLagPivot;
 
     public bool HasItem => activeIndex >= 0 && activeIndex < slots.Count;
     public int ItemCount => slots.Count;
@@ -45,12 +52,20 @@ public class FPSInventorySystem : MonoBehaviour
             viewPointTransform.localPosition = viewPoint;
         }
 
+        ConfigureViewPointRotationLag();
+        ApplyRotationLagSettings();
+
         if (inventoryRoot == null)
         {
             GameObject root = new GameObject("InventoryRoot");
             root.transform.SetParent(transform, false);
             inventoryRoot = root.transform;
         }
+    }
+
+    private void LateUpdate()
+    {
+        ApplyRotationLagSettings();
     }
 
     public bool TryPickup(GameObject target, GameObject picker)
@@ -228,5 +243,73 @@ public class FPSInventorySystem : MonoBehaviour
         }
 
         return null;
+    }
+
+    private void ConfigureViewPointRotationLag()
+    {
+        if (viewPointTransform == null)
+        {
+            return;
+        }
+
+        if (useViewPointRotationLag && createRuntimeLagPivot && Application.isPlaying)
+        {
+            Transform followParent = viewPointTransform.parent;
+            if (followParent == null)
+            {
+                return;
+            }
+
+            if (runtimeLagPivot == null)
+            {
+                Transform existingPivot = followParent.Find("ViewPointLagPivot");
+                if (existingPivot != null)
+                {
+                    runtimeLagPivot = existingPivot;
+                }
+                else
+                {
+                    GameObject pivot = new GameObject("ViewPointLagPivot");
+                    pivot.transform.SetParent(followParent, false);
+                    pivot.transform.localPosition = viewPointTransform.localPosition;
+                    pivot.transform.localRotation = viewPointTransform.localRotation;
+                    runtimeLagPivot = pivot.transform;
+                }
+            }
+
+            rotationLag = runtimeLagPivot.GetComponent<ChildRotationLag>();
+            if (rotationLag == null)
+            {
+                rotationLag = runtimeLagPivot.gameObject.AddComponent<ChildRotationLag>();
+            }
+
+            viewPointTransform = runtimeLagPivot;
+            return;
+        }
+
+        rotationLag = viewPointTransform.GetComponent<ChildRotationLag>();
+        if (rotationLag == null)
+        {
+            rotationLag = viewPointTransform.gameObject.AddComponent<ChildRotationLag>();
+        }
+    }
+
+    private void ApplyRotationLagSettings()
+    {
+        if (rotationLag == null)
+        {
+            return;
+        }
+
+        if (!useViewPointRotationLag)
+        {
+            rotationLag.enabled = false;
+            return;
+        }
+
+        rotationLag.enabled = true;
+        rotationLag.parentToFollow = viewPointTransform.parent;
+        rotationLag.followSpeed = Mathf.Max(0.01f, viewPointRotationFollowSpeed);
+        rotationLag.maxAngle = Mathf.Clamp(viewPointRotationMaxAngle, 0f, 45f);
     }
 }

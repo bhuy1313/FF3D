@@ -11,31 +11,35 @@ public class ChildRotationLag : MonoBehaviour
     [Tooltip("Giới hạn độ lệch tối đa (độ).")]
     public float maxAngle = 12f;
 
-    Quaternion _defaultLocalRot;
+    private Quaternion _defaultLocalRot;
+    private Quaternion _currentWorldRot;
 
-    void Awake()
+    private void Awake()
     {
         _defaultLocalRot = transform.localRotation;
         if (!parentToFollow) parentToFollow = transform.parent;
+
+        _currentWorldRot = parentToFollow != null
+            ? parentToFollow.rotation * _defaultLocalRot
+            : transform.rotation;
     }
 
-    void LateUpdate()
+    private void LateUpdate()
     {
         if (!parentToFollow) return;
 
-        // Ta muốn ViewPoint cuối cùng trùng hướng với cha (trong world),
-        // nhưng giới hạn độ lệch + tạo trễ.
         Quaternion targetWorldRot = parentToFollow.rotation * _defaultLocalRot;
 
-        // Đuổi theo mượt (time-constant, không phụ thuộc FPS)
         float t = 1f - Mathf.Exp(-followSpeed * Time.deltaTime);
-        Quaternion newWorldRot = Quaternion.Slerp(transform.rotation, targetWorldRot, t);
+        _currentWorldRot = Quaternion.Slerp(_currentWorldRot, targetWorldRot, t);
 
-        // Clamp độ lệch so với target để không văng quá xa
-        float ang = Quaternion.Angle(targetWorldRot, newWorldRot);
+        float ang = Quaternion.Angle(targetWorldRot, _currentWorldRot);
         if (ang > maxAngle)
-            newWorldRot = Quaternion.Slerp(targetWorldRot, newWorldRot, maxAngle / ang);
+        {
+            _currentWorldRot = Quaternion.Slerp(targetWorldRot, _currentWorldRot, maxAngle / ang);
+        }
 
-        transform.rotation = newWorldRot;
+        // Quan trọng: object là child nên phải bù ngược parent rotation vào local.
+        transform.localRotation = Quaternion.Inverse(parentToFollow.rotation) * _currentWorldRot;
     }
 }
