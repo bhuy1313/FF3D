@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class SledgeHammer : MonoBehaviour, IInteractable, IPickupable, IUsable
+public class FireAxe : MonoBehaviour, IInteractable, IPickupable, IUsable
 {
     private Rigidbody cachedRigidbody;
     public Rigidbody Rigidbody => cachedRigidbody;
@@ -9,6 +9,9 @@ public class SledgeHammer : MonoBehaviour, IInteractable, IPickupable, IUsable
     [SerializeField] private float damage = 25f;
     [SerializeField] private LayerMask hitMask = ~0;
 
+    [Header("Stamina")]
+    [SerializeField] private float staminaCost = 10f;
+
     private void Awake()
     {
         cachedRigidbody = GetComponent<Rigidbody>();
@@ -16,24 +19,45 @@ public class SledgeHammer : MonoBehaviour, IInteractable, IPickupable, IUsable
 
     public void Interact(GameObject interactor)
     {
-        Debug.Log("SledgeHammer Interacted!");
+        Debug.Log("FireAxe Interacted!");
     }
 
     public void OnPickup(GameObject picker)
     {
-        Debug.Log("SledgeHammer Picked Up!");
+        Debug.Log("FireAxe Picked Up!");
     }
 
     public void OnDrop(GameObject dropper)
     {
-        Debug.Log("SledgeHammer Dropped!");
+        Debug.Log("FireAxe Dropped!");
     }
 
     public void Use(GameObject user)
     {
-        Debug.Log("SledgeHammer Used!");
+        if (!TryConsumeStamina(user))
+        {
+            Debug.LogWarning("Not enough stamina to use FireAxe.");
+            return;
+        }
+
+        Debug.Log("FireAxe Used!");
         Debug.Log("User: " + (user != null ? user.name : "null"));
         TryDealDamage(user);
+    }
+
+    private bool TryConsumeStamina(GameObject user)
+    {
+        if (staminaCost <= 0f || user == null)
+        {
+            return true;
+        }
+
+        if (!user.TryGetComponent(out PlayerVitals vitals))
+        {
+            return true;
+        }
+
+        return vitals.TryUseStamina(staminaCost);
     }
 
     private void TryDealDamage(GameObject user)
@@ -45,13 +69,17 @@ public class SledgeHammer : MonoBehaviour, IInteractable, IPickupable, IUsable
         }
 
         GameObject playerCameraRoot = GetPlayerCameraRoot(user);
+
         if (playerCameraRoot == null)
         {
             return;
         }
 
         Ray ray = new Ray(playerCameraRoot.transform.position, playerCameraRoot.transform.forward);
-        if (!Physics.Raycast(ray, out RaycastHit hit, range, hitMask, QueryTriggerInteraction.Ignore))
+        RaycastHit hit;
+        bool hitSomething = Physics.Raycast(ray, out hit, range, hitMask, QueryTriggerInteraction.Ignore);
+
+        if (!hitSomething)
         {
             Debug.Log("No hit detected.");
             return;
@@ -76,7 +104,7 @@ public class SledgeHammer : MonoBehaviour, IInteractable, IPickupable, IUsable
     {
         if (damageable is Breakable breakable)
         {
-            return breakable.Type == Breakable.BreakableType.Stone;
+            return breakable.Type == Breakable.BreakableType.Wood;
         }
 
         return true;
