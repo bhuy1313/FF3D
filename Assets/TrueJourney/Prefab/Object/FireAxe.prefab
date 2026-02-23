@@ -140,8 +140,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 979707955808453874}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 16.95, y: 42.471725, z: 4.04}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -191,6 +191,7 @@ MonoBehaviour:
   hitMask:
     serializedVersion: 2
     m_Bits: 256
+  staminaCost: 10
 --- !u!114 &5039271393193485205
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -206,6 +207,38 @@ MonoBehaviour:
   itemName: Fire Axe
   itemDescription: A sturdy fire axe useful for chopping wood and breaking objects.
   itemIcon: {fileID: 0}
+--- !u!1 &1362478858261855568
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1719489544017968993}
+  m_Layer: 0
+  m_Name: Low
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!4 &1719489544017968993
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1362478858261855568}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 5096389957477372292}
+  m_Father: {fileID: 8716025876020840090}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2720971435971151887
 GameObject:
   m_ObjectHideFlags: 0
@@ -329,7 +362,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8716025876020840090}
   m_Layer: 0
-  m_Name: model
+  m_Name: Body
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -349,6 +382,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 4105678874061931071}
+  - {fileID: 1719489544017968993}
   m_Father: {fileID: 553468921299418875}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &4990459243102346162
@@ -612,3 +646,65 @@ MeshCollider:
   m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: -5472965118421888187, guid: f3dcd1f5b2307d546a73fcbb9cb3191e, type: 3}
+--- !u!1001 &8625215469165775002
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1719489544017968993}
+    m_Modifications:
+    - target: {fileID: 3533329472362780958, guid: 7b41e03229864904781931d0c2216153, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0.55
+      objectReference: {fileID: 0}
+    - target: {fileID: 3533329472362780958, guid: 7b41e03229864904781931d0c2216153, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.474
+      objectReference: {fileID: 0}
+    - target: {fileID: 3533329472362780958, guid: 7b41e03229864904781931d0c2216153, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -0.089
+      objectReference: {fileID: 0}
+    - target: {fileID: 3533329472362780958, guid: 7b41e03229864904781931d0c2216153, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 3533329472362780958, guid: 7b41e03229864904781931d0c2216153, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3533329472362780958, guid: 7b41e03229864904781931d0c2216153, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 3533329472362780958, guid: 7b41e03229864904781931d0c2216153, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3533329472362780958, guid: 7b41e03229864904781931d0c2216153, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3533329472362780958, guid: 7b41e03229864904781931d0c2216153, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 90
+      objectReference: {fileID: 0}
+    - target: {fileID: 3533329472362780958, guid: 7b41e03229864904781931d0c2216153, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4198261691301643172, guid: 7b41e03229864904781931d0c2216153, type: 3}
+      propertyPath: m_Name
+      value: Axe
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 7b41e03229864904781931d0c2216153, type: 3}
+--- !u!4 &5096389957477372292 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3533329472362780958, guid: 7b41e03229864904781931d0c2216153, type: 3}
+  m_PrefabInstance: {fileID: 8625215469165775002}
+  m_PrefabAsset: {fileID: 0}
