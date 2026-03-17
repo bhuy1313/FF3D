@@ -77,6 +77,36 @@ namespace StarterAssets
 		[Tooltip("Time in seconds to smooth camera rotation input. Set to 0 to disable.")]
 		public float CameraRotationSmoothTime = 0.05f;
 
+		[Header("Camera Motion")]
+		[Tooltip("Adds subtle camera bob and tilt while moving on the ground.")]
+		public bool EnableCameraMotion = true;
+		[Tooltip("Base bob frequency while walking.")]
+		public float WalkBobFrequency = 8.0f;
+		[Tooltip("Side-to-side bob amount while walking.")]
+		public float WalkBobHorizontalAmplitude = 0.015f;
+		[Tooltip("Vertical bob amount while walking.")]
+		public float WalkBobVerticalAmplitude = 0.025f;
+		[Tooltip("Frequency multiplier while sprinting.")]
+		public float SprintBobFrequencyMultiplier = 1.35f;
+		[Tooltip("Amplitude multiplier while sprinting.")]
+		public float SprintBobAmplitudeMultiplier = 1.45f;
+		[Tooltip("Frequency multiplier while crouching.")]
+		public float CrouchBobFrequencyMultiplier = 0.75f;
+		[Tooltip("Amplitude multiplier while crouching.")]
+		public float CrouchBobAmplitudeMultiplier = 0.6f;
+		[Tooltip("How quickly bob and tilt blend in and out.")]
+		public float CameraMotionBlendSpeed = 14.0f;
+		[Tooltip("Maximum camera roll angle applied while strafing.")]
+		public float StrafeTilt = 1.5f;
+		[Tooltip("Maximum upward camera offset while moving upward in a jump.")]
+		public float JumpCameraUpwardOffset = 0.03f;
+		[Tooltip("Maximum downward camera offset while falling.")]
+		public float FallCameraDownwardOffset = 0.05f;
+		[Tooltip("Upward speed that reaches full jump camera offset.")]
+		public float JumpCameraMaxRiseSpeed = 5.0f;
+		[Tooltip("Downward speed that reaches full fall camera offset.")]
+		public float FallCameraMaxSpeed = 10.0f;
+
 		// cinemachine
 		private float _cinemachineTargetPitch;
 
@@ -98,6 +128,7 @@ namespace StarterAssets
 		private StarterAssetsInputs _input;
 		private GameObject _mainCamera;
 		private PlayerVitals _vitals;
+		private FPSInteractionSystem _interactionSystem;
 
 		private const float _threshold = 0.00001f;
 		private bool _wantsSprint;
@@ -107,6 +138,10 @@ namespace StarterAssets
 		private float _standHeight;
 		private Vector3 _standCenter;
 		private Vector3 _cameraTargetInitialLocalPos;
+		private Vector3 _cameraBaseLocalPosCurrent;
+		private Vector3 _cameraMotionCurrentPosOffset;
+		private float _cameraMotionCurrentRoll;
+		private float _cameraBobTimer;
 		private Vector2 _lookInputSmoothed;
 		private Vector2 _lookInputSmoothVelocity;
 
@@ -136,6 +171,7 @@ namespace StarterAssets
 			_controller = GetComponent<CharacterController>();
 			_input = GetComponent<StarterAssetsInputs>();
 			_vitals = GetComponent<PlayerVitals>();
+			_interactionSystem = GetComponent<FPSInteractionSystem>();
 #if ENABLE_INPUT_SYSTEM
 			_playerInput = GetComponent<PlayerInput>();
 #else
@@ -151,6 +187,7 @@ namespace StarterAssets
 			_cameraTargetInitialLocalPos = CinemachineCameraTarget != null
 				? CinemachineCameraTarget.transform.localPosition
 				: Vector3.zero;
+			_cameraBaseLocalPosCurrent = _cameraTargetInitialLocalPos;
 		}
 
 		private void Update()
@@ -173,6 +210,7 @@ namespace StarterAssets
 		private void LateUpdate()
 		{
 			CameraRotation();
+			UpdateCameraTargetTransform();
 		}
 
 		private void GroundedCheck()
@@ -212,9 +250,6 @@ namespace StarterAssets
 
 				// clamp our pitch rotation
 				_cinemachineTargetPitch = ClampAngle(_cinemachineTargetPitch, BottomClamp, TopClamp);
-
-				// Update Cinemachine camera target pitch
-				CinemachineCameraTarget.transform.localRotation = Quaternion.Euler(_cinemachineTargetPitch, 0.0f, 0.0f);
 
 				// rotate the player left and right
 				transform.Rotate(Vector3.up * _rotationVelocity);
@@ -276,6 +311,12 @@ namespace StarterAssets
 
 		private void UpdateSprintState()
 		{
+			if (IsGrabActionLocked())
+			{
+				_wantsSprint = false;
+				return;
+			}
+
 			if (_input.crouch || _isCrouching)
 			{
 				_wantsSprint = false;
@@ -301,7 +342,7 @@ namespace StarterAssets
 
 		private void UpdateCrouch()
 		{
-			bool wantsCrouch = _input.crouch;
+			bool wantsCrouch = !IsGrabActionLocked() && _input.crouch;
 			float targetHeight = wantsCrouch ? CrouchHeight : (CanStandUp() ? _standHeight : _controller.height);
 			float heightDelta = _standHeight - targetHeight;
 			float targetCenterY = _standCenter.y - (heightDelta * 0.5f);
@@ -314,21 +355,104 @@ namespace StarterAssets
 			);
 
 			_isCrouching = _controller.height < (_standHeight - 0.05f);
+		}
 
-			if (CinemachineCameraTarget != null)
+		private void UpdateCameraTargetTransform()
+		{
+			if (CinemachineCameraTarget == null)
 			{
-				float targetCameraY = _cameraTargetInitialLocalPos.y + (_isCrouching ? CrouchCameraOffset : 0.0f);
-				Vector3 targetCameraPos = new Vector3(
-					_cameraTargetInitialLocalPos.x,
-					targetCameraY,
-					_cameraTargetInitialLocalPos.z
-				);
-				CinemachineCameraTarget.transform.localPosition = Vector3.Lerp(
-					CinemachineCameraTarget.transform.localPosition,
-					targetCameraPos,
-					Time.deltaTime * CrouchTransitionSpeed
-				);
+				return;
 			}
+
+			Vector3 baseTargetPos = new Vector3(
+				_cameraTargetInitialLocalPos.x,
+				_cameraTargetInitialLocalPos.y + (_isCrouching ? CrouchCameraOffset : 0.0f),
+				_cameraTargetInitialLocalPos.z
+			);
+			float crouchBlend = 1f - Mathf.Exp(-CrouchTransitionSpeed * Time.deltaTime);
+			_cameraBaseLocalPosCurrent = Vector3.Lerp(_cameraBaseLocalPosCurrent, baseTargetPos, crouchBlend);
+
+			Vector3 targetMotionOffset = Vector3.zero;
+			float targetRoll = 0f;
+			if (EnableCameraMotion)
+			{
+				float motionScale = GetGroundMotionScale();
+				if (motionScale > 0f)
+				{
+					float bobFrequency = WalkBobFrequency;
+					if (_wantsSprint)
+					{
+						bobFrequency *= SprintBobFrequencyMultiplier;
+					}
+
+					if (_isCrouching)
+					{
+						bobFrequency *= CrouchBobFrequencyMultiplier;
+					}
+
+					float bobAmplitudeScale = motionScale;
+					if (_wantsSprint)
+					{
+						bobAmplitudeScale *= SprintBobAmplitudeMultiplier;
+					}
+
+					if (_isCrouching)
+					{
+						bobAmplitudeScale *= CrouchBobAmplitudeMultiplier;
+					}
+
+					_cameraBobTimer += Time.deltaTime * bobFrequency;
+					targetMotionOffset = FirstPersonCameraMotion.EvaluateBob(
+						_cameraBobTimer,
+						WalkBobHorizontalAmplitude * bobAmplitudeScale,
+						WalkBobVerticalAmplitude * bobAmplitudeScale
+					);
+					targetRoll = FirstPersonCameraMotion.EvaluateStrafeTilt(_input.move.x, StrafeTilt, motionScale);
+				}
+				else
+				{
+					_cameraBobTimer = 0f;
+				}
+
+				if (!Grounded && !_isClimbing)
+				{
+					targetMotionOffset.y += FirstPersonCameraMotion.EvaluateAirborneVerticalOffset(
+						_verticalVelocity,
+						JumpCameraUpwardOffset,
+						FallCameraDownwardOffset,
+						JumpCameraMaxRiseSpeed,
+						FallCameraMaxSpeed
+					);
+				}
+			}
+			else
+			{
+				_cameraBobTimer = 0f;
+			}
+
+			float motionBlend = 1f - Mathf.Exp(-CameraMotionBlendSpeed * Time.deltaTime);
+			_cameraMotionCurrentPosOffset = Vector3.Lerp(_cameraMotionCurrentPosOffset, targetMotionOffset, motionBlend);
+			_cameraMotionCurrentRoll = Mathf.Lerp(_cameraMotionCurrentRoll, targetRoll, motionBlend);
+
+			CinemachineCameraTarget.transform.localPosition = _cameraBaseLocalPosCurrent + _cameraMotionCurrentPosOffset;
+			CinemachineCameraTarget.transform.localRotation = Quaternion.Euler(_cinemachineTargetPitch, 0.0f, _cameraMotionCurrentRoll);
+		}
+
+		private float GetGroundMotionScale()
+		{
+			if (_controller == null || !Grounded || _isClimbing || _input.move == Vector2.zero)
+			{
+				return 0f;
+			}
+
+			float maxMoveSpeed = _isCrouching ? CrouchSpeed : (_wantsSprint ? SprintSpeed : MoveSpeed);
+			if (maxMoveSpeed <= 0f)
+			{
+				return 0f;
+			}
+
+			float horizontalSpeed = new Vector3(_controller.velocity.x, 0f, _controller.velocity.z).magnitude;
+			return Mathf.Clamp01(horizontalSpeed / maxMoveSpeed);
 		}
 
 		private bool CanStandUp()
@@ -348,7 +472,7 @@ namespace StarterAssets
 			if (_isClimbing)
 			{
 				_verticalVelocity = 0f;
-				if (JumpToExitClimb && _input.jump)
+				if (!IsGrabActionLocked() && JumpToExitClimb && _input.jump)
 				{
 					StopClimb();
 					_verticalVelocity = Mathf.Sqrt(JumpHeight * -2f * Gravity);
@@ -368,7 +492,7 @@ namespace StarterAssets
 				}
 
 				// Jump
-				if (_input.jump && _jumpTimeoutDelta <= 0.0f)
+				if (!IsGrabActionLocked() && _input.jump && _jumpTimeoutDelta <= 0.0f)
 				{
 					// the square root of H * -2 * G = how much velocity needed to reach desired height
 					_verticalVelocity = Mathf.Sqrt(JumpHeight * -2f * Gravity);
@@ -469,6 +593,11 @@ namespace StarterAssets
 			if (lfAngle < -360f) lfAngle += 360f;
 			if (lfAngle > 360f) lfAngle -= 360f;
 			return Mathf.Clamp(lfAngle, lfMin, lfMax);
+		}
+
+		private bool IsGrabActionLocked()
+		{
+			return _interactionSystem != null && _interactionSystem.IsGrabActive;
 		}
 
 		private void OnDrawGizmosSelected()

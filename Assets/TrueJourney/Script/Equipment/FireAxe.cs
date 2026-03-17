@@ -19,17 +19,14 @@ public class FireAxe : MonoBehaviour, IInteractable, IPickupable, IUsable
 
     public void Interact(GameObject interactor)
     {
-        Debug.Log("FireAxe Interacted!");
     }
 
     public void OnPickup(GameObject picker)
     {
-        Debug.Log("FireAxe Picked Up!");
     }
 
     public void OnDrop(GameObject dropper)
     {
-        Debug.Log("FireAxe Dropped!");
     }
 
     public void Use(GameObject user)
@@ -40,8 +37,6 @@ public class FireAxe : MonoBehaviour, IInteractable, IPickupable, IUsable
             return;
         }
 
-        Debug.Log("FireAxe Used!");
-        Debug.Log("User: " + (user != null ? user.name : "null"));
         TryDealDamage(user);
     }
 
@@ -81,7 +76,6 @@ public class FireAxe : MonoBehaviour, IInteractable, IPickupable, IUsable
 
         if (!hitSomething)
         {
-            Debug.Log("No hit detected.");
             return;
         }
 

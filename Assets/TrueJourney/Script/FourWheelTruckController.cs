@@ -10,6 +10,7 @@ public class FourWheelTruckController : MonoBehaviour
     [SerializeField] private KeyCode handbrakeKey = KeyCode.LeftShift;
     [SerializeField] private bool invertSteerInput = true;
     [SerializeField] private bool invertMotorInput = true;
+    [SerializeField, Range(0f, 0.5f)] private float inputDeadzone = 0.05f;
 
     [Header("Drive")]
     [SerializeField] private bool allWheelDrive = true;
@@ -17,6 +18,9 @@ public class FourWheelTruckController : MonoBehaviour
     [SerializeField] private float maxMotorTorque = 2400f;
     [SerializeField] private float brakeTorque = 3500f;
     [SerializeField] private float handbrakeTorque = 6000f;
+    [SerializeField] private bool autoBrakeWhenIdle = true;
+    [SerializeField] private float idleBrakeTorque = 4500f;
+    [SerializeField] private float idleBrakeSpeedThresholdKmh = 2f;
     [SerializeField] private float maxSpeedKmh = 90f;
     [SerializeField] private float steeringResponse = 6f;
 
@@ -90,8 +94,8 @@ public class FourWheelTruckController : MonoBehaviour
 
     private void Update()
     {
-        steerInput = Input.GetAxis(steerAxis);
-        throttleInput = Input.GetAxis(throttleAxis);
+        steerInput = ApplyDeadzone(Input.GetAxis(steerAxis));
+        throttleInput = ApplyDeadzone(Input.GetAxis(throttleAxis));
         brakePressed = Input.GetKey(brakeKey);
         handbrakePressed = Input.GetKey(handbrakeKey);
     }
@@ -150,13 +154,28 @@ public class FourWheelTruckController : MonoBehaviour
         float speedKmh = Mathf.Abs(forwardSpeed) * 3.6f;
         bool acceleratingIntoLimiter = speedKmh > maxSpeedKmh && Mathf.Sign(throttleInput * motorDirection) == Mathf.Sign(forwardSpeed);
         float throttle = acceleratingIntoLimiter ? 0f : throttleInput * motorDirection;
+        bool idleBrakeActive = autoBrakeWhenIdle &&
+                               !brakePressed &&
+                               !handbrakePressed &&
+                               Mathf.Approximately(throttleInput, 0f) &&
+                               speedKmh <= idleBrakeSpeedThresholdKmh;
+
         if (brakePressed || handbrakePressed)
+        {
+            throttle = 0f;
+        }
+        else if (idleBrakeActive)
         {
             throttle = 0f;
         }
 
         float motorTorque = throttle * maxMotorTorque;
         float baseBrake = brakePressed ? brakeTorque : 0f;
+        if (idleBrakeActive)
+        {
+            baseBrake = Mathf.Max(baseBrake, idleBrakeTorque);
+        }
+
         float rearBrake = baseBrake + (handbrakePressed ? handbrakeTorque : 0f);
 
         if (allWheelDrive)
@@ -295,6 +314,12 @@ public class FourWheelTruckController : MonoBehaviour
         // Approximate spring so each wheel supports a quarter of the chassis at rest.
         float baseSpring = (mass * Physics.gravity.magnitude) / (travel * 4f);
         return Mathf.Max(5000f, baseSpring * 1.6f);
+    }
+
+    private float ApplyDeadzone(float axisValue)
+    {
+        float deadzone = Mathf.Clamp01(inputDeadzone);
+        return Mathf.Abs(axisValue) < deadzone ? 0f : axisValue;
     }
 
     private static Transform FindDeepChild(Transform root, string childName)

@@ -155,7 +155,6 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
 
     public void Interact(GameObject interactor)
     {
-        Debug.Log("FireHose Interacted!");
     }
 
     public void OnPickup(GameObject picker)
@@ -164,19 +163,15 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
         ConfigureWaterParticleCollision();
         CacheWaterParticleDefaults();
         ApplySprayTuningToVfx();
-        Debug.Log("FireHose Picked Up!");
     }
 
     public void OnDrop(GameObject dropper)
     {
         SetSprayState(false);
-        Debug.Log("FireHose Dropped!");
     }
 
     public void Use(GameObject user)
     {
-        Debug.Log("FireHose Used!");
-
         if (toggleUse)
         {
             if (isSpraying)

@@ -1,0 +1,119 @@
+using UnityEngine;
+using UnityEngine.AI;
+
+[DisallowMultipleComponent]
+[RequireComponent(typeof(NavMeshAgent))]
+public class BotBehaviorContext : MonoBehaviour
+{
+    [Header("References")]
+    [SerializeField] private NavMeshAgent navMeshAgent;
+
+    [Header("Orders")]
+    [SerializeField] private bool useMoveOrdersAsBehaviorInput;
+    [SerializeField] private float arrivalDistance = 0.35f;
+
+    [Header("Patrol")]
+    [SerializeField] private Transform[] patrolPoints;
+    [SerializeField] private float patrolWaitSeconds = 1.5f;
+
+    [Header("Idle")]
+    [SerializeField] private float idleTurnSpeed = 90f;
+    [SerializeField] private Vector2 idleTurnDurationRange = new Vector2(1.25f, 2.5f);
+    [SerializeField] private Vector2 idlePauseDurationRange = new Vector2(0.4f, 1.2f);
+
+    private readonly BotMoveOrderState moveOrderState = new BotMoveOrderState();
+
+    public NavMeshAgent NavMeshAgent => navMeshAgent;
+    public bool UseMoveOrdersAsBehaviorInput => useMoveOrdersAsBehaviorInput;
+    public bool HasMoveOrder => moveOrderState.HasMoveOrder;
+    public float ArrivalDistance => Mathf.Max(0.05f, arrivalDistance);
+    public float PatrolWaitSeconds => Mathf.Max(0f, patrolWaitSeconds);
+    public float IdleTurnSpeed => Mathf.Max(0f, idleTurnSpeed);
+    public Vector2 IdleTurnDurationRange => SanitizeRange(idleTurnDurationRange, 0.1f);
+    public Vector2 IdlePauseDurationRange => SanitizeRange(idlePauseDurationRange, 0f);
+    public int PatrolPointCount => patrolPoints != null ? patrolPoints.Length : 0;
+    public bool HasPatrolRoute => GetPatrolPointCount() > 0;
+
+    private void Awake()
+    {
+        if (navMeshAgent == null)
+        {
+            navMeshAgent = GetComponent<NavMeshAgent>();
+        }
+    }
+
+    public void SetUseMoveOrdersAsBehaviorInput(bool value)
+    {
+        useMoveOrdersAsBehaviorInput = value;
+    }
+
+    public void SetMoveOrder(Vector3 destination)
+    {
+        moveOrderState.SetDestination(destination);
+    }
+
+    public bool TryGetMoveOrder(out Vector3 destination)
+    {
+        return moveOrderState.TryGetDestination(out destination);
+    }
+
+    public void ClearMoveOrder()
+    {
+        moveOrderState.Clear();
+    }
+
+    public int GetPatrolPointCount()
+    {
+        if (patrolPoints == null || patrolPoints.Length == 0)
+        {
+            return 0;
+        }
+
+        int count = 0;
+        for (int i = 0; i < patrolPoints.Length; i++)
+        {
+            if (patrolPoints[i] != null)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    public bool TryGetPatrolPointPosition(int index, out Vector3 position)
+    {
+        position = default;
+        if (patrolPoints == null || patrolPoints.Length == 0)
+        {
+            return false;
+        }
+
+        int resolvedIndex = 0;
+        for (int i = 0; i < patrolPoints.Length; i++)
+        {
+            Transform point = patrolPoints[i];
+            if (point == null)
+            {
+                continue;
+            }
+
+            if (resolvedIndex == index)
+            {
+                position = point.position;
+                return true;
+            }
+
+            resolvedIndex++;
+        }
+
+        return false;
+    }
+
+    private static Vector2 SanitizeRange(Vector2 range, float minimum)
+    {
+        float min = Mathf.Max(minimum, range.x);
+        float max = Mathf.Max(min, range.y);
+        return new Vector2(min, max);
+    }
+}

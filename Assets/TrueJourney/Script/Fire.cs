@@ -14,17 +14,17 @@ public class Fire : MonoBehaviour
     [Header("Fire State")]
     [SerializeField] private float maxIntensity = 1f;
     [SerializeField] private float minIntensityToLive = 0.05f;
-    [SerializeField] private float regrowRate = 0f;
-    [SerializeField] private bool startLitOnEnable = true;
+    [SerializeField] private float regrowRate = 0.05f;
+    [SerializeField] private bool startLitOnEnable = false;
     [SerializeField] private bool allowRegrowFromZero = false;
-    [SerializeField] private float currentIntensity = 1f;
+    [SerializeField] private float currentIntensity = 0f;
 
     [Header("Fire Spread")]
     [SerializeField] private bool enableSpread = true;
     [SerializeField] private bool allowRegrow = true;
     [SerializeField] private float minRadius = 0.1f;
-    [SerializeField] private float maxRadius = 20f;
-    [SerializeField] private float currentRadius = 20f;
+    [SerializeField] private float maxRadius = 1f;
+    [SerializeField] private float currentRadius = 0f;
     [SerializeField] private float spreadInterval = 1f;
     [SerializeField] private float spreadIgniteAmount = 0.2f;
     [Range(0f, 1f)]
@@ -64,6 +64,7 @@ public class Fire : MonoBehaviour
     private readonly List<ParticleSystem> managedParticleSystems = new List<ParticleSystem>();
     private readonly List<Transform> particleRootTransforms = new List<Transform>();
     private readonly List<Vector3> particleRootBaseLocalScales = new List<Vector3>();
+    private readonly List<Quaternion> particleRootBaseLocalRotations = new List<Quaternion>();
     private readonly List<Vector3> managedParticleBaseLocalScales = new List<Vector3>();
     private readonly List<float> managedParticleScaleExponents = new List<float>();
     private readonly List<ParticleSystemScalingMode> particleScalingModes = new List<ParticleSystemScalingMode>();
@@ -257,30 +258,40 @@ public class Fire : MonoBehaviour
         if (!keepParticleWorldUp) return;
         if (particleRootTransforms.Count == 0) return;
 
-        for (int i = 0; i < particleRootTransforms.Count; i++)
+        int count = Mathf.Min(particleRootTransforms.Count, particleRootBaseLocalRotations.Count);
+        for (int i = 0; i < count; i++)
         {
             Transform psTransform = particleRootTransforms[i];
-            if (psTransform == null || psTransform == transform)
+            if (psTransform == null)
             {
                 continue;
             }
 
-            Vector3 selectedAxis = GetSelectedAxis(psTransform);
+            Quaternion parentRotation = psTransform.parent != null
+                ? psTransform.parent.rotation
+                : Quaternion.identity;
+            Quaternion baseWorldRotation = parentRotation * particleRootBaseLocalRotations[i];
+            Vector3 selectedAxis = GetSelectedAxis(baseWorldRotation);
+            if (selectedAxis.sqrMagnitude <= Mathf.Epsilon)
+            {
+                continue;
+            }
+
             Quaternion correction = Quaternion.FromToRotation(selectedAxis, Vector3.up);
-            psTransform.rotation = correction * psTransform.rotation;
+            psTransform.rotation = correction * baseWorldRotation;
         }
     }
 
-    private Vector3 GetSelectedAxis(Transform t)
+    private Vector3 GetSelectedAxis(Quaternion rotation)
     {
         switch (particleUpAxis)
         {
             case ParticleUpAxis.Up:
-                return t.up;
+                return rotation * Vector3.up;
             case ParticleUpAxis.Right:
-                return t.right;
+                return rotation * Vector3.right;
             default:
-                return t.forward;
+                return rotation * Vector3.forward;
         }
     }
 
@@ -408,6 +419,7 @@ public class Fire : MonoBehaviour
     {
         particleRootTransforms.Clear();
         particleRootBaseLocalScales.Clear();
+        particleRootBaseLocalRotations.Clear();
         if (managedParticleSystems.Count == 0)
         {
             return;
@@ -444,6 +456,7 @@ public class Fire : MonoBehaviour
 
             particleRootTransforms.Add(candidate);
             particleRootBaseLocalScales.Add(candidate.localScale);
+            particleRootBaseLocalRotations.Add(candidate.localRotation);
         }
     }
 

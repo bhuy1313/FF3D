@@ -12,21 +12,17 @@ public class Cube : MonoBehaviour, IInteractable, IPickupable, IUsable
 
     public void Interact(GameObject interactor)
     {
-        Debug.Log("Cube Interacted!");
     }
 
     public void OnPickup(GameObject picker)
     {
-        Debug.Log("Cube Picked Up!");
     }
 
     public void OnDrop(GameObject dropper)
     {
-        Debug.Log("Cube Dropped!");
     }
 
     public void Use(GameObject user)
     {
-        Debug.Log("Cube Used!");
     }
 }

@@ -19,17 +19,14 @@ public class SledgeHammer : MonoBehaviour, IInteractable, IPickupable, IUsable
 
     public void Interact(GameObject interactor)
     {
-        Debug.Log("SledgeHammer Interacted!");
     }
 
     public void OnPickup(GameObject picker)
     {
-        Debug.Log("SledgeHammer Picked Up!");
     }
 
     public void OnDrop(GameObject dropper)
     {
-        Debug.Log("SledgeHammer Dropped!");
     }
 
     public void Use(GameObject user)
@@ -40,8 +37,6 @@ public class SledgeHammer : MonoBehaviour, IInteractable, IPickupable, IUsable
             return;
         }
 
-        Debug.Log("SledgeHammer Used!");
-        Debug.Log("User: " + (user != null ? user.name : "null"));
         TryDealDamage(user);
     }
 
@@ -77,7 +72,6 @@ public class SledgeHammer : MonoBehaviour, IInteractable, IPickupable, IUsable
         Ray ray = new Ray(playerCameraRoot.transform.position, playerCameraRoot.transform.forward);
         if (!Physics.Raycast(ray, out RaycastHit hit, range, hitMask, QueryTriggerInteraction.Ignore))
         {
-            Debug.Log("No hit detected.");
             return;
         }
 

@@ -55,18 +55,15 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
 
     public void Interact(GameObject interactor)
     {
-        Debug.Log("FireExtinguisher Interacted!");
     }
 
     public void OnPickup(GameObject picker)
     {
-        Debug.Log("FireExtinguisher Picked Up!");
     }
 
     public void OnDrop(GameObject dropper)
     {
         SetSprayState(false);
-        Debug.Log("FireExtinguisher Dropped!");
     }
 
     public void Use(GameObject user)

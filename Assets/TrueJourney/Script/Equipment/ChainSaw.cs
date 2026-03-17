@@ -69,19 +69,16 @@ public class ChainSaw : MonoBehaviour, IInteractable, IPickupable, IUsable
 
     public void Interact(GameObject interactor)
     {
-        Debug.Log("ChainSaw Interacted!");
     }
 
     public void OnPickup(GameObject picker)
     {
-        Debug.Log("ChainSaw Picked Up!");
     }
 
     public void OnDrop(GameObject dropper)
     {
         activeUser = null;
         SetRunningState(false);
-        Debug.Log("ChainSaw Dropped!");
     }
 
     public void Use(GameObject user)

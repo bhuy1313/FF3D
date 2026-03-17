@@ -1,4 +1,3 @@
-using Unity.Entities.UniversalDelegates;
 using UnityEngine;
 
 public class Vent : MonoBehaviour, IInteractable, IGrabbable
@@ -20,7 +19,6 @@ public class Vent : MonoBehaviour, IInteractable, IGrabbable
 
     public void Interact(GameObject interactor)
     {
-        Debug.Log("Vent interacted with by " + interactor.name);
         rb.isKinematic = false;
     }
 }

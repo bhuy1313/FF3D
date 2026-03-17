@@ -140,6 +140,18 @@ namespace StarterAssets
 			grab = newGrabState;
 		}
 
+		public void ClearGameplayActionInputs()
+		{
+			jump = false;
+			sprint = false;
+			crouch = false;
+			interact = false;
+			pickup = false;
+			use = false;
+			drop = false;
+			slot = -1;
+		}
+
 		public void SlotInput(int slotIndex, bool isPressed)
 		{
 			if (!isPressed)
@@ -157,6 +169,7 @@ namespace StarterAssets
 			pickup = false;
 			use = false;
 			drop = false;
+			grab = false;
 			slot = -1;
 		}
 		

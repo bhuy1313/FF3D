@@ -242,11 +242,14 @@ public class RopeBasic : MonoBehaviour
             nodePrevPositions[0] = nodePositions[0];
             nodePrevPositions[count - 1] = nodePositions[count - 1];
 
+            // Damping adjusted for substeps
+            float stepDamping = Mathf.Pow(damping, 1f / substeps);
+
             // Verlet integration
             for (int i = 1; i < count - 1; i++)
             {
                 Vector3 current = nodePositions[i];
-                Vector3 velocity = (current - nodePrevPositions[i]) * damping;
+                Vector3 velocity = (current - nodePrevPositions[i]) * stepDamping;
 
                 if (maxStepDistance > 0f)
                 {
@@ -299,12 +302,12 @@ public class RopeBasic : MonoBehaviour
                     nodePositions[i] = p1;
                     nodePositions[j] = p2;
                 }
+            }
 
-                if (enableCollision && collisionIterations > 0)
-                {
-                    for (int c = 0; c < collisionIterations; c++)
-                        ResolveCollisions();
-                }
+            if (enableCollision && collisionIterations > 0)
+            {
+                for (int c = 0; c < collisionIterations; c++)
+                    ResolveCollisions();
             }
         }
     }
@@ -654,8 +657,9 @@ public class RopeBasic : MonoBehaviour
                 if (Physics.CapsuleCast(prev1, prev2, radius, sweepDir, out RaycastHit hit, sweepDist, collisionMask, q))
                 {
                     Vector3 targetMid = prevMid + sweepDir * hit.distance;
-                    Vector3 shift = (targetMid - currMid) + hit.normal * surfaceOffset;
-                    ApplySegmentCorrection(i, shift);
+                    Vector3 normal = hit.normal;
+                    Vector3 shift = (targetMid - currMid) + normal * surfaceOffset;
+                    ApplySegmentCorrection(i, shift, normal);
                     p1 = nodePositions[i];
                     p2 = nodePositions[i + 1];
                 }
@@ -673,12 +677,10 @@ public class RopeBasic : MonoBehaviour
                         col, col.transform.position, col.transform.rotation,
                         out Vector3 pushDir, out float pushDist))
                 {
-                    if (pushDist > 0f)
-                    {
-                        ApplySegmentCorrection(i, pushDir * (pushDist + surfaceOffset));
-                        p1 = nodePositions[i];
-                        p2 = nodePositions[i + 1];
-                    }
+                    Vector3 normal = pushDir.normalized;
+                    ApplySegmentCorrection(i, pushDir * (pushDist + surfaceOffset), normal);
+                    p1 = nodePositions[i];
+                    p2 = nodePositions[i + 1];
                 }
             }
         }
@@ -737,11 +739,24 @@ public class RopeBasic : MonoBehaviour
 
             nodePositions[i] = pos;
             if (moved && collisionDampenVelocity)
-                nodePrevPositions[i] = pos;
+            {
+                // Slide along the surface instead of full stop
+                Vector3 vel = nodePositions[i] - nodePrevPositions[i];
+                Vector3 normal = (pos - prev).normalized; 
+                if (normal.sqrMagnitude > 0.0001f)
+                {
+                    float proj = Vector3.Dot(vel, normal);
+                    if (proj < 0)
+                    {
+                        vel -= normal * proj;
+                        nodePrevPositions[i] = nodePositions[i] - vel;
+                    }
+                }
+            }
         }
     }
 
-    private void ApplySegmentCorrection(int index, Vector3 correction)
+    private void ApplySegmentCorrection(int index, Vector3 correction, Vector3 normal)
     {
         int last = nodePositions.Length - 1;
         bool pin1 = (index == 0);
@@ -754,13 +769,29 @@ public class RopeBasic : MonoBehaviour
         {
             nodePositions[index + 1] += correction;
             if (collisionDampenVelocity)
-                nodePrevPositions[index + 1] = nodePositions[index + 1];
+            {
+                Vector3 vel = nodePositions[index + 1] - nodePrevPositions[index + 1];
+                float proj = Vector3.Dot(vel, normal);
+                if (proj < 0)
+                {
+                    vel -= normal * proj;
+                    nodePrevPositions[index + 1] = nodePositions[index + 1] - vel;
+                }
+            }
         }
         else if (pin2)
         {
             nodePositions[index] += correction;
             if (collisionDampenVelocity)
-                nodePrevPositions[index] = nodePositions[index];
+            {
+                Vector3 vel = nodePositions[index] - nodePrevPositions[index];
+                float proj = Vector3.Dot(vel, normal);
+                if (proj < 0)
+                {
+                    vel -= normal * proj;
+                    nodePrevPositions[index] = nodePositions[index] - vel;
+                }
+            }
         }
         else
         {
@@ -769,8 +800,21 @@ public class RopeBasic : MonoBehaviour
             nodePositions[index + 1] += half;
             if (collisionDampenVelocity)
             {
-                nodePrevPositions[index] = nodePositions[index];
-                nodePrevPositions[index + 1] = nodePositions[index + 1];
+                Vector3 vel1 = nodePositions[index] - nodePrevPositions[index];
+                float proj1 = Vector3.Dot(vel1, normal);
+                if (proj1 < 0)
+                {
+                    vel1 -= normal * proj1;
+                    nodePrevPositions[index] = nodePositions[index] - vel1;
+                }
+
+                Vector3 vel2 = nodePositions[index + 1] - nodePrevPositions[index + 1];
+                float proj2 = Vector3.Dot(vel2, normal);
+                if (proj2 < 0)
+                {
+                    vel2 -= normal * proj2;
+                    nodePrevPositions[index + 1] = nodePositions[index + 1] - vel2;
+                }
             }
         }
     }

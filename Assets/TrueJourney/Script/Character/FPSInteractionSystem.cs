@@ -17,21 +17,18 @@ namespace StarterAssets
         [SerializeField] private float interactDistance = 3f;
         [SerializeField] private LayerMask interactMask = ~0;
         [SerializeField] private bool drawDebugRay;
+        [SerializeField] private bool enableOutlineHighlight = true;
+        [SerializeField, Range(0, 31)] private int outlineRenderingLayer = 6;
 
         // Input
         [SerializeField] private StarterAssetsInputs input;
 
-        [Header("Physics Grab")]
+        [Header("Grab")]
         [SerializeField] private LayerMask grabMask = ~0;
         [SerializeField] private float grabDistance = 3f;
-        [SerializeField] private float holdDistance = 2.2f;
         [SerializeField] private float maxGrabMass = 50f;
-        [SerializeField] private float grabSpring = 600f;
-        [SerializeField] private float grabDamper = 50f;
-        [SerializeField] private float heldDrag = 10f;
-        [SerializeField] private float heldAngularDrag = 10f;
-        [SerializeField] private float holdSmoothTime = 0.05f;
-        [SerializeField] private float holdMaxSpeed = 30f;
+        [SerializeField] private Transform grabPoint;
+        [SerializeField] private Vector3 grabPointLocalPosition = Vector3.zero;
 
         [Header("References")]
         [SerializeField] private FPSInventorySystem inventory;
@@ -41,18 +38,20 @@ namespace StarterAssets
 
         public GameObject CurrentTarget => currentTarget;
         public float InteractDistance => interactDistance;
+        public bool IsGrabActive => grabbedBody != null;
 
         private Rigidbody grabbedBody;
-        private SpringJoint grabJoint;
-        private float grabbedOriginalDrag;
-        private float grabbedOriginalAngularDrag;
-        private Vector3 smoothedHoldPoint;
-        private Vector3 holdPointVelocity;
+        private Transform grabbedOriginalParent;
+        private bool grabbedOriginalIsKinematic;
+        private bool grabbedOriginalDetectCollisions;
         private bool previousInteract;
         private bool previousPickup;
         private bool previousUse;
         private bool previousDrop;
         private bool previousGrab;
+        private GameObject outlinedTargetRoot;
+        private Renderer[] outlinedRenderers;
+        private uint[] outlinedBaseRenderingLayerMasks;
 
         private void Awake()
         {
@@ -72,6 +71,7 @@ namespace StarterAssets
             }
 
             grabDistance = interactDistance;
+            ResolveGrabPoint();
         }
 
         private void Update()
@@ -81,19 +81,27 @@ namespace StarterAssets
                 return;
             }
 
-            UpdateFocus();
+            if (IsGrabActive)
+            {
+                ClearFocus();
+            }
+            else
+            {
+                UpdateFocus();
+            }
 
             bool currentGrab = input != null && input.grab;
-            GetButtonState(currentGrab, ref previousGrab, out bool grabPressed, out bool grabReleased);
+            bool grabPressed = WasPressed(currentGrab, ref previousGrab);
 
             if (grabPressed)
             {
-                TryGrab();
+                ToggleGrab();
             }
 
-            if (grabReleased)
+            if (IsGrabActive)
             {
-                ReleaseGrab();
+                BlockGameplayActionsWhileGrabbed();
+                return;
             }
 
             if (WasPressed(input != null && input.pickup, ref previousPickup) && inventory != null)
@@ -130,32 +138,6 @@ namespace StarterAssets
                 inventory.TrySelectSlot(slotIndex);
                 input.slot = -1;
             }
-        }
-
-        private void FixedUpdate()
-        {
-            if (grabJoint == null || viewCamera == null)
-            {
-                return;
-            }
-
-            Vector3 targetHoldPoint = GetHoldPoint();
-            if (holdSmoothTime <= 0f)
-            {
-                smoothedHoldPoint = targetHoldPoint;
-            }
-            else
-            {
-                smoothedHoldPoint = Vector3.SmoothDamp(
-                    smoothedHoldPoint,
-                    targetHoldPoint,
-                    ref holdPointVelocity,
-                    holdSmoothTime,
-                    holdMaxSpeed,
-                    Time.fixedDeltaTime);
-            }
-
-            grabJoint.connectedAnchor = smoothedHoldPoint;
         }
 
         private void UpdateFocus()
@@ -238,6 +220,7 @@ namespace StarterAssets
 
             currentTarget = target;
             currentInteractable = interactable;
+            UpdateOutlineHighlight(target, interactable);
         }
 
         private void ClearFocus()
@@ -249,11 +232,23 @@ namespace StarterAssets
 
             currentTarget = null;
             currentInteractable = null;
+            ClearOutlineHighlight();
         }
 
         private void TryGrab()
         {
-            if (grabJoint != null || viewCamera == null)
+            if (grabbedBody != null || viewCamera == null)
+            {
+                return;
+            }
+
+            if (inventory != null && inventory.HasItem)
+            {
+                return;
+            }
+
+            ResolveGrabPoint();
+            if (grabPoint == null)
             {
                 return;
             }
@@ -281,45 +276,106 @@ namespace StarterAssets
             }
 
             grabbedBody = targetBody;
-            grabbedOriginalDrag = grabbedBody.linearDamping;
-            grabbedOriginalAngularDrag = grabbedBody.angularDamping;
-            grabbedBody.linearDamping = heldDrag;
-            grabbedBody.angularDamping = heldAngularDrag;
+            grabbedOriginalParent = grabbedBody.transform.parent;
+            grabbedOriginalIsKinematic = grabbedBody.isKinematic;
+            grabbedOriginalDetectCollisions = grabbedBody.detectCollisions;
 
-            grabJoint = grabbedBody.gameObject.AddComponent<SpringJoint>();
-            grabJoint.autoConfigureConnectedAnchor = false;
-            grabJoint.connectedAnchor = GetHoldPoint();
-            grabJoint.spring = grabSpring;
-            grabJoint.damper = grabDamper;
-            grabJoint.minDistance = 0f;
-            grabJoint.maxDistance = 0f;
-            grabJoint.tolerance = 0f;
+            grabbedBody.linearVelocity = Vector3.zero;
+            grabbedBody.angularVelocity = Vector3.zero;
+            grabbedBody.isKinematic = true;
+            grabbedBody.detectCollisions = false;
 
-            smoothedHoldPoint = GetHoldPoint();
-            holdPointVelocity = Vector3.zero;
+            Transform grabbedTransform = grabbedBody.transform;
+            grabbedTransform.SetParent(grabPoint, false);
+            grabbedTransform.localPosition = Vector3.zero;
+            grabbedTransform.localRotation = Quaternion.identity;
+        }
+
+        private void ToggleGrab()
+        {
+            if (IsGrabActive)
+            {
+                ReleaseGrab();
+                return;
+            }
+
+            TryGrab();
         }
 
         private void ReleaseGrab()
         {
             if (grabbedBody != null)
             {
-                grabbedBody.linearDamping = grabbedOriginalDrag;
-                grabbedBody.angularDamping = grabbedOriginalAngularDrag;
+                Transform grabbedTransform = grabbedBody.transform;
+                grabbedTransform.SetParent(grabbedOriginalParent, true);
+
+                grabbedBody.isKinematic = grabbedOriginalIsKinematic;
+                grabbedBody.detectCollisions = grabbedOriginalDetectCollisions;
+                grabbedBody.linearVelocity = Vector3.zero;
+                grabbedBody.angularVelocity = Vector3.zero;
             }
 
-            if (grabJoint != null)
-            {
-                Destroy(grabJoint);
-            }
-
-            grabJoint = null;
             grabbedBody = null;
-            holdPointVelocity = Vector3.zero;
+            grabbedOriginalParent = null;
         }
 
-        private Vector3 GetHoldPoint()
+        private void ResolveGrabPoint()
         {
-            return viewCamera.transform.position + viewCamera.transform.forward * holdDistance;
+            if (grabPoint != null)
+            {
+                return;
+            }
+
+            grabPoint = FindChildTransformByName("GrabPoint");
+            if (grabPoint != null || viewCamera == null)
+            {
+                ApplyGrabPointPosition();
+                return;
+            }
+
+            GameObject runtimeGrabPoint = new GameObject("RuntimeGrabPoint");
+            grabPoint = runtimeGrabPoint.transform;
+            grabPoint.SetParent(viewCamera.transform, false);
+            ApplyGrabPointPosition();
+            grabPoint.localRotation = Quaternion.identity;
+        }
+
+        private Transform FindChildTransformByName(string childName)
+        {
+            Transform[] transforms = GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < transforms.Length; i++)
+            {
+                Transform candidate = transforms[i];
+                if (candidate != null && candidate.name == childName)
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
+        }
+
+        private void ApplyGrabPointPosition()
+        {
+            if (grabPoint == null)
+            {
+                return;
+            }
+
+            grabPoint.localPosition = grabPointLocalPosition;
+        }
+
+        private void BlockGameplayActionsWhileGrabbed()
+        {
+            if (input != null)
+            {
+                input.ClearGameplayActionInputs();
+            }
+
+            previousInteract = false;
+            previousPickup = false;
+            previousUse = false;
+            previousDrop = false;
         }
 
         private static bool WasPressed(bool current, ref bool previous)
@@ -329,11 +385,80 @@ namespace StarterAssets
             return pressed;
         }
 
-        private static void GetButtonState(bool current, ref bool previous, out bool pressed, out bool released)
+        private void OnDisable()
         {
-            pressed = current && !previous;
-            released = !current && previous;
-            previous = current;
+            ReleaseGrab();
+            ClearOutlineHighlight();
+        }
+
+        private void UpdateOutlineHighlight(GameObject target, IInteractable interactable)
+        {
+            if (!enableOutlineHighlight)
+            {
+                ClearOutlineHighlight();
+                return;
+            }
+
+            GameObject highlightRoot = ResolveHighlightRoot(target, interactable);
+            if (highlightRoot == outlinedTargetRoot)
+            {
+                return;
+            }
+
+            ClearOutlineHighlight();
+            if (highlightRoot == null)
+            {
+                return;
+            }
+
+            outlinedTargetRoot = highlightRoot;
+            outlinedRenderers = highlightRoot.GetComponentsInChildren<Renderer>(true);
+            outlinedBaseRenderingLayerMasks = new uint[outlinedRenderers.Length];
+
+            uint outlineBit = 1u << outlineRenderingLayer;
+            for (int i = 0; i < outlinedRenderers.Length; i++)
+            {
+                Renderer renderer = outlinedRenderers[i];
+                if (renderer == null)
+                {
+                    continue;
+                }
+
+                outlinedBaseRenderingLayerMasks[i] = renderer.renderingLayerMask & ~outlineBit;
+                renderer.renderingLayerMask = outlinedBaseRenderingLayerMasks[i] | outlineBit;
+            }
+        }
+
+        private void ClearOutlineHighlight()
+        {
+            if (outlinedRenderers != null && outlinedBaseRenderingLayerMasks != null)
+            {
+                int count = Mathf.Min(outlinedRenderers.Length, outlinedBaseRenderingLayerMasks.Length);
+                for (int i = 0; i < count; i++)
+                {
+                    Renderer renderer = outlinedRenderers[i];
+                    if (renderer == null)
+                    {
+                        continue;
+                    }
+
+                    renderer.renderingLayerMask = outlinedBaseRenderingLayerMasks[i];
+                }
+            }
+
+            outlinedTargetRoot = null;
+            outlinedRenderers = null;
+            outlinedBaseRenderingLayerMasks = null;
+        }
+
+        private static GameObject ResolveHighlightRoot(GameObject target, IInteractable interactable)
+        {
+            if (interactable is Component interactableComponent)
+            {
+                return interactableComponent.gameObject;
+            }
+
+            return target;
         }
     }
 }
