@@ -1,7 +1,7 @@
 using UnityEngine;
 
 [DisallowMultipleComponent]
-public class Door : MonoBehaviour, IInteractable
+public class Door : MonoBehaviour, IInteractable, IOpenable
 {
     [SerializeField] private string doorChildName = "Door";
     [SerializeField] private float openAngle = -90f;
@@ -14,6 +14,8 @@ public class Door : MonoBehaviour, IInteractable
     private bool isOpen;
     private bool initialized;
     private int currentOpenDirection = -1;
+
+    public bool IsOpen => isOpen;
 
     private void Awake()
     {

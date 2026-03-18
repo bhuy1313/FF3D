@@ -31,3 +31,8 @@ public interface IEventListener
 {
     void OnEventTriggered(GameObject eventSource, GameObject instigator);
 }
+
+public interface IOpenable
+{
+    bool IsOpen { get; }
+}

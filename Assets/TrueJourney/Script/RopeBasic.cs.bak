@@ -1,26 +1,13 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-[System.Serializable]
-public class RopeCurve
-{
-    public Transform startPoint;
-    public Transform endPoint;
-
-    // Runtime variables hidden from inspector
-    [HideInInspector] public Transform startCap;
-    [HideInInspector] public Transform endCap;
-    [HideInInspector] public List<Transform> segments = new List<Transform>();
-    [HideInInspector] public Vector3[] nodePositions;
-    [HideInInspector] public Vector3[] nodePrevPositions;
-}
-
 public class RopeBasic : MonoBehaviour
 {
-    [Header("Ropes")]
-    [SerializeField] private List<RopeCurve> ropes = new List<RopeCurve>();
+    [Header("Endpoints")]
+    [SerializeField] private Transform startPoint;
+    [SerializeField] private Transform endPoint;
 
-    [Header("Rope Setup")]
+    [Header("Rope Body")]
     [SerializeField] private bool tubeMode = true;
     [SerializeField] private bool autoSegmentCount = true;
     [SerializeField] private bool usePhysics = true;
@@ -66,7 +53,14 @@ public class RopeBasic : MonoBehaviour
     [SerializeField] private int collisionMaxOverlaps = 8;
     [SerializeField] private bool collisionDampenVelocity = true;
 
+    [Header("Runtime (Debug)")]
+    [SerializeField] private Transform startCap;
+    [SerializeField] private Transform endCap;
+    [SerializeField] private List<Transform> segments = new List<Transform>();
+
     private bool lastTubeMode;
+    private Vector3[] nodePositions;
+    private Vector3[] nodePrevPositions;
     private float restSegmentLength;
     private Collider[] overlapBuffer;
     private CapsuleCollider queryCapsule;
@@ -131,44 +125,42 @@ public class RopeBasic : MonoBehaviour
         maxSegments = Mathf.Max(minSegments, maxSegments);
         segmentCount = Mathf.Clamp(segmentCount, minForMode, maxSegments);
 
-        foreach (var rope in ropes)
+        if (segments == null)
+            segments = new List<Transform>();
+        segments.RemoveAll(s => s == null);
+
+        if (forceRecreateSegments && segments.Count > 0)
         {
-            if (rope.segments == null)
-                rope.segments = new List<Transform>();
-            rope.segments.RemoveAll(s => s == null);
+            for (int i = 0; i < segments.Count; i++)
+            {
+                if (segments[i] != null)
+                    DestroySegment(segments[i].gameObject);
+            }
+            segments.Clear();
+        }
 
-            if (forceRecreateSegments && rope.segments.Count > 0)
-            {
-                for (int i = 0; i < rope.segments.Count; i++)
-                {
-                    if (rope.segments[i] != null)
-                        DestroySegment(rope.segments[i].gameObject);
-                }
-                rope.segments.Clear();
-            }
+        if (tubeMode)
+        {
+            EnsureCaps();
+        }
+        else
+        {
+            DestroyCap(ref startCap);
+            DestroyCap(ref endCap);
+        }
 
-            if (tubeMode)
-            {
-                EnsureCaps(rope);
-            }
-            else
-            {
-                DestroyCap(ref rope.startCap);
-                DestroyCap(ref rope.endCap);
-            }
+        for (int i = segments.Count - 1; i >= segmentCount; i--)
+        {
+            if (segments[i] != null)
+                DestroySegment(segments[i].gameObject);
+            segments.RemoveAt(i);
+        }
 
-            for (int i = rope.segments.Count - 1; i >= segmentCount; i--)
-            {
-                if (rope.segments[i] != null)
-                    DestroySegment(rope.segments[i].gameObject);
-                rope.segments.RemoveAt(i);
-            }
+        for (int i = segments.Count; i < segmentCount; i++)
+        {
+            GameObject seg = tubeMode ? CreateBodySegment(i) : CreateSphereSegment(i);
 
-            for (int i = rope.segments.Count; i < segmentCount; i++)
-            {
-                GameObject seg = tubeMode ? CreateBodySegment($"RopeBody_{i}") : CreateSphereSegment($"RopeSphere_{i}");
-                rope.segments.Add(seg.transform);
-            }
+            segments.Add(seg.transform);
         }
 
         EnsureNodes(preserveSimulation);
@@ -177,6 +169,9 @@ public class RopeBasic : MonoBehaviour
 
     private void UpdateSegments()
     {
+        if (startPoint == null || endPoint == null)
+            return;
+
         if (lastTubeMode != tubeMode)
         {
             lastTubeMode = tubeMode;
@@ -185,175 +180,167 @@ public class RopeBasic : MonoBehaviour
                 ResetSimulation();
         }
 
-        foreach (var rope in ropes)
+        Vector3 rawA = startPoint.position;
+        Vector3 rawB = endPoint.position;
+        Vector3 dir = rawB - rawA;
+        float rawDist = dir.magnitude;
+        Vector3 n = (rawDist > 0.0001f) ? (dir / rawDist) : transform.up;
+
+        Vector3 a = rawA;
+        Vector3 b = rawB;
+        if (!usePhysics && padEndsByRadius && rawDist > 0.0001f)
         {
-            if (rope.startPoint == null || rope.endPoint == null)
-                continue;
-
-            Vector3 rawA = rope.startPoint.position;
-            Vector3 rawB = rope.endPoint.position;
-            Vector3 dir = rawB - rawA;
-            float rawDist = dir.magnitude;
-            Vector3 n = (rawDist > 0.0001f) ? (dir / rawDist) : transform.up;
-
-            Vector3 a = rawA;
-            Vector3 b = rawB;
-            if (!usePhysics && padEndsByRadius && rawDist > 0.0001f)
-            {
-                float radius = GetSphereDiameter() * 0.5f;
-                float pad = Mathf.Min(radius, rawDist * 0.5f);
-                a += n * pad;
-                b -= n * pad;
-            }
-
-            float distance = (b - a).magnitude;
-
-            if (autoSegmentCount)
-            {
-                int desired = CalculateSegmentCount(distance);
-                if (desired != segmentCount || rope.segments == null || rope.segments.Count != desired)
-                {
-                    segmentCount = desired;
-                    bool preserve = usePhysics && preserveSimulationOnResize;
-                    Build(preserveSimulation: preserve);
-                }
-            }
-
-            if (rope.segments == null || rope.segments.Count == 0)
-                continue;
-
-            if (usePhysics)
-                UpdateFromNodes(rope);
-            else if (tubeMode)
-                UpdateTube(rope, rawA, rawB, a, b, n, distance);
-            else
-                UpdateSpheres(rope, a, b);
+            float radius = GetSphereDiameter() * 0.5f;
+            float pad = Mathf.Min(radius, rawDist * 0.5f);
+            a += n * pad;
+            b -= n * pad;
         }
+
+        float distance = (b - a).magnitude;
+
+        if (autoSegmentCount)
+        {
+            int desired = CalculateSegmentCount(distance);
+            if (desired != segmentCount || segments == null || segments.Count != desired)
+            {
+                segmentCount = desired;
+                bool preserve = usePhysics && preserveSimulationOnResize;
+                Build(preserveSimulation: preserve);
+            }
+        }
+
+        if (segments == null || segments.Count == 0)
+            return;
+
+        if (usePhysics)
+            UpdateFromNodes();
+        else if (tubeMode)
+            UpdateTube(rawA, rawB, a, b, n, distance);
+        else
+            UpdateSpheres(a, b);
     }
 
     private void Simulate(float dt)
     {
+        if (startPoint == null || endPoint == null)
+            return;
+
         EnsureNodes(preserveSimulationOnResize);
         UpdateRestSegmentLength();
+        int count = nodePositions.Length;
+        if (count <= 1)
+            return;
 
         int substeps = Mathf.Max(1, physicsSubsteps);
         float stepDt = dt / substeps;
-        float stepDamping = Mathf.Pow(damping, 1f / substeps);
 
         for (int s = 0; s < substeps; s++)
         {
-            foreach (var rope in ropes)
+            // Pin endpoints
+            nodePositions[0] = startPoint.position;
+            nodePositions[count - 1] = endPoint.position;
+            nodePrevPositions[0] = nodePositions[0];
+            nodePrevPositions[count - 1] = nodePositions[count - 1];
+
+            // Damping adjusted for substeps
+            float stepDamping = Mathf.Pow(damping, 1f / substeps);
+
+            // Verlet integration
+            for (int i = 1; i < count - 1; i++)
             {
-                if (rope.startPoint == null || rope.endPoint == null)
-                    continue;
+                Vector3 current = nodePositions[i];
+                Vector3 velocity = (current - nodePrevPositions[i]) * stepDamping;
 
-                int count = rope.nodePositions != null ? rope.nodePositions.Length : 0;
-                if (count <= 1)
-                    continue;
-
-                // Pin endpoints
-                rope.nodePositions[0] = rope.startPoint.position;
-                rope.nodePositions[count - 1] = rope.endPoint.position;
-                rope.nodePrevPositions[0] = rope.nodePositions[0];
-                rope.nodePrevPositions[count - 1] = rope.nodePositions[count - 1];
-
-                // Verlet integration
-                for (int i = 1; i < count - 1; i++)
+                if (maxStepDistance > 0f)
                 {
-                    Vector3 current = rope.nodePositions[i];
-                    Vector3 velocity = (current - rope.nodePrevPositions[i]) * stepDamping;
+                    float vLen = velocity.magnitude;
+                    if (vLen > maxStepDistance)
+                        velocity = velocity / vLen * maxStepDistance;
+                }
 
-                    if (maxStepDistance > 0f)
+                nodePrevPositions[i] = current;
+                nodePositions[i] = current + velocity + gravity * (stepDt * stepDt);
+            }
+
+            // Constraints
+            for (int iter = 0; iter < solverIterations; iter++)
+            {
+                nodePositions[0] = startPoint.position;
+                nodePositions[count - 1] = endPoint.position;
+
+                for (int i = 0; i < count - 1; i++)
+                {
+                    int j = i + 1;
+                    Vector3 p1 = nodePositions[i];
+                    Vector3 p2 = nodePositions[j];
+                    Vector3 delta = p2 - p1;
+                    float dist = delta.magnitude;
+                    if (dist <= 0.0001f)
+                        continue;
+
+                    float diff = (dist - restSegmentLength) / dist;
+                    bool pin1 = (i == 0);
+                    bool pin2 = (j == count - 1);
+
+                    if (pin1 && pin2)
+                        continue;
+                    if (pin1)
                     {
-                        float vLen = velocity.magnitude;
-                        if (vLen > maxStepDistance)
-                            velocity = velocity / vLen * maxStepDistance;
+                        p2 -= delta * diff;
+                    }
+                    else if (pin2)
+                    {
+                        p1 += delta * diff;
+                    }
+                    else
+                    {
+                        Vector3 correction = delta * (0.5f * diff);
+                        p1 += correction;
+                        p2 -= correction;
                     }
 
-                    rope.nodePrevPositions[i] = current;
-                    rope.nodePositions[i] = current + velocity + gravity * (stepDt * stepDt);
+                    nodePositions[i] = p1;
+                    nodePositions[j] = p2;
                 }
+            }
 
-                // Constraints
-                for (int iter = 0; iter < solverIterations; iter++)
-                {
-                    rope.nodePositions[0] = rope.startPoint.position;
-                    rope.nodePositions[count - 1] = rope.endPoint.position;
-
-                    for (int i = 0; i < count - 1; i++)
-                    {
-                        int j = i + 1;
-                        Vector3 p1 = rope.nodePositions[i];
-                        Vector3 p2 = rope.nodePositions[j];
-                        Vector3 delta = p2 - p1;
-                        float dist = delta.magnitude;
-                        if (dist <= 0.0001f)
-                            continue;
-
-                        float diff = (dist - restSegmentLength) / dist;
-                        bool pin1 = (i == 0);
-                        bool pin2 = (j == count - 1);
-
-                        if (pin1 && pin2)
-                            continue;
-                        if (pin1)
-                        {
-                            p2 -= delta * diff;
-                        }
-                        else if (pin2)
-                        {
-                            p1 += delta * diff;
-                        }
-                        else
-                        {
-                            Vector3 correction = delta * (0.5f * diff);
-                            p1 += correction;
-                            p2 -= correction;
-                        }
-
-                        rope.nodePositions[i] = p1;
-                        rope.nodePositions[j] = p2;
-                    }
-                }
-
-                if (enableCollision && collisionIterations > 0)
-                {
-                    for (int c = 0; c < collisionIterations; c++)
-                        ResolveCollisions(rope);
-                }
+            if (enableCollision && collisionIterations > 0)
+            {
+                for (int c = 0; c < collisionIterations; c++)
+                    ResolveCollisions();
             }
         }
     }
 
-    private void UpdateFromNodes(RopeCurve rope)
+    private void UpdateFromNodes()
     {
-        if (rope.nodePositions == null || rope.nodePositions.Length == 0)
+        if (nodePositions == null || nodePositions.Length == 0)
             return;
 
         if (tubeMode)
         {
-            EnsureCaps(rope);
+            EnsureCaps();
 
-            if (rope.startCap != null)
+            if (startCap != null)
             {
-                rope.startCap.position = rope.nodePositions[0];
-                rope.startCap.localScale = Vector3.one * sphereScale;
+                startCap.position = nodePositions[0];
+                startCap.localScale = Vector3.one * sphereScale;
             }
 
-            if (rope.endCap != null)
+            if (endCap != null)
             {
-                rope.endCap.position = rope.nodePositions[rope.nodePositions.Length - 1];
-                rope.endCap.localScale = Vector3.one * sphereScale;
+                endCap.position = nodePositions[nodePositions.Length - 1];
+                endCap.localScale = Vector3.one * sphereScale;
             }
 
-            int count = rope.segments.Count;
+            int count = segments.Count;
             for (int i = 0; i < count; i++)
             {
-                Transform seg = rope.segments[i];
+                Transform seg = segments[i];
                 if (seg == null) continue;
 
-                Vector3 p1 = rope.nodePositions[i];
-                Vector3 p2 = rope.nodePositions[i + 1];
+                Vector3 p1 = nodePositions[i];
+                Vector3 p2 = nodePositions[i + 1];
                 Vector3 dir = p2 - p1;
                 float len = dir.magnitude;
                 if (len <= 0.0001f)
@@ -371,35 +358,35 @@ public class RopeBasic : MonoBehaviour
         }
         else
         {
-            int count = rope.segments.Count;
+            int count = segments.Count;
             for (int i = 0; i < count; i++)
             {
-                Transform seg = rope.segments[i];
+                Transform seg = segments[i];
                 if (seg == null) continue;
 
-                seg.position = rope.nodePositions[i];
+                seg.position = nodePositions[i];
                 seg.localScale = Vector3.one * sphereScale;
             }
         }
     }
 
-    private void UpdateTube(RopeCurve rope, Vector3 rawA, Vector3 rawB, Vector3 a, Vector3 b, Vector3 n, float distance)
+    private void UpdateTube(Vector3 rawA, Vector3 rawB, Vector3 a, Vector3 b, Vector3 n, float distance)
     {
-        EnsureCaps(rope);
+        EnsureCaps();
 
-        if (rope.startCap != null)
+        if (startCap != null)
         {
-            rope.startCap.position = rawA;
-            rope.startCap.localScale = Vector3.one * sphereScale;
+            startCap.position = rawA;
+            startCap.localScale = Vector3.one * sphereScale;
         }
 
-        if (rope.endCap != null)
+        if (endCap != null)
         {
-            rope.endCap.position = rawB;
-            rope.endCap.localScale = Vector3.one * sphereScale;
+            endCap.position = rawB;
+            endCap.localScale = Vector3.one * sphereScale;
         }
 
-        int count = rope.segments.Count;
+        int count = segments.Count;
         if (count <= 0) return;
 
         float segLength = (count > 0) ? (distance / count) : 0f;
@@ -411,7 +398,7 @@ public class RopeBasic : MonoBehaviour
 
         for (int i = 0; i < count; i++)
         {
-            Transform seg = rope.segments[i];
+            Transform seg = segments[i];
             if (seg == null) continue;
 
             float t = (i + 0.5f) / count;
@@ -421,13 +408,13 @@ public class RopeBasic : MonoBehaviour
         }
     }
 
-    private void UpdateSpheres(RopeCurve rope, Vector3 a, Vector3 b)
+    private void UpdateSpheres(Vector3 a, Vector3 b)
     {
-        int count = rope.segments.Count;
+        int count = segments.Count;
         for (int i = 0; i < count; i++)
         {
             float t = (count == 1) ? 0f : (float)i / (count - 1);
-            Transform seg = rope.segments[i];
+            Transform seg = segments[i];
             if (seg == null) continue;
 
             seg.position = Vector3.Lerp(a, b, t);
@@ -435,12 +422,12 @@ public class RopeBasic : MonoBehaviour
         }
     }
 
-    private void EnsureCaps(RopeCurve rope)
+    private void EnsureCaps()
     {
-        if (rope.startCap == null)
-            rope.startCap = CreateSphere("RopeCap_Start").transform;
-        if (rope.endCap == null)
-            rope.endCap = CreateSphere("RopeCap_End").transform;
+        if (startCap == null)
+            startCap = CreateSphere("RopeCap_Start").transform;
+        if (endCap == null)
+            endCap = CreateSphere("RopeCap_End").transform;
     }
 
     private void DestroyCap(ref Transform cap)
@@ -450,25 +437,25 @@ public class RopeBasic : MonoBehaviour
         cap = null;
     }
 
-    private GameObject CreateSphereSegment(string name)
+    private GameObject CreateSphereSegment(int index)
     {
-        GameObject seg = CreateSphere(name);
+        GameObject seg = CreateSphere($"RopeSphere_{index}");
         seg.transform.localScale = Vector3.one * sphereScale;
         return seg;
     }
 
-    private GameObject CreateBodySegment(string name)
+    private GameObject CreateBodySegment(int index)
     {
         GameObject seg;
         if (bodyPrefab != null)
         {
             seg = Instantiate(bodyPrefab, transform);
-            seg.name = name;
+            seg.name = $"RopeBody_{index}";
         }
         else
         {
             seg = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            seg.name = name;
+            seg.name = $"RopeBody_{index}";
             seg.transform.SetParent(transform, false);
         }
 
@@ -537,19 +524,16 @@ public class RopeBasic : MonoBehaviour
         if (count <= 0)
             return;
 
-        foreach (var rope in ropes)
+        if (nodePositions == null || nodePrevPositions == null ||
+            nodePositions.Length != count || nodePrevPositions.Length != count)
         {
-            if (rope.nodePositions == null || rope.nodePrevPositions == null ||
-                rope.nodePositions.Length != count || rope.nodePrevPositions.Length != count)
-            {
-                ResizeNodes(rope, count, preserveSimulation);
-            }
+            ResizeNodes(count, preserveSimulation);
         }
 
         UpdateRestSegmentLength();
     }
 
-    private void ResizeNodes(RopeCurve rope, int newCount, bool preserveSimulation)
+    private void ResizeNodes(int newCount, bool preserveSimulation)
     {
         if (newCount <= 0)
             return;
@@ -557,31 +541,31 @@ public class RopeBasic : MonoBehaviour
         Vector3[] newPos = new Vector3[newCount];
         Vector3[] newPrev = new Vector3[newCount];
 
-        if (!preserveSimulation || rope.nodePositions == null || rope.nodePrevPositions == null || rope.nodePositions.Length <= 0)
+        if (!preserveSimulation || nodePositions == null || nodePrevPositions == null || nodePositions.Length <= 0)
         {
-            InitializeNodes(rope, newPos, newPrev);
-            rope.nodePositions = newPos;
-            rope.nodePrevPositions = newPrev;
+            InitializeNodes(newPos, newPrev);
+            nodePositions = newPos;
+            nodePrevPositions = newPrev;
             return;
         }
 
-        int oldCount = rope.nodePositions.Length;
+        int oldCount = nodePositions.Length;
 
         int oldInterior = Mathf.Max(0, oldCount - 2);
         int newInterior = Mathf.Max(0, newCount - 2);
         int keep = Mathf.Min(oldInterior, newInterior);
 
         // Keep endpoints
-        newPos[0] = rope.nodePositions[0];
-        newPrev[0] = rope.nodePrevPositions[0];
-        newPos[newCount - 1] = rope.nodePositions[oldCount - 1];
-        newPrev[newCount - 1] = rope.nodePrevPositions[oldCount - 1];
+        newPos[0] = nodePositions[0];
+        newPrev[0] = nodePrevPositions[0];
+        newPos[newCount - 1] = nodePositions[oldCount - 1];
+        newPrev[newCount - 1] = nodePrevPositions[oldCount - 1];
 
         // Keep as many interior nodes as possible
         for (int i = 0; i < keep; i++)
         {
-            newPos[i + 1] = rope.nodePositions[i + 1];
-            newPrev[i + 1] = rope.nodePrevPositions[i + 1];
+            newPos[i + 1] = nodePositions[i + 1];
+            newPrev[i + 1] = nodePrevPositions[i + 1];
         }
 
         // Add new nodes near the end (if lengthened)
@@ -599,21 +583,21 @@ public class RopeBasic : MonoBehaviour
             }
         }
 
-        rope.nodePositions = newPos;
-        rope.nodePrevPositions = newPrev;
+        nodePositions = newPos;
+        nodePrevPositions = newPrev;
     }
 
-    private void InitializeNodes(RopeCurve rope, Vector3[] pos, Vector3[] prev)
+    private void InitializeNodes(Vector3[] pos, Vector3[] prev)
     {
-        if (rope.startPoint == null || rope.endPoint == null)
+        if (startPoint == null || endPoint == null)
             return;
 
         int count = Mathf.Min(pos.Length, prev.Length);
         if (count <= 0)
             return;
 
-        Vector3 a = rope.startPoint.position;
-        Vector3 b = rope.endPoint.position;
+        Vector3 a = startPoint.position;
+        Vector3 b = endPoint.position;
         for (int i = 0; i < count; i++)
         {
             float t = (count == 1) ? 0f : (float)i / (count - 1);
@@ -628,21 +612,21 @@ public class RopeBasic : MonoBehaviour
         restSegmentLength = Mathf.Max(0.0001f, GetSphereDiameter() * Mathf.Max(0.1f, spacingMultiplier));
     }
 
-    private void ResolveCollisions(RopeCurve rope)
+    private void ResolveCollisions()
     {
         if (!enableCollision)
             return;
 
-        if (rope.nodePositions == null || rope.nodePositions.Length <= 2)
+        if (nodePositions == null || nodePositions.Length <= 2)
             return;
 
         if (useSegmentCollision)
-            ResolveSegmentCollisions(rope);
+            ResolveSegmentCollisions();
         else
-            ResolveNodeCollisions(rope);
+            ResolveNodeCollisions();
     }
 
-    private void ResolveSegmentCollisions(RopeCurve rope)
+    private void ResolveSegmentCollisions()
     {
         EnsureOverlapBuffer();
         EnsureQueryCapsule();
@@ -652,14 +636,14 @@ public class RopeBasic : MonoBehaviour
             return;
 
         QueryTriggerInteraction q = includeTriggers ? QueryTriggerInteraction.Collide : QueryTriggerInteraction.Ignore;
-        int last = rope.nodePositions.Length - 1;
+        int last = nodePositions.Length - 1;
 
         for (int i = 0; i < last; i++)
         {
-            Vector3 p1 = rope.nodePositions[i];
-            Vector3 p2 = rope.nodePositions[i + 1];
-            Vector3 prev1 = rope.nodePrevPositions[i];
-            Vector3 prev2 = rope.nodePrevPositions[i + 1];
+            Vector3 p1 = nodePositions[i];
+            Vector3 p2 = nodePositions[i + 1];
+            Vector3 prev1 = nodePrevPositions[i];
+            Vector3 prev2 = nodePrevPositions[i + 1];
 
             // Sweep capsule from previous segment to current segment to reduce tunneling
             Vector3 prevMid = (prev1 + prev2) * 0.5f;
@@ -675,9 +659,9 @@ public class RopeBasic : MonoBehaviour
                     Vector3 targetMid = prevMid + sweepDir * hit.distance;
                     Vector3 normal = hit.normal;
                     Vector3 shift = (targetMid - currMid) + normal * surfaceOffset;
-                    ApplySegmentCorrection(rope, i, shift, normal);
-                    p1 = rope.nodePositions[i];
-                    p2 = rope.nodePositions[i + 1];
+                    ApplySegmentCorrection(i, shift, normal);
+                    p1 = nodePositions[i];
+                    p2 = nodePositions[i + 1];
                 }
             }
 
@@ -694,15 +678,15 @@ public class RopeBasic : MonoBehaviour
                         out Vector3 pushDir, out float pushDist))
                 {
                     Vector3 normal = pushDir.normalized;
-                    ApplySegmentCorrection(rope, i, pushDir * (pushDist + surfaceOffset), normal);
-                    p1 = rope.nodePositions[i];
-                    p2 = rope.nodePositions[i + 1];
+                    ApplySegmentCorrection(i, pushDir * (pushDist + surfaceOffset), normal);
+                    p1 = nodePositions[i];
+                    p2 = nodePositions[i + 1];
                 }
             }
         }
     }
 
-    private void ResolveNodeCollisions(RopeCurve rope)
+    private void ResolveNodeCollisions()
     {
         EnsureOverlapBuffer();
         float radius = GetSphereDiameter() * 0.5f * Mathf.Max(0.1f, collisionRadiusMultiplier);
@@ -710,12 +694,12 @@ public class RopeBasic : MonoBehaviour
             return;
 
         QueryTriggerInteraction q = includeTriggers ? QueryTriggerInteraction.Collide : QueryTriggerInteraction.Ignore;
-        int last = rope.nodePositions.Length - 1;
+        int last = nodePositions.Length - 1;
 
         for (int i = 1; i < last; i++)
         {
-            Vector3 prev = rope.nodePrevPositions[i];
-            Vector3 pos = rope.nodePositions[i];
+            Vector3 prev = nodePrevPositions[i];
+            Vector3 pos = nodePositions[i];
             Vector3 dir = pos - prev;
             float dist = dir.magnitude;
             bool moved = false;
@@ -753,11 +737,11 @@ public class RopeBasic : MonoBehaviour
                 }
             }
 
-            rope.nodePositions[i] = pos;
+            nodePositions[i] = pos;
             if (moved && collisionDampenVelocity)
             {
                 // Slide along the surface instead of full stop
-                Vector3 vel = rope.nodePositions[i] - rope.nodePrevPositions[i];
+                Vector3 vel = nodePositions[i] - nodePrevPositions[i];
                 Vector3 normal = (pos - prev).normalized; 
                 if (normal.sqrMagnitude > 0.0001f)
                 {
@@ -765,16 +749,16 @@ public class RopeBasic : MonoBehaviour
                     if (proj < 0)
                     {
                         vel -= normal * proj;
-                        rope.nodePrevPositions[i] = rope.nodePositions[i] - vel;
+                        nodePrevPositions[i] = nodePositions[i] - vel;
                     }
                 }
             }
         }
     }
 
-    private void ApplySegmentCorrection(RopeCurve rope, int index, Vector3 correction, Vector3 normal)
+    private void ApplySegmentCorrection(int index, Vector3 correction, Vector3 normal)
     {
-        int last = rope.nodePositions.Length - 1;
+        int last = nodePositions.Length - 1;
         bool pin1 = (index == 0);
         bool pin2 = (index + 1 == last);
 
@@ -783,53 +767,53 @@ public class RopeBasic : MonoBehaviour
 
         if (pin1)
         {
-            rope.nodePositions[index + 1] += correction;
+            nodePositions[index + 1] += correction;
             if (collisionDampenVelocity)
             {
-                Vector3 vel = rope.nodePositions[index + 1] - rope.nodePrevPositions[index + 1];
+                Vector3 vel = nodePositions[index + 1] - nodePrevPositions[index + 1];
                 float proj = Vector3.Dot(vel, normal);
                 if (proj < 0)
                 {
                     vel -= normal * proj;
-                    rope.nodePrevPositions[index + 1] = rope.nodePositions[index + 1] - vel;
+                    nodePrevPositions[index + 1] = nodePositions[index + 1] - vel;
                 }
             }
         }
         else if (pin2)
         {
-            rope.nodePositions[index] += correction;
+            nodePositions[index] += correction;
             if (collisionDampenVelocity)
             {
-                Vector3 vel = rope.nodePositions[index] - rope.nodePrevPositions[index];
+                Vector3 vel = nodePositions[index] - nodePrevPositions[index];
                 float proj = Vector3.Dot(vel, normal);
                 if (proj < 0)
                 {
                     vel -= normal * proj;
-                    rope.nodePrevPositions[index] = rope.nodePositions[index] - vel;
+                    nodePrevPositions[index] = nodePositions[index] - vel;
                 }
             }
         }
         else
         {
             Vector3 half = correction * 0.5f;
-            rope.nodePositions[index] += half;
-            rope.nodePositions[index + 1] += half;
+            nodePositions[index] += half;
+            nodePositions[index + 1] += half;
             if (collisionDampenVelocity)
             {
-                Vector3 vel1 = rope.nodePositions[index] - rope.nodePrevPositions[index];
+                Vector3 vel1 = nodePositions[index] - nodePrevPositions[index];
                 float proj1 = Vector3.Dot(vel1, normal);
                 if (proj1 < 0)
                 {
                     vel1 -= normal * proj1;
-                    rope.nodePrevPositions[index] = rope.nodePositions[index] - vel1;
+                    nodePrevPositions[index] = nodePositions[index] - vel1;
                 }
 
-                Vector3 vel2 = rope.nodePositions[index + 1] - rope.nodePrevPositions[index + 1];
+                Vector3 vel2 = nodePositions[index + 1] - nodePrevPositions[index + 1];
                 float proj2 = Vector3.Dot(vel2, normal);
                 if (proj2 < 0)
                 {
                     vel2 -= normal * proj2;
-                    rope.nodePrevPositions[index + 1] = rope.nodePositions[index + 1] - vel2;
+                    nodePrevPositions[index + 1] = nodePositions[index + 1] - vel2;
                 }
             }
         }

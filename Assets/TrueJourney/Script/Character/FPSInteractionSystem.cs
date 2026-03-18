@@ -51,7 +51,7 @@ namespace StarterAssets
         private bool previousGrab;
         private GameObject outlinedTargetRoot;
         private Renderer[] outlinedRenderers;
-        private uint[] outlinedBaseRenderingLayerMasks;
+        private bool[] outlinedRendererHadBit;
 
         private void Awake()
         {
@@ -181,9 +181,13 @@ namespace StarterAssets
             }
 
             Transform parent = collider.transform.parent;
-            if (parent != null && parent.TryGetComponent(out IInteractable parentInteractable))
+            while (parent != null)
             {
-                return parentInteractable;
+                if (parent.TryGetComponent(out IInteractable parentInteractable))
+                {
+                    return parentInteractable;
+                }
+                parent = parent.parent;
             }
 
             return null;
@@ -203,9 +207,13 @@ namespace StarterAssets
             }
 
             Transform parent = collider.transform.parent;
-            if (parent != null && parent.TryGetComponent(out IGrabbable parentGrabbable))
+            while (parent != null)
             {
-                return parentGrabbable;
+                if (parent.TryGetComponent(out IGrabbable parentGrabbable))
+                {
+                    return parentGrabbable;
+                }
+                parent = parent.parent;
             }
 
             return null;
@@ -413,7 +421,7 @@ namespace StarterAssets
 
             outlinedTargetRoot = highlightRoot;
             outlinedRenderers = highlightRoot.GetComponentsInChildren<Renderer>(true);
-            outlinedBaseRenderingLayerMasks = new uint[outlinedRenderers.Length];
+            outlinedRendererHadBit = new bool[outlinedRenderers.Length];
 
             uint outlineBit = 1u << outlineRenderingLayer;
             for (int i = 0; i < outlinedRenderers.Length; i++)
@@ -424,31 +432,32 @@ namespace StarterAssets
                     continue;
                 }
 
-                outlinedBaseRenderingLayerMasks[i] = renderer.renderingLayerMask & ~outlineBit;
-                renderer.renderingLayerMask = outlinedBaseRenderingLayerMasks[i] | outlineBit;
+                outlinedRendererHadBit[i] = (renderer.renderingLayerMask & outlineBit) != 0;
+                renderer.renderingLayerMask |= outlineBit;
             }
         }
 
         private void ClearOutlineHighlight()
         {
-            if (outlinedRenderers != null && outlinedBaseRenderingLayerMasks != null)
+            if (outlinedRenderers != null && outlinedRendererHadBit != null)
             {
-                int count = Mathf.Min(outlinedRenderers.Length, outlinedBaseRenderingLayerMasks.Length);
+                uint outlineBit = 1u << outlineRenderingLayer;
+                int count = Mathf.Min(outlinedRenderers.Length, outlinedRendererHadBit.Length);
                 for (int i = 0; i < count; i++)
                 {
                     Renderer renderer = outlinedRenderers[i];
-                    if (renderer == null)
+                    if (renderer == null || outlinedRendererHadBit[i])
                     {
                         continue;
                     }
 
-                    renderer.renderingLayerMask = outlinedBaseRenderingLayerMasks[i];
+                    renderer.renderingLayerMask &= ~outlineBit;
                 }
             }
 
             outlinedTargetRoot = null;
             outlinedRenderers = null;
-            outlinedBaseRenderingLayerMasks = null;
+            outlinedRendererHadBit = null;
         }
 
         private static GameObject ResolveHighlightRoot(GameObject target, IInteractable interactable)

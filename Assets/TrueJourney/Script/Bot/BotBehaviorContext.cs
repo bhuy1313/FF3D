@@ -13,6 +13,7 @@ public class BotBehaviorContext : MonoBehaviour
     [SerializeField] private float arrivalDistance = 0.35f;
 
     [Header("Patrol")]
+    [SerializeField] private bool enablePatrolMovement = true;
     [SerializeField] private Transform[] patrolPoints;
     [SerializeField] private float patrolWaitSeconds = 1.5f;
 
@@ -28,11 +29,13 @@ public class BotBehaviorContext : MonoBehaviour
     public bool HasMoveOrder => moveOrderState.HasMoveOrder;
     public float ArrivalDistance => Mathf.Max(0.05f, arrivalDistance);
     public float PatrolWaitSeconds => Mathf.Max(0f, patrolWaitSeconds);
+    public bool PatrolMovementEnabled => enablePatrolMovement;
     public float IdleTurnSpeed => Mathf.Max(0f, idleTurnSpeed);
     public Vector2 IdleTurnDurationRange => SanitizeRange(idleTurnDurationRange, 0.1f);
     public Vector2 IdlePauseDurationRange => SanitizeRange(idlePauseDurationRange, 0f);
     public int PatrolPointCount => patrolPoints != null ? patrolPoints.Length : 0;
-    public bool HasPatrolRoute => GetPatrolPointCount() > 0;
+    public bool HasConfiguredPatrolRoute => GetPatrolPointCount() > 0;
+    public bool HasPatrolRoute => enablePatrolMovement && HasConfiguredPatrolRoute;
 
     private void Awake()
     {
@@ -45,6 +48,11 @@ public class BotBehaviorContext : MonoBehaviour
     public void SetUseMoveOrdersAsBehaviorInput(bool value)
     {
         useMoveOrdersAsBehaviorInput = value;
+    }
+
+    public void SetPatrolMovementEnabled(bool value)
+    {
+        enablePatrolMovement = value;
     }
 
     public void SetMoveOrder(Vector3 destination)

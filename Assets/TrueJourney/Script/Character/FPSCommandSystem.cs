@@ -12,6 +12,7 @@ namespace StarterAssets
         [Header("Selection")]
         [SerializeField] private float selectionDistance = 12f;
         [SerializeField] private LayerMask commandableMask = ~0;
+        [SerializeField, Range(0, 31)] private int selectedRenderingLayer = 7;
 
         [Header("Move Command")]
         [SerializeField] private KeyCode moveCommandKey = KeyCode.H;
@@ -30,7 +31,10 @@ namespace StarterAssets
 
         private ICommandable hoveredCommandable;
         private GameObject hoveredCommandTarget;
-        private GameObject selectedCommandTarget;
+        [SerializeField] private GameObject selectedCommandTarget;
+        private GameObject currentOutlineRoot;
+        private Renderer[] currentOutlineRenderers;
+        private bool[] currentOutlineRendererHadBit;
         private Vector3 lastPreviewPoint;
         private bool hasPreviewPoint;
 
@@ -139,6 +143,7 @@ namespace StarterAssets
             }
 
             selectedCommandTarget = hoveredCommandTarget;
+            UpdateTargetOutline(selectedCommandTarget);
             UpdatePreviewPoint();
 
             if (logCommandSelection)
@@ -167,6 +172,7 @@ namespace StarterAssets
                 }
 
                 selectedCommandTarget = null;
+                UpdateTargetOutline(null);
             }
             else if (logCommandSelection)
             {
@@ -183,6 +189,7 @@ namespace StarterAssets
 
             commandState.Cancel();
             selectedCommandTarget = null;
+            UpdateTargetOutline(null);
             hasPreviewPoint = false;
         }
 
@@ -295,6 +302,66 @@ namespace StarterAssets
             Debug.DrawRay(ray.origin, ray.direction * distance, color);
         }
 
+        private void UpdateTargetOutline(GameObject target)
+        {
+            GameObject outlineRoot = target != null ? ResolveSelectionOutlineRoot(target) : null;
+            if (outlineRoot == currentOutlineRoot)
+            {
+                return;
+            }
+
+            ClearCurrentOutline();
+            if (outlineRoot == null)
+            {
+                return;
+            }
+
+            currentOutlineRoot = outlineRoot;
+            currentOutlineRenderers = outlineRoot.GetComponentsInChildren<Renderer>(true);
+            currentOutlineRendererHadBit = new bool[currentOutlineRenderers.Length];
+
+            uint selectedBit = 1u << selectedRenderingLayer;
+            for (int i = 0; i < currentOutlineRenderers.Length; i++)
+            {
+                Renderer renderer = currentOutlineRenderers[i];
+                if (renderer == null)
+                {
+                    continue;
+                }
+
+                currentOutlineRendererHadBit[i] = (renderer.renderingLayerMask & selectedBit) != 0;
+                renderer.renderingLayerMask |= selectedBit;
+            }
+        }
+
+        private void ClearCurrentOutline()
+        {
+            if (currentOutlineRenderers != null && currentOutlineRendererHadBit != null)
+            {
+                uint selectedBit = 1u << selectedRenderingLayer;
+                int count = Mathf.Min(currentOutlineRenderers.Length, currentOutlineRendererHadBit.Length);
+                for (int i = 0; i < count; i++)
+                {
+                    Renderer renderer = currentOutlineRenderers[i];
+                    if (renderer == null || currentOutlineRendererHadBit[i])
+                    {
+                        continue;
+                    }
+
+                    renderer.renderingLayerMask &= ~selectedBit;
+                }
+            }
+
+            currentOutlineRoot = null;
+            currentOutlineRenderers = null;
+            currentOutlineRendererHadBit = null;
+        }
+
+        private static GameObject ResolveSelectionOutlineRoot(GameObject target)
+        {
+            return target;
+        }
+
         private void OnDrawGizmosSelected()
         {
             if (!IsAwaitingDestination || !hasPreviewPoint)
@@ -304,6 +371,11 @@ namespace StarterAssets
 
             Gizmos.color = Color.cyan;
             Gizmos.DrawWireSphere(lastPreviewPoint, 0.2f);
+        }
+
+        private void OnDisable()
+        {
+            ClearCurrentOutline();
         }
 
         private void OnGUI()

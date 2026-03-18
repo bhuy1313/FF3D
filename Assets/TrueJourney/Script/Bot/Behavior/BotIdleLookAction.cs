@@ -43,7 +43,7 @@ namespace TrueJourney.BotBehavior
                 return Status.Failure;
             }
 
-            if (context.HasMoveOrder || context.HasPatrolRoute)
+            if (context.HasMoveOrder || (context.PatrolMovementEnabled && context.HasConfiguredPatrolRoute))
             {
                 return Status.Failure;
             }
@@ -80,7 +80,7 @@ namespace TrueJourney.BotBehavior
             }
 
             context = Agent.Value.GetComponent<BotBehaviorContext>();
-            if (context == null || context.HasMoveOrder || context.HasPatrolRoute)
+            if (context == null || context.HasMoveOrder || (context.PatrolMovementEnabled && context.HasConfiguredPatrolRoute))
             {
                 return false;
             }
