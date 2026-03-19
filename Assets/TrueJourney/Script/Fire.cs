@@ -72,6 +72,8 @@ public class Fire : MonoBehaviour
     private readonly List<float> particleBaseStartSizeMultipliers = new List<float>();
     private readonly List<Vector3> particleBaseStartSize3DMultipliers = new List<Vector3>();
 
+    private int lastWateredFrame = -1;
+
     private void Reset()
     {
         CacheReferences();
@@ -124,6 +126,9 @@ public class Fire : MonoBehaviour
 
     public void ApplyWater(float amount)
     {
+        if (Time.frameCount == lastWateredFrame) return;
+        lastWateredFrame = Time.frameCount;
+
         if (amount <= 0f) return;
         if (currentIntensity <= 0f) return;
 
@@ -207,7 +212,14 @@ public class Fire : MonoBehaviour
     private void OnParticleCollision(GameObject other)
     {
         if (!string.IsNullOrEmpty(waterTag) && other.CompareTag(waterTag))
-            ApplyWater(waterExtinguishPerSecond * Time.deltaTime);
+        {
+            FireHose hose = other.GetComponentInParent<FireHose>();
+            float amount = hose != null 
+                ? hose.CurrentApplyWaterRate * Time.deltaTime 
+                : waterExtinguishPerSecond * Time.deltaTime;
+                
+            ApplyWater(amount);
+        }
     }
 
     private void ApplyVisuals(bool forcePlayState = false)

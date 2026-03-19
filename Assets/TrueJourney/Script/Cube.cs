@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class Cube : MonoBehaviour, IInteractable, IPickupable, IUsable
+public class Cube : MonoBehaviour, IPickupable
 {
     private Rigidbody cachedRigidbody;
     public Rigidbody Rigidbody => cachedRigidbody;
@@ -9,20 +9,11 @@ public class Cube : MonoBehaviour, IInteractable, IPickupable, IUsable
     {
         cachedRigidbody = GetComponent<Rigidbody>();
     }
-
-    public void Interact(GameObject interactor)
-    {
-    }
-
+    
     public void OnPickup(GameObject picker)
     {
     }
-
     public void OnDrop(GameObject dropper)
-    {
-    }
-
-    public void Use(GameObject user)
     {
     }
 }

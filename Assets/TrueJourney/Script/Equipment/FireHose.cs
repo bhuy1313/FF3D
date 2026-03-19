@@ -74,6 +74,22 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
     [SerializeField] private float currentSprayRange;
     [SerializeField] private float currentSprayRadius;
 
+    [Header("Spray Physics Arc (Parabola)")]
+    [Tooltip("Initial velocity of the water stream")]
+    [SerializeField] private float arcVelocity = 15f;
+    [Tooltip("Gravity drop multiplier for the water stream")]
+    [SerializeField] private float arcGravityMultiplier = 1f;
+    [Tooltip("How long the water travels in seconds before disappearing")]
+    [SerializeField] private float arcLifetime = 1.0f;
+    [Tooltip("Number of SphereCast segments along the parabolic curve")]
+    [SerializeField] private int arcSegments = 8;
+
+    [Header("Debug")]
+    [SerializeField] private bool drawArcGizmo = true;
+    [SerializeField] private bool drawOnlyWhenSelected = true;
+
+    public float CurrentApplyWaterRate => currentApplyWaterRate;
+
     private Rigidbody cachedRigidbody;
     private bool particleDefaultsCached;
     private float baseParticleStartSpeedMultiplier = 1f;
@@ -145,7 +161,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
                 }
             }
 
-            SprayWater();
+            SprayWaterArc();
         }
         else if (maxWater > 0f && rechargePerSecond > 0f && currentWater < maxWater)
         {
@@ -266,30 +282,109 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
         }
     }
 
-    private void SprayWater()
+
+
+    private void SprayWaterArc()
     {
-        if (currentApplyWaterRate <= 0f)
-        {
-            return;
-        }
+        if (currentApplyWaterRate <= 0f) return;
 
         Transform origin = sprayOrigin != null ? sprayOrigin : transform;
-        Vector3 position = origin.position;
-        Vector3 direction = origin.forward;
+        Vector3 startPos = origin.position;
+        Vector3 initialVelocity = origin.forward * arcVelocity;
+        Vector3 gravity = Physics.gravity * arcGravityMultiplier;
 
         float amount = currentApplyWaterRate * Time.deltaTime;
-        RaycastHit[] hits = Physics.SphereCastAll(
-            position,
-            currentSprayRadius,
-            direction,
-            currentSprayRange,
-            sprayMask,
-            QueryTriggerInteraction.Collide);
+        float timeStep = arcLifetime / arcSegments;
 
-        for (int i = 0; i < hits.Length; i++)
+        System.Collections.Generic.HashSet<FireGroup> processedGroups = new System.Collections.Generic.HashSet<FireGroup>();
+        System.Collections.Generic.HashSet<Fire> processedFires = new System.Collections.Generic.HashSet<Fire>();
+        System.Collections.Generic.HashSet<FireParticleSystem> processedParticleFires = new System.Collections.Generic.HashSet<FireParticleSystem>();
+
+        Vector3 currentPos = startPos;
+
+        for (int step = 0; step < arcSegments; step++)
         {
-            ApplyWaterToCollider(hits[i].collider, amount);
+            float t = step * timeStep;
+            float nextT = t + timeStep;
+
+            // Calculate next position using kinematic equation
+            Vector3 nextPos = startPos + initialVelocity * nextT + 0.5f * gravity * nextT * nextT;
+
+            // Expanding radius over time
+            float progress = t / arcLifetime;
+            float currentRadius = Mathf.Lerp(0.1f, currentSprayRadius, progress);
+
+            Vector3 segmentDir = nextPos - currentPos;
+            float segmentDistance = segmentDir.magnitude;
+
+            if (segmentDistance > 0.001f)
+            {
+                RaycastHit[] hits = Physics.SphereCastAll(
+                    currentPos,
+                    currentRadius,
+                    segmentDir.normalized,
+                    segmentDistance,
+                    sprayMask,
+                    QueryTriggerInteraction.Collide);
+
+                for (int i = 0; i < hits.Length; i++)
+                {
+                    ApplyWaterToColliderSafe(hits[i].collider, amount, processedGroups, processedFires, processedParticleFires);
+                }
+            }
+
+            currentPos = nextPos;
         }
+    }
+
+    private static void ApplyWaterToColliderSafe(Collider collider, float amount, System.Collections.Generic.HashSet<FireGroup> processedGroups, System.Collections.Generic.HashSet<Fire> processedFires, System.Collections.Generic.HashSet<FireParticleSystem> processedParticleFires)
+    {
+        if (collider == null) return;
+
+        FireGroup fireGroup = FindFireGroup(collider);
+        if (fireGroup != null && processedGroups.Add(fireGroup))
+        {
+            fireGroup.ApplyWater(amount);
+        }
+
+        Fire fire = FindFire(collider);
+        if (fire != null && processedFires.Add(fire))
+        {
+            fire.ApplyWater(amount);
+        }
+
+        FireParticleSystem particleFire = FindFireParticleSystem(collider);
+        if (particleFire != null && processedParticleFires.Add(particleFire))
+        {
+            particleFire.ApplyWater(amount);
+        }
+    }
+
+    private static Fire FindFire(Collider collider)
+    {
+        if (collider.TryGetComponent(out Fire direct)) return direct;
+        if (collider.attachedRigidbody != null && collider.attachedRigidbody.TryGetComponent(out Fire rigidbodyOwner)) return rigidbodyOwner;
+        Transform parent = collider.transform.parent;
+        if (parent != null && parent.TryGetComponent(out Fire parentFire)) return parentFire;
+        return null;
+    }
+
+    private static FireParticleSystem FindFireParticleSystem(Collider collider)
+    {
+        if (collider.TryGetComponent(out FireParticleSystem direct)) return direct;
+        if (collider.attachedRigidbody != null && collider.attachedRigidbody.TryGetComponent(out FireParticleSystem rigidbodyOwner)) return rigidbodyOwner;
+        Transform parent = collider.transform.parent;
+        if (parent != null && parent.TryGetComponent(out FireParticleSystem parentFire)) return parentFire;
+        return null;
+    }
+
+    private static FireGroup FindFireGroup(Collider collider)
+    {
+        if (collider.TryGetComponent(out FireGroup direct)) return direct;
+        if (collider.attachedRigidbody != null && collider.attachedRigidbody.TryGetComponent(out FireGroup rigidbodyOwner)) return rigidbodyOwner;
+        Transform parent = collider.transform.parent;
+        if (parent != null && parent.TryGetComponent(out FireGroup parentGroup)) return parentGroup;
+        return null;
     }
 
     private void AlignWaterVfxToSprayOrigin()
@@ -350,6 +445,11 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
         wideEffectivenessMultiplier = Mathf.Max(0f, wideEffectivenessMultiplier);
         wideVfxSpeedMultiplier = Mathf.Max(0.1f, wideVfxSpeedMultiplier);
         wideVfxSpreadMultiplier = Mathf.Max(0.05f, wideVfxSpreadMultiplier);
+
+        arcVelocity = Mathf.Max(0.01f, arcVelocity);
+        arcGravityMultiplier = Mathf.Max(0f, arcGravityMultiplier);
+        arcLifetime = Mathf.Max(0.01f, arcLifetime);
+        arcSegments = Mathf.Max(1, arcSegments);
     }
 
     private void RecalculateSprayRuntimeValues()
@@ -556,69 +656,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
         shape.angle = baseParticleShapeAngle * config.vfxSpreadMultiplier * pressureSpreadMultiplier;
     }
 
-    private static void ApplyWaterToCollider(Collider collider, float amount)
-    {
-        if (collider == null)
-        {
-            return;
-        }
 
-        Fire fire = FindFire(collider);
-        if (fire != null)
-        {
-            fire.ApplyWater(amount);
-        }
-
-        FireParticleSystem particleFire = FindFireParticleSystem(collider);
-        if (particleFire != null)
-        {
-            particleFire.ApplyWater(amount);
-        }
-    }
-
-    private static Fire FindFire(Collider collider)
-    {
-        if (collider.TryGetComponent(out Fire direct))
-        {
-            return direct;
-        }
-
-        if (collider.attachedRigidbody != null &&
-            collider.attachedRigidbody.TryGetComponent(out Fire rigidbodyOwner))
-        {
-            return rigidbodyOwner;
-        }
-
-        Transform parent = collider.transform.parent;
-        if (parent != null && parent.TryGetComponent(out Fire parentFire))
-        {
-            return parentFire;
-        }
-
-        return null;
-    }
-
-    private static FireParticleSystem FindFireParticleSystem(Collider collider)
-    {
-        if (collider.TryGetComponent(out FireParticleSystem direct))
-        {
-            return direct;
-        }
-
-        if (collider.attachedRigidbody != null &&
-            collider.attachedRigidbody.TryGetComponent(out FireParticleSystem rigidbodyOwner))
-        {
-            return rigidbodyOwner;
-        }
-
-        Transform parent = collider.transform.parent;
-        if (parent != null && parent.TryGetComponent(out FireParticleSystem parentFire))
-        {
-            return parentFire;
-        }
-
-        return null;
-    }
 
     private void TryApplyWaterTag()
     {
@@ -640,5 +678,63 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
         {
             Debug.LogWarning($"Tag '{waterTag}' not found. Add it in Tag Manager to enable water detection.", this);
         }
+    }
+
+#if UNITY_EDITOR
+private void OnDrawGizmos()
+{
+    if (!drawArcGizmo || drawOnlyWhenSelected) return;
+    DrawSprayArcGizmoDetailed();
+}
+
+private void OnDrawGizmosSelected()
+{
+    if (!drawArcGizmo) return;
+    DrawSprayArcGizmoDetailed();
+}
+#endif
+
+    private void DrawSprayArcGizmoDetailed()
+    {
+        Transform origin = sprayOrigin != null ? sprayOrigin : transform;
+        if (origin == null) return;
+
+        int segments = Mathf.Max(1, arcSegments);
+        float lifetime = Mathf.Max(0.01f, arcLifetime);
+
+        Vector3 startPos = origin.position;
+        Vector3 initialVelocity = origin.forward * arcVelocity;
+        Vector3 gravity = Physics.gravity * arcGravityMultiplier;
+
+        float timeStep = lifetime / segments;
+        Vector3 currentPos = startPos;
+
+        for (int step = 0; step < segments; step++)
+        {
+            float t = step * timeStep;
+            float nextT = t + timeStep;
+
+            Vector3 nextPos = startPos
+                            + initialVelocity * nextT
+                            + 0.5f * gravity * nextT * nextT;
+
+            float progress = t / lifetime;
+            float radius = Mathf.Lerp(0.1f, currentSprayRadius > 0f ? currentSprayRadius : sprayRadius, progress);
+
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawLine(currentPos, nextPos);
+
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawWireSphere(currentPos, radius);
+            Gizmos.DrawWireSphere(nextPos, radius);
+
+            currentPos = nextPos;
+        }
+
+        Gizmos.color = Color.green;
+        Gizmos.DrawSphere(startPos, 0.05f);
+
+        Gizmos.color = Color.red;
+        Gizmos.DrawSphere(currentPos, 0.06f);
     }
 }

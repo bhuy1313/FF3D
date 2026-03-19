@@ -1,0 +1,82 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+[RequireComponent(typeof(BoxCollider))]
+public class FireGroup : MonoBehaviour
+{
+    [Header("Configuration")]
+    [SerializeField] private string waterTag = "Water";
+    [Tooltip("If true, automatically uses the BoxCollider to find all Fire scripts within its volume at Start.")]
+    [SerializeField] private bool autoCollectOnStart = true;
+    
+    [Header("Status")]
+    [SerializeField] private List<Fire> managedFires = new List<Fire>();
+
+    private BoxCollider boxCollider;
+
+    private void Awake()
+    {
+        boxCollider = GetComponent<BoxCollider>();
+        boxCollider.isTrigger = true;
+    }
+
+    private void Start()
+    {
+        if (autoCollectOnStart)
+        {
+            CollectFires();
+        }
+    }
+
+    [ContextMenu("Refresh Fire List")]
+    public void CollectFires()
+    {
+        managedFires.Clear();
+
+        if (boxCollider == null)
+            boxCollider = GetComponent<BoxCollider>();
+
+        Vector3 center = transform.TransformPoint(boxCollider.center);
+        Vector3 halfExtents = Vector3.Scale(boxCollider.size, transform.lossyScale) * 0.5f;
+
+        // Use OverlapBox to find all colliders within the box volume, specifically looking for triggers 
+        // because Fire scripts typically use trigger SphereColliders.
+        Collider[] hits = Physics.OverlapBox(center, halfExtents, transform.rotation, ~0, QueryTriggerInteraction.Collide);
+        
+        foreach (Collider hit in hits)
+        {
+            Fire fire = hit.GetComponent<Fire>();
+            if (fire == null)
+                fire = hit.GetComponentInParent<Fire>();
+
+            if (fire != null && !managedFires.Contains(fire))
+            {
+                managedFires.Add(fire);
+            }
+        }
+    }
+
+    public void ApplyWater(float amount)
+    {
+        for (int i = 0; i < managedFires.Count; i++)
+        {
+            if (managedFires[i] != null)
+            {
+                managedFires[i].ApplyWater(amount);
+            }
+        }
+    }
+
+    private void OnParticleCollision(GameObject other)
+    {
+        if (!string.IsNullOrEmpty(waterTag) && other.CompareTag(waterTag))
+        {
+            FireHose hose = other.GetComponentInParent<FireHose>();
+            float amount = hose != null 
+                ? hose.CurrentApplyWaterRate * Time.deltaTime 
+                : 2f * Time.deltaTime; // Arbitrary fallback if not from hose
+                
+            ApplyWater(amount);
+        }
+    }
+}
