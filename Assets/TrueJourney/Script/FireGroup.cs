@@ -1,8 +1,9 @@
 using System.Collections.Generic;
+using TrueJourney.BotBehavior;
 using UnityEngine;
 
 [RequireComponent(typeof(BoxCollider))]
-public class FireGroup : MonoBehaviour
+public class FireGroup : MonoBehaviour, IFireGroupTarget
 {
     [Header("Configuration")]
     [SerializeField] private string waterTag = "Water";
@@ -18,6 +19,16 @@ public class FireGroup : MonoBehaviour
     {
         boxCollider = GetComponent<BoxCollider>();
         boxCollider.isTrigger = true;
+    }
+
+    private void OnEnable()
+    {
+        BotRuntimeRegistry.RegisterFireGroup(this);
+    }
+
+    private void OnDisable()
+    {
+        BotRuntimeRegistry.UnregisterFireGroup(this);
     }
 
     private void Start()
@@ -67,16 +78,105 @@ public class FireGroup : MonoBehaviour
         }
     }
 
+    public bool HasActiveFires
+    {
+        get
+        {
+            CleanupManagedFires();
+            for (int i = 0; i < managedFires.Count; i++)
+            {
+                if (managedFires[i] != null && managedFires[i].IsBurning)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+
+    public Vector3 GetClosestActiveFirePosition(Vector3 fromPosition)
+    {
+        CleanupManagedFires();
+
+        float bestDistanceSq = float.PositiveInfinity;
+        Vector3 bestPosition = GetWorldCenter();
+        bool found = false;
+
+        for (int i = 0; i < managedFires.Count; i++)
+        {
+            Fire fire = managedFires[i];
+            if (fire == null || !fire.IsBurning)
+            {
+                continue;
+            }
+
+            Vector3 candidate = fire.transform.position;
+            float distanceSq = (candidate - fromPosition).sqrMagnitude;
+            if (distanceSq >= bestDistanceSq)
+            {
+                continue;
+            }
+
+            bestDistanceSq = distanceSq;
+            bestPosition = candidate;
+            found = true;
+        }
+
+        return found ? bestPosition : GetWorldCenter();
+    }
+
+    public Vector3 GetWorldCenter()
+    {
+        if (boxCollider == null)
+        {
+            boxCollider = GetComponent<BoxCollider>();
+        }
+
+        return boxCollider != null
+            ? transform.TransformPoint(boxCollider.center)
+            : transform.position;
+    }
+
     private void OnParticleCollision(GameObject other)
     {
         if (!string.IsNullOrEmpty(waterTag) && other.CompareTag(waterTag))
         {
+            FireExtinguisher extinguisher = other.GetComponentInParent<FireExtinguisher>();
+            if (extinguisher != null)
+            {
+                // FireExtinguisher now applies water through its own cone-cast pipeline.
+                return;
+            }
+
             FireHose hose = other.GetComponentInParent<FireHose>();
+            if (hose != null)
+            {
+                // FireHose applies water through its arc logic, not particle collision callbacks.
+                return;
+            }
+
             float amount = hose != null 
                 ? hose.CurrentApplyWaterRate * Time.deltaTime 
                 : 2f * Time.deltaTime; // Arbitrary fallback if not from hose
                 
             ApplyWater(amount);
+        }
+    }
+
+    private void CleanupManagedFires()
+    {
+        for (int i = managedFires.Count - 1; i >= 0; i--)
+        {
+            if (managedFires[i] == null)
+            {
+                managedFires.RemoveAt(i);
+            }
+        }
+
+        if (managedFires.Count == 0 && autoCollectOnStart)
+        {
+            CollectFires();
         }
     }
 }

@@ -1,8 +1,10 @@
 using System.Collections.Generic;
+using TrueJourney.BotBehavior;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [RequireComponent(typeof(SphereCollider))]
-public class Fire : MonoBehaviour
+public class Fire : MonoBehaviour, IFireTarget
 {
     private enum ParticleUpAxis
     {
@@ -12,12 +14,17 @@ public class Fire : MonoBehaviour
     }
 
     [Header("Fire State")]
-    [SerializeField] private float maxIntensity = 1f;
-    [SerializeField] private float minIntensityToLive = 0.05f;
-    [SerializeField] private float regrowRate = 0.05f;
+    [FormerlySerializedAs("maxIntensity")]
+    [SerializeField] private float maxHp = 1f;
+    [FormerlySerializedAs("minIntensityToLive")]
+    [SerializeField] private float minHpToLive = 0.05f;
+    [FormerlySerializedAs("regrowRate")]
+    [SerializeField] private float regrowHpPerSecond = 0.05f;
     [SerializeField] private bool startLitOnEnable = false;
     [SerializeField] private bool allowRegrowFromZero = false;
-    [SerializeField] private float currentIntensity = 0f;
+    [SerializeField] private float regrowResumeDelay = 1.5f;
+    [FormerlySerializedAs("currentIntensity")]
+    [SerializeField] private float currentHp = 0f;
 
     [Header("Fire Spread")]
     [SerializeField] private bool enableSpread = true;
@@ -28,15 +35,14 @@ public class Fire : MonoBehaviour
     [SerializeField] private float spreadInterval = 1f;
     [SerializeField] private float spreadIgniteAmount = 0.2f;
     [Range(0f, 1f)]
-    [SerializeField] private float spreadMinNormalizedIntensity = 0.3f;
+    [FormerlySerializedAs("spreadMinNormalizedIntensity")]
+    [SerializeField] private float spreadMinNormalizedHp = 0.3f;
     [SerializeField] private bool spreadOnlyToUnlitTargets = true;
     [SerializeField] private int spreadMaxOverlaps = 16;
     [SerializeField] private LayerMask spreadLayerMask = ~0;
     [SerializeField] private QueryTriggerInteraction spreadTriggerInteraction = QueryTriggerInteraction.Collide;
 
     [Header("Extinguish")]
-    [SerializeField] private float waterExtinguishPerSecond = 0.5f;
-    [SerializeField] private string waterTag = "Water";
     [SerializeField] private bool disableGameObjectOnExtinguish = false;
 
     [Header("Player Damage")]
@@ -71,8 +77,14 @@ public class Fire : MonoBehaviour
     private readonly List<bool> particleUses3DStartSize = new List<bool>();
     private readonly List<float> particleBaseStartSizeMultipliers = new List<float>();
     private readonly List<Vector3> particleBaseStartSize3DMultipliers = new List<Vector3>();
+    private float lastWaterAppliedTime = float.NegativeInfinity;
 
-    private int lastWateredFrame = -1;
+    public bool IsBurning => currentHp > 0f;
+
+    public Vector3 GetWorldPosition()
+    {
+        return transform.position;
+    }
 
     private void Reset()
     {
@@ -92,18 +104,26 @@ public class Fire : MonoBehaviour
 
     private void OnEnable()
     {
-        if (startLitOnEnable && currentIntensity <= 0f)
-            currentIntensity = maxIntensity;
+        BotRuntimeRegistry.RegisterFireTarget(this);
 
-        currentIntensity = Mathf.Clamp(currentIntensity, 0f, Mathf.Max(0f, maxIntensity));
+        if (startLitOnEnable && currentHp <= 0f)
+            currentHp = maxHp;
+
+        currentHp = Mathf.Clamp(currentHp, 0f, Mathf.Max(0f, maxHp));
         spreadTimer = 0f;
+        lastWaterAppliedTime = float.NegativeInfinity;
         SyncRadiusAndCollider();
         ApplyVisuals(forcePlayState: true);
     }
 
+    private void OnDisable()
+    {
+        BotRuntimeRegistry.UnregisterFireTarget(this);
+    }
+
     private void Update()
     {
-        RegrowIntensity();
+        RegrowHp();
         SyncRadiusAndCollider();
         ApplyVisuals();
         TrySpreadFire();
@@ -121,46 +141,50 @@ public class Fire : MonoBehaviour
         if (!gameObject.activeSelf)
             gameObject.SetActive(true);
 
-        currentIntensity = Mathf.Clamp(currentIntensity + amount, 0f, Mathf.Max(0f, maxIntensity));
+        currentHp = Mathf.Clamp(currentHp + amount, 0f, Mathf.Max(0f, maxHp));
     }
 
     public void ApplyWater(float amount)
     {
-        if (Time.frameCount == lastWateredFrame) return;
-        lastWateredFrame = Time.frameCount;
-
         if (amount <= 0f) return;
-        if (currentIntensity <= 0f) return;
+        if (currentHp <= 0f) return;
 
-        currentIntensity = Mathf.Max(0f, currentIntensity - amount);
-        if (currentIntensity <= minIntensityToLive)
+        float previousHp = currentHp;
+        currentHp = Mathf.Max(0f, currentHp - amount);
+        if (currentHp < previousHp)
+        {
+            lastWaterAppliedTime = Time.time;
+        }
+
+        if (currentHp <= 0f)
             Extinguish();
     }
 
     private void Extinguish()
     {
-        currentIntensity = 0f;
+        currentHp = 0f;
         if (disableGameObjectOnExtinguish)
             gameObject.SetActive(false);
     }
 
-    private void RegrowIntensity()
+    private void RegrowHp()
     {
-        if (regrowRate <= 0f) return;
-        if (!allowRegrowFromZero && currentIntensity <= 0f) return;
-        if (currentIntensity >= maxIntensity) return;
+        if (regrowHpPerSecond <= 0f) return;
+        if (!allowRegrowFromZero && currentHp <= 0f) return;
+        if (currentHp >= maxHp) return;
+        if (Time.time < lastWaterAppliedTime + Mathf.Max(0f, regrowResumeDelay)) return;
 
-        currentIntensity = Mathf.Min(maxIntensity, currentIntensity + regrowRate * Time.deltaTime);
+        currentHp = Mathf.Min(maxHp, currentHp + regrowHpPerSecond * Time.deltaTime);
     }
 
     private void TrySpreadFire()
     {
         if (!enableSpread) return;
         if (spreadIgniteAmount <= 0f) return;
-        if (currentIntensity <= 0f || maxIntensity <= 0f) return;
+        if (currentHp <= 0f || maxHp <= 0f) return;
 
-        float normalizedIntensity = Mathf.Clamp01(currentIntensity / maxIntensity);
-        if (normalizedIntensity < spreadMinNormalizedIntensity) return;
+        float normalizedHp = GetNormalizedHp();
+        if (normalizedHp < spreadMinNormalizedHp) return;
 
         spreadTimer -= Time.deltaTime;
         if (spreadTimer > 0f) return;
@@ -184,7 +208,7 @@ public class Fire : MonoBehaviour
 
             Fire target = hit.GetComponentInParent<Fire>();
             if (target == null || target == this) continue;
-            if (spreadOnlyToUnlitTargets && target.currentIntensity > target.minIntensityToLive) continue;
+            if (spreadOnlyToUnlitTargets && target.currentHp > target.minHpToLive) continue;
             if (!spreadTargets.Add(target)) continue;
 
             target.Ignite(spreadIgniteAmount);
@@ -193,16 +217,13 @@ public class Fire : MonoBehaviour
 
     private void OnTriggerStay(Collider other)
     {
-        if (!string.IsNullOrEmpty(waterTag) && other.CompareTag(waterTag))
-            ApplyWater(waterExtinguishPerSecond * Time.deltaTime);
-
-        if (damagePerSecond <= 0f || currentIntensity <= 0f) return;
+        if (damagePerSecond <= 0f || currentHp <= 0f) return;
         if (!string.IsNullOrEmpty(playerTag) && !other.CompareTag(playerTag)) return;
 
         PlayerVitals vitals = other.GetComponentInParent<PlayerVitals>();
         if (vitals == null || !vitals.IsAlive) return;
 
-        float t01 = (maxIntensity <= 0f) ? 0f : Mathf.Clamp01(currentIntensity / maxIntensity);
+        float t01 = GetNormalizedHp();
         float scale = damageScalesWithIntensity ? t01 : 1f;
         if (scale <= 0f) return;
 
@@ -211,26 +232,33 @@ public class Fire : MonoBehaviour
 
     private void OnParticleCollision(GameObject other)
     {
-        if (!string.IsNullOrEmpty(waterTag) && other.CompareTag(waterTag))
+        if (other != null)
         {
+            FireExtinguisher extinguisher = other.GetComponentInParent<FireExtinguisher>();
+            if (extinguisher != null)
+            {
+                // FireExtinguisher now applies water through its own cone-cast pipeline.
+                return;
+            }
+
             FireHose hose = other.GetComponentInParent<FireHose>();
-            float amount = hose != null 
-                ? hose.CurrentApplyWaterRate * Time.deltaTime 
-                : waterExtinguishPerSecond * Time.deltaTime;
-                
-            ApplyWater(amount);
+            if (hose != null)
+            {
+                // FireHose uses its own arc/sphere-cast pipeline as the single source of truth.
+                return;
+            }
         }
     }
 
     private void ApplyVisuals(bool forcePlayState = false)
     {
-        float t01 = (maxIntensity <= 0f) ? 0f : Mathf.Clamp01(currentIntensity / maxIntensity);
+        float t01 = GetNormalizedHp();
 
         if (managedParticleSystems.Count > 0)
         {
             UpdateParticleObjectScale(t01);
 
-            bool shouldPlay = currentIntensity > 0f;
+            bool shouldPlay = currentHp > 0f;
             for (int i = 0; i < managedParticleSystems.Count; i++)
             {
                 ParticleSystem ps = managedParticleSystems[i];
@@ -256,7 +284,7 @@ public class Fire : MonoBehaviour
         if (fireLight != null)
         {
             fireLight.intensity = Mathf.Lerp(0f, maxLightIntensity, t01);
-            fireLight.enabled = currentIntensity > 0f;
+            fireLight.enabled = currentHp > 0f;
         }
 
         if (scaleWithIntensity)
@@ -315,7 +343,7 @@ public class Fire : MonoBehaviour
         minRadius = Mathf.Max(0.1f, minRadius);
         maxRadius = Mathf.Max(minRadius, maxRadius);
 
-        float t01 = (maxIntensity <= 0f) ? 0f : Mathf.Clamp01(currentIntensity / maxIntensity);
+        float t01 = GetNormalizedHp();
         float targetRadius = Mathf.Lerp(minRadius, maxRadius, t01);
 
         if (allowRegrow)
@@ -592,5 +620,10 @@ public class Fire : MonoBehaviour
             Mathf.Abs(transform.lossyScale.z));
 
         return Mathf.Max(0f, sphereCollider.radius * maxAxisScale);
+    }
+
+    private float GetNormalizedHp()
+    {
+        return maxHp <= 0f ? 0f : Mathf.Clamp01(currentHp / maxHp);
     }
 }

@@ -21,7 +21,36 @@ public class WheelSelector : MonoBehaviour
     [SerializeField] private float menuItemRadius = 130f;
 
     private bool isSelectionWheelActive = false;
-    private int previousSelectedItemIndex = -1;
+
+    public bool IsSelectionWheelActive => isSelectionWheelActive;
+    public System.Action<int> OnOptionSelected;
+
+    public void OpenWheel()
+    {
+        isSelectionWheelActive = true;
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+        previousSelection = -1;
+        if (selectionWheelCanvasGroup != null)
+        {
+            selectionWheelCanvasGroup.alpha = 1f;
+            selectionWheelCanvasGroup.interactable = true;
+            selectionWheelCanvasGroup.blocksRaycasts = true;
+        }
+    }
+
+    public void CloseWheel()
+    {
+        isSelectionWheelActive = false;
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+        if (selectionWheelCanvasGroup != null)
+        {
+            selectionWheelCanvasGroup.alpha = 0f;
+            selectionWheelCanvasGroup.interactable = false;
+            selectionWheelCanvasGroup.blocksRaycasts = false;
+        }
+    }
 
     private void Awake()
     {
@@ -129,34 +158,6 @@ public class WheelSelector : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.J))
-        {
-            isSelectionWheelActive = !isSelectionWheelActive;
-            if (isSelectionWheelActive)
-            {
-                Cursor.lockState = CursorLockMode.None;
-                Cursor.visible = true;
-                previousSelection = -1;
-                if (selectionWheelCanvasGroup != null)
-                {
-                    selectionWheelCanvasGroup.alpha = 1f;
-                    selectionWheelCanvasGroup.interactable = true;
-                    selectionWheelCanvasGroup.blocksRaycasts = true;
-                }
-            }
-            else
-            {
-                Cursor.lockState = CursorLockMode.Locked;
-                Cursor.visible = false;
-                if (selectionWheelCanvasGroup != null)
-                {
-                    selectionWheelCanvasGroup.alpha = 0f;
-                    selectionWheelCanvasGroup.interactable = false;
-                    selectionWheelCanvasGroup.blocksRaycasts = false;
-                }
-            }
-        }
-
         if (!isSelectionWheelActive)
         {
             return;
@@ -214,62 +215,8 @@ public class WheelSelector : MonoBehaviour
 
         if (Input.GetMouseButtonDown(0))
         {
-            if (previousSelectedItemIndex == selection)
-                return;
-
-            previousSelectedItemIndex = selection;
-            HandleSelection(selection);
-            isSelectionWheelActive = false;
-            if (selectionWheelCanvasGroup != null)
-            {
-                selectionWheelCanvasGroup.alpha = 0f;
-                selectionWheelCanvasGroup.interactable = false;
-                selectionWheelCanvasGroup.blocksRaycasts = false;
-            }
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
-        }
-    }
-
-    private void HandleSelection(int selectedIndex)
-    {
-        switch (selectedIndex)
-        {
-            case 0:
-                Debug.Log("Selection Wheel: Option 0 selected (FireAxe)");
-                // TODO: add logic for FireAxe
-                break;
-            case 1:
-                Debug.Log("Selection Wheel: Option 1 selected");
-                // TODO: add logic for option 1
-                break;
-            case 2:
-                Debug.Log("Selection Wheel: Option 2 selected");
-                // TODO: add logic for option 2
-                break;
-            case 3:
-                Debug.Log("Selection Wheel: Option 3 selected");
-                // TODO: add logic for option 3
-                break;
-            case 4:
-                Debug.Log("Selection Wheel: Option 4 selected");
-                // TODO: add logic for option 4
-                break;
-            case 5:
-                Debug.Log("Selection Wheel: Option 5 selected");
-                // TODO: add logic for option 5
-                break;
-            case 6:
-                Debug.Log("Selection Wheel: Option 6 selected");
-                // TODO: add logic for option 6
-                break;
-            case 7:
-                Debug.Log("Selection Wheel: Option 7 selected");
-                // TODO: add logic for option 7
-                break;
-            default:
-                Debug.LogWarning($"Selection Wheel: unknown selection {selectedIndex}");
-                break;
+            OnOptionSelected?.Invoke(selection);
+            CloseWheel();
         }
     }
 }

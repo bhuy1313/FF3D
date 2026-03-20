@@ -1,8 +1,9 @@
+using TrueJourney.BotBehavior;
 using UnityEngine;
 using UnityEngine.Events;
 
 [DisallowMultipleComponent]
-public class Breakable : MonoBehaviour, IDamageable
+public class Breakable : MonoBehaviour, IDamageable, IBotBreakableTarget
 {
     public enum BreakableType
     {
@@ -38,9 +39,12 @@ public class Breakable : MonoBehaviour, IDamageable
     public float CurrentHealth => currentHealth;
     public float MaxHealth => maxHealth;
     public bool IsBroken => isBroken;
+    public bool CanBeClearedByBot => !isBroken && breakableType == BreakableType.Wood;
 
     private void OnEnable()
     {
+        BotRuntimeRegistry.RegisterBreakableTarget(this);
+
         if (resetHealthOnEnable)
         {
             currentHealth = maxHealth;
@@ -48,6 +52,21 @@ public class Breakable : MonoBehaviour, IDamageable
 
         currentHealth = Mathf.Clamp(currentHealth, 0f, maxHealth);
         isBroken = currentHealth <= 0f;
+    }
+
+    private void OnDisable()
+    {
+        BotRuntimeRegistry.UnregisterBreakableTarget(this);
+    }
+
+    public Vector3 GetWorldPosition()
+    {
+        return transform.position;
+    }
+
+    public void TakeBreakDamage(float amount, GameObject source, Vector3 hitPoint, Vector3 hitNormal)
+    {
+        TakeDamage(amount, source, hitPoint, hitNormal);
     }
 
     public void TakeDamage(float amount, GameObject source, Vector3 hitPoint, Vector3 hitNormal)

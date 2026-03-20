@@ -21,6 +21,15 @@ public class SamplesShowcaseEditor : Editor
 
     SerializedProperty currentIndex;
     Color headlineColor;
+
+    private void EnsureSerializedProperties()
+    {
+        if (serializedObject == null)
+            return;
+
+        if (currentIndex == null)
+            currentIndex = serializedObject.FindProperty("currentIndex");
+    }
     Color openColor;
     Color highlightColor;
     Color codeColor;
@@ -39,7 +48,7 @@ public class SamplesShowcaseEditor : Editor
     private void OnEnable()
     {
         SamplesShowcase.OnUpdateSamplesInspector += UpdateSamplesInspector;
-        currentIndex = serializedObject.FindProperty("currentIndex");
+        EnsureSerializedProperties();
         RenderPipelineManager.activeRenderPipelineCreated += UpdateRequiredSettingsDisplay;
     }
 
@@ -130,13 +139,23 @@ public class SamplesShowcaseEditor : Editor
                         choices.Add(sample.title);
                     }
                 }
-                if (currentIndex.intValue >= choices.Count)
-                    currentIndex.intValue = choices.Count - 1;
+                EnsureSerializedProperties();
+                if (currentIndex != null)
+                {
+                    if (currentIndex.intValue >= choices.Count)
+                        currentIndex.intValue = Mathf.Max(choices.Count - 1, 0);
 
-                dropdownField.value = choices[currentIndex.intValue];
-                dropdownField.choices = choices;
-                GoToSample(self, root, currentIndex.intValue, sampleJsonObject);
-                dropdownField.RegisterValueChangedCallback(v => GoToSample(self, root, choices.IndexOf(dropdownField.value), sampleJsonObject));  //Dropdown function call
+                    int selectedIndex = Mathf.Clamp(currentIndex.intValue, 0, choices.Count - 1);
+                    dropdownField.value = choices[selectedIndex];
+                    dropdownField.choices = choices;
+                    GoToSample(self, root, selectedIndex, sampleJsonObject);
+                    dropdownField.RegisterValueChangedCallback(v => GoToSample(self, root, Mathf.Clamp(choices.IndexOf(dropdownField.value), 0, choices.Count - 1), sampleJsonObject));
+                }
+                else
+                {
+                    dropdownField.value = choices.Count > 0 ? choices[0] : string.Empty;
+                    dropdownField.choices = choices;
+                }
                 root.Q<Button>("SelectSampleBtn").style.display = self.enableSelectButton ? UnityEngine.UIElements.DisplayStyle.Flex : UnityEngine.UIElements.DisplayStyle.None;
                 root.Q<Button>("SelectSampleBtn").clicked += () => { Selection.activeGameObject = self.currentPrefab; };
 
@@ -258,6 +277,10 @@ public class SamplesShowcaseEditor : Editor
 
     private void GoToSample(SamplesShowcase self, VisualElement root, int index, Samples sampleJsonObject)
     {
+        EnsureSerializedProperties();
+        if (serializedObject == null || currentIndex == null)
+            return;
+
         serializedObject.Update();
         currentIndex.intValue = index; //Send the new index value to the monobehaviour
         var sampleInfosElement = root.Q<VisualElement>("sampleInfosContainer");

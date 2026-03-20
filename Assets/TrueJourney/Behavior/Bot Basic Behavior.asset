@@ -32,8 +32,8 @@ MonoBehaviour:
           rid: 3784147764152369373
         BlackboardGroupReferences: []
         Root:
-          rid: 3784147764152369407
-        m_VersionTimestamp: 639092957143263955
+          rid: 3784147826071568498
+        m_VersionTimestamp: 639095519749987067
     - rid: 3784147764152369373
       type: {class: BlackboardReference, ns: Unity.Behavior, asm: Unity.Behavior}
       data:
@@ -44,16 +44,8 @@ MonoBehaviour:
       type: {class: Blackboard, ns: Unity.Behavior, asm: Unity.Behavior}
       data:
         m_Variables:
-        - rid: 3784147764152369376
-    - rid: 3784147764152369376
-      type: {class: 'BlackboardVariable`1[[UnityEngine.GameObject, UnityEngine.CoreModule]]', ns: Unity.Behavior, asm: Unity.Behavior}
-      data:
-        GUID:
-          m_Value0: 1
-          m_Value1: 0
-        Name: Self
-        m_Value: {fileID: 0}
-    - rid: 3784147764152369407
+        - rid: 3784147826071568500
+    - rid: 3784147826071568498
       type: {class: Start, ns: Unity.Behavior, asm: Unity.Behavior}
       data:
         ID:
@@ -64,10 +56,10 @@ MonoBehaviour:
         m_Parent:
           rid: -2
         m_Child:
-          rid: 3784147764152369408
+          rid: 3784147826071568499
         Repeat: 1
         AllowMultipleRepeatsPerTick: 0
-    - rid: 3784147764152369408
+    - rid: 3784147826071568499
       type: {class: SelectorComposite, ns: Unity.Behavior, asm: Unity.Behavior}
       data:
         ID:
@@ -76,13 +68,21 @@ MonoBehaviour:
         Graph:
           rid: 3784147764152369372
         m_Parent:
-          rid: 3784147764152369407
+          rid: 3784147826071568498
         m_Children:
-        - rid: 3784147764152369409
-        - rid: 3784147764152369410
-        - rid: 3784147764152369411
+        - rid: 3784147826071568501
+        - rid: 3784147826071568502
+        - rid: 3784147826071568503
         m_RegisteredObservers: []
-    - rid: 3784147764152369409
+    - rid: 3784147826071568500
+      type: {class: 'BlackboardVariable`1[[UnityEngine.GameObject, UnityEngine.CoreModule]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 1
+          m_Value1: 0
+        Name: Self
+        m_Value: {fileID: 0}
+    - rid: 3784147826071568501
       type: {class: BotExecuteMoveOrderAction, ns: TrueJourney.BotBehavior, asm: TrueJourney.BotCommands}
       data:
         ID:
@@ -91,10 +91,10 @@ MonoBehaviour:
         Graph:
           rid: 3784147764152369372
         m_Parent:
-          rid: 3784147764152369408
+          rid: 3784147826071568499
         Agent:
-          rid: 3784147764152369376
-    - rid: 3784147764152369410
+          rid: 3784147826071568500
+    - rid: 3784147826071568502
       type: {class: BotPatrolRouteAction, ns: TrueJourney.BotBehavior, asm: TrueJourney.BotCommands}
       data:
         ID:
@@ -103,10 +103,10 @@ MonoBehaviour:
         Graph:
           rid: 3784147764152369372
         m_Parent:
-          rid: 3784147764152369408
+          rid: 3784147826071568499
         Agent:
-          rid: 3784147764152369376
-    - rid: 3784147764152369411
+          rid: 3784147826071568500
+    - rid: 3784147826071568503
       type: {class: BotIdleLookAction, ns: TrueJourney.BotBehavior, asm: TrueJourney.BotCommands}
       data:
         ID:
@@ -115,9 +115,9 @@ MonoBehaviour:
         Graph:
           rid: 3784147764152369372
         m_Parent:
-          rid: 3784147764152369408
+          rid: 3784147826071568499
         Agent:
-          rid: 3784147764152369376
+          rid: 3784147826071568500
 --- !u!114 &-2931049170897841258
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -131,8 +131,8 @@ MonoBehaviour:
   m_Name: Bot Basic Behavior Blackboard
   m_EditorClassIdentifier: Unity.Behavior.Authoring::Unity.Behavior.BehaviorBlackboardAuthoringAsset
   AssetID:
-    m_Value0: 0
-    m_Value1: 0
+    m_Value0: 9569755923455106434
+    m_Value1: 12775160503840871562
   m_Variables:
   - rid: 3784147764152369377
   m_VersionTimestamp: 639092957138494414
@@ -172,7 +172,7 @@ MonoBehaviour:
   - rid: 3784147764152369383
   - rid: 3784147764152369384
   - rid: 3784147764152369385
-  m_VersionTimestamp: 639092957143263955
+  m_VersionTimestamp: 639095519749987067
   m_SerializedVersion: 2
   m_DebugInfo: {fileID: 3533990556055886289}
   m_RuntimeGraph: {fileID: -7849778262270925701}
@@ -319,7 +319,7 @@ MonoBehaviour:
     - rid: 3784147764152369384
       type: {class: ActionNodeModel, ns: Unity.Behavior, asm: Unity.Behavior.Authoring}
       data:
-        Position: {x: 0, y: 460}
+        Position: {x: 1.0951887, y: 460}
         ID:
           m_Value0: 11998350486037690684
           m_Value1: 11005351318055349401

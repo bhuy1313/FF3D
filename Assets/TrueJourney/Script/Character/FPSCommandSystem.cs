@@ -26,6 +26,9 @@ namespace StarterAssets
         [SerializeField] private bool logCommandSelection = true;
         [SerializeField] private Vector2 debugOverlayOffset = new Vector2(16f, 16f);
 
+        [Header("Selection Wheel")]
+        [SerializeField] private WheelSelector wheelSelector;
+
         private readonly BotCommandState commandState = new BotCommandState();
         private GUIStyle debugGuiStyle;
 
@@ -37,6 +40,10 @@ namespace StarterAssets
         private bool[] currentOutlineRendererHadBit;
         private Vector3 lastPreviewPoint;
         private bool hasPreviewPoint;
+
+        private bool isAwaitingCommandSelection;
+        private ICommandable pendingCommandable;
+        private GameObject pendingCommandTarget;
 
         public GameObject HoveredCommandTarget => hoveredCommandTarget;
         public GameObject SelectedCommandTarget => selectedCommandTarget;
@@ -52,6 +59,19 @@ namespace StarterAssets
             if (interactionSystem == null)
             {
                 interactionSystem = GetComponent<FPSInteractionSystem>();
+            }
+
+            if (wheelSelector != null)
+            {
+                wheelSelector.OnOptionSelected += OnWheelOptionSelected;
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (wheelSelector != null)
+            {
+                wheelSelector.OnOptionSelected -= OnWheelOptionSelected;
             }
         }
 
@@ -82,11 +102,17 @@ namespace StarterAssets
                 return;
             }
 
+            if (isAwaitingCommandSelection)
+            {
+                // waiting for the wheel command choice
+                return;
+            }
+
             if (!commandState.IsAwaitingTarget)
             {
                 if (Input.GetKeyDown(moveCommandKey))
                 {
-                    TryStartMoveCommand();
+                    TryStartCommandSelection();
                 }
 
                 return;
@@ -130,26 +156,123 @@ namespace StarterAssets
             DrawDebugRay(ray, hit.distance, Color.green);
         }
 
-        private void TryStartMoveCommand()
+        private void TryStartCommandSelection()
         {
             if (hoveredCommandable == null)
             {
                 return;
             }
 
-            if (!commandState.TryBegin(hoveredCommandable, BotCommandType.Move))
+            pendingCommandable = hoveredCommandable;
+            pendingCommandTarget = hoveredCommandTarget;
+            isAwaitingCommandSelection = true;
+            UpdateTargetOutline(pendingCommandTarget);
+
+            if (wheelSelector != null)
+            {
+                wheelSelector.OpenWheel();
+            }
+
+            if (logCommandSelection)
+            {
+                Debug.Log($"[FPSCommandSystem] Selected bot '{GetTargetName(pendingCommandTarget)}' for command selection.", this);
+            }
+        }
+
+        private void OnWheelOptionSelected(int selectedIndex)
+        {
+            if (!isAwaitingCommandSelection || pendingCommandable == null || pendingCommandTarget == null)
             {
                 return;
             }
 
-            selectedCommandTarget = hoveredCommandTarget;
+            BotCommandType commandType = MapWheelIndexToCommand(selectedIndex);
+            if (commandType == BotCommandType.None)
+            {
+                if (logCommandSelection)
+                {
+                    Debug.LogWarning($"[FPSCommandSystem] Unknown command wheel selection index {selectedIndex}.");
+                }
+                ResetCommandSelection();
+                return;
+            }
+
+            if (!commandState.TryBegin(pendingCommandable, commandType))
+            {
+                if (logCommandSelection)
+                {
+                    Debug.LogWarning($"[FPSCommandSystem] Command '{commandType}' is not supported by '{GetTargetName(pendingCommandTarget)}'.");
+                }
+                ResetCommandSelection();
+                return;
+            }
+
+            selectedCommandTarget = pendingCommandTarget;
             UpdateTargetOutline(selectedCommandTarget);
+            isAwaitingCommandSelection = false;
+            pendingCommandable = null;
+            pendingCommandTarget = null;
+
+            if (commandType == BotCommandType.Follow)
+            {
+                TryConfirmImmediateCommand(commandType);
+                return;
+            }
+
             UpdatePreviewPoint();
 
             if (logCommandSelection)
             {
-                Debug.Log($"[FPSCommandSystem] Selected bot '{GetTargetName(selectedCommandTarget)}' for command '{BotCommandType.Move}'.", this);
+                Debug.Log($"[FPSCommandSystem] Selected bot '{GetTargetName(selectedCommandTarget)}' with command '{commandType}'.", this);
             }
+        }
+
+        private BotCommandType MapWheelIndexToCommand(int selectedIndex)
+        {
+            switch (selectedIndex)
+            {
+                case 0:
+                    return BotCommandType.Move;
+                case 1:
+                    return BotCommandType.Extinguish;
+                case 2:
+                    return BotCommandType.Follow;
+                default:
+                    return BotCommandType.None;
+            }
+        }
+
+        private void TryConfirmImmediateCommand(BotCommandType commandType)
+        {
+            if (commandState.TryConfirm(transform.position))
+            {
+                if (logCommandSelection)
+                {
+                    Debug.Log($"[FPSCommandSystem] Issued '{commandType}' to '{GetTargetName(selectedCommandTarget)}'.", this);
+                }
+
+                selectedCommandTarget = null;
+                UpdateTargetOutline(null);
+                hasPreviewPoint = false;
+            }
+            else if (logCommandSelection)
+            {
+                Debug.LogWarning($"[FPSCommandSystem] Immediate command '{commandType}' failed for '{GetTargetName(selectedCommandTarget)}'.", this);
+            }
+        }
+
+        private void ResetCommandSelection()
+        {
+            isAwaitingCommandSelection = false;
+            pendingCommandable = null;
+            pendingCommandTarget = null;
+            if (wheelSelector != null)
+            {
+                wheelSelector.CloseWheel();
+            }
+            selectedCommandTarget = null;
+            UpdateTargetOutline(null);
+            hasPreviewPoint = false;
         }
 
         private void TryConfirmPendingCommand()
@@ -164,11 +287,12 @@ namespace StarterAssets
                 return;
             }
 
+            BotCommandType commandType = commandState.PendingCommand;
             if (commandState.TryConfirm(destination))
             {
                 if (logCommandSelection)
                 {
-                    Debug.Log($"[FPSCommandSystem] Issued '{BotCommandType.Move}' to '{GetTargetName(selectedCommandTarget)}' at {destination}.", this);
+                    Debug.Log($"[FPSCommandSystem] Issued '{commandType}' to '{GetTargetName(selectedCommandTarget)}' at {destination}.", this);
                 }
 
                 selectedCommandTarget = null;
@@ -182,6 +306,17 @@ namespace StarterAssets
 
         private void CancelPendingCommand()
         {
+            if (isAwaitingCommandSelection)
+            {
+                if (logCommandSelection && pendingCommandTarget != null)
+                {
+                    Debug.Log($"[FPSCommandSystem] Cancelled pending command selection for '{GetTargetName(pendingCommandTarget)}'.", this);
+                }
+
+                ResetCommandSelection();
+                return;
+            }
+
             if (logCommandSelection && selectedCommandTarget != null)
             {
                 Debug.Log($"[FPSCommandSystem] Cancelled command for '{GetTargetName(selectedCommandTarget)}'.", this);
@@ -191,6 +326,10 @@ namespace StarterAssets
             selectedCommandTarget = null;
             UpdateTargetOutline(null);
             hasPreviewPoint = false;
+            if (wheelSelector != null)
+            {
+                wheelSelector.CloseWheel();
+            }
         }
 
         private void UpdatePreviewPoint()
@@ -405,8 +544,9 @@ namespace StarterAssets
             Color previousColor = GUI.color;
             GUI.color = new Color(0f, 0f, 0f, 0.75f);
             GUI.Box(rect, GUIContent.none);
-            GUI.color = previousColor;
+            GUI.color = Color.white;
             GUI.Label(new Rect(rect.x + 8f, rect.y + 6f, rect.width - 16f, rect.height - 12f), debugText, debugGuiStyle);
+            GUI.color = previousColor;
         }
 
         private void EnsureDebugGuiStyle()

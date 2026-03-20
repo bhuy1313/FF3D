@@ -1,24 +1,65 @@
+using TrueJourney.BotBehavior;
 using UnityEngine;
+using UnityEngine.Serialization;
 
-public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsable
+public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotExtinguisherItem
 {
-    [Header("Extinguisher")]
+    [Header("Charge")]
     [SerializeField] private float maxCharge = 10f;
-    [SerializeField] private float dischargePerSecond = 1.5f;
     [SerializeField] private float rechargePerSecond = 0f;
     [SerializeField] private float minChargeToUse = 0.05f;
+
+    [Header("Usage")]
     [SerializeField] private bool toggleUse = true;
 
-    [Header("VFX/SFX")]
+    [Header("Suppression")]
+    [SerializeField] private float playerApplyWaterPerSecond = 1.5f;
+    [SerializeField] private float botApplyWaterPerSecond = 1.5f;
+    [SerializeField] private float maxSprayDistance = 4.25f;
+    [Tooltip("Optional stand-off distance override for bots. Set to 0 to derive automatically from Max Spray Distance.")]
+    [SerializeField] private float botStandDistanceOverride = 0f;
+
+    [Header("Cone Detection")]
+    [SerializeField] private float coneHalfAngle = 28f;
+    [SerializeField] private float coneBaseRadius = 0.15f;
+    [SerializeField] private int coneSegments = 4;
+    [SerializeField] private LayerMask sprayMask = ~0;
+
+    [Header("References")]
+    [SerializeField] private Transform sprayOrigin;
     [SerializeField] private ParticleSystem sprayParticles;
     [SerializeField] private AudioSource sprayAudio;
 
     [Header("Runtime (Debug)")]
     [SerializeField] private float currentCharge;
     [SerializeField] private bool isSpraying;
+    [SerializeField] private GameObject currentHolder;
+    [SerializeField] private GameObject currentUser;
+    [SerializeField] private GameObject claimOwner;
+
+    [Header("Debug")]
+    [SerializeField] private bool drawConeGizmo = true;
+    [FormerlySerializedAs("drawOnlyWhenSelected")]
+    [SerializeField] private bool drawGizmoOnlyWhenSelected = true;
 
     private Rigidbody cachedRigidbody;
     public Rigidbody Rigidbody => cachedRigidbody;
+    public float ApplyWaterPerSecond => botApplyWaterPerSecond;
+    public float PreferredSprayDistance => botStandDistanceOverride > 0f
+        ? Mathf.Clamp(botStandDistanceOverride, 0.75f, maxSprayDistance)
+        : Mathf.Clamp(maxSprayDistance * 0.6f, 0.75f, maxSprayDistance);
+    public float MaxSprayDistance => maxSprayDistance;
+    public float MaxVerticalReach => Mathf.Tan(coneHalfAngle * Mathf.Deg2Rad) * maxSprayDistance;
+    public float BallisticLaunchSpeed => 0f;
+    public float BallisticGravityMultiplier => 1f;
+    public bool RequiresPreciseAim => false;
+    public bool IsSpraying => isSpraying;
+    public bool HasUsableCharge => currentCharge >= minChargeToUse;
+    public GameObject CurrentHolder => currentHolder;
+    public GameObject CurrentUser => currentUser;
+    public bool IsHeld => currentHolder != null;
+    public GameObject ClaimOwner => claimOwner;
+    public bool IsBotControlled => currentUser != null && currentUser.GetComponentInParent<BotBehaviorContext>() != null;
 
     private void Awake()
     {
@@ -26,6 +67,11 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
         if (sprayParticles == null)
         {
             sprayParticles = GetComponentInChildren<ParticleSystem>();
+        }
+
+        if (sprayOrigin == null && sprayParticles != null)
+        {
+            sprayOrigin = sprayParticles.transform;
         }
 
         if (sprayAudio == null)
@@ -37,13 +83,20 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
         SetSprayState(false);
     }
 
+    private void OnEnable()
+    {
+        BotRuntimeRegistry.RegisterExtinguisherItem(this);
+    }
+
     private void Update()
     {
         if (isSpraying)
         {
-            currentCharge = Mathf.Max(0f, currentCharge - dischargePerSecond * Time.deltaTime);
+            currentCharge = Mathf.Max(0f, currentCharge - GetActiveWaterPerSecond() * Time.deltaTime);
+            ApplyExtinguishCone();
             if (currentCharge <= 0f)
             {
+                currentUser = null;
                 SetSprayState(false);
             }
         }
@@ -53,17 +106,62 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
         }
     }
 
+    private float GetActiveWaterPerSecond()
+    {
+        return Mathf.Max(0f, IsBotControlled ? botApplyWaterPerSecond : playerApplyWaterPerSecond);
+    }
+
     public void Interact(GameObject interactor)
     {
     }
 
     public void OnPickup(GameObject picker)
     {
+        currentHolder = picker;
+        claimOwner = picker;
+        currentUser = null;
+        SetSprayState(false);
     }
 
     public void OnDrop(GameObject dropper)
     {
+        currentHolder = null;
+        if (claimOwner == dropper)
+        {
+            claimOwner = null;
+        }
+
+        currentUser = null;
         SetSprayState(false);
+    }
+
+    public bool IsAvailableTo(GameObject requester)
+    {
+        if (requester == null)
+        {
+            return false;
+        }
+
+        return claimOwner == null || claimOwner == requester || currentHolder == requester;
+    }
+
+    public bool TryClaim(GameObject requester)
+    {
+        if (!IsAvailableTo(requester))
+        {
+            return false;
+        }
+
+        claimOwner = requester;
+        return true;
+    }
+
+    public void ReleaseClaim(GameObject requester)
+    {
+        if (requester != null && claimOwner == requester && currentHolder != requester)
+        {
+            claimOwner = null;
+        }
     }
 
     public void Use(GameObject user)
@@ -72,12 +170,14 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
         {
             if (isSpraying)
             {
+                currentUser = null;
                 SetSprayState(false);
                 return;
             }
 
             if (currentCharge >= minChargeToUse)
             {
+                currentUser = user;
                 SetSprayState(true);
             }
 
@@ -86,12 +186,43 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
 
         if (currentCharge >= minChargeToUse)
         {
+            currentUser = user;
             SetSprayState(true);
         }
     }
 
+    public void SetExternalSprayState(bool enable, GameObject user)
+    {
+        if (!enable)
+        {
+            currentUser = null;
+            SetSprayState(false);
+            return;
+        }
+
+        if (currentCharge < minChargeToUse)
+        {
+            currentUser = null;
+            SetSprayState(false);
+            return;
+        }
+
+        currentUser = user;
+        SetSprayState(true);
+    }
+
+    public void SetExternalAimDirection(Vector3 worldDirection, GameObject user)
+    {
+    }
+
+    public void ClearExternalAimDirection(GameObject user)
+    {
+    }
+
     private void OnDisable()
     {
+        BotRuntimeRegistry.UnregisterExtinguisherItem(this);
+        currentUser = null;
         SetSprayState(false);
     }
 
@@ -130,5 +261,180 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
                 sprayAudio.Stop();
             }
         }
+    }
+
+    private void ApplyExtinguishCone()
+    {
+        if (playerApplyWaterPerSecond <= 0f || maxSprayDistance <= 0f)
+        {
+            return;
+        }
+
+        Transform origin = sprayOrigin != null ? sprayOrigin : transform;
+        Vector3 start = origin.position;
+        Vector3 forward = origin.forward;
+        if (forward.sqrMagnitude <= 0.001f)
+        {
+            return;
+        }
+
+        float amount = playerApplyWaterPerSecond * Time.deltaTime;
+        float segmentLength = maxSprayDistance / Mathf.Max(1, coneSegments);
+
+        System.Collections.Generic.HashSet<Fire> processedFires = new System.Collections.Generic.HashSet<Fire>();
+
+        for (int i = 0; i < coneSegments; i++)
+        {
+            float distance = segmentLength * (i + 1);
+            float radius = coneBaseRadius + Mathf.Tan(coneHalfAngle * Mathf.Deg2Rad) * distance;
+            Vector3 center = start + forward * distance;
+            Collider[] hits = Physics.OverlapSphere(center, radius, sprayMask, QueryTriggerInteraction.Collide);
+
+            for (int hitIndex = 0; hitIndex < hits.Length; hitIndex++)
+            {
+                Collider hit = hits[hitIndex];
+                if (hit == null)
+                {
+                    continue;
+                }
+
+                Vector3 closestPoint = GetClosestPointSafe(hit, start);
+                Vector3 toHit = closestPoint - start;
+                float hitDistance = toHit.magnitude;
+                if (hitDistance <= 0.001f || hitDistance > maxSprayDistance)
+                {
+                    continue;
+                }
+
+                float angle = Vector3.Angle(forward, toHit.normalized);
+                if (angle > coneHalfAngle)
+                {
+                    continue;
+                }
+
+                ApplyWaterToColliderSafe(hit, amount, processedFires);
+            }
+        }
+    }
+
+    private static void ApplyWaterToColliderSafe(
+        Collider collider,
+        float amount,
+        System.Collections.Generic.HashSet<Fire> processedFires)
+    {
+        if (collider == null)
+        {
+            return;
+        }
+
+        Fire fire = FindFire(collider);
+        if (fire != null && processedFires.Add(fire))
+        {
+            fire.ApplyWater(amount);
+        }
+    }
+
+    private static Fire FindFire(Collider collider)
+    {
+        if (collider.TryGetComponent(out Fire direct))
+        {
+            return direct;
+        }
+
+        if (collider.attachedRigidbody != null && collider.attachedRigidbody.TryGetComponent(out Fire rigidbodyOwner))
+        {
+            return rigidbodyOwner;
+        }
+
+        Transform parent = collider.transform.parent;
+        if (parent != null && parent.TryGetComponent(out Fire parentFire))
+        {
+            return parentFire;
+        }
+
+        return null;
+    }
+
+    private static Vector3 GetClosestPointSafe(Collider collider, Vector3 position)
+    {
+        if (collider == null)
+        {
+            return position;
+        }
+
+        if (collider is BoxCollider || collider is SphereCollider || collider is CapsuleCollider)
+        {
+            return collider.ClosestPoint(position);
+        }
+
+        if (collider is MeshCollider meshCollider && meshCollider.convex)
+        {
+            return collider.ClosestPoint(position);
+        }
+
+        return collider.bounds.ClosestPoint(position);
+    }
+
+#if UNITY_EDITOR
+    private void OnDrawGizmos()
+    {
+        if (!drawConeGizmo || drawGizmoOnlyWhenSelected)
+        {
+            return;
+        }
+
+        DrawConeGizmo();
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        if (!drawConeGizmo)
+        {
+            return;
+        }
+
+        DrawConeGizmo();
+    }
+#endif
+
+    private void DrawConeGizmo()
+    {
+        Transform origin = sprayOrigin != null ? sprayOrigin : transform;
+        if (origin == null || maxSprayDistance <= 0f)
+        {
+            return;
+        }
+
+        Vector3 start = origin.position;
+        Vector3 forward = origin.forward;
+        if (forward.sqrMagnitude <= 0.001f)
+        {
+            return;
+        }
+
+        int segments = Mathf.Max(1, coneSegments);
+        float segmentLength = maxSprayDistance / segments;
+        Gizmos.color = new Color(0.85f, 0.95f, 1f, 0.9f);
+
+        Vector3 previousCenter = start;
+        float previousRadius = coneBaseRadius;
+
+        for (int i = 0; i < segments; i++)
+        {
+            float distance = segmentLength * (i + 1);
+            float radius = coneBaseRadius + Mathf.Tan(coneHalfAngle * Mathf.Deg2Rad) * distance;
+            Vector3 center = start + forward * distance;
+
+            Gizmos.DrawWireSphere(center, radius);
+            Gizmos.DrawLine(previousCenter + origin.right * previousRadius, center + origin.right * radius);
+            Gizmos.DrawLine(previousCenter - origin.right * previousRadius, center - origin.right * radius);
+            Gizmos.DrawLine(previousCenter + origin.up * previousRadius, center + origin.up * radius);
+            Gizmos.DrawLine(previousCenter - origin.up * previousRadius, center - origin.up * radius);
+
+            previousCenter = center;
+            previousRadius = radius;
+        }
+
+        Gizmos.DrawRay(start, forward * maxSprayDistance);
     }
 }

@@ -1,9 +1,11 @@
+using TrueJourney.BotBehavior;
 using UnityEngine;
+using UnityEngine.Serialization;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
 
-public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
+public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotExtinguisherItem
 {
     private enum SprayPattern
     {
@@ -22,17 +24,17 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
 
     [Header("Water Supply")]
     [SerializeField] private float maxWater = 0f;
-    [SerializeField] private float dischargePerSecond = 2f;
     [SerializeField] private float rechargePerSecond = 0f;
     [SerializeField] private float minWaterToUse = 0.05f;
     [SerializeField] private bool toggleUse = true;
 
-    [Header("Spray (Base)")]
+    [Header("Suppression")]
     [SerializeField] private Transform sprayOrigin;
     [SerializeField] private float sprayRange = 12f;
     [SerializeField] private float sprayRadius = 0.35f;
     [SerializeField] private LayerMask sprayMask = ~0;
-    [SerializeField] private float applyWaterPerSecond = 1.5f;
+    [SerializeField] private float playerApplyWaterPerSecond = 1.5f;
+    [SerializeField] private float botApplyWaterPerSecond = 1.5f;
 
     [Header("Spray Control")]
     [SerializeField] private SprayPattern sprayPattern = SprayPattern.Concentrated;
@@ -58,7 +60,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
     [SerializeField] private float wideVfxSpeedMultiplier = 0.9f;
     [SerializeField] private float wideVfxSpreadMultiplier = 1.45f;
 
-    [Header("VFX/SFX")]
+    [Header("References")]
     [SerializeField] private ParticleSystem waterParticles;
     [SerializeField] private AudioSource sprayAudio;
     [SerializeField] private float particleGravityModifier = 0.35f;
@@ -69,12 +71,17 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
     [Header("Runtime (Debug)")]
     [SerializeField] private float currentWater;
     [SerializeField] private bool isSpraying;
-    [SerializeField] private float currentDischargeRate;
     [SerializeField] private float currentApplyWaterRate;
     [SerializeField] private float currentSprayRange;
     [SerializeField] private float currentSprayRadius;
+    [SerializeField] private GameObject currentHolder;
+    [SerializeField] private GameObject currentUser;
+    [SerializeField] private GameObject claimOwner;
+    [SerializeField] private bool hasExternalAimDirection;
+    [SerializeField] private Vector3 externalAimDirection;
+    [SerializeField] private GameObject externalAimUser;
 
-    [Header("Spray Physics Arc (Parabola)")]
+    [Header("Ballistics")]
     [Tooltip("Initial velocity of the water stream")]
     [SerializeField] private float arcVelocity = 15f;
     [Tooltip("Gravity drop multiplier for the water stream")]
@@ -84,11 +91,29 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
     [Tooltip("Number of SphereCast segments along the parabolic curve")]
     [SerializeField] private int arcSegments = 8;
 
+    [Header("Bot AI")]
+    [Tooltip("Optional stand-off distance override for bots. Set to 0 to derive automatically from current spray range.")]
+    [FormerlySerializedAs("botPreferredSprayDistance")]
+    [SerializeField] private float botStandDistanceOverride = 0f;
+
     [Header("Debug")]
     [SerializeField] private bool drawArcGizmo = true;
-    [SerializeField] private bool drawOnlyWhenSelected = true;
+    [FormerlySerializedAs("drawOnlyWhenSelected")]
+    [SerializeField] private bool drawGizmoOnlyWhenSelected = true;
 
     public float CurrentApplyWaterRate => currentApplyWaterRate;
+    public float ApplyWaterPerSecond => currentApplyWaterRate;
+    public float PreferredSprayDistance => botStandDistanceOverride > 0f
+        ? Mathf.Min(botStandDistanceOverride, MaxSprayDistance)
+        : Mathf.Max(4f, currentSprayRange * 0.75f);
+    public float MaxSprayDistance => Mathf.Max(0.1f, currentSprayRange);
+    public float MaxVerticalReach => Mathf.Max(2f, currentSprayRange);
+    public float BallisticLaunchSpeed => arcVelocity;
+    public float BallisticGravityMultiplier => arcGravityMultiplier;
+    public bool RequiresPreciseAim => true;
+    public bool HasUsableCharge => maxWater <= 0f || currentWater >= minWaterToUse;
+    public bool IsHeld => currentHolder != null;
+    public GameObject ClaimOwner => claimOwner;
 
     private Rigidbody cachedRigidbody;
     private bool particleDefaultsCached;
@@ -144,16 +169,22 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
         TryApplyWaterTag();
     }
 
+    private void OnEnable()
+    {
+        BotRuntimeRegistry.RegisterExtinguisherItem(this);
+    }
+
     private void Update()
     {
         HandleRuntimeTuningInput();
         RecalculateSprayRuntimeValues();
+        ApplyExternalAimToVfx();
 
         if (isSpraying)
         {
             if (maxWater > 0f)
             {
-                currentWater = Mathf.Max(0f, currentWater - currentDischargeRate * Time.deltaTime);
+                currentWater = Mathf.Max(0f, currentWater - currentApplyWaterRate * Time.deltaTime);
                 if (currentWater <= 0f)
                 {
                     SetSprayState(false);
@@ -175,6 +206,10 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
 
     public void OnPickup(GameObject picker)
     {
+        currentHolder = picker;
+        claimOwner = picker;
+        currentUser = null;
+        ClearExternalAimState();
         AlignWaterVfxToSprayOrigin();
         ConfigureWaterParticleCollision();
         CacheWaterParticleDefaults();
@@ -183,7 +218,44 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
 
     public void OnDrop(GameObject dropper)
     {
+        currentHolder = null;
+        if (claimOwner == dropper)
+        {
+            claimOwner = null;
+        }
+
+        currentUser = null;
+        ClearExternalAimState();
         SetSprayState(false);
+    }
+
+    public bool IsAvailableTo(GameObject requester)
+    {
+        if (requester == null)
+        {
+            return false;
+        }
+
+        return claimOwner == null || claimOwner == requester || currentHolder == requester;
+    }
+
+    public bool TryClaim(GameObject requester)
+    {
+        if (!IsAvailableTo(requester))
+        {
+            return false;
+        }
+
+        claimOwner = requester;
+        return true;
+    }
+
+    public void ReleaseClaim(GameObject requester)
+    {
+        if (requester != null && claimOwner == requester && currentHolder != requester)
+        {
+            claimOwner = null;
+        }
     }
 
     public void Use(GameObject user)
@@ -192,12 +264,14 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
         {
             if (isSpraying)
             {
+                currentUser = null;
                 SetSprayState(false);
                 return;
             }
 
             if (HasWaterToUse())
             {
+                currentUser = user;
                 SetSprayState(true);
             }
 
@@ -206,12 +280,58 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
 
         if (HasWaterToUse())
         {
+            currentUser = user;
             SetSprayState(true);
+        }
+    }
+
+    public void SetExternalSprayState(bool enable, GameObject user)
+    {
+        if (!enable)
+        {
+            currentUser = null;
+            ClearExternalAimDirection(user);
+            SetSprayState(false);
+            return;
+        }
+
+        if (!HasWaterToUse())
+        {
+            currentUser = null;
+            SetSprayState(false);
+            return;
+        }
+
+        currentUser = user;
+        SetSprayState(true);
+    }
+
+    public void SetExternalAimDirection(Vector3 worldDirection, GameObject user)
+    {
+        if (user == null || worldDirection.sqrMagnitude <= 0.001f)
+        {
+            return;
+        }
+
+        externalAimUser = user;
+        externalAimDirection = worldDirection.normalized;
+        hasExternalAimDirection = true;
+        ApplyExternalAimToVfx();
+    }
+
+    public void ClearExternalAimDirection(GameObject user)
+    {
+        if (user == null || externalAimUser == user)
+        {
+            ClearExternalAimState();
         }
     }
 
     private void OnDisable()
     {
+        BotRuntimeRegistry.UnregisterExtinguisherItem(this);
+        currentUser = null;
+        ClearExternalAimState();
         SetSprayState(false);
     }
 
@@ -258,6 +378,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
             {
                 AlignWaterVfxToSprayOrigin();
                 ApplySprayTuningToVfx();
+                ApplyExternalAimToVfx();
                 waterParticles.Play();
             }
             else
@@ -292,17 +413,22 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
         Vector3 startPos = origin.position;
         Vector3 initialVelocity = origin.forward * arcVelocity;
         Vector3 gravity = Physics.gravity * arcGravityMultiplier;
+        float effectiveLifetime = GetEffectiveArcLifetime(startPos, initialVelocity, gravity);
+        int segments = GetEffectiveArcSegments(effectiveLifetime);
+
+        if (effectiveLifetime <= 0f || segments <= 0)
+        {
+            return;
+        }
 
         float amount = currentApplyWaterRate * Time.deltaTime;
-        float timeStep = arcLifetime / arcSegments;
+        float timeStep = effectiveLifetime / segments;
 
         System.Collections.Generic.HashSet<FireGroup> processedGroups = new System.Collections.Generic.HashSet<FireGroup>();
-        System.Collections.Generic.HashSet<Fire> processedFires = new System.Collections.Generic.HashSet<Fire>();
-        System.Collections.Generic.HashSet<FireParticleSystem> processedParticleFires = new System.Collections.Generic.HashSet<FireParticleSystem>();
 
         Vector3 currentPos = startPos;
 
-        for (int step = 0; step < arcSegments; step++)
+        for (int step = 0; step < segments; step++)
         {
             float t = step * timeStep;
             float nextT = t + timeStep;
@@ -311,7 +437,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
             Vector3 nextPos = startPos + initialVelocity * nextT + 0.5f * gravity * nextT * nextT;
 
             // Expanding radius over time
-            float progress = t / arcLifetime;
+            float progress = t / effectiveLifetime;
             float currentRadius = Mathf.Lerp(0.1f, currentSprayRadius, progress);
 
             Vector3 segmentDir = nextPos - currentPos;
@@ -329,7 +455,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
 
                 for (int i = 0; i < hits.Length; i++)
                 {
-                    ApplyWaterToColliderSafe(hits[i].collider, amount, processedGroups, processedFires, processedParticleFires);
+                    ApplyWaterToColliderSafe(hits[i].collider, amount, processedGroups);
                 }
             }
 
@@ -337,7 +463,52 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
         }
     }
 
-    private static void ApplyWaterToColliderSafe(Collider collider, float amount, System.Collections.Generic.HashSet<FireGroup> processedGroups, System.Collections.Generic.HashSet<Fire> processedFires, System.Collections.Generic.HashSet<FireParticleSystem> processedParticleFires)
+    private int GetEffectiveArcSegments(float effectiveLifetime)
+    {
+        if (effectiveLifetime <= 0f)
+        {
+            return 0;
+        }
+
+        float lifetimeRatio = arcLifetime > 0f ? effectiveLifetime / arcLifetime : 1f;
+        return Mathf.Max(1, Mathf.CeilToInt(arcSegments * lifetimeRatio));
+    }
+
+    private float GetEffectiveArcLifetime(Vector3 startPos, Vector3 initialVelocity, Vector3 gravity)
+    {
+        float maxLifetime = Mathf.Max(0.01f, arcLifetime);
+        float desiredRange = Mathf.Max(0.01f, currentSprayRange);
+        int samples = Mathf.Max(8, arcSegments * 4);
+
+        Vector3 previousPos = startPos;
+        float travelledDistance = 0f;
+
+        for (int sample = 1; sample <= samples; sample++)
+        {
+            float sampleT = maxLifetime * sample / samples;
+            Vector3 samplePos = startPos + initialVelocity * sampleT + 0.5f * gravity * sampleT * sampleT;
+            float segmentDistance = Vector3.Distance(previousPos, samplePos);
+
+            if (travelledDistance + segmentDistance >= desiredRange)
+            {
+                if (segmentDistance <= Mathf.Epsilon)
+                {
+                    return sampleT;
+                }
+
+                float overshootRatio = (desiredRange - travelledDistance) / segmentDistance;
+                float previousT = maxLifetime * (sample - 1) / samples;
+                return Mathf.Lerp(previousT, sampleT, Mathf.Clamp01(overshootRatio));
+            }
+
+            travelledDistance += segmentDistance;
+            previousPos = samplePos;
+        }
+
+        return maxLifetime;
+    }
+
+    private static void ApplyWaterToColliderSafe(Collider collider, float amount, System.Collections.Generic.HashSet<FireGroup> processedGroups)
     {
         if (collider == null) return;
 
@@ -346,36 +517,6 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
         {
             fireGroup.ApplyWater(amount);
         }
-
-        Fire fire = FindFire(collider);
-        if (fire != null && processedFires.Add(fire))
-        {
-            fire.ApplyWater(amount);
-        }
-
-        FireParticleSystem particleFire = FindFireParticleSystem(collider);
-        if (particleFire != null && processedParticleFires.Add(particleFire))
-        {
-            particleFire.ApplyWater(amount);
-        }
-    }
-
-    private static Fire FindFire(Collider collider)
-    {
-        if (collider.TryGetComponent(out Fire direct)) return direct;
-        if (collider.attachedRigidbody != null && collider.attachedRigidbody.TryGetComponent(out Fire rigidbodyOwner)) return rigidbodyOwner;
-        Transform parent = collider.transform.parent;
-        if (parent != null && parent.TryGetComponent(out Fire parentFire)) return parentFire;
-        return null;
-    }
-
-    private static FireParticleSystem FindFireParticleSystem(Collider collider)
-    {
-        if (collider.TryGetComponent(out FireParticleSystem direct)) return direct;
-        if (collider.attachedRigidbody != null && collider.attachedRigidbody.TryGetComponent(out FireParticleSystem rigidbodyOwner)) return rigidbodyOwner;
-        Transform parent = collider.transform.parent;
-        if (parent != null && parent.TryGetComponent(out FireParticleSystem parentFire)) return parentFire;
-        return null;
     }
 
     private static FireGroup FindFireGroup(Collider collider)
@@ -404,6 +545,34 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
         particleTransform.localRotation = Quaternion.identity;
     }
 
+    private void ApplyExternalAimToVfx()
+    {
+        if (waterParticles == null)
+        {
+            return;
+        }
+
+        Transform particleTransform = waterParticles.transform;
+        if (hasExternalAimDirection && externalAimDirection.sqrMagnitude > 0.001f)
+        {
+            particleTransform.rotation = Quaternion.LookRotation(externalAimDirection.normalized, Vector3.up);
+            return;
+        }
+
+        if (particleTransform.localRotation != Quaternion.identity)
+        {
+            particleTransform.localRotation = Quaternion.identity;
+        }
+    }
+
+    private void ClearExternalAimState()
+    {
+        hasExternalAimDirection = false;
+        externalAimDirection = Vector3.zero;
+        externalAimUser = null;
+        ApplyExternalAimToVfx();
+    }
+
     private void ConfigureWaterParticleCollision()
     {
         if (!removeParticleBounce || waterParticles == null)
@@ -426,8 +595,8 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
     {
         sprayRange = Mathf.Max(0.1f, sprayRange);
         sprayRadius = Mathf.Max(0.01f, sprayRadius);
-        applyWaterPerSecond = Mathf.Max(0f, applyWaterPerSecond);
-        dischargePerSecond = Mathf.Max(0f, dischargePerSecond);
+        playerApplyWaterPerSecond = Mathf.Max(0f, playerApplyWaterPerSecond);
+        botApplyWaterPerSecond = Mathf.Max(0f, botApplyWaterPerSecond);
         particleGravityModifier = Mathf.Max(0f, particleGravityModifier);
         pressureStep = Mathf.Max(0.01f, pressureStep);
         minPressureMultiplier = Mathf.Max(0.1f, minPressureMultiplier);
@@ -460,9 +629,11 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
         float pressureT = GetPressure01();
         float pressureRangeMultiplier = Mathf.Lerp(0.85f, 1.2f, pressureT);
         float pressureRadiusMultiplier = Mathf.Lerp(1.15f, 0.85f, pressureT);
+        float baseApplyWaterPerSecond = currentUser != null && currentUser.GetComponentInParent<BotBehaviorContext>() != null
+            ? botApplyWaterPerSecond
+            : playerApplyWaterPerSecond;
 
-        currentDischargeRate = dischargePerSecond * pressureMultiplier;
-        currentApplyWaterRate = applyWaterPerSecond * config.effectivenessMultiplier * pressureMultiplier;
+        currentApplyWaterRate = baseApplyWaterPerSecond * config.effectivenessMultiplier * pressureMultiplier;
         currentSprayRange = sprayRange * config.rangeMultiplier * pressureRangeMultiplier;
         currentSprayRadius = sprayRadius * config.radiusMultiplier * pressureRadiusMultiplier;
     }
@@ -683,7 +854,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable
 #if UNITY_EDITOR
 private void OnDrawGizmos()
 {
-    if (!drawArcGizmo || drawOnlyWhenSelected) return;
+    if (!drawArcGizmo || drawGizmoOnlyWhenSelected) return;
     DrawSprayArcGizmoDetailed();
 }
 
@@ -699,12 +870,16 @@ private void OnDrawGizmosSelected()
         Transform origin = sprayOrigin != null ? sprayOrigin : transform;
         if (origin == null) return;
 
-        int segments = Mathf.Max(1, arcSegments);
-        float lifetime = Mathf.Max(0.01f, arcLifetime);
-
         Vector3 startPos = origin.position;
         Vector3 initialVelocity = origin.forward * arcVelocity;
         Vector3 gravity = Physics.gravity * arcGravityMultiplier;
+        float lifetime = GetEffectiveArcLifetime(startPos, initialVelocity, gravity);
+        int segments = GetEffectiveArcSegments(lifetime);
+
+        if (lifetime <= 0f || segments <= 0)
+        {
+            return;
+        }
 
         float timeStep = lifetime / segments;
         Vector3 currentPos = startPos;

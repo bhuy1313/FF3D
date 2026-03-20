@@ -23,10 +23,14 @@ public class BotBehaviorContext : MonoBehaviour
     [SerializeField] private Vector2 idlePauseDurationRange = new Vector2(0.4f, 1.2f);
 
     private readonly BotMoveOrderState moveOrderState = new BotMoveOrderState();
+    private readonly BotExtinguishOrderState extinguishOrderState = new BotExtinguishOrderState();
+    private readonly BotFollowOrderState followOrderState = new BotFollowOrderState();
 
     public NavMeshAgent NavMeshAgent => navMeshAgent;
     public bool UseMoveOrdersAsBehaviorInput => useMoveOrdersAsBehaviorInput;
     public bool HasMoveOrder => moveOrderState.HasMoveOrder;
+    public bool HasExtinguishOrder => extinguishOrderState.HasExtinguishOrder;
+    public bool HasFollowOrder => followOrderState.HasFollowOrder;
     public float ArrivalDistance => Mathf.Max(0.05f, arrivalDistance);
     public float PatrolWaitSeconds => Mathf.Max(0f, patrolWaitSeconds);
     public bool PatrolMovementEnabled => enablePatrolMovement;
@@ -68,6 +72,31 @@ public class BotBehaviorContext : MonoBehaviour
     public void ClearMoveOrder()
     {
         moveOrderState.Clear();
+    }
+
+    public void SetExtinguishOrder(Vector3 destination)
+    {
+        extinguishOrderState.SetDestination(destination);
+    }
+
+    public bool TryGetExtinguishOrder(out Vector3 destination)
+    {
+        return extinguishOrderState.TryGetDestination(out destination);
+    }
+
+    public void ClearExtinguishOrder()
+    {
+        extinguishOrderState.Clear();
+    }
+
+    public void SetFollowOrder()
+    {
+        followOrderState.SetActive();
+    }
+
+    public void ClearFollowOrder()
+    {
+        followOrderState.Clear();
     }
 
     public int GetPatrolPointCount()

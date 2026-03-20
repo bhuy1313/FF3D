@@ -24,6 +24,7 @@ namespace TrueJourney.BotBehavior
 
         private BotBehaviorContext context;
         private NavMeshAgent navMeshAgent;
+        private global::BotCommandAgent commandAgent;
 
         protected override Status OnStart()
         {
@@ -43,21 +44,39 @@ namespace TrueJourney.BotBehavior
                 return Status.Failure;
             }
 
+            if (context.HasExtinguishOrder || context.HasFollowOrder)
+            {
+                return Status.Failure;
+            }
+
             if (!context.TryGetMoveOrder(out Vector3 destination))
             {
                 return Status.Success;
             }
 
-            if ((destination - currentDestination).sqrMagnitude > 0.01f)
+            bool destinationChanged = (destination - currentDestination).sqrMagnitude > 0.01f;
+            bool requiresNavigationRefresh =
+                !navMeshAgent.pathPending &&
+                (!navMeshAgent.hasPath ||
+                 navMeshAgent.pathStatus != NavMeshPathStatus.PathComplete ||
+                 (commandAgent != null && commandAgent.ShouldRefreshPathClearingCheck()));
+            if (destinationChanged || requiresNavigationRefresh)
             {
                 currentDestination = destination;
-                if (!navMeshAgent.SetDestination(currentDestination))
+                if (!(commandAgent != null
+                        ? commandAgent.TryNavigateTo(currentDestination)
+                        : navMeshAgent.SetDestination(currentDestination)))
                 {
                     return Status.Failure;
                 }
             }
 
             if (navMeshAgent.pathPending)
+            {
+                return Status.Running;
+            }
+
+            if (commandAgent != null && commandAgent.IsPathClearingActive)
             {
                 return Status.Running;
             }
@@ -93,7 +112,9 @@ namespace TrueJourney.BotBehavior
                 return false;
             }
 
-            if (!context.TryGetMoveOrder(out destination))
+            commandAgent = Agent.Value.GetComponent<global::BotCommandAgent>();
+
+            if (context.HasExtinguishOrder || context.HasFollowOrder || !context.TryGetMoveOrder(out destination))
             {
                 return false;
             }
@@ -108,7 +129,9 @@ namespace TrueJourney.BotBehavior
             navMeshAgent.isStopped = false;
 
             BotBehaviorActionUtility.TrySampleDestination(navMeshAgent, destination, 2f, out destination);
-            return navMeshAgent.SetDestination(destination);
+            return commandAgent != null
+                ? commandAgent.TryNavigateTo(destination)
+                : navMeshAgent.SetDestination(destination);
         }
     }
 }

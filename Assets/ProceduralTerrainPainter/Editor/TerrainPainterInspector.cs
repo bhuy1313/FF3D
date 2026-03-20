@@ -98,12 +98,10 @@ namespace sc.terrain.proceduralpainter
 
         private string iconPrefix => EditorGUIUtility.isProSkin ? "d_" : "";
         
-        private void OnEnable()
+        private void RefreshProperties()
         {
-            script = (TerrainPainter) target;
-            TerrainPainter.Current = script;
-            
-            if(script.terrains != null) script.RecalculateBounds();
+            if (serializedObject == null)
+                return;
 
             terrains = serializedObject.FindProperty("terrains");
             autoRepaint = serializedObject.FindProperty("autoRepaint");
@@ -116,6 +114,16 @@ namespace sc.terrain.proceduralpainter
 #if __MICROSPLAT__
             msTexArray = serializedObject.FindProperty("msTexArray");
 #endif
+        }
+
+        private void OnEnable()
+        {
+            script = (TerrainPainter) target;
+            TerrainPainter.Current = script;
+            
+            if(script.terrains != null) script.RecalculateBounds();
+
+            RefreshProperties();
             ModifierEditor.RefreshModifiers();
 
             RefreshLayerList();
@@ -194,16 +202,25 @@ namespace sc.terrain.proceduralpainter
             //It is normally called when saving the project. But there's the risk of the terrains in the queue no longer being present in the scene, thus throwing null-refs.
             PaintContext.ApplyDelayedActions();
             
-            script.Dispose();
+            if (script != null)
+            {
+                script.Dispose();
+            }
         }
         
         public override void OnInspectorGUI()
         {
+            if (serializedObject == null)
+                return;
+
+            RefreshProperties();
+            serializedObject.Update();
+
             EditorGUILayout.LabelField("Version " + TerrainPainter.Version, EditorStyles.centeredGreyMiniLabel);
             GUILayout.Space(5f);
             
             //Terrains not yet assigned? Force settings tab
-            if (terrains.arraySize > 0 && !hasMissingTerrains)
+            if (terrains != null && terrains.arraySize > 0 && !hasMissingTerrains)
             {
                 CurrentTab = (Tab)GUILayout.Toolbar((int)CurrentTab, new GUIContent[]
                 {
@@ -279,17 +296,33 @@ namespace sc.terrain.proceduralpainter
 
         private void DrawSettings()
         {
-            if (terrains.arraySize == 0 || hasMissingTerrains)
+            if (serializedObject == null)
+                return;
+
+            RefreshProperties();
+            serializedObject.Update();
+
+            if (terrains == null)
+                terrains = serializedObject.FindProperty("terrains");
+            if (autoRepaint == null)
+                autoRepaint = serializedObject.FindProperty("autoRepaint");
+
+            if (terrains != null && (terrains.arraySize == 0 || hasMissingTerrains))
             {
                 terrains.isExpanded = true;
             }
 
             using (new EditorGUILayout.VerticalScope("Box"))
             {
-                serializedObject.Update();
                 EditorGUI.BeginChangeCheck();
-                EditorGUILayout.PropertyField(terrains, new GUIContent("Terrains (" + terrains.arraySize + ")"));
-                if (EditorGUI.EndChangeCheck()) serializedObject.ApplyModifiedProperties();
+                if (terrains != null)
+                {
+                    EditorGUILayout.PropertyField(terrains, new GUIContent("Terrains (" + terrains.arraySize + ")"));
+                }
+                if (EditorGUI.EndChangeCheck())
+                {
+                    serializedObject.ApplyModifiedProperties();
+                }
                     
                 using (new EditorGUILayout.HorizontalScope())
                 {
@@ -298,7 +331,7 @@ namespace sc.terrain.proceduralpainter
                     if (GUILayout.Button("Assign active terrains"))
                     {
                         //Important! Don't repaint if the terrains are new, current splatmaps would be wiped without user warning!
-                        if(terrains.arraySize > 0) requiresRepaint = true;
+                        if (terrains != null && terrains.arraySize > 0) requiresRepaint = true;
                         
                         script.SetTargetTerrains(Terrain.activeTerrains);
 
@@ -310,7 +343,7 @@ namespace sc.terrain.proceduralpainter
                     if (GUILayout.Button("Assign child terrains"))
                     {
                         //Important! Don't repaint if the terrains are new, current splatmaps would be wiped without user warning!
-                        if(terrains.arraySize > 0) requiresRepaint = true;
+                        if (terrains != null && terrains.arraySize > 0) requiresRepaint = true;
                         
                         script.SetTargetTerrains(script.GetComponentsInChildren<Terrain>());
 
@@ -321,7 +354,7 @@ namespace sc.terrain.proceduralpainter
                     }
                     EditorGUI.EndDisabledGroup();
 
-                    if (terrains.arraySize > 0)
+                    if (terrains != null && terrains.arraySize > 0)
                     {
                         if (GUILayout.Button("Clear"))
                         {
@@ -335,7 +368,7 @@ namespace sc.terrain.proceduralpainter
                 }
             }
             
-            if (terrains.arraySize == 0)
+            if (terrains == null || terrains.arraySize == 0)
             {
                 EditorGUILayout.HelpBox("Assign terrains to paint on first", MessageType.Info);
             }
@@ -347,17 +380,20 @@ namespace sc.terrain.proceduralpainter
 
                 EditorGUI.BeginChangeCheck();
                 
-                EditorGUILayout.PropertyField(autoRepaint);
-                if (EditorGUI.EndChangeCheck())
+                if (autoRepaint != null)
                 {
-                    serializedObject.ApplyModifiedProperties();
-                    script.SetAutoRepaint(autoRepaint.boolValue);
+                    EditorGUILayout.PropertyField(autoRepaint);
+                    if (EditorGUI.EndChangeCheck())
+                    {
+                        serializedObject.ApplyModifiedProperties();
+                        script.SetAutoRepaint(autoRepaint.boolValue);
+                    }
                 }
-                
+
                 EditorGUI.BeginChangeCheck();
                 
-                EditorGUILayout.PropertyField(resolution);
-                EditorGUILayout.PropertyField(colorMapResolution);
+                if (resolution != null) EditorGUILayout.PropertyField(resolution);
+                if (colorMapResolution != null) EditorGUILayout.PropertyField(colorMapResolution);
                 if (EditorGUI.EndChangeCheck())
                 {
                     requiresRepaint = true;

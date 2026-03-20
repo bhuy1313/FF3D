@@ -21,6 +21,8 @@ namespace TrueJourney.BotBehavior
         private NavMeshAgent agent;
         private BotInventorySystem inventory;
         private float lastInteractTime;
+        private bool pickupWindowEnabled;
+        private IPickupable pickupTarget;
 
         private void Awake()
         {
@@ -34,7 +36,7 @@ namespace TrueJourney.BotBehavior
                 return;
 
             // Only check for interaction if moving
-            if (agent.velocity.sqrMagnitude < 0.1f)
+            if (!TryGetProbeDirection(true, out _))
                 return;
 
             if (Time.time < lastInteractTime + interactCooldown)
@@ -46,7 +48,10 @@ namespace TrueJourney.BotBehavior
         private void CheckForInteractables()
         {
             Vector3 origin = transform.position + Vector3.up * sensorYOffset; 
-            Vector3 direction = agent.velocity.normalized;
+            if (!TryGetProbeDirection(true, out Vector3 direction))
+            {
+                return;
+            }
 
             if (Physics.SphereCast(origin, sensorRadius, direction, out RaycastHit hit, sensorRange, interactMask, QueryTriggerInteraction.Ignore))
             {
@@ -54,10 +59,17 @@ namespace TrueJourney.BotBehavior
                 IPickupable pickupable = FindPickupable(hit.collider);
                 if (pickupable != null)
                 {
-                    if (inventory != null && !inventory.IsFull)
+                    if (pickupWindowEnabled &&
+                        inventory != null &&
+                        !inventory.IsFull &&
+                        (pickupTarget == null || pickupTarget == pickupable) &&
+                        inventory.TryPickup(pickupable))
                     {
-                        inventory.TryPickup(pickupable);
+                        pickupWindowEnabled = false;
+                        pickupTarget = null;
+                        lastInteractTime = Time.time;
                     }
+
                     return; // Done processing this frame
                 }
 
@@ -77,6 +89,84 @@ namespace TrueJourney.BotBehavior
                     lastInteractTime = Time.time;
                 }
             }
+        }
+
+        public void SetPickupWindow(bool enabled, IPickupable target = null)
+        {
+            pickupWindowEnabled = enabled;
+            pickupTarget = enabled ? target : null;
+        }
+
+        public bool TryFindBreakableAhead(out IBotBreakableTarget breakableTarget)
+        {
+            breakableTarget = null;
+            if (agent == null || !agent.enabled || !agent.isOnNavMesh)
+            {
+                return false;
+            }
+
+            Vector3 origin = transform.position + Vector3.up * sensorYOffset;
+            if (!TryGetProbeDirection(false, out Vector3 direction))
+            {
+                return false;
+            }
+
+            if (!Physics.SphereCast(origin, sensorRadius, direction, out RaycastHit hit, sensorRange, interactMask, QueryTriggerInteraction.Ignore))
+            {
+                return false;
+            }
+
+            IBotBreakableTarget breakable = FindBreakableTarget(hit.collider);
+            if (breakable == null || breakable.IsBroken || !breakable.CanBeClearedByBot)
+            {
+                return false;
+            }
+
+            breakableTarget = breakable;
+            return true;
+        }
+
+        private bool TryGetProbeDirection(bool requireMovementIntent, out Vector3 direction)
+        {
+            direction = default;
+            if (agent == null || !agent.enabled || !agent.isOnNavMesh)
+            {
+                return false;
+            }
+
+            Vector3 probeDirection = agent.velocity;
+            probeDirection.y = 0f;
+
+            if (probeDirection.sqrMagnitude < 0.01f)
+            {
+                probeDirection = agent.desiredVelocity;
+                probeDirection.y = 0f;
+            }
+
+            if (probeDirection.sqrMagnitude < 0.01f && agent.hasPath)
+            {
+                probeDirection = agent.steeringTarget - transform.position;
+                probeDirection.y = 0f;
+            }
+
+            if (probeDirection.sqrMagnitude < 0.01f)
+            {
+                probeDirection = transform.forward;
+                probeDirection.y = 0f;
+            }
+
+            if (probeDirection.sqrMagnitude < 0.01f)
+            {
+                return false;
+            }
+
+            if (requireMovementIntent && agent.remainingDistance <= agent.stoppingDistance + 0.05f && agent.desiredVelocity.sqrMagnitude < 0.01f && agent.velocity.sqrMagnitude < 0.01f)
+            {
+                return false;
+            }
+
+            direction = probeDirection.normalized;
+            return true;
         }
 
         private static IInteractable FindInteractable(Collider collider)
@@ -125,6 +215,33 @@ namespace TrueJourney.BotBehavior
                 {
                     return parentPickupable;
                 }
+                parent = parent.parent;
+            }
+
+            return null;
+        }
+
+        private static IBotBreakableTarget FindBreakableTarget(Collider collider)
+        {
+            if (collider.TryGetComponent(out IBotBreakableTarget direct))
+            {
+                return direct;
+            }
+
+            if (collider.attachedRigidbody != null &&
+                collider.attachedRigidbody.TryGetComponent(out IBotBreakableTarget rigidbodyOwner))
+            {
+                return rigidbodyOwner;
+            }
+
+            Transform parent = collider.transform.parent;
+            while (parent != null)
+            {
+                if (parent.TryGetComponent(out IBotBreakableTarget parentBreakable))
+                {
+                    return parentBreakable;
+                }
+
                 parent = parent.parent;
             }
 

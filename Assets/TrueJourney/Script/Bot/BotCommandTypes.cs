@@ -3,7 +3,9 @@ using UnityEngine;
 public enum BotCommandType
 {
     None = 0,
-    Move = 1
+    Move = 1,
+    Extinguish = 2,
+    Follow = 3
 }
 
 public interface ICommandable

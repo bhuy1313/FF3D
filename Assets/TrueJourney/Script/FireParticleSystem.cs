@@ -1,20 +1,21 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class FireParticleSystem : MonoBehaviour
 {
     [Header("Fire State")]
-    [SerializeField] private float maxIntensity = 1f;
-    [SerializeField] private float minIntensityToLive = 0.05f;
+    [FormerlySerializedAs("maxIntensity")]
+    [SerializeField] private float maxHp = 1f;
     [Tooltip("Regrow rate per second (0 = no regrow).")]
-    [SerializeField] private float regrowRate = 0f;
-    [Tooltip("If true, when enabled and currentIntensity <= 0, set to maxIntensity.")]
+    [FormerlySerializedAs("regrowRate")]
+    [SerializeField] private float regrowHpPerSecond = 0f;
+    [Tooltip("If true, when enabled and currentHp <= 0, set to maxHp.")]
     [SerializeField] private bool startLitOnEnable = true;
     [Tooltip("If true, regrow can start from 0 even after fully extinguished.")]
     [SerializeField] private bool allowRegrowFromZero = false;
+    [SerializeField] private float regrowResumeDelay = 1.5f;
 
     [Header("Extinguish")]
-    [SerializeField] private float waterExtinguishPerSecond = 0.5f;
-    [SerializeField] private string waterTag = "Water";
     [Tooltip("If true, disables GameObject when fully extinguished.")]
     [SerializeField] private bool disableGameObjectOnExtinguish = false;
 
@@ -40,11 +41,13 @@ public class FireParticleSystem : MonoBehaviour
     [SerializeField] private float maxLightIntensity = 2f;
 
     [Header("Runtime (Debug)")]
-    [SerializeField] private float currentIntensity = 1f;
+    [FormerlySerializedAs("currentIntensity")]
+    [SerializeField] private float currentHp = 1f;
 
     private bool particleDefaultsCached;
     private float cachedMaxEmissionRate;
     private float cachedMaxStartSize;
+    private float lastWaterAppliedTime = float.NegativeInfinity;
 
     private void Awake()
     {
@@ -55,10 +58,11 @@ public class FireParticleSystem : MonoBehaviour
 
     private void OnEnable()
     {
-        if (startLitOnEnable && currentIntensity <= 0f)
-            currentIntensity = maxIntensity;
+        if (startLitOnEnable && currentHp <= 0f)
+            currentHp = maxHp;
 
-        currentIntensity = Mathf.Clamp(currentIntensity, 0f, maxIntensity);
+        currentHp = Mathf.Clamp(currentHp, 0f, maxHp);
+        lastWaterAppliedTime = float.NegativeInfinity;
 
         CacheParticleDefaults();
         ApplyVisuals(forcePlayState: true);
@@ -66,23 +70,30 @@ public class FireParticleSystem : MonoBehaviour
 
     private void Update()
     {
-        if (regrowRate <= 0f) return;
-        if (!allowRegrowFromZero && currentIntensity <= 0f) return;
-        if (currentIntensity >= maxIntensity) return;
+        if (regrowHpPerSecond <= 0f) return;
+        if (!allowRegrowFromZero && currentHp <= 0f) return;
+        if (currentHp >= maxHp) return;
+        if (Time.time < lastWaterAppliedTime + Mathf.Max(0f, regrowResumeDelay)) return;
 
-        currentIntensity = Mathf.Min(maxIntensity, currentIntensity + regrowRate * Time.deltaTime);
+        currentHp = Mathf.Min(maxHp, currentHp + regrowHpPerSecond * Time.deltaTime);
         ApplyVisuals();
     }
 
     public void ApplyWater(float amount)
     {
         if (amount <= 0f) return;
-        if (currentIntensity <= 0f) return;
+        if (currentHp <= 0f) return;
 
-        currentIntensity = Mathf.Max(0f, currentIntensity - amount);
+        float previousHp = currentHp;
+        currentHp = Mathf.Max(0f, currentHp - amount);
+        if (currentHp < previousHp)
+        {
+            lastWaterAppliedTime = Time.time;
+        }
+
         ApplyVisuals();
 
-        if (currentIntensity <= minIntensityToLive)
+        if (currentHp <= 0f)
             Extinguish();
     }
 
@@ -93,13 +104,13 @@ public class FireParticleSystem : MonoBehaviour
         if (!gameObject.activeSelf)
             gameObject.SetActive(true);
 
-        currentIntensity = Mathf.Clamp(currentIntensity + amount, 0f, maxIntensity);
+        currentHp = Mathf.Clamp(currentHp + amount, 0f, maxHp);
         ApplyVisuals(forcePlayState: true);
     }
 
     private void Extinguish()
     {
-        currentIntensity = 0f;
+        currentHp = 0f;
         ApplyVisuals(forcePlayState: true);
 
         if (disableGameObjectOnExtinguish)
@@ -108,7 +119,7 @@ public class FireParticleSystem : MonoBehaviour
 
     private void ApplyVisuals(bool forcePlayState = false)
     {
-        float t01 = (maxIntensity <= 0f) ? 0f : Mathf.Clamp01(currentIntensity / maxIntensity);
+        float t01 = GetNormalizedHp();
 
         if (firePs != null)
         {
@@ -129,10 +140,10 @@ public class FireParticleSystem : MonoBehaviour
 
             if (forcePlayState || !firePs.isPlaying)
             {
-                if (currentIntensity > 0f) firePs.Play();
+                if (currentHp > 0f) firePs.Play();
                 else StopParticles();
             }
-            else if (currentIntensity <= 0f && firePs.isPlaying)
+            else if (currentHp <= 0f && firePs.isPlaying)
             {
                 StopParticles();
             }
@@ -141,7 +152,7 @@ public class FireParticleSystem : MonoBehaviour
         if (fireLight != null)
         {
             fireLight.intensity = Mathf.Lerp(0f, maxLightIntensity, t01);
-            fireLight.enabled = currentIntensity > 0f;
+            fireLight.enabled = currentHp > 0f;
         }
 
         if (scaleWithIntensity)
@@ -189,16 +200,13 @@ public class FireParticleSystem : MonoBehaviour
 
     private void OnTriggerStay(Collider other)
     {
-        if (!string.IsNullOrEmpty(waterTag) && other.CompareTag(waterTag))
-            ApplyWater(waterExtinguishPerSecond * Time.deltaTime);
-
-        if (damagePerSecond <= 0f || currentIntensity <= 0f) return;
+        if (damagePerSecond <= 0f || currentHp <= 0f) return;
         if (!string.IsNullOrEmpty(playerTag) && !other.CompareTag(playerTag)) return;
 
         PlayerVitals vitals = other.GetComponentInParent<PlayerVitals>();
         if (vitals == null || !vitals.IsAlive) return;
 
-        float t01 = (maxIntensity <= 0f) ? 0f : Mathf.Clamp01(currentIntensity / maxIntensity);
+        float t01 = GetNormalizedHp();
         float scale = damageScalesWithIntensity ? t01 : 1f;
         if (scale <= 0f) return;
 
@@ -207,7 +215,26 @@ public class FireParticleSystem : MonoBehaviour
 
     private void OnParticleCollision(GameObject other)
     {
-        if (!string.IsNullOrEmpty(waterTag) && other.CompareTag(waterTag))
-            ApplyWater(waterExtinguishPerSecond * Time.deltaTime);
+        if (other != null)
+        {
+            FireExtinguisher extinguisher = other.GetComponentInParent<FireExtinguisher>();
+            if (extinguisher != null)
+            {
+                // FireExtinguisher now applies water through its own cone-cast pipeline.
+                return;
+            }
+
+            FireHose hose = other.GetComponentInParent<FireHose>();
+            if (hose != null)
+            {
+                // FireHose applies water through its arc logic, so its particles remain visual-only.
+                return;
+            }
+        }
+    }
+
+    private float GetNormalizedHp()
+    {
+        return maxHp <= 0f ? 0f : Mathf.Clamp01(currentHp / maxHp);
     }
 }

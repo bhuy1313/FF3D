@@ -134,9 +134,9 @@ namespace TrueJourney.BotBehavior.Editor
             object selectorNode = CreateNode(authoringGraph, GetBehaviorType(SelectorCompositeRuntimeTypeName), new Vector2(0f, 220f), startOutput);
             object selectorOutput = GetDefaultPort(selectorNode, useOutputPort: true);
 
-            object moveNode = CreateNode(authoringGraph, typeof(BotExecuteMoveOrderAction), new Vector2(-320f, 460f), selectorOutput);
-            object patrolNode = CreateNode(authoringGraph, typeof(BotPatrolRouteAction), new Vector2(0f, 460f), selectorOutput);
-            object idleNode = CreateNode(authoringGraph, typeof(BotIdleLookAction), new Vector2(320f, 460f), selectorOutput);
+            object moveNode = CreateNode(authoringGraph, typeof(BotExecuteMoveOrderAction), new Vector2(-240f, 460f), selectorOutput);
+            object patrolNode = CreateNode(authoringGraph, typeof(BotPatrolRouteAction), new Vector2(80f, 460f), selectorOutput);
+            object idleNode = CreateNode(authoringGraph, typeof(BotIdleLookAction), new Vector2(400f, 460f), selectorOutput);
 
             object selfVariable = GetSelfVariable(blackboard);
             LinkAgentField(moveNode, selfVariable);
