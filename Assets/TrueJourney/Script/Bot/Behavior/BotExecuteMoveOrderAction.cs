@@ -88,11 +88,14 @@ namespace TrueJourney.BotBehavior
 
             context.ClearMoveOrder();
             navMeshAgent.ResetPath();
+            commandAgent?.ResetMoveActivityDebug();
             return Status.Success;
         }
 
         protected override void OnEnd()
         {
+            commandAgent?.ResetMoveActivityDebug();
+
             if (navMeshAgent != null && navMeshAgent.enabled && navMeshAgent.isOnNavMesh && originalStoppingDistance >= 0f)
             {
                 navMeshAgent.stoppingDistance = originalStoppingDistance;

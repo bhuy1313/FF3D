@@ -2,8 +2,17 @@ using UnityEngine;
 
 namespace TrueJourney.BotBehavior
 {
+    public enum BreakToolKind
+    {
+        None = 0,
+        FireAxe = 1,
+        SledgeHammer = 2,
+        ChainSaw = 3
+    }
+
     public interface IBotBreakTool
     {
+        BreakToolKind ToolKind { get; }
         Rigidbody Rigidbody { get; }
         float PreferredBreakDistance { get; }
         float MaxBreakDistance { get; }
@@ -13,14 +22,18 @@ namespace TrueJourney.BotBehavior
         bool IsAvailableTo(GameObject requester);
         bool TryClaim(GameObject requester);
         void ReleaseClaim(GameObject requester);
-        void UseOnTarget(GameObject user, IBotBreakableTarget target);
+        bool UseOnTarget(GameObject user, IBotBreakableTarget target);
     }
 
     public interface IBotBreakableTarget
     {
         bool IsBroken { get; }
         bool CanBeClearedByBot { get; }
+        bool IsBreakInProgress { get; }
+        GameObject ActiveBreaker { get; }
         Vector3 GetWorldPosition();
-        void TakeBreakDamage(float amount, GameObject source, Vector3 hitPoint, Vector3 hitNormal);
+        bool IsOnSameSide(Vector3 pointA, Vector3 pointB);
+        bool SupportsBreakTool(BreakToolKind toolKind);
+        bool TryStartBreak(GameObject breaker, BreakToolKind toolKind);
     }
 }

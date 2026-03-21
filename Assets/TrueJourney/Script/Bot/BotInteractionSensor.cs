@@ -17,12 +17,15 @@ namespace TrueJourney.BotBehavior
         
         [Header("Debug")]
         [SerializeField] private bool drawDebugPath = true;
+        [SerializeField] private bool debugBreakableSensorLogs = false;
+        [SerializeField] private bool debugBreakableSensorMisses = false;
 
         private NavMeshAgent agent;
         private BotInventorySystem inventory;
         private float lastInteractTime;
         private bool pickupWindowEnabled;
         private IPickupable pickupTarget;
+        private string lastBreakableSensorLogKey;
 
         private void Awake()
         {
@@ -102,26 +105,143 @@ namespace TrueJourney.BotBehavior
             breakableTarget = null;
             if (agent == null || !agent.enabled || !agent.isOnNavMesh)
             {
+                LogBreakableSensor("ahead:no-agent", "Ahead: sensor unavailable.");
                 return false;
             }
 
             Vector3 origin = transform.position + Vector3.up * sensorYOffset;
             if (!TryGetProbeDirection(false, out Vector3 direction))
             {
+                LogBreakableSensor("ahead:no-direction", "Ahead: no probe direction.", true);
                 return false;
             }
 
             if (!Physics.SphereCast(origin, sensorRadius, direction, out RaycastHit hit, sensorRange, interactMask, QueryTriggerInteraction.Ignore))
             {
+                LogBreakableSensor(
+                    $"ahead:no-hit:{FormatVectorKey(origin)}:{FormatVectorKey(direction)}",
+                    $"Ahead: no blocker. origin={origin}, direction={direction}, range={sensorRange:F2}.",
+                    true);
                 return false;
             }
 
             IBotBreakableTarget breakable = FindBreakableTarget(hit.collider);
             if (breakable == null || breakable.IsBroken || !breakable.CanBeClearedByBot)
             {
+                string hitName = hit.collider != null ? hit.collider.name : "(null)";
+                LogBreakableSensor(
+                    $"ahead:non-breakable:{hitName}",
+                    $"Ahead: hit '{hitName}' but it is not a valid blocker.",
+                    true);
                 return false;
             }
 
+            LogBreakableSensor(
+                $"ahead:blocker:{GetBreakableDebugName(breakable)}",
+                $"Ahead: detected blocker '{GetBreakableDebugName(breakable)}'.");
+            breakableTarget = breakable;
+            return true;
+        }
+
+        public bool TryFindBreakableTowards(Vector3 worldPosition, out IBotBreakableTarget breakableTarget)
+        {
+            breakableTarget = null;
+            if (agent == null || !agent.enabled || !agent.isOnNavMesh)
+            {
+                LogBreakableSensor("towards:no-agent", $"Towards {worldPosition}: sensor unavailable.");
+                return false;
+            }
+
+            Vector3 origin = transform.position + Vector3.up * sensorYOffset;
+            Vector3 direction = worldPosition - origin;
+            direction.y = 0f;
+            float distance = direction.magnitude;
+            if (distance <= 0.05f)
+            {
+                LogBreakableSensor(
+                    $"towards:short:{FormatVectorKey(worldPosition)}",
+                    $"Towards {worldPosition}: distance too short.",
+                    true);
+                return false;
+            }
+
+            direction /= distance;
+            if (!Physics.SphereCast(origin, sensorRadius, direction, out RaycastHit hit, distance, interactMask, QueryTriggerInteraction.Ignore))
+            {
+                LogBreakableSensor(
+                    $"towards:no-hit:{FormatVectorKey(worldPosition)}",
+                    $"Towards {worldPosition}: no blocker on probe.",
+                    true);
+                return false;
+            }
+
+            IBotBreakableTarget breakable = FindBreakableTarget(hit.collider);
+            if (breakable == null || breakable.IsBroken || !breakable.CanBeClearedByBot)
+            {
+                string hitName = hit.collider != null ? hit.collider.name : "(null)";
+                LogBreakableSensor(
+                    $"towards:non-breakable:{hitName}:{FormatVectorKey(worldPosition)}",
+                    $"Towards {worldPosition}: hit '{hitName}' but it is not a valid blocker.",
+                    true);
+                return false;
+            }
+
+            LogBreakableSensor(
+                $"towards:blocker:{GetBreakableDebugName(breakable)}:{FormatVectorKey(worldPosition)}",
+                $"Towards {worldPosition}: detected blocker '{GetBreakableDebugName(breakable)}'.");
+            breakableTarget = breakable;
+            return true;
+        }
+
+        public bool TryFindBreakableBetween(Vector3 worldStart, Vector3 worldEnd, out IBotBreakableTarget breakableTarget)
+        {
+            breakableTarget = null;
+            if (agent == null || !agent.enabled || !agent.isOnNavMesh)
+            {
+                LogBreakableSensor(
+                    $"between:no-agent:{FormatVectorKey(worldStart)}:{FormatVectorKey(worldEnd)}",
+                    $"Between {worldStart} -> {worldEnd}: sensor unavailable.");
+                return false;
+            }
+
+            Vector3 origin = worldStart + Vector3.up * sensorYOffset;
+            Vector3 target = worldEnd + Vector3.up * sensorYOffset;
+            Vector3 direction = target - origin;
+            direction.y = 0f;
+            float distance = direction.magnitude;
+            if (distance <= 0.05f)
+            {
+                LogBreakableSensor(
+                    $"between:short:{FormatVectorKey(worldStart)}:{FormatVectorKey(worldEnd)}",
+                    $"Between {worldStart} -> {worldEnd}: distance too short.",
+                    true);
+                return false;
+            }
+
+            direction /= distance;
+            if (!Physics.SphereCast(origin, sensorRadius, direction, out RaycastHit hit, distance, interactMask, QueryTriggerInteraction.Ignore))
+            {
+                LogBreakableSensor(
+                    $"between:no-hit:{FormatVectorKey(worldStart)}:{FormatVectorKey(worldEnd)}",
+                    $"Between {worldStart} -> {worldEnd}: no blocker on segment.",
+                    true);
+                return false;
+            }
+
+            IBotBreakableTarget breakable = FindBreakableTarget(hit.collider);
+            if (breakable == null || breakable.IsBroken || !breakable.CanBeClearedByBot)
+            {
+                string hitName = hit.collider != null ? hit.collider.name : "(null)";
+                LogBreakableSensor(
+                    $"between:non-breakable:{hitName}:{FormatVectorKey(worldStart)}:{FormatVectorKey(worldEnd)}",
+                    $"Between {worldStart} -> {worldEnd}: hit '{hitName}' but it is not a valid blocker.",
+                    true);
+                return false;
+            }
+
+            LogBreakableSensor(
+                $"between:blocker:{GetBreakableDebugName(breakable)}:{FormatVectorKey(worldStart)}:{FormatVectorKey(worldEnd)}",
+                $"Between {worldStart} -> {worldEnd}: detected blocker '{GetBreakableDebugName(breakable)}'.");
             breakableTarget = breakable;
             return true;
         }
@@ -246,6 +366,39 @@ namespace TrueJourney.BotBehavior
             }
 
             return null;
+        }
+
+        private void LogBreakableSensor(string key, string detail, bool isMiss = false)
+        {
+            if (!debugBreakableSensorLogs)
+            {
+                return;
+            }
+
+            if (isMiss && !debugBreakableSensorMisses)
+            {
+                return;
+            }
+
+            if (lastBreakableSensorLogKey == key)
+            {
+                return;
+            }
+
+            lastBreakableSensorLogKey = key;
+            Debug.Log($"[BotSensor] [{name}] {detail}", this);
+        }
+
+        private static string GetBreakableDebugName(IBotBreakableTarget breakable)
+        {
+            return breakable is Component component && component != null
+                ? component.name
+                : "(unknown breakable)";
+        }
+
+        private static string FormatVectorKey(Vector3 value)
+        {
+            return $"{Mathf.RoundToInt(value.x * 10f)}:{Mathf.RoundToInt(value.y * 10f)}:{Mathf.RoundToInt(value.z * 10f)}";
         }
 
         private void OnDrawGizmosSelected()

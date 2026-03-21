@@ -123,8 +123,9 @@ GameObject:
   m_Component:
   - component: {fileID: 553468921299418875}
   - component: {fileID: 8785765127927313614}
-  - component: {fileID: 5714008796098425165}
   - component: {fileID: 5039271393193485205}
+  - component: {fileID: 8037682574301293432}
+  - component: {fileID: 4747125290758802551}
   m_Layer: 0
   m_Name: FireAxe
   m_TagString: Untagged
@@ -175,23 +176,6 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!114 &5714008796098425165
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 979707955808453874}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c5c43b798fee406468c3457e412a08db, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::FireAxe
-  damage: 25
-  hitMask:
-    serializedVersion: 2
-    m_Bits: 256
-  staminaCost: 10
 --- !u!114 &5039271393193485205
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -207,6 +191,47 @@ MonoBehaviour:
   itemName: Fire Axe
   itemDescription: A sturdy fire axe useful for chopping wood and breaking objects.
   itemIcon: {fileID: 0}
+--- !u!114 &8037682574301293432
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 979707955808453874}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshModifier
+  m_SerializedVersion: 0
+  m_OverrideArea: 0
+  m_Area: 0
+  m_OverrideGenerateLinks: 0
+  m_GenerateLinks: 0
+  m_IgnoreFromBuild: 1
+  m_ApplyToChildren: 1
+  m_AffectedAgents: ffffffff
+--- !u!114 &4747125290758802551
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 979707955808453874}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c66cffe5fc7c1b498f4a5670c01348b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Tool
+  toolKind: 1
+  useRange: 2
+  hitMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  botUseRange: 1.75
+  botUseCooldown: 0.6
+  currentHolder: {fileID: 0}
+  claimOwner: {fileID: 0}
 --- !u!1 &1362478858261855568
 GameObject:
   m_ObjectHideFlags: 0

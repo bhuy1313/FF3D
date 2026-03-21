@@ -61,7 +61,6 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
     [Header("Navigation")]
     [SerializeField] private float navMeshSampleDistance = 2f;
     [SerializeField] private float turnSpeed = 360f;
-    [SerializeField] private bool drawDestinationGizmo = true;
 
     [Header("Aim")]
     [SerializeField] private float pitchTurnSpeed = 180f;
@@ -86,6 +85,7 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
     [SerializeField] private float pathClearingRefreshInterval = 0.2f;
     [SerializeField] private float breakStandDistanceTolerance = 0.35f;
     [SerializeField] private float pathClearingResumeGraceTime = 0.2f;
+    [SerializeField] private float blockedBreakToolRetryDelay = 1f;
 
     [Header("Follow")]
     [SerializeField] private string followTargetTag = "Player";
@@ -93,23 +93,13 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
     [SerializeField] private float followRepathDistance = 0.75f;
     [SerializeField] private float followCatchupDistance = 4f;
 
-    [Header("Debug")]
-    [SerializeField] private bool enableExtinguishDebugLogs = false;
-    [SerializeField] private bool debugExtinguishStage = false;
+    [Header("Gizmos")]
+    [SerializeField] private bool drawDestinationGizmo = true;
     [SerializeField] private bool drawAimGizmo = true;
     [SerializeField] private float aimGizmoLength = 2.5f;
-    [SerializeField] private bool debugExtinguishTargeting = false;
-    [SerializeField] private bool debugExtinguishTooling = false;
-    [SerializeField] private bool debugExtinguishMovement = false;
-    [SerializeField] private bool debugExtinguishTiming = false;
-    [SerializeField] private bool debugExtinguishDistance = false;
-    [SerializeField] private bool debugExtinguishSpray = false;
-    [SerializeField] private bool enablePathClearingDebugLogs = false;
-    [SerializeField] private bool debugPathClearingStage = false;
-    [SerializeField] private bool debugPathClearingDetection = false;
-    [SerializeField] private bool debugPathClearingTooling = false;
-    [SerializeField] private bool debugPathClearingMovement = false;
-    [SerializeField] private bool debugPathClearingAttack = false;
+
+    [Header("Debug")]
+    [SerializeField] private bool enableActivityDebug = false;
 
     private Vector3 lastIssuedDestination;
     private bool hasIssuedDestination;
@@ -120,7 +110,9 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
     private IBotExtinguisherItem committedExtinguishTool;
     private IBotBreakTool activeBreakTool;
     private IBotBreakTool committedBreakTool;
+    private IBotBreakTool temporarilyRejectedBreakTool;
     private IBotBreakableTarget currentBlockedBreakable;
+    private IBotBreakableTarget temporarilyRejectedBreakable;
     private IFireTarget currentFireTarget;
     private Vector3 currentExtinguishTargetPosition;
     private Vector3 currentExtinguishAimPoint;
@@ -133,13 +125,16 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
     private Transform followTarget;
     private Vector3 lastFollowDestination;
     private int lastExtinguishDebugStage = -1;
-    private string lastVerboseExtinguishKey;
     private int lastPathClearingDebugStage = -1;
-    private string lastVerbosePathClearingKey;
+    private string lastPathClearingFlowKey;
+    private string lastPathClearingFlowMessage;
+    private string lastMoveCommandFlowKey;
+    private string lastMoveStartFlowKey;
     private float sprayReadyTime = -1f;
     private float nextBreakUseTime;
     private float nextPathClearingRefreshTime;
     private float pathClearingResumeGraceUntilTime;
+    private float temporarilyRejectedBreakToolUntilTime;
 
     public Vector3 LastIssuedDestination => lastIssuedDestination;
     public bool HasIssuedDestination => hasIssuedDestination;
@@ -579,63 +574,24 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
 
     private bool TryEnsureExtinguisherEquipped(IBotExtinguisherItem desiredTool)
     {
-        if (desiredTool == null)
+        BotToolAcquisitionOptions<IBotExtinguisherItem> options = new BotToolAcquisitionOptions<IBotExtinguisherItem>
         {
-            return false;
-        }
+            BotTransform = transform,
+            InventorySystem = inventorySystem,
+            PickupDistance = pickupDistance,
+            IsAvailableToBot = tool => tool.IsAvailableTo(gameObject),
+            IsHeldByBot = tool => tool.IsHeld && tool.ClaimOwner == gameObject,
+            SetActiveTool = tool => activeExtinguisher = tool,
+            OnUnavailable = () => ReleaseCommittedToolIfMatches(desiredTool),
+            OnBeforeAcquire = StopExtinguisher,
+            ReportSearching = toolName => UpdateExtinguishDebugStage(ExtinguishDebugStage.SearchingExtinguisher, $"Acquiring tool '{toolName}'."),
+            ReportPickingUp = toolName => UpdateExtinguishDebugStage(ExtinguishDebugStage.PickingUpExtinguisher, $"Picking up extinguisher '{toolName}'."),
+            ReportMovingToTool = (toolName, toolPosition) => UpdateExtinguishDebugStage(ExtinguishDebugStage.MovingToExtinguisher, $"Moving to tool '{toolName}' at {toolPosition}."),
+            SetPickupWindow = SetPickupWindow,
+            MoveToTool = toolPosition => MoveTo(toolPosition)
+        };
 
-        if (!desiredTool.IsAvailableTo(gameObject))
-        {
-            ReleaseCommittedToolIfMatches(desiredTool);
-            return false;
-        }
-
-        if (ReferenceEquals(activeExtinguisher, desiredTool) && activeExtinguisher.IsHeld)
-        {
-            SetPickupWindow(false);
-            return true;
-        }
-
-        if (desiredTool is IPickupable desiredPickupable && inventorySystem.TryEquipItem(desiredPickupable))
-        {
-            activeExtinguisher = desiredTool;
-            SetPickupWindow(false);
-            return true;
-        }
-
-        UpdateExtinguishDebugStage(ExtinguishDebugStage.SearchingExtinguisher, $"Acquiring tool '{GetToolName(desiredTool)}'.");
-        StopExtinguisher();
-
-        Component extinguisherComponent = desiredTool as Component;
-        if (extinguisherComponent == null)
-        {
-            return false;
-        }
-
-        Vector3 extinguisherPosition = extinguisherComponent.transform.position;
-        if (Vector3.Distance(transform.position, extinguisherPosition) <= pickupDistance)
-        {
-            UpdateExtinguishDebugStage(ExtinguishDebugStage.PickingUpExtinguisher, $"Picking up extinguisher '{extinguisherComponent.name}'.");
-            SetPickupWindow(true, desiredTool as IPickupable);
-            if (!inventorySystem.TryPickup(desiredTool))
-            {
-                return false;
-            }
-
-            SetPickupWindow(false);
-            if (desiredTool is IPickupable pickedTool && inventorySystem.TryEquipItem(pickedTool))
-            {
-                activeExtinguisher = desiredTool;
-                return true;
-            }
-
-            return false;
-        }
-
-        UpdateExtinguishDebugStage(ExtinguishDebugStage.MovingToExtinguisher, $"Moving to tool '{extinguisherComponent.name}' at {extinguisherPosition}.");
-        SetPickupWindow(true, desiredTool as IPickupable);
-        MoveTo(extinguisherPosition);
-        return false;
+        return BotToolAcquisitionUtility.TryEnsureToolEquipped(desiredTool, options);
     }
 
     private IBotExtinguisherItem SelectPreferredExtinguishTool(Vector3 orderPoint, Vector3 firePosition, IFireGroupTarget fireGroup, IFireTarget fireTarget)
@@ -821,6 +777,10 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
 
     public bool TryNavigateTo(Vector3 destination)
     {
+        LogPathClearingFlow(
+            $"move-destination:{FormatFlowVectorKey(destination)}",
+            $"Tiến tới điểm chỉ định {destination}.");
+
         if (TryHandleBlockedPath(destination))
         {
             return true;
@@ -833,6 +793,9 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
             destination = navMeshHit.position;
         }
 
+        LogPathClearingFlow(
+            $"move-start:{FormatFlowVectorKey(destination)}",
+            "Di chuyển.");
         return navMeshAgent.SetDestination(destination);
     }
 
@@ -1450,7 +1413,6 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
         hasCurrentExtinguishAimPoint = false;
         hasCurrentExtinguishLaunchDirection = false;
         currentExtinguishTrajectoryPointCount = 0;
-        lastVerboseExtinguishKey = null;
         sprayReadyTime = -1f;
     }
 
@@ -1464,11 +1426,41 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
 
         if (HasPendingCommittedBreakTool())
         {
+            if (interactionSensor != null &&
+                interactionSensor.TryFindBreakableAhead(out IBotBreakableTarget routeBlockedBreakable) &&
+                routeBlockedBreakable != null &&
+                routeBlockedBreakable.CanBeClearedByBot &&
+                !routeBlockedBreakable.IsBroken)
+            {
+                LogPathClearingFlow(
+                    $"sensor-blocker-reroute:{GetDebugTargetName(routeBlockedBreakable)}:{GetBreakToolName(committedBreakTool)}",
+                    $"Phát hiện Blocker '{GetDebugTargetName(routeBlockedBreakable)}'.");
+                LogPathClearingFlow(
+                    $"retry-breaktool-route:{GetBreakToolName(committedBreakTool)}:{GetDebugTargetName(routeBlockedBreakable)}",
+                    "Xác định Fire Axe khác.");
+                LogPathClearingFlow(
+                    $"discard-breaktool-route:{GetBreakToolName(committedBreakTool)}:{GetDebugTargetName(routeBlockedBreakable)}",
+                    "Loại Fire Axe.");
+                RejectBreakToolForCurrentBlocker(committedBreakTool, routeBlockedBreakable);
+                StopBreakToolRoute();
+                ReleaseCommittedBreakTool();
+                UpdatePathClearingDebugStage(PathClearingDebugStage.SearchingBreakTool, $"Break tool route is blocked by '{GetDebugTargetName(routeBlockedBreakable)}'. Re-evaluating tool.");
+                return true;
+            }
+
             if (!IsBreakToolStillUsable(committedBreakTool))
             {
+                StopBreakToolRoute();
+                LogPathClearingFlow(
+                    $"no-break-tool:committed:{GetBreakToolName(committedBreakTool)}",
+                    "Không còn Tool khả dụng.");
+                LogPathClearingFlow(
+                    $"stop-breaktool:committed:{GetBreakToolName(committedBreakTool)}",
+                    "Stop.");
                 UpdatePathClearingDebugStage(PathClearingDebugStage.NoBreakTool, $"Committed break tool '{GetBreakToolName(committedBreakTool)}' is no longer usable.");
                 ReleaseCommittedBreakTool();
-                return false;
+                RefreshPathClearingResumeGrace();
+                return true;
             }
 
             UpdatePathClearingDebugStage(PathClearingDebugStage.SearchingBreakTool, $"Continuing acquisition of break tool '{GetBreakToolName(committedBreakTool)}'.");
@@ -1501,8 +1493,16 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
         IBotBreakTool breakTool = ResolveCommittedBreakTool();
         if (breakTool == null)
         {
+            StopBreakToolRoute();
+            LogPathClearingFlow(
+                $"no-break-tool:blocker:{GetDebugTargetName(blockedTarget)}",
+                "Không còn Tool khả dụng.");
+            LogPathClearingFlow(
+                $"stop-breaktool:blocker:{GetDebugTargetName(blockedTarget)}",
+                "Stop.");
             UpdatePathClearingDebugStage(PathClearingDebugStage.NoBreakTool, $"No usable break tool found for '{GetDebugTargetName(blockedTarget)}'.");
-            return false;
+            RefreshPathClearingResumeGrace();
+            return true;
         }
 
         if (!TryEnsureBreakToolEquipped(breakTool))
@@ -1554,14 +1554,22 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
         navMeshAgent.isStopped = true;
         AimTowards(targetPosition);
 
+        if (blockedTarget.IsBreakInProgress)
+        {
+            return true;
+        }
+
         if (Time.time >= nextBreakUseTime)
         {
-            UpdatePathClearingDebugStage(PathClearingDebugStage.Breaking, $"Breaking '{GetDebugTargetName(blockedTarget)}' with '{GetBreakToolName(equippedBreakTool)}'.");
-            LogVerbosePathClearing(
-                VerbosePathClearingLogCategory.Attack,
-                $"attackbreak:{GetDebugTargetName(blockedTarget)}:{GetBreakToolName(equippedBreakTool)}",
-                $"Attacking breakable '{GetDebugTargetName(blockedTarget)}' with '{GetBreakToolName(equippedBreakTool)}'.");
-            equippedBreakTool.UseOnTarget(gameObject, blockedTarget);
+            bool startedBreak = equippedBreakTool.UseOnTarget(gameObject, blockedTarget);
+            if (startedBreak)
+            {
+                UpdatePathClearingDebugStage(PathClearingDebugStage.Breaking, $"Breaking '{GetDebugTargetName(blockedTarget)}' with '{GetBreakToolName(equippedBreakTool)}'.");
+                LogPathClearingFlow(
+                    $"break-breakable:{GetDebugTargetName(blockedTarget)}",
+                    "Phá Breakable.");
+            }
+
             nextBreakUseTime = Time.time + equippedBreakTool.UseCooldown;
         }
 
@@ -1587,6 +1595,9 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
 
         if (interactionSensor != null && interactionSensor.TryFindBreakableAhead(out IBotBreakableTarget sensedBreakable))
         {
+            LogPathClearingFlow(
+                $"sensor-blocker-ahead:{GetDebugTargetName(sensedBreakable)}",
+                $"Phát hiện Blocker '{GetDebugTargetName(sensedBreakable)}'.");
             LogVerbosePathClearing(
                 VerbosePathClearingLogCategory.Detection,
                 $"sensorbreakable:{GetDebugTargetName(sensedBreakable)}",
@@ -1797,7 +1808,11 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
         for (int i = 0; i < inventoryTools.Count; i++)
         {
             IBotBreakTool candidate = inventoryTools[i];
-            if (candidate == null || !candidate.IsAvailableTo(gameObject))
+            if (candidate == null ||
+                !candidate.IsAvailableTo(gameObject) ||
+                (currentBlockedBreakable != null && !currentBlockedBreakable.SupportsBreakTool(candidate.ToolKind)) ||
+                IsBreakToolBlockedByCurrentBreakable(candidate) ||
+                IsBreakToolTemporarilyRejected(candidate))
             {
                 continue;
             }
@@ -1813,7 +1828,12 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
         foreach (IBotBreakTool candidate in BotRuntimeRegistry.ActiveBreakTools)
         {
             Component candidateComponent = candidate as Component;
-            if (candidateComponent == null || candidate.IsHeld || !candidate.IsAvailableTo(gameObject))
+            if (candidateComponent == null ||
+                candidate.IsHeld ||
+                !candidate.IsAvailableTo(gameObject) ||
+                (currentBlockedBreakable != null && !currentBlockedBreakable.SupportsBreakTool(candidate.ToolKind)) ||
+                IsBreakToolBlockedByCurrentBreakable(candidate) ||
+                IsBreakToolTemporarilyRejected(candidate))
             {
                 continue;
             }
@@ -1847,89 +1867,184 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
 
     private bool TryEnsureBreakToolEquipped(IBotBreakTool desiredTool)
     {
-        if (desiredTool == null)
+        BotToolAcquisitionOptions<IBotBreakTool> options = new BotToolAcquisitionOptions<IBotBreakTool>
+        {
+            BotTransform = transform,
+            InventorySystem = inventorySystem,
+            PickupDistance = pickupDistance,
+            IsAvailableToBot = tool => tool.IsAvailableTo(gameObject),
+            IsHeldByBot = tool => tool.IsHeldBy(gameObject),
+            SetActiveTool = tool => activeBreakTool = tool,
+            OnUnavailable = ReleaseCommittedBreakTool,
+            ReportSearching = toolName => UpdatePathClearingDebugStage(PathClearingDebugStage.SearchingBreakTool, $"Acquiring break tool '{toolName}'."),
+            ReportPickingUp = toolName =>
+            {
+                LogPathClearingFlow($"pickup-breaktool:{toolName}", "Nhặt Fire Axe.");
+                UpdatePathClearingDebugStage(PathClearingDebugStage.PickingUpBreakTool, $"Picking up break tool '{toolName}'.");
+            },
+            ReportMovingToTool = (toolName, toolPosition) => UpdatePathClearingDebugStage(PathClearingDebugStage.MovingToBreakTool, $"Moving to break tool '{toolName}' at {toolPosition}."),
+            LogHeld = toolName => LogVerbosePathClearing(
+                VerbosePathClearingLogCategory.Tooling,
+                $"heldbreaktool:{toolName}",
+                $"Using already-held break tool '{toolName}'."),
+            LogEquipped = toolName => LogVerbosePathClearing(
+                VerbosePathClearingLogCategory.Tooling,
+                $"equipbreaktool:{toolName}",
+                $"Equipped break tool '{toolName}' from inventory."),
+            LogPickedUp = toolName => LogVerbosePathClearing(
+                VerbosePathClearingLogCategory.Tooling,
+                $"pickupbreaktool:{toolName}",
+                $"Picked up and equipped break tool '{toolName}'."),
+            SetPickupWindow = SetPickupWindow,
+            MoveToTool = toolPosition =>
+            {
+                if (IsBreakToolBlockedByCurrentBreakable(desiredTool))
+                {
+                    if (currentBlockedBreakable != null)
+                    {
+                        LogPathClearingFlow(
+                            $"discard-breaktool-move:{GetBreakToolName(desiredTool)}:{GetDebugTargetName(currentBlockedBreakable)}",
+                            "Loại Fire Axe.");
+                        RejectBreakToolForCurrentBlocker(desiredTool, currentBlockedBreakable);
+                    }
+
+                    StopBreakToolRoute();
+                    SetPickupWindow(false, null);
+                    ReleaseCommittedBreakTool();
+                    UpdatePathClearingDebugStage(
+                        PathClearingDebugStage.SearchingBreakTool,
+                        $"Break tool route is blocked. Re-evaluating tool.");
+                    return;
+                }
+
+                LogVerbosePathClearing(
+                    VerbosePathClearingLogCategory.Movement,
+                    $"movetobreaktool:{toolPosition}",
+                    $"Moving to break tool at {toolPosition}.");
+                LogPathClearingFlow(
+                    $"move-breaktool:{FormatFlowVectorKey(toolPosition)}",
+                    "Di chuyển.");
+                TrySetDestinationDirect(toolPosition);
+            }
+        };
+
+        return BotToolAcquisitionUtility.TryEnsureToolEquipped(desiredTool, options);
+    }
+
+    private bool IsBreakToolStillUsable(IBotBreakTool tool)
+    {
+        return tool != null &&
+               tool.IsAvailableTo(gameObject) &&
+               (currentBlockedBreakable == null || currentBlockedBreakable.SupportsBreakTool(tool.ToolKind)) &&
+               !IsBreakToolBlockedByCurrentBreakable(tool) &&
+               !IsBreakToolTemporarilyRejected(tool);
+    }
+
+    private bool IsBreakToolBlockedByCurrentBreakable(IBotBreakTool tool)
+    {
+        if (tool == null ||
+            tool.IsHeldBy(gameObject) ||
+            currentBlockedBreakable == null ||
+            currentBlockedBreakable.IsBroken ||
+            !currentBlockedBreakable.CanBeClearedByBot)
         {
             return false;
         }
 
-        if (!desiredTool.IsAvailableTo(gameObject))
-        {
-            ReleaseCommittedBreakTool();
-            return false;
-        }
-
-        UpdatePathClearingDebugStage(PathClearingDebugStage.SearchingBreakTool, $"Acquiring break tool '{GetBreakToolName(desiredTool)}'.");
-        if (desiredTool.IsHeldBy(gameObject))
-        {
-            activeBreakTool = desiredTool;
-            SetPickupWindow(false);
-            LogVerbosePathClearing(
-                VerbosePathClearingLogCategory.Tooling,
-                $"heldbreaktool:{GetBreakToolName(desiredTool)}",
-                $"Using already-held break tool '{GetBreakToolName(desiredTool)}'.");
-            return true;
-        }
-
-        if (ReferenceEquals(activeBreakTool, desiredTool) && activeBreakTool.IsHeldBy(gameObject))
-        {
-            SetPickupWindow(false);
-            return true;
-        }
-
-        if (desiredTool is IPickupable desiredPickupable && inventorySystem.TryEquipItem(desiredPickupable))
-        {
-            activeBreakTool = desiredTool;
-            SetPickupWindow(false);
-            LogVerbosePathClearing(
-                VerbosePathClearingLogCategory.Tooling,
-                $"equipbreaktool:{GetBreakToolName(desiredTool)}",
-                $"Equipped break tool '{GetBreakToolName(desiredTool)}' from inventory.");
-            return true;
-        }
-
-        Component toolComponent = desiredTool as Component;
-        if (toolComponent == null)
+        if (!(tool is Component toolComponent))
         {
             return false;
         }
 
         Vector3 toolPosition = toolComponent.transform.position;
-        if (Vector3.Distance(transform.position, toolPosition) <= pickupDistance)
-        {
-            UpdatePathClearingDebugStage(PathClearingDebugStage.PickingUpBreakTool, $"Picking up break tool '{toolComponent.name}'.");
-            SetPickupWindow(true, desiredTool as IPickupable);
-            if (!(desiredTool is IPickupable pickupable) || !inventorySystem.TryPickup(pickupable))
-            {
-                return false;
-            }
+        string toolName = GetBreakToolName(tool);
+        LogPathClearingFlow(
+            $"candidate-breaktool:{toolName}:{FormatFlowVectorKey(toolPosition)}",
+            $"Xác định Fire Axe '{toolName}'.");
+        LogPathClearingFlow(
+            $"create-path:{toolName}:{FormatFlowVectorKey(toolPosition)}",
+            $"Tạo Path tới Fire Axe '{toolName}'.");
 
-            SetPickupWindow(false);
-            if (inventorySystem.TryEquipItem(pickupable))
+        if (interactionSensor != null &&
+            TryFindBreakableOnPreviewPath(toolName, toolPosition, out IBotBreakableTarget sensedBreakable))
+        {
+            if (sensedBreakable != null && !sensedBreakable.IsBroken && sensedBreakable.CanBeClearedByBot)
             {
-                activeBreakTool = desiredTool;
+                LogPathClearingFlow(
+                    $"retry-breaktool:{toolName}:{GetDebugTargetName(sensedBreakable)}",
+                    "Xác định Fire Axe khác.");
+                LogPathClearingFlow(
+                    $"discard-breaktool:{toolName}:{GetDebugTargetName(sensedBreakable)}",
+                    "Loại Fire Axe.");
                 LogVerbosePathClearing(
                     VerbosePathClearingLogCategory.Tooling,
-                    $"pickupbreaktool:{GetBreakToolName(desiredTool)}",
-                    $"Picked up and equipped break tool '{GetBreakToolName(desiredTool)}'.");
+                    $"blockedbreaktool:{toolName}:{GetDebugTargetName(sensedBreakable)}",
+                    $"Break tool '{toolName}' is blocked by '{GetDebugTargetName(sensedBreakable)}' on the previewed route to the tool.");
+                return true;
+            }
+        }
+
+        if (currentBlockedBreakable.IsOnSameSide(transform.position, toolPosition))
+        {
+            return false;
+        }
+
+        LogPathClearingFlow(
+            $"retry-breaktool:{toolName}:{GetDebugTargetName(currentBlockedBreakable)}",
+            "Xác định Fire Axe khác.");
+        LogPathClearingFlow(
+            $"discard-breaktool:{toolName}:{GetDebugTargetName(currentBlockedBreakable)}",
+            "Loại Fire Axe.");
+        LogVerbosePathClearing(
+            VerbosePathClearingLogCategory.Tooling,
+            $"blockedbreaktool:{toolName}:{GetDebugTargetName(currentBlockedBreakable)}",
+            $"Break tool '{toolName}' is on the opposite side of '{GetDebugTargetName(currentBlockedBreakable)}'.");
+        return true;
+    }
+
+    private bool TryFindBreakableOnPreviewPath(string toolName, Vector3 toolPosition, out IBotBreakableTarget breakableTarget)
+    {
+        breakableTarget = null;
+        if (navMeshAgent == null || !navMeshAgent.enabled || !navMeshAgent.isOnNavMesh)
+        {
+            return false;
+        }
+
+        Vector3 sampledToolPosition = toolPosition;
+        if (navMeshSampleDistance > 0f &&
+            NavMesh.SamplePosition(toolPosition, out NavMeshHit toolNavMeshHit, navMeshSampleDistance, navMeshAgent.areaMask))
+        {
+            sampledToolPosition = toolNavMeshHit.position;
+        }
+
+        NavMeshPath path = new NavMeshPath();
+        if (!navMeshAgent.CalculatePath(sampledToolPosition, path) || path.corners == null || path.corners.Length < 2)
+        {
+            if (interactionSensor != null &&
+                interactionSensor.TryFindBreakableTowards(sampledToolPosition, out breakableTarget))
+            {
+                LogPathClearingFlow(
+                    $"sensor-blocker-tool:{toolName}:{GetDebugTargetName(breakableTarget)}",
+                    $"Phát hiện Blocker '{GetDebugTargetName(breakableTarget)}'.");
                 return true;
             }
 
             return false;
         }
 
-        UpdatePathClearingDebugStage(PathClearingDebugStage.MovingToBreakTool, $"Moving to break tool '{toolComponent.name}' at {toolPosition}.");
-        LogVerbosePathClearing(
-            VerbosePathClearingLogCategory.Movement,
-            $"movetobreaktool:{toolComponent.name}:{toolPosition}",
-            $"Moving to break tool '{toolComponent.name}' at {toolPosition}.");
-        SetPickupWindow(true, desiredTool as IPickupable);
-        TrySetDestinationDirect(toolPosition);
-        return false;
-    }
+        for (int i = 1; i < path.corners.Length; i++)
+        {
+            if (interactionSensor != null &&
+                interactionSensor.TryFindBreakableBetween(path.corners[i - 1], path.corners[i], out breakableTarget))
+            {
+                LogPathClearingFlow(
+                    $"sensor-blocker-path:{toolName}:{GetDebugTargetName(breakableTarget)}:{i}",
+                    $"Phát hiện Blocker '{GetDebugTargetName(breakableTarget)}'.");
+                return true;
+            }
+        }
 
-    private bool IsBreakToolStillUsable(IBotBreakTool tool)
-    {
-        return tool != null && tool.IsAvailableTo(gameObject);
+        return false;
     }
 
     private void ReleaseCommittedBreakTool()
@@ -1941,17 +2056,71 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
         }
     }
 
+    private void StopBreakToolRoute()
+    {
+        if (navMeshAgent == null || !navMeshAgent.enabled)
+        {
+            return;
+        }
+
+        navMeshAgent.ResetPath();
+        navMeshAgent.isStopped = true;
+    }
+
     private void ClearBlockedPathRuntime()
     {
         SetPickupWindow(false);
         activeBreakTool = null;
         currentBlockedBreakable = null;
+        temporarilyRejectedBreakTool = null;
+        temporarilyRejectedBreakable = null;
         nextBreakUseTime = 0f;
         nextPathClearingRefreshTime = 0f;
         RefreshPathClearingResumeGrace();
+        temporarilyRejectedBreakToolUntilTime = 0f;
         lastPathClearingDebugStage = -1;
-        lastVerbosePathClearingKey = null;
+        lastPathClearingFlowKey = null;
+        lastPathClearingFlowMessage = null;
         ReleaseCommittedBreakTool();
+    }
+
+    public void ResetMoveActivityDebug()
+    {
+        lastMoveCommandFlowKey = null;
+        lastMoveStartFlowKey = null;
+        lastPathClearingFlowMessage = null;
+    }
+
+    private bool IsBreakToolTemporarilyRejected(IBotBreakTool tool)
+    {
+        if (tool == null || temporarilyRejectedBreakTool == null || currentBlockedBreakable == null)
+        {
+            return false;
+        }
+
+        if (Time.time >= temporarilyRejectedBreakToolUntilTime)
+        {
+            return false;
+        }
+
+        return ReferenceEquals(tool, temporarilyRejectedBreakTool) &&
+               ReferenceEquals(currentBlockedBreakable, temporarilyRejectedBreakable);
+    }
+
+    private void RejectBreakToolForCurrentBlocker(IBotBreakTool tool, IBotBreakableTarget blocker)
+    {
+        if (tool == null || blocker == null)
+        {
+            return;
+        }
+
+        temporarilyRejectedBreakTool = tool;
+        temporarilyRejectedBreakable = blocker;
+        temporarilyRejectedBreakToolUntilTime = Time.time + Mathf.Max(0.1f, blockedBreakToolRetryDelay);
+        LogVerbosePathClearing(
+            VerbosePathClearingLogCategory.Tooling,
+            $"rejectbreaktool:{GetBreakToolName(tool)}:{GetDebugTargetName(blocker)}",
+            $"Temporarily rejecting break tool '{GetBreakToolName(tool)}' because route is blocked by '{GetDebugTargetName(blocker)}'.");
     }
 
     private Vector3 ResolveStandPositionAroundPoint(Vector3 referencePoint, Vector3 targetPosition, float preferredDistance)
@@ -1986,39 +2155,7 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
 
     private void LogVerboseExtinguish(VerboseExtinguishLogCategory category, string key, string detail)
     {
-        if (!enableExtinguishDebugLogs || !ShouldLogVerboseExtinguishCategory(category))
-        {
-            return;
-        }
-
-        if (lastVerboseExtinguishKey == key)
-        {
-            return;
-        }
-
-        lastVerboseExtinguishKey = key;
-        Debug.Log($"[BotExtinguishVerbose] [{name}] {detail}", this);
-    }
-
-    private bool ShouldLogVerboseExtinguishCategory(VerboseExtinguishLogCategory category)
-    {
-        switch (category)
-        {
-            case VerboseExtinguishLogCategory.Targeting:
-                return debugExtinguishTargeting;
-            case VerboseExtinguishLogCategory.Tooling:
-                return debugExtinguishTooling;
-            case VerboseExtinguishLogCategory.Movement:
-                return debugExtinguishMovement;
-            case VerboseExtinguishLogCategory.Timing:
-                return debugExtinguishTiming;
-            case VerboseExtinguishLogCategory.Distance:
-                return debugExtinguishDistance;
-            case VerboseExtinguishLogCategory.Spray:
-                return debugExtinguishSpray;
-            default:
-                return false;
-        }
+        return;
     }
 
     private static string GetDebugTargetName(object target)
@@ -2266,6 +2403,33 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
         return Vector2.Distance(a2, b2);
     }
 
+    private static string NormalizeExtinguishActivityMessage(ExtinguishDebugStage stage, string detail)
+    {
+        switch (stage)
+        {
+            case ExtinguishDebugStage.NoFireGroupFound:
+                return "Không thấy mục tiêu cháy.";
+            case ExtinguishDebugStage.NoReachableTool:
+                return "Không có tool dập lửa khả dụng.";
+            case ExtinguishDebugStage.SearchingExtinguisher:
+                return "Tìm tool dập lửa.";
+            case ExtinguishDebugStage.MovingToExtinguisher:
+                return "Di chuyển tới tool dập lửa.";
+            case ExtinguishDebugStage.PickingUpExtinguisher:
+                return "Nhặt tool dập lửa.";
+            case ExtinguishDebugStage.MovingToFire:
+                return "Di chuyển tới vị trí dập lửa.";
+            case ExtinguishDebugStage.Spraying:
+                return "Bắt đầu dập lửa.";
+            case ExtinguishDebugStage.OutOfCharge:
+                return "Hết nước.";
+            case ExtinguishDebugStage.Completed:
+                return "Hoàn tất dập lửa.";
+            default:
+                return null;
+        }
+    }
+
     private void UpdateExtinguishDebugStage(ExtinguishDebugStage stage, string detail)
     {
         int stageValue = (int)stage;
@@ -2275,31 +2439,18 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
         }
 
         lastExtinguishDebugStage = stageValue;
-        if (!enableExtinguishDebugLogs)
+        if (!enableActivityDebug)
         {
             return;
         }
 
-        if (!debugExtinguishStage && !ShouldLogExtinguishStage(stage))
+        string normalizedDetail = NormalizeExtinguishActivityMessage(stage, detail);
+        if (string.IsNullOrEmpty(normalizedDetail))
         {
             return;
         }
 
-        Debug.Log($"[BotExtinguish] [{name}] {stage}: {detail}", this);
-    }
-
-    private static bool ShouldLogExtinguishStage(ExtinguishDebugStage stage)
-    {
-        switch (stage)
-        {
-            case ExtinguishDebugStage.NoFireGroupFound:
-            case ExtinguishDebugStage.NoReachableTool:
-            case ExtinguishDebugStage.OutOfCharge:
-            case ExtinguishDebugStage.Completed:
-                return true;
-            default:
-                return false;
-        }
+        Debug.Log($"[BotExtinguish] [{name}] {normalizedDetail}", this);
     }
 
     private bool HasPendingCommittedBreakTool()
@@ -2314,35 +2465,119 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
 
     private void LogVerbosePathClearing(VerbosePathClearingLogCategory category, string key, string detail)
     {
-        if (!enablePathClearingDebugLogs || !ShouldLogVerbosePathClearingCategory(category))
-        {
-            return;
-        }
-
-        if (lastVerbosePathClearingKey == key)
-        {
-            return;
-        }
-
-        lastVerbosePathClearingKey = key;
-        Debug.Log($"[BotPathClearVerbose] [{name}] {detail}", this);
+        return;
     }
 
-    private bool ShouldLogVerbosePathClearingCategory(VerbosePathClearingLogCategory category)
+    private void LogPathClearingFlow(string key, string detail)
     {
-        switch (category)
+        if (!enableActivityDebug)
         {
-            case VerbosePathClearingLogCategory.Detection:
-                return debugPathClearingDetection;
-            case VerbosePathClearingLogCategory.Tooling:
-                return debugPathClearingTooling;
-            case VerbosePathClearingLogCategory.Movement:
-                return debugPathClearingMovement;
-            case VerbosePathClearingLogCategory.Attack:
-                return debugPathClearingAttack;
-            default:
-                return false;
+            return;
         }
+
+        string normalizedDetail = NormalizePathClearingFlowMessage(key, detail);
+        if (string.IsNullOrEmpty(normalizedDetail))
+        {
+            return;
+        }
+
+        if (key.StartsWith("move-destination:"))
+        {
+            if (lastMoveCommandFlowKey == key)
+            {
+                return;
+            }
+
+            lastMoveCommandFlowKey = key;
+        }
+
+        if (key.StartsWith("move-start:"))
+        {
+            if (lastMoveStartFlowKey == key)
+            {
+                return;
+            }
+
+            lastMoveStartFlowKey = key;
+        }
+
+        if (lastPathClearingFlowKey == key)
+        {
+            return;
+        }
+
+        if (lastPathClearingFlowMessage == normalizedDetail)
+        {
+            lastPathClearingFlowKey = key;
+            return;
+        }
+
+        lastPathClearingFlowKey = key;
+        lastPathClearingFlowMessage = normalizedDetail;
+        Debug.Log($"[BotPathFlow] [{name}] {normalizedDetail}", this);
+    }
+
+    private static string FormatFlowVectorKey(Vector3 value)
+    {
+        return $"{Mathf.RoundToInt(value.x * 10f)}:{Mathf.RoundToInt(value.y * 10f)}:{Mathf.RoundToInt(value.z * 10f)}";
+    }
+
+    private static string NormalizePathClearingFlowMessage(string key, string detail)
+    {
+        if (string.IsNullOrEmpty(key))
+        {
+            return detail;
+        }
+
+        if (key.StartsWith("create-path:"))
+        {
+            return null;
+        }
+
+        if (key.StartsWith("move-destination:"))
+        {
+            int vectorIndex = detail.IndexOf('(');
+            return vectorIndex >= 0
+                ? $"Nhận lệnh Move tới {detail.Substring(vectorIndex)}"
+                : "Nhận lệnh Move.";
+        }
+
+        if (key.StartsWith("move-start:") || key.StartsWith("move-breaktool:"))
+        {
+            return "Di chuyển.";
+        }
+
+        if (key.StartsWith("sensor-blocker"))
+        {
+            return "Thấy Blocker.";
+        }
+
+        if (key.StartsWith("candidate-breaktool:"))
+        {
+            return "Tìm Fire Axe.";
+        }
+
+        if (key.StartsWith("discard-breaktool:") || key.StartsWith("discard-breaktool-route:") || key.StartsWith("discard-breaktool-move:"))
+        {
+            return "Loại Fire Axe.";
+        }
+
+        if (key.StartsWith("retry-breaktool"))
+        {
+            return "Tìm Fire Axe khác.";
+        }
+
+        if (key.StartsWith("no-break-tool:"))
+        {
+            return "Không còn Tool khả dụng.";
+        }
+
+        if (key.StartsWith("stop-breaktool:"))
+        {
+            return "Stop.";
+        }
+
+        return detail;
     }
 
     private void UpdatePathClearingDebugStage(PathClearingDebugStage stage, string detail)
@@ -2354,29 +2589,7 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
         }
 
         lastPathClearingDebugStage = stageValue;
-        if (!enablePathClearingDebugLogs)
-        {
-            return;
-        }
-
-        if (!debugPathClearingStage && !ShouldLogPathClearingStage(stage))
-        {
-            return;
-        }
-
-        Debug.Log($"[BotPathClear] [{name}] {stage}: {detail}", this);
-    }
-
-    private static bool ShouldLogPathClearingStage(PathClearingDebugStage stage)
-    {
-        switch (stage)
-        {
-            case PathClearingDebugStage.NoBreakTool:
-            case PathClearingDebugStage.Cleared:
-                return true;
-            default:
-                return false;
-        }
+        return;
     }
 
     private void OnDrawGizmosSelected()

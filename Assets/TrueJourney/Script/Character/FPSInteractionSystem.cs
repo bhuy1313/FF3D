@@ -123,6 +123,12 @@ namespace StarterAssets
 
             if (WasPressed(input != null && input.use, ref previousUse) && inventory != null && inventory.HasItem)
             {
+                if (currentInteractable is Breakable breakable)
+                {
+                    breakable.Interact(gameObject);
+                    return;
+                }
+
                 inventory.UseHeld(gameObject);
             }
 

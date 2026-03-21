@@ -10,8 +10,9 @@ GameObject:
   m_Component:
   - component: {fileID: 294834489802250872}
   - component: {fileID: 6106678640194618850}
-  - component: {fileID: 6728267841782741949}
   - component: {fileID: 7605389206426400502}
+  - component: {fileID: 6528605001282081931}
+  - component: {fileID: 7092688488436906014}
   m_Layer: 0
   m_Name: SledgeHammer
   m_TagString: Untagged
@@ -62,23 +63,6 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!114 &6728267841782741949
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3278099281585694142}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5ccf89c11e8e4f9f9cde339116b3a88c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SledgeHammer
-  damage: 25
-  hitMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  staminaCost: 10
 --- !u!114 &7605389206426400502
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -94,6 +78,47 @@ MonoBehaviour:
   itemName: SledgeHammer
   itemDescription: SledgeHammer
   itemIcon: {fileID: 0}
+--- !u!114 &6528605001282081931
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3278099281585694142}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshModifier
+  m_SerializedVersion: 0
+  m_OverrideArea: 0
+  m_Area: 0
+  m_OverrideGenerateLinks: 0
+  m_GenerateLinks: 0
+  m_IgnoreFromBuild: 1
+  m_ApplyToChildren: 1
+  m_AffectedAgents: ffffffff
+--- !u!114 &7092688488436906014
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3278099281585694142}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c66cffe5fc7c1b498f4a5670c01348b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Tool
+  toolKind: 2
+  useRange: 2
+  hitMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  botUseRange: 1.75
+  botUseCooldown: 0.6
+  currentHolder: {fileID: 0}
+  claimOwner: {fileID: 0}
 --- !u!1001 &6454950456370132247
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -116,7 +141,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 89ac79f2e1e2e3a4ab7c74438b070726, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: -0.05
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 89ac79f2e1e2e3a4ab7c74438b070726, type: 3}
       propertyPath: m_LocalPosition.y
@@ -132,15 +157,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 89ac79f2e1e2e3a4ab7c74438b070726, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 89ac79f2e1e2e3a4ab7c74438b070726, type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 89ac79f2e1e2e3a4ab7c74438b070726, type: 3}
       propertyPath: m_LocalRotation.z
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 89ac79f2e1e2e3a4ab7c74438b070726, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x

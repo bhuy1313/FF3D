@@ -218,10 +218,10 @@ Transform:
   - {fileID: 1128218575}
   - {fileID: 491099947}
   - {fileID: 980978874}
-  - {fileID: 1986439349}
   - {fileID: 1909960890}
   - {fileID: 1402862693}
   - {fileID: 865458197}
+  - {fileID: 1986439349}
   - {fileID: 123890603}
   - {fileID: 1051595249}
   - {fileID: 565347908}
@@ -811,23 +811,27 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Breakable
   breakableType: 0
-  maxHealth: 100
-  currentHealth: 100
-  resetHealthOnEnable: 1
-  invincible: 0
-  destroyOnBreak: 0
+  breakRequirements:
+  - toolKind: 1
+    timeToBreak: 10
+  lockPlayerWhileBreaking: 1
+  destroyOnBreak: 1
   destroyDelay: 0
   deactivateOnBreak: 1
   disableCollidersOnBreak: 1
   disableRenderersOnBreak: 1
   brokenPrefab: {fileID: 0}
   brokenSpawnPoint: {fileID: 0}
-  onDamaged:
+  onBreakStarted:
     m_PersistentCalls:
       m_Calls: []
   onBroken:
     m_PersistentCalls:
       m_Calls: []
+  isBroken: 0
+  isBreakInProgress: 0
+  activeBreaker: {fileID: 0}
+  activeToolKind: 0
 --- !u!114 &57112132
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1062,6 +1066,8 @@ MonoBehaviour:
     m_Bits: 4294967295
   interactCooldown: 2
   drawDebugPath: 1
+  debugBreakableSensorLogs: 0
+  debugBreakableSensorMisses: 0
 --- !u!114 &67496326
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1129,7 +1135,6 @@ MonoBehaviour:
   viewPoint: {fileID: 0}
   navMeshSampleDistance: 2
   turnSpeed: 360
-  drawDestinationGizmo: 1
   pitchTurnSpeed: 180
   minPitchAngle: -45
   maxPitchAngle: 60
@@ -1148,26 +1153,15 @@ MonoBehaviour:
   pathClearingRefreshInterval: 0.2
   breakStandDistanceTolerance: 0.35
   pathClearingResumeGraceTime: 0.2
+  blockedBreakToolRetryDelay: 1
   followTargetTag: Player
   followDistance: 2.5
   followRepathDistance: 0.75
   followCatchupDistance: 4
-  enableExtinguishDebugLogs: 0
-  debugExtinguishStage: 0
+  drawDestinationGizmo: 1
   drawAimGizmo: 1
   aimGizmoLength: 2.5
-  debugExtinguishTargeting: 0
-  debugExtinguishTooling: 0
-  debugExtinguishMovement: 0
-  debugExtinguishTiming: 0
-  debugExtinguishDistance: 0
-  debugExtinguishSpray: 0
-  enablePathClearingDebugLogs: 0
-  debugPathClearingStage: 0
-  debugPathClearingDetection: 0
-  debugPathClearingTooling: 0
-  debugPathClearingMovement: 0
-  debugPathClearingAttack: 0
+  enableActivityDebug: 0
 --- !u!195 &67496329
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -2084,31 +2078,6 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 133885199}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
---- !u!1 &143939693 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 3278099281585694142, guid: 39fb66ddfb30bd8478613ddf795ecf2d, type: 3}
-  m_PrefabInstance: {fileID: 688091516}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &143939701
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 143939693}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshModifier
-  m_SerializedVersion: 0
-  m_OverrideArea: 0
-  m_Area: 0
-  m_OverrideGenerateLinks: 0
-  m_GenerateLinks: 0
-  m_IgnoreFromBuild: 1
-  m_ApplyToChildren: 1
-  m_AffectedAgents: ffffffff
 --- !u!1 &144444782
 GameObject:
   m_ObjectHideFlags: 0
@@ -8458,7 +8427,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 553468921299418875, guid: b776637ebbae7ec4eb8e05eb727ecd87, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 88.25
+      value: 86.63809
       objectReference: {fileID: 0}
     - target: {fileID: 553468921299418875, guid: b776637ebbae7ec4eb8e05eb727ecd87, type: 3}
       propertyPath: m_LocalPosition.y
@@ -8466,7 +8435,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 553468921299418875, guid: b776637ebbae7ec4eb8e05eb727ecd87, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 54.5
+      value: 57.03665
       objectReference: {fileID: 0}
     - target: {fileID: 553468921299418875, guid: b776637ebbae7ec4eb8e05eb727ecd87, type: 3}
       propertyPath: m_LocalRotation.w
@@ -8503,10 +8472,7 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 979707955808453874, guid: b776637ebbae7ec4eb8e05eb727ecd87, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 2021553511}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: b776637ebbae7ec4eb8e05eb727ecd87, type: 3}
 --- !u!4 &635972233 stripped
 Transform:
@@ -9255,37 +9221,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: SledgeHammer
       objectReference: {fileID: 0}
-    - target: {fileID: 6781908945508406012, guid: 39fb66ddfb30bd8478613ddf795ecf2d, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: -0.05
-      objectReference: {fileID: 0}
-    - target: {fileID: 6781908945508406012, guid: 39fb66ddfb30bd8478613ddf795ecf2d, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 6781908945508406012, guid: 39fb66ddfb30bd8478613ddf795ecf2d, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6781908945508406012, guid: 39fb66ddfb30bd8478613ddf795ecf2d, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6781908945508406012, guid: 39fb66ddfb30bd8478613ddf795ecf2d, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6781908945508406012, guid: 39fb66ddfb30bd8478613ddf795ecf2d, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 3278099281585694142, guid: 39fb66ddfb30bd8478613ddf795ecf2d, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 143939701}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 39fb66ddfb30bd8478613ddf795ecf2d, type: 3}
 --- !u!1 &705417739
 GameObject:
@@ -9859,6 +9798,8 @@ MonoBehaviour:
     m_Bits: 4294967295
   interactCooldown: 2
   drawDebugPath: 1
+  debugBreakableSensorLogs: 0
+  debugBreakableSensorMisses: 0
 --- !u!114 &758942451
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9926,7 +9867,6 @@ MonoBehaviour:
   viewPoint: {fileID: 0}
   navMeshSampleDistance: 2
   turnSpeed: 360
-  drawDestinationGizmo: 1
   pitchTurnSpeed: 180
   minPitchAngle: -45
   maxPitchAngle: 60
@@ -9945,26 +9885,15 @@ MonoBehaviour:
   pathClearingRefreshInterval: 0.2
   breakStandDistanceTolerance: 0.35
   pathClearingResumeGraceTime: 0.2
+  blockedBreakToolRetryDelay: 1
   followTargetTag: Player
   followDistance: 2.5
   followRepathDistance: 0.75
   followCatchupDistance: 4
-  enableExtinguishDebugLogs: 0
-  debugExtinguishStage: 0
+  drawDestinationGizmo: 1
   drawAimGizmo: 1
   aimGizmoLength: 2.5
-  debugExtinguishTargeting: 1
-  debugExtinguishTooling: 0
-  debugExtinguishMovement: 0
-  debugExtinguishTiming: 0
-  debugExtinguishDistance: 1
-  debugExtinguishSpray: 0
-  enablePathClearingDebugLogs: 0
-  debugPathClearingStage: 0
-  debugPathClearingDetection: 0
-  debugPathClearingTooling: 0
-  debugPathClearingMovement: 0
-  debugPathClearingAttack: 0
+  enableActivityDebug: 0
 --- !u!195 &758942454
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -23484,7 +23413,6 @@ MonoBehaviour:
   viewPoint: {fileID: 0}
   navMeshSampleDistance: 2
   turnSpeed: 360
-  drawDestinationGizmo: 1
   pitchTurnSpeed: 180
   minPitchAngle: -45
   maxPitchAngle: 60
@@ -23503,26 +23431,15 @@ MonoBehaviour:
   pathClearingRefreshInterval: 0.2
   breakStandDistanceTolerance: 0.35
   pathClearingResumeGraceTime: 0.2
+  blockedBreakToolRetryDelay: 1
   followTargetTag: Player
   followDistance: 2.5
   followRepathDistance: 0.75
   followCatchupDistance: 4
-  enableExtinguishDebugLogs: 0
-  debugExtinguishStage: 0
+  drawDestinationGizmo: 1
   drawAimGizmo: 1
   aimGizmoLength: 2.5
-  debugExtinguishTargeting: 0
-  debugExtinguishTooling: 0
-  debugExtinguishMovement: 0
-  debugExtinguishTiming: 0
-  debugExtinguishDistance: 0
-  debugExtinguishSpray: 0
-  enablePathClearingDebugLogs: 0
-  debugPathClearingStage: 0
-  debugPathClearingDetection: 0
-  debugPathClearingTooling: 0
-  debugPathClearingMovement: 0
-  debugPathClearingAttack: 0
+  enableActivityDebug: 1
 --- !u!195 &1688152282
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -23711,6 +23628,8 @@ MonoBehaviour:
     m_Bits: 4294967295
   interactCooldown: 2
   drawDebugPath: 1
+  debugBreakableSensorLogs: 0
+  debugBreakableSensorMisses: 0
 --- !u!114 &1688152290
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -29416,31 +29335,6 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 2060208369}
   m_SourcePrefab: {fileID: 100100000, guid: adce3e1a041ed8e45827de6cdacc39f1, type: 3}
---- !u!1 &2021553507 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 979707955808453874, guid: b776637ebbae7ec4eb8e05eb727ecd87, type: 3}
-  m_PrefabInstance: {fileID: 635664199}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &2021553511
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2021553507}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshModifier
-  m_SerializedVersion: 0
-  m_OverrideArea: 0
-  m_Area: 0
-  m_OverrideGenerateLinks: 0
-  m_GenerateLinks: 0
-  m_IgnoreFromBuild: 1
-  m_ApplyToChildren: 1
-  m_AffectedAgents: ffffffff
 --- !u!1001 &2028847768
 PrefabInstance:
   m_ObjectHideFlags: 0

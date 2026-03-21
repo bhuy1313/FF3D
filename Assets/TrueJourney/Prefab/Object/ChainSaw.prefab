@@ -42,8 +42,8 @@ GameObject:
   m_Component:
   - component: {fileID: 608311474186699391}
   - component: {fileID: 2505887964026384603}
-  - component: {fileID: 1659782846840283536}
   - component: {fileID: 725974538182655758}
+  - component: {fileID: 9196709619376682240}
   m_Layer: 0
   m_Name: ChainSaw
   m_TagString: Untagged
@@ -94,31 +94,6 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!114 &1659782846840283536
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8910739026653656461}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7a613487d9a34e4ca8d90c5e76e1a2bf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ChainSaw
-  damagePerTick: 12
-  tickInterval: 0.1
-  fallbackRange: 2.5
-  hitMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  woodOnly: 1
-  toggleUse: 1
-  bladeParticles: {fileID: 0}
-  engineAudio: {fileID: 0}
-  staminaCostPerSecond: 12
-  isRunning: 0
-  activeUser: {fileID: 0}
 --- !u!114 &725974538182655758
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -134,6 +109,27 @@ MonoBehaviour:
   itemName: Chainsaw
   itemDescription: 
   itemIcon: {fileID: 0}
+--- !u!114 &9196709619376682240
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8910739026653656461}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c66cffe5fc7c1b498f4a5670c01348b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Tool
+  toolKind: 3
+  useRange: 2
+  hitMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  botUseRange: 1.75
+  botUseCooldown: 0.6
+  currentHolder: {fileID: 0}
+  claimOwner: {fileID: 0}
 --- !u!1001 &7290860557076051763
 PrefabInstance:
   m_ObjectHideFlags: 0
