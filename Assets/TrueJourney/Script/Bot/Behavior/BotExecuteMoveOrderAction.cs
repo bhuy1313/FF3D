@@ -44,7 +44,7 @@ namespace TrueJourney.BotBehavior
                 return Status.Failure;
             }
 
-            if (context.HasExtinguishOrder || context.HasFollowOrder)
+            if (context.HasExtinguishOrder || context.HasFollowOrder || context.HasRescueOrder)
             {
                 return Status.Failure;
             }
@@ -117,7 +117,7 @@ namespace TrueJourney.BotBehavior
 
             commandAgent = Agent.Value.GetComponent<global::BotCommandAgent>();
 
-            if (context.HasExtinguishOrder || context.HasFollowOrder || !context.TryGetMoveOrder(out destination))
+            if (context.HasExtinguishOrder || context.HasFollowOrder || context.HasRescueOrder || !context.TryGetMoveOrder(out destination))
             {
                 return false;
             }

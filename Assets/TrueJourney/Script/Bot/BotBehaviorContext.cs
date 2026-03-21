@@ -25,12 +25,14 @@ public class BotBehaviorContext : MonoBehaviour
     private readonly BotMoveOrderState moveOrderState = new BotMoveOrderState();
     private readonly BotExtinguishOrderState extinguishOrderState = new BotExtinguishOrderState();
     private readonly BotFollowOrderState followOrderState = new BotFollowOrderState();
+    private readonly BotRescueOrderState rescueOrderState = new BotRescueOrderState();
 
     public NavMeshAgent NavMeshAgent => navMeshAgent;
     public bool UseMoveOrdersAsBehaviorInput => useMoveOrdersAsBehaviorInput;
     public bool HasMoveOrder => moveOrderState.HasMoveOrder;
     public bool HasExtinguishOrder => extinguishOrderState.HasExtinguishOrder;
     public bool HasFollowOrder => followOrderState.HasFollowOrder;
+    public bool HasRescueOrder => rescueOrderState.HasRescueOrder;
     public float ArrivalDistance => Mathf.Max(0.05f, arrivalDistance);
     public float PatrolWaitSeconds => Mathf.Max(0f, patrolWaitSeconds);
     public bool PatrolMovementEnabled => enablePatrolMovement;
@@ -97,6 +99,21 @@ public class BotBehaviorContext : MonoBehaviour
     public void ClearFollowOrder()
     {
         followOrderState.Clear();
+    }
+
+    public void SetRescueOrder(Vector3 destination)
+    {
+        rescueOrderState.SetDestination(destination);
+    }
+
+    public bool TryGetRescueOrder(out Vector3 destination)
+    {
+        return rescueOrderState.TryGetDestination(out destination);
+    }
+
+    public void ClearRescueOrder()
+    {
+        rescueOrderState.Clear();
     }
 
     public int GetPatrolPointCount()

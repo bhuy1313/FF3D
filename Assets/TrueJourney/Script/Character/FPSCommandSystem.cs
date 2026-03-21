@@ -237,6 +237,8 @@ namespace StarterAssets
                     return BotCommandType.Extinguish;
                 case 2:
                     return BotCommandType.Follow;
+                case 3:
+                    return BotCommandType.Rescue;
                 default:
                     return BotCommandType.None;
             }

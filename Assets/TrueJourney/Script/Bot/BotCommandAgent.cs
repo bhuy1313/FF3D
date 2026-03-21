@@ -93,6 +93,13 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
     [SerializeField] private float followRepathDistance = 0.75f;
     [SerializeField] private float followCatchupDistance = 4f;
 
+    [Header("Rescue")]
+    [SerializeField] private float rescueSearchRadius = 12f;
+    [SerializeField] private float rescueInteractionDistance = 1.5f;
+    [SerializeField] private float rescueSafeZoneArrivalDistance = 2f;
+    [SerializeField] private Transform rescueCarryAnchor;
+    [SerializeField] private Vector3 rescueCarryLocalPosition = new Vector3(0f, 1.1f, 0.6f);
+
     [Header("Gizmos")]
     [SerializeField] private bool drawDestinationGizmo = true;
     [SerializeField] private bool drawAimGizmo = true;
@@ -114,6 +121,8 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
     private IBotBreakableTarget currentBlockedBreakable;
     private IBotBreakableTarget temporarilyRejectedBreakable;
     private IFireTarget currentFireTarget;
+    private IRescuableTarget currentRescueTarget;
+    private ISafeZoneTarget currentSafeZoneTarget;
     private Vector3 currentExtinguishTargetPosition;
     private Vector3 currentExtinguishAimPoint;
     private Vector3 currentExtinguishLaunchDirection;
@@ -128,6 +137,8 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
     private int lastPathClearingDebugStage = -1;
     private string lastPathClearingFlowKey;
     private string lastPathClearingFlowMessage;
+    private string lastRescueActivityKey;
+    private string lastRescueActivityMessage;
     private string lastMoveCommandFlowKey;
     private string lastMoveStartFlowKey;
     private float sprayReadyTime = -1f;
@@ -135,6 +146,7 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
     private float nextPathClearingRefreshTime;
     private float pathClearingResumeGraceUntilTime;
     private float temporarilyRejectedBreakToolUntilTime;
+    private Transform runtimeRescueCarryAnchor;
 
     public Vector3 LastIssuedDestination => lastIssuedDestination;
     public bool HasIssuedDestination => hasIssuedDestination;
@@ -175,6 +187,24 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
         {
             ProcessExtinguishOrder();
             return;
+        }
+
+        if (behaviorContext.HasRescueOrder)
+        {
+            ResetViewPointPitch();
+            if (lastExtinguishDebugStage != -1)
+            {
+                ClearExtinguishRuntimeState();
+                lastExtinguishDebugStage = -1;
+            }
+
+            ProcessRescueOrder();
+            return;
+        }
+
+        if (currentRescueTarget != null || !string.IsNullOrEmpty(lastRescueActivityKey) || !string.IsNullOrEmpty(lastRescueActivityMessage))
+        {
+            ClearRescueRuntimeState();
         }
 
         if (behaviorContext.HasFollowOrder)
@@ -218,6 +248,8 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
                 return behaviorContext != null && inventorySystem != null;
             case BotCommandType.Follow:
                 return behaviorContext != null;
+            case BotCommandType.Rescue:
+                return behaviorContext != null;
             default:
                 return false;
         }
@@ -250,6 +282,8 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
                 {
                     behaviorContext.ClearFollowOrder();
                     behaviorContext.ClearExtinguishOrder();
+                    behaviorContext.ClearRescueOrder();
+                    ClearRescueRuntimeState();
                     behaviorContext.SetMoveOrder(destination);
                     accepted = true;
                 }
@@ -267,6 +301,8 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
 
                 behaviorContext.ClearFollowOrder();
                 behaviorContext.ClearMoveOrder();
+                behaviorContext.ClearRescueOrder();
+                ClearRescueRuntimeState();
                 behaviorContext.SetExtinguishOrder(destination);
                 accepted = true;
                 break;
@@ -278,7 +314,22 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
 
                 behaviorContext.ClearMoveOrder();
                 behaviorContext.ClearExtinguishOrder();
+                behaviorContext.ClearRescueOrder();
+                ClearRescueRuntimeState();
                 behaviorContext.SetFollowOrder();
+                accepted = true;
+                break;
+            case BotCommandType.Rescue:
+                if (behaviorContext == null)
+                {
+                    return false;
+                }
+
+                behaviorContext.ClearMoveOrder();
+                behaviorContext.ClearExtinguishOrder();
+                behaviorContext.ClearFollowOrder();
+                ClearRescueRuntimeState();
+                behaviorContext.SetRescueOrder(destination);
                 accepted = true;
                 break;
             default:
@@ -354,6 +405,99 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
         }
 
         AimTowards(targetPosition);
+    }
+
+    private void ProcessRescueOrder()
+    {
+        if (navMeshAgent == null || !navMeshAgent.enabled || !navMeshAgent.isOnNavMesh || behaviorContext == null || !behaviorContext.TryGetRescueOrder(out Vector3 orderPoint))
+        {
+            return;
+        }
+
+        LogRescueActivity($"rescue-order:{FormatFlowVectorKey(orderPoint)}", $"Nhận lệnh Rescue tới {orderPoint}.");
+
+        IRescuableTarget rescueTarget = ResolveRescueTarget(orderPoint);
+        if (rescueTarget == null)
+        {
+            LogRescueActivity("rescue-notfound", "Không thấy người cần cứu.");
+            behaviorContext.ClearRescueOrder();
+            currentRescueTarget = null;
+            navMeshAgent.ResetPath();
+            navMeshAgent.isStopped = false;
+            return;
+        }
+
+        currentRescueTarget = rescueTarget;
+        currentSafeZoneTarget = ResolveNearestSafeZone(rescueTarget.GetWorldPosition());
+
+        if (!rescueTarget.NeedsRescue)
+        {
+            LogRescueActivity("rescue-complete", "Hoàn tất cứu.");
+            behaviorContext.ClearRescueOrder();
+            currentRescueTarget = null;
+            currentSafeZoneTarget = null;
+            navMeshAgent.ResetPath();
+            navMeshAgent.isStopped = false;
+            return;
+        }
+
+        if (currentSafeZoneTarget == null)
+        {
+            LogRescueActivity("rescue-no-safezone", "Không thấy vùng an toàn.");
+            behaviorContext.ClearRescueOrder();
+            currentRescueTarget = null;
+            navMeshAgent.ResetPath();
+            navMeshAgent.isStopped = false;
+            return;
+        }
+
+        if (rescueTarget.IsCarried && rescueTarget.ActiveRescuer == gameObject)
+        {
+            Vector3 safeZonePosition = currentSafeZoneTarget.GetWorldPosition();
+            float distanceToSafeZone = GetHorizontalDistance(transform.position, safeZonePosition);
+            if (distanceToSafeZone > rescueSafeZoneArrivalDistance)
+            {
+                LogRescueActivity("rescue-carry", "Mang nạn nhân tới vùng an toàn.");
+                MoveTo(safeZonePosition);
+                return;
+            }
+
+            navMeshAgent.ResetPath();
+            navMeshAgent.isStopped = true;
+            rescueTarget.CompleteRescueAt(safeZonePosition);
+            LogRescueActivity("rescue-complete", "Hoàn tất cứu.");
+            behaviorContext.ClearRescueOrder();
+            currentRescueTarget = null;
+            currentSafeZoneTarget = null;
+            return;
+        }
+
+        Vector3 targetPosition = rescueTarget.GetWorldPosition();
+        float horizontalDistance = GetHorizontalDistance(transform.position, targetPosition);
+        if (horizontalDistance > rescueInteractionDistance)
+        {
+            LogRescueActivity("rescue-move", "Di chuyển tới người bị nạn.");
+            MoveTo(targetPosition);
+            return;
+        }
+
+        navMeshAgent.ResetPath();
+        navMeshAgent.isStopped = true;
+        AimTowards(targetPosition);
+
+        if (rescueTarget.IsRescueInProgress && rescueTarget.ActiveRescuer == gameObject)
+        {
+            LogRescueActivity("rescue-start", "Bắt đầu cứu.");
+            return;
+        }
+
+        if (rescueTarget.TryBeginCarry(gameObject, GetRescueCarryAnchor()))
+        {
+            LogRescueActivity("rescue-pickup", "Nhấc nạn nhân.");
+            return;
+        }
+
+        currentRescueTarget = null;
     }
 
     private void ProcessExtinguishOrder()
@@ -592,6 +736,92 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
         };
 
         return BotToolAcquisitionUtility.TryEnsureToolEquipped(desiredTool, options);
+    }
+
+    private IRescuableTarget ResolveRescueTarget(Vector3 orderPoint)
+    {
+        if (currentRescueTarget != null &&
+            currentRescueTarget.NeedsRescue &&
+            (!currentRescueTarget.IsRescueInProgress || currentRescueTarget.ActiveRescuer == gameObject) &&
+            GetHorizontalDistance(orderPoint, currentRescueTarget.GetWorldPosition()) <= rescueSearchRadius)
+        {
+            return currentRescueTarget;
+        }
+
+        IRescuableTarget bestTarget = null;
+        float bestDistance = float.MaxValue;
+
+        foreach (IRescuableTarget candidate in BotRuntimeRegistry.ActiveRescuableTargets)
+        {
+            if (candidate == null || !candidate.NeedsRescue)
+            {
+                continue;
+            }
+
+            if (candidate.IsRescueInProgress && candidate.ActiveRescuer != gameObject)
+            {
+                continue;
+            }
+
+            float distance = GetHorizontalDistance(orderPoint, candidate.GetWorldPosition());
+            if (distance > rescueSearchRadius || distance >= bestDistance)
+            {
+                continue;
+            }
+
+            bestDistance = distance;
+            bestTarget = candidate;
+        }
+
+        return bestTarget;
+    }
+
+    private ISafeZoneTarget ResolveNearestSafeZone(Vector3 fromPosition)
+    {
+        if (currentSafeZoneTarget != null)
+        {
+            return currentSafeZoneTarget;
+        }
+
+        ISafeZoneTarget bestTarget = null;
+        float bestDistance = float.MaxValue;
+        foreach (ISafeZoneTarget candidate in BotRuntimeRegistry.ActiveSafeZones)
+        {
+            if (candidate == null)
+            {
+                continue;
+            }
+
+            float distance = GetHorizontalDistance(fromPosition, candidate.GetWorldPosition());
+            if (distance >= bestDistance)
+            {
+                continue;
+            }
+
+            bestDistance = distance;
+            bestTarget = candidate;
+        }
+
+        return bestTarget;
+    }
+
+    private Transform GetRescueCarryAnchor()
+    {
+        if (rescueCarryAnchor != null)
+        {
+            return rescueCarryAnchor;
+        }
+
+        if (runtimeRescueCarryAnchor == null)
+        {
+            GameObject anchorObject = new GameObject("RescueCarryAnchor");
+            runtimeRescueCarryAnchor = anchorObject.transform;
+            runtimeRescueCarryAnchor.SetParent(transform, false);
+            runtimeRescueCarryAnchor.localPosition = rescueCarryLocalPosition;
+            runtimeRescueCarryAnchor.localRotation = Quaternion.identity;
+        }
+
+        return runtimeRescueCarryAnchor;
     }
 
     private IBotExtinguisherItem SelectPreferredExtinguishTool(Vector3 orderPoint, Vector3 firePosition, IFireGroupTarget fireGroup, IFireTarget fireTarget)
@@ -2091,6 +2321,14 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
         lastPathClearingFlowMessage = null;
     }
 
+    private void ClearRescueRuntimeState()
+    {
+        currentRescueTarget = null;
+        currentSafeZoneTarget = null;
+        lastRescueActivityKey = null;
+        lastRescueActivityMessage = null;
+    }
+
     private bool IsBreakToolTemporarilyRejected(IBotBreakTool tool)
     {
         if (tool == null || temporarilyRejectedBreakTool == null || currentBlockedBreakable == null)
@@ -2453,6 +2691,25 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
         Debug.Log($"[BotExtinguish] [{name}] {normalizedDetail}", this);
     }
 
+    private void LogRescueActivity(string key, string detail)
+    {
+        if (!enableActivityDebug || string.IsNullOrEmpty(detail))
+        {
+            return;
+        }
+
+        if (lastRescueActivityKey == key || lastRescueActivityMessage == detail)
+        {
+            lastRescueActivityKey = key;
+            lastRescueActivityMessage = detail;
+            return;
+        }
+
+        lastRescueActivityKey = key;
+        lastRescueActivityMessage = detail;
+        Debug.Log($"[BotRescue] [{name}] {detail}", this);
+    }
+
     private bool HasPendingCommittedBreakTool()
     {
         return committedBreakTool != null && !committedBreakTool.IsHeldBy(gameObject);
@@ -2622,6 +2879,22 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
             Gizmos.color = Color.magenta;
             Gizmos.DrawLine(transform.position, followTarget.position);
             Gizmos.DrawWireSphere(followTarget.position, 0.2f);
+        }
+
+        if (behaviorContext != null && behaviorContext.HasRescueOrder && currentRescueTarget != null)
+        {
+            Vector3 rescuePosition = currentRescueTarget.GetWorldPosition();
+            Gizmos.color = Color.blue;
+            Gizmos.DrawLine(transform.position, rescuePosition);
+            Gizmos.DrawWireSphere(rescuePosition, 0.2f);
+
+            if (currentSafeZoneTarget != null)
+            {
+                Vector3 safeZonePosition = currentSafeZoneTarget.GetWorldPosition();
+                Gizmos.color = Color.white;
+                Gizmos.DrawLine(rescuePosition, safeZonePosition);
+                Gizmos.DrawWireSphere(safeZonePosition, 0.25f);
+            }
         }
 
         if (behaviorContext != null && behaviorContext.HasExtinguishOrder)

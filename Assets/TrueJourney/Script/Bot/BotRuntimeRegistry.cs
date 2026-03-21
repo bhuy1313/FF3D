@@ -9,12 +9,16 @@ namespace TrueJourney.BotBehavior
         private static readonly HashSet<IFireGroupTarget> FireGroupTargets = new HashSet<IFireGroupTarget>();
         private static readonly HashSet<IBotBreakTool> BreakTools = new HashSet<IBotBreakTool>();
         private static readonly HashSet<IBotBreakableTarget> BreakableTargets = new HashSet<IBotBreakableTarget>();
+        private static readonly HashSet<IRescuableTarget> RescuableTargets = new HashSet<IRescuableTarget>();
+        private static readonly HashSet<ISafeZoneTarget> SafeZoneTargets = new HashSet<ISafeZoneTarget>();
 
         public static IEnumerable<IBotExtinguisherItem> ActiveExtinguisherItems => ExtinguisherItems;
         public static IEnumerable<IFireTarget> ActiveFireTargets => FireTargets;
         public static IEnumerable<IFireGroupTarget> ActiveFireGroups => FireGroupTargets;
         public static IEnumerable<IBotBreakTool> ActiveBreakTools => BreakTools;
         public static IEnumerable<IBotBreakableTarget> ActiveBreakableTargets => BreakableTargets;
+        public static IEnumerable<IRescuableTarget> ActiveRescuableTargets => RescuableTargets;
+        public static IEnumerable<ISafeZoneTarget> ActiveSafeZones => SafeZoneTargets;
 
         public static void RegisterExtinguisherItem(IBotExtinguisherItem item)
         {
@@ -93,6 +97,38 @@ namespace TrueJourney.BotBehavior
             if (target != null)
             {
                 BreakableTargets.Remove(target);
+            }
+        }
+
+        public static void RegisterRescuableTarget(IRescuableTarget target)
+        {
+            if (target != null)
+            {
+                RescuableTargets.Add(target);
+            }
+        }
+
+        public static void UnregisterRescuableTarget(IRescuableTarget target)
+        {
+            if (target != null)
+            {
+                RescuableTargets.Remove(target);
+            }
+        }
+
+        public static void RegisterSafeZone(ISafeZoneTarget target)
+        {
+            if (target != null)
+            {
+                SafeZoneTargets.Add(target);
+            }
+        }
+
+        public static void UnregisterSafeZone(ISafeZoneTarget target)
+        {
+            if (target != null)
+            {
+                SafeZoneTargets.Remove(target);
             }
         }
     }

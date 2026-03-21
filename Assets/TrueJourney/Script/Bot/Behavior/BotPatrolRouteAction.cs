@@ -44,7 +44,7 @@ namespace TrueJourney.BotBehavior
                 return Status.Failure;
             }
 
-            if (context.HasExtinguishOrder || context.HasFollowOrder || context.HasMoveOrder || !context.PatrolMovementEnabled || !context.HasConfiguredPatrolRoute || !navMeshAgent.enabled || !navMeshAgent.isOnNavMesh)
+            if (context.HasExtinguishOrder || context.HasFollowOrder || context.HasRescueOrder || context.HasMoveOrder || !context.PatrolMovementEnabled || !context.HasConfiguredPatrolRoute || !navMeshAgent.enabled || !navMeshAgent.isOnNavMesh)
             {
                 return Status.Failure;
             }
@@ -102,7 +102,7 @@ namespace TrueJourney.BotBehavior
                 return false;
             }
 
-            if (context.HasExtinguishOrder || context.HasFollowOrder || context.HasMoveOrder || !context.PatrolMovementEnabled || !context.HasConfiguredPatrolRoute || !navMeshAgent.enabled || !navMeshAgent.isOnNavMesh)
+            if (context.HasExtinguishOrder || context.HasFollowOrder || context.HasRescueOrder || context.HasMoveOrder || !context.PatrolMovementEnabled || !context.HasConfiguredPatrolRoute || !navMeshAgent.enabled || !navMeshAgent.isOnNavMesh)
             {
                 return false;
             }

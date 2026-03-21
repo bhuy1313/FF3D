@@ -5,7 +5,8 @@ public enum BotCommandType
     None = 0,
     Move = 1,
     Extinguish = 2,
-    Follow = 3
+    Follow = 3,
+    Rescue = 4
 }
 
 public interface ICommandable
