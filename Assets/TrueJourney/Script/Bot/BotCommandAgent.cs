@@ -832,46 +832,9 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
 
     private IRescuableTarget ResolveRescueTarget(Vector3 orderPoint)
     {
-        IRescuableTarget committedTarget = GetCommittedRescueTarget();
-        if (committedTarget != null)
-        {
-            return committedTarget;
-        }
-
-        if (currentRescueTarget != null &&
-            currentRescueTarget.NeedsRescue &&
-            (!currentRescueTarget.IsRescueInProgress || currentRescueTarget.ActiveRescuer == gameObject) &&
-            GetHorizontalDistance(orderPoint, currentRescueTarget.GetWorldPosition()) <= rescueSearchRadius)
-        {
-            return currentRescueTarget;
-        }
-
-        IRescuableTarget bestTarget = null;
-        float bestDistance = float.MaxValue;
-
-        foreach (IRescuableTarget candidate in BotRuntimeRegistry.ActiveRescuableTargets)
-        {
-            if (candidate == null || !candidate.NeedsRescue)
-            {
-                continue;
-            }
-
-            if (candidate.IsRescueInProgress && candidate.ActiveRescuer != gameObject)
-            {
-                continue;
-            }
-
-            float distance = GetHorizontalDistance(orderPoint, candidate.GetWorldPosition());
-            if (distance > rescueSearchRadius || distance >= bestDistance)
-            {
-                continue;
-            }
-
-            bestDistance = distance;
-            bestTarget = candidate;
-        }
-
-        return bestTarget;
+        return runtimeDecisionService != null
+            ? runtimeDecisionService.ResolveRescueTarget(orderPoint, currentRescueTarget, gameObject, rescueSearchRadius)
+            : null;
     }
 
     private IRescuableTarget GetCommittedRescueTarget()
@@ -896,31 +859,9 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
 
     private ISafeZoneTarget ResolveNearestSafeZone(Vector3 fromPosition)
     {
-        if (currentSafeZoneTarget != null)
-        {
-            return currentSafeZoneTarget;
-        }
-
-        ISafeZoneTarget bestTarget = null;
-        float bestDistance = float.MaxValue;
-        foreach (ISafeZoneTarget candidate in BotRuntimeRegistry.ActiveSafeZones)
-        {
-            if (candidate == null)
-            {
-                continue;
-            }
-
-            float distance = GetHorizontalDistance(fromPosition, candidate.GetWorldPosition());
-            if (distance >= bestDistance)
-            {
-                continue;
-            }
-
-            bestDistance = distance;
-            bestTarget = candidate;
-        }
-
-        return bestTarget;
+        return runtimeDecisionService != null
+            ? runtimeDecisionService.ResolveNearestSafeZone(fromPosition, currentSafeZoneTarget)
+            : null;
     }
 
     private Transform GetRescueCarryAnchor()
@@ -2489,26 +2430,6 @@ public class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
         }
 
         return transform.position;
-    }
-
-    private bool TryResolveFollowTarget(out Transform target)
-    {
-        if (followTarget != null && followTarget.gameObject.activeInHierarchy)
-        {
-            target = followTarget;
-            return true;
-        }
-
-        if (string.IsNullOrWhiteSpace(followTargetTag))
-        {
-            target = null;
-            return false;
-        }
-
-        GameObject targetObject = GameObject.FindGameObjectWithTag(followTargetTag);
-        target = targetObject != null ? targetObject.transform : null;
-        followTarget = target;
-        return target != null;
     }
 
     private void LogVerboseExtinguish(VerboseExtinguishLogCategory category, string key, string detail)
