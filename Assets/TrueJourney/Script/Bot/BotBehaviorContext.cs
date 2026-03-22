@@ -116,6 +116,37 @@ public class BotBehaviorContext : MonoBehaviour
         rescueOrderState.Clear();
     }
 
+    public void ClearAllOrders()
+    {
+        moveOrderState.Clear();
+        extinguishOrderState.Clear();
+        followOrderState.Clear();
+        rescueOrderState.Clear();
+    }
+
+    public void ClearOrdersExcept(BotCommandType commandType)
+    {
+        if (commandType != BotCommandType.Move)
+        {
+            moveOrderState.Clear();
+        }
+
+        if (commandType != BotCommandType.Extinguish)
+        {
+            extinguishOrderState.Clear();
+        }
+
+        if (commandType != BotCommandType.Follow)
+        {
+            followOrderState.Clear();
+        }
+
+        if (commandType != BotCommandType.Rescue)
+        {
+            rescueOrderState.Clear();
+        }
+    }
+
     public int GetPatrolPointCount()
     {
         if (patrolPoints == null || patrolPoints.Length == 0)

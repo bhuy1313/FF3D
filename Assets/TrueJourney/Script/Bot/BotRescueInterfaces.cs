@@ -16,5 +16,7 @@ namespace TrueJourney.BotBehavior
     public interface ISafeZoneTarget
     {
         Vector3 GetWorldPosition();
+        Vector3 GetDropPoint(Vector3 fallbackPosition);
+        bool ContainsPoint(Vector3 worldPosition);
     }
 }

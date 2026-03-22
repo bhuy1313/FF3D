@@ -63,6 +63,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
     [Header("References")]
     [SerializeField] private ParticleSystem waterParticles;
     [SerializeField] private AudioSource sprayAudio;
+    [SerializeField] private bool enableParticle = true;
     [SerializeField] private float particleGravityModifier = 0.35f;
     [SerializeField] private string waterTag = "Water";
     [SerializeField] private bool setWaterTag = true;
@@ -76,6 +77,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
     [SerializeField] private float currentSprayRadius;
     [SerializeField] private GameObject currentHolder;
     [SerializeField] private GameObject currentUser;
+    [SerializeField] private bool currentUserIsBot;
     [SerializeField] private GameObject claimOwner;
     [SerializeField] private bool hasExternalAimDirection;
     [SerializeField] private Vector3 externalAimDirection;
@@ -180,6 +182,11 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         RecalculateSprayRuntimeValues();
         ApplyExternalAimToVfx();
 
+        if (!enableParticle && waterParticles != null && waterParticles.isPlaying)
+        {
+            waterParticles.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+        }
+
         if (isSpraying)
         {
             if (maxWater > 0f)
@@ -192,7 +199,10 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
                 }
             }
 
-            SprayWaterArc();
+            if (!currentUserIsBot)
+            {
+                SprayWaterArc();
+            }
         }
         else if (maxWater > 0f && rechargePerSecond > 0f && currentWater < maxWater)
         {
@@ -209,6 +219,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         currentHolder = picker;
         claimOwner = picker;
         currentUser = null;
+        currentUserIsBot = false;
         ClearExternalAimState();
         AlignWaterVfxToSprayOrigin();
         ConfigureWaterParticleCollision();
@@ -225,6 +236,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         }
 
         currentUser = null;
+        currentUserIsBot = false;
         ClearExternalAimState();
         SetSprayState(false);
     }
@@ -265,13 +277,14 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
             if (isSpraying)
             {
                 currentUser = null;
+                currentUserIsBot = false;
                 SetSprayState(false);
                 return;
             }
 
             if (HasWaterToUse())
             {
-                currentUser = user;
+                SetCurrentUser(user);
                 SetSprayState(true);
             }
 
@@ -280,7 +293,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
 
         if (HasWaterToUse())
         {
-            currentUser = user;
+            SetCurrentUser(user);
             SetSprayState(true);
         }
     }
@@ -290,6 +303,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         if (!enable)
         {
             currentUser = null;
+            currentUserIsBot = false;
             ClearExternalAimDirection(user);
             SetSprayState(false);
             return;
@@ -298,11 +312,12 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         if (!HasWaterToUse())
         {
             currentUser = null;
+            currentUserIsBot = false;
             SetSprayState(false);
             return;
         }
 
-        currentUser = user;
+        SetCurrentUser(user);
         SetSprayState(true);
     }
 
@@ -331,6 +346,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
     {
         BotRuntimeRegistry.UnregisterExtinguisherItem(this);
         currentUser = null;
+        currentUserIsBot = false;
         ClearExternalAimState();
         SetSprayState(false);
     }
@@ -374,7 +390,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
 
         if (waterParticles != null)
         {
-            if (enable)
+            if (enable && enableParticle)
             {
                 AlignWaterVfxToSprayOrigin();
                 ApplySprayTuningToVfx();
@@ -629,13 +645,19 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         float pressureT = GetPressure01();
         float pressureRangeMultiplier = Mathf.Lerp(0.85f, 1.2f, pressureT);
         float pressureRadiusMultiplier = Mathf.Lerp(1.15f, 0.85f, pressureT);
-        float baseApplyWaterPerSecond = currentUser != null && currentUser.GetComponentInParent<BotBehaviorContext>() != null
+        float baseApplyWaterPerSecond = currentUserIsBot
             ? botApplyWaterPerSecond
             : playerApplyWaterPerSecond;
 
         currentApplyWaterRate = baseApplyWaterPerSecond * config.effectivenessMultiplier * pressureMultiplier;
         currentSprayRange = sprayRange * config.rangeMultiplier * pressureRangeMultiplier;
         currentSprayRadius = sprayRadius * config.radiusMultiplier * pressureRadiusMultiplier;
+    }
+
+    private void SetCurrentUser(GameObject user)
+    {
+        currentUser = user;
+        currentUserIsBot = user != null && user.GetComponentInParent<BotBehaviorContext>() != null;
     }
 
     private SprayPatternConfig GetCurrentPatternConfig()

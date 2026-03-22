@@ -38,6 +38,9 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
     private Transform activeCarryAnchor;
     private Transform originalParent;
     private Quaternion originalRotation;
+    private Rigidbody cachedRigidbody;
+    private bool originalUseGravity;
+    private bool originalIsKinematic;
     private Collider[] managedColliders;
     private bool[] managedColliderStates;
 
@@ -52,6 +55,8 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
         activeCarryAnchor = null;
         originalParent = transform.parent;
         originalRotation = transform.rotation;
+        CacheRigidbodyState();
+        RestoreRigidbodyState();
         CacheColliderStates();
         RestoreColliderStates();
     }
@@ -68,6 +73,7 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
         isCarried = false;
         activeRescuer = null;
         activeCarryAnchor = null;
+        RestoreRigidbodyState();
         RestoreColliderStates();
         BotRuntimeRegistry.UnregisterRescuableTarget(this);
     }
@@ -130,7 +136,10 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
         activeRescuer = null;
         activeCarryAnchor = null;
 
+        RestoreRigidbodyState();
         RestoreColliderStates();
+
+        onRescued?.Invoke();
 
         if (disableRenderersOnRescue)
         {
@@ -140,8 +149,6 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
                 renderers[i].enabled = false;
             }
         }
-
-        onRescued?.Invoke();
 
         if (deactivateOnRescue)
         {
@@ -163,12 +170,68 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
 
         isRescueInProgress = false;
         isCarried = true;
+        PrepareRigidbodyForCarry();
         transform.SetParent(activeCarryAnchor, false);
         transform.localPosition = carriedLocalPosition;
         transform.localRotation = Quaternion.Euler(carriedLocalEulerAngles);
         if (disableCollidersWhileCarried)
         {
             SetColliderStates(false);
+        }
+    }
+
+    private void CacheRigidbodyState()
+    {
+        if (cachedRigidbody == null)
+        {
+            cachedRigidbody = GetComponent<Rigidbody>();
+        }
+
+        if (cachedRigidbody == null)
+        {
+            return;
+        }
+
+        originalUseGravity = cachedRigidbody.useGravity;
+        originalIsKinematic = cachedRigidbody.isKinematic;
+    }
+
+    private void PrepareRigidbodyForCarry()
+    {
+        if (cachedRigidbody == null)
+        {
+            CacheRigidbodyState();
+        }
+
+        if (cachedRigidbody == null)
+        {
+            return;
+        }
+
+        cachedRigidbody.linearVelocity = Vector3.zero;
+        cachedRigidbody.angularVelocity = Vector3.zero;
+        cachedRigidbody.useGravity = false;
+        cachedRigidbody.isKinematic = true;
+    }
+
+    private void RestoreRigidbodyState()
+    {
+        if (cachedRigidbody == null)
+        {
+            CacheRigidbodyState();
+        }
+
+        if (cachedRigidbody == null)
+        {
+            return;
+        }
+
+        cachedRigidbody.isKinematic = originalIsKinematic;
+        cachedRigidbody.useGravity = originalUseGravity;
+        if (!cachedRigidbody.isKinematic)
+        {
+            cachedRigidbody.linearVelocity = Vector3.zero;
+            cachedRigidbody.angularVelocity = Vector3.zero;
         }
     }
 
