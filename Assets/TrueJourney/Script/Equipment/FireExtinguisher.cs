@@ -1,7 +1,5 @@
 using TrueJourney.BotBehavior;
 using UnityEngine;
-using UnityEngine.Serialization;
-
 public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotExtinguisherItem
 {
     [Header("Charge")]
@@ -16,8 +14,9 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
     [SerializeField] private float playerApplyWaterPerSecond = 1.5f;
     [SerializeField] private float botApplyWaterPerSecond = 1.5f;
     [SerializeField] private float maxSprayDistance = 4.25f;
-    [Tooltip("Optional stand-off distance override for bots. Set to 0 to derive automatically from Max Spray Distance.")]
-    [SerializeField] private float botStandDistanceOverride = 0f;
+    [Range(0f, 1f)]
+    [Tooltip("Bot stand distance as a ratio of Max Spray Distance.")]
+    [SerializeField] private float botStandDistanceFactor = 0.6f;
 
     [Header("Cone Detection")]
     [SerializeField] private float coneHalfAngle = 28f;
@@ -39,15 +38,12 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
 
     [Header("Debug")]
     [SerializeField] private bool drawConeGizmo = true;
-    [FormerlySerializedAs("drawOnlyWhenSelected")]
     [SerializeField] private bool drawGizmoOnlyWhenSelected = true;
 
     private Rigidbody cachedRigidbody;
     public Rigidbody Rigidbody => cachedRigidbody;
     public float ApplyWaterPerSecond => botApplyWaterPerSecond;
-    public float PreferredSprayDistance => botStandDistanceOverride > 0f
-        ? Mathf.Clamp(botStandDistanceOverride, 0.75f, maxSprayDistance)
-        : Mathf.Clamp(maxSprayDistance * 0.6f, 0.75f, maxSprayDistance);
+    public float PreferredSprayDistance => Mathf.Clamp(maxSprayDistance * Mathf.Clamp01(botStandDistanceFactor), 0.75f, maxSprayDistance);
     public float MaxSprayDistance => maxSprayDistance;
     public float MaxVerticalReach => Mathf.Tan(coneHalfAngle * Mathf.Deg2Rad) * maxSprayDistance;
     public float BallisticLaunchSpeed => 0f;
@@ -93,7 +89,10 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
         if (isSpraying)
         {
             currentCharge = Mathf.Max(0f, currentCharge - GetActiveWaterPerSecond() * Time.deltaTime);
-            ApplyExtinguishCone();
+            if (!IsBotControlled)
+            {
+                ApplyExtinguishCone();
+            }
             if (currentCharge <= 0f)
             {
                 currentUser = null;
@@ -273,6 +272,13 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
         Transform origin = sprayOrigin != null ? sprayOrigin : transform;
         Vector3 start = origin.position;
         Vector3 forward = origin.forward;
+        if (!IsFinite(start) || !IsFinite(forward))
+        {
+            currentUser = null;
+            SetSprayState(false);
+            return;
+        }
+
         if (forward.sqrMagnitude <= 0.001f)
         {
             return;
@@ -373,6 +379,11 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
         }
 
         return collider.bounds.ClosestPoint(position);
+    }
+
+    private static bool IsFinite(Vector3 value)
+    {
+        return float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
     }
 
 #if UNITY_EDITOR

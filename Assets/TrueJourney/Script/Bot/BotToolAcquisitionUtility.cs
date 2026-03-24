@@ -52,9 +52,14 @@ namespace TrueJourney.BotBehavior
             string toolName = GetToolName(desiredTool);
             if (options.IsHeldByBot(desiredTool))
             {
+                if (desiredTool is IPickupable heldPickupable)
+                {
+                    options.InventorySystem.TryEquipItem(heldPickupable);
+                }
+
                 options.SetActiveTool(desiredTool);
                 options.SetPickupWindow?.Invoke(false, null);
-                options.LogHeld?.Invoke(toolName);
+                options.LogEquipped?.Invoke(toolName);
                 return true;
             }
 

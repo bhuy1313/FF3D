@@ -11,6 +11,9 @@ namespace TrueJourney.BotBehavior
         [SerializeField] private float sensorRadius = 0.5f;
         [SerializeField] private float sensorYOffset = 1.0f;
         [SerializeField] private LayerMask interactMask = ~0;
+        [SerializeField] private LayerMask fireMask = ~0;
+        [SerializeField] private int fireBufferSize = 32;
+        [SerializeField] private float fireVerticalTolerance = 1.25f;
         
         [Header("Cooldown")]
         [SerializeField] private float interactCooldown = 2.0f;
@@ -26,11 +29,13 @@ namespace TrueJourney.BotBehavior
         private bool pickupWindowEnabled;
         private IPickupable pickupTarget;
         private string lastBreakableSensorLogKey;
+        private Collider[] fireBuffer;
 
         private void Awake()
         {
             agent = GetComponent<NavMeshAgent>();
             inventory = GetComponent<BotInventorySystem>();
+            EnsureFireBuffer();
         }
 
         private void Update()
@@ -81,6 +86,12 @@ namespace TrueJourney.BotBehavior
                 
                 if (interactable != null)
                 {
+                    // Rescue pickup is handled explicitly by the rescue controller.
+                    if (FindRescuableTarget(hit.collider) != null)
+                    {
+                        return;
+                    }
+
                     // Special behavior for Door: Don't interact if already open
                     if (interactable is IOpenable openable && openable.IsOpen)
                     {
@@ -98,6 +109,18 @@ namespace TrueJourney.BotBehavior
         {
             pickupWindowEnabled = enabled;
             pickupTarget = enabled ? target : null;
+        }
+
+        public bool TryFindNearbyFire(float radius, out IFireTarget fireTarget)
+        {
+            Vector3 center = transform.position + Vector3.up * sensorYOffset;
+            return TryFindFireNear(center, radius, transform.position, transform.position.y, out fireTarget);
+        }
+
+        public bool TryFindFireNearPoint(Vector3 worldPoint, float radius, out IFireTarget fireTarget)
+        {
+            Vector3 center = worldPoint + Vector3.up * sensorYOffset;
+            return TryFindFireNear(center, radius, transform.position, worldPoint.y, out fireTarget);
         }
 
         public bool TryFindBreakableAhead(out IBotBreakableTarget breakableTarget)
@@ -289,6 +312,61 @@ namespace TrueJourney.BotBehavior
             return true;
         }
 
+        private bool TryFindFireNear(Vector3 center, float radius, Vector3 fromPosition, float referenceHeight, out IFireTarget fireTarget)
+        {
+            fireTarget = null;
+            EnsureFireBuffer();
+
+            float effectiveRadius = Mathf.Max(0.05f, radius);
+            int hitCount = Physics.OverlapSphereNonAlloc(
+                center,
+                effectiveRadius,
+                fireBuffer,
+                fireMask,
+                QueryTriggerInteraction.Collide);
+            if (hitCount <= 0)
+            {
+                return false;
+            }
+
+            float bestDistanceSq = float.PositiveInfinity;
+            for (int i = 0; i < hitCount; i++)
+            {
+                Collider hit = fireBuffer[i];
+                fireBuffer[i] = null;
+                IFireTarget candidate = FindFireTarget(hit);
+                if (candidate == null || !candidate.IsBurning)
+                {
+                    continue;
+                }
+
+                if (Mathf.Abs(candidate.GetWorldPosition().y - referenceHeight) > Mathf.Max(0.05f, fireVerticalTolerance))
+                {
+                    continue;
+                }
+
+                float distanceSq = (candidate.GetWorldPosition() - fromPosition).sqrMagnitude;
+                if (distanceSq >= bestDistanceSq)
+                {
+                    continue;
+                }
+
+                bestDistanceSq = distanceSq;
+                fireTarget = candidate;
+            }
+
+            return fireTarget != null;
+        }
+
+        private void EnsureFireBuffer()
+        {
+            int desiredSize = Mathf.Max(8, fireBufferSize);
+            if (fireBuffer == null || fireBuffer.Length != desiredSize)
+            {
+                fireBuffer = new Collider[desiredSize];
+            }
+        }
+
         private static IInteractable FindInteractable(Collider collider)
         {
             if (collider.TryGetComponent(out IInteractable direct))
@@ -360,6 +438,70 @@ namespace TrueJourney.BotBehavior
                 if (parent.TryGetComponent(out IBotBreakableTarget parentBreakable))
                 {
                     return parentBreakable;
+                }
+
+                parent = parent.parent;
+            }
+
+            return null;
+        }
+
+        private static IFireTarget FindFireTarget(Collider collider)
+        {
+            if (collider == null)
+            {
+                return null;
+            }
+
+            if (collider.TryGetComponent(out IFireTarget direct))
+            {
+                return direct;
+            }
+
+            if (collider.attachedRigidbody != null &&
+                collider.attachedRigidbody.TryGetComponent(out IFireTarget rigidbodyOwner))
+            {
+                return rigidbodyOwner;
+            }
+
+            Transform parent = collider.transform.parent;
+            while (parent != null)
+            {
+                if (parent.TryGetComponent(out IFireTarget parentFire))
+                {
+                    return parentFire;
+                }
+
+                parent = parent.parent;
+            }
+
+            return null;
+        }
+
+        private static IRescuableTarget FindRescuableTarget(Collider collider)
+        {
+            if (collider == null)
+            {
+                return null;
+            }
+
+            if (collider.TryGetComponent(out IRescuableTarget direct))
+            {
+                return direct;
+            }
+
+            if (collider.attachedRigidbody != null &&
+                collider.attachedRigidbody.TryGetComponent(out IRescuableTarget rigidbodyOwner))
+            {
+                return rigidbodyOwner;
+            }
+
+            Transform parent = collider.transform.parent;
+            while (parent != null)
+            {
+                if (parent.TryGetComponent(out IRescuableTarget parentRescuable))
+                {
+                    return parentRescuable;
                 }
 
                 parent = parent.parent;

@@ -1,9 +1,11 @@
 using System.Collections.Generic;
 using TrueJourney.BotBehavior;
+using Unity.AI.Navigation;
 using UnityEngine;
 using UnityEngine.Serialization;
 
 [RequireComponent(typeof(SphereCollider))]
+[RequireComponent(typeof(NavMeshModifier))]
 public class Fire : MonoBehaviour, IFireTarget
 {
     private enum ParticleUpAxis
@@ -50,8 +52,13 @@ public class Fire : MonoBehaviour, IFireTarget
     [SerializeField] private string playerTag = "Player";
     [SerializeField] private bool damageScalesWithIntensity = true;
 
+    [Header("Navigation Blocking")]
+    [SerializeField] private bool removeFromNavMeshWhileBurning = true;
+    [SerializeField] private bool navMeshModifierApplyToChildren = true;
+
     [Header("Visuals")]
     [SerializeField] private ParticleSystem fireParticleSystem;
+    [SerializeField] private Transform particleVisualRoot;
     [SerializeField] private bool includeChildParticleSystems = true;
     [SerializeField] private bool keepParticleWorldUp = false;
     [SerializeField] private ParticleUpAxis particleUpAxis = ParticleUpAxis.Forward;
@@ -64,6 +71,7 @@ public class Fire : MonoBehaviour, IFireTarget
     [SerializeField] private float maxLightIntensity = 2f;
 
     private SphereCollider sphereCollider;
+    private NavMeshModifier navMeshModifier;
     private float spreadTimer;
     private Collider[] spreadBuffer;
     private readonly HashSet<Fire> spreadTargets = new HashSet<Fire>();
@@ -77,6 +85,7 @@ public class Fire : MonoBehaviour, IFireTarget
     private readonly List<bool> particleUses3DStartSize = new List<bool>();
     private readonly List<float> particleBaseStartSizeMultipliers = new List<float>();
     private readonly List<Vector3> particleBaseStartSize3DMultipliers = new List<Vector3>();
+    private Vector3 particleVisualRootBaseLocalScale = Vector3.one;
     private float lastWaterAppliedTime = float.NegativeInfinity;
 
     public bool IsBurning => currentHp > 0f;
@@ -86,12 +95,19 @@ public class Fire : MonoBehaviour, IFireTarget
         return transform.position;
     }
 
+    public float GetWorldRadius()
+    {
+        return GetSphereRadiusWorld();
+    }
+
     private void Reset()
     {
         CacheReferences();
         EnsureCollider();
+        EnsureNavMeshModifier();
         EnsureSpreadBuffer();
         SyncRadiusAndCollider();
+        SyncNavMeshModifier();
         ApplyVisuals(forcePlayState: true);
     }
 
@@ -99,6 +115,7 @@ public class Fire : MonoBehaviour, IFireTarget
     {
         CacheReferences();
         EnsureCollider();
+        EnsureNavMeshModifier();
         EnsureSpreadBuffer();
     }
 
@@ -113,18 +130,24 @@ public class Fire : MonoBehaviour, IFireTarget
         spreadTimer = 0f;
         lastWaterAppliedTime = float.NegativeInfinity;
         SyncRadiusAndCollider();
+        SyncNavMeshModifier();
         ApplyVisuals(forcePlayState: true);
     }
 
     private void OnDisable()
     {
         BotRuntimeRegistry.UnregisterFireTarget(this);
+        if (navMeshModifier != null)
+        {
+            navMeshModifier.enabled = false;
+        }
     }
 
     private void Update()
     {
         RegrowHp();
         SyncRadiusAndCollider();
+        SyncNavMeshModifier();
         ApplyVisuals();
         TrySpreadFire();
     }
@@ -287,10 +310,7 @@ public class Fire : MonoBehaviour, IFireTarget
             fireLight.enabled = currentHp > 0f;
         }
 
-        if (scaleWithIntensity)
-            transform.localScale = Vector3.Lerp(Vector3.zero, maxScale, t01);
-        else
-            transform.localScale = maxScale;
+        UpdateParticleVisualRootScale(t01);
     }
 
     private void KeepParticlesWorldUp()
@@ -361,10 +381,22 @@ public class Fire : MonoBehaviour, IFireTarget
 
     private void CacheReferences()
     {
+        ResolveParticleVisualRoot();
+        if (navMeshModifier == null)
+        {
+            navMeshModifier = GetComponent<NavMeshModifier>();
+        }
+
         if (fireParticleSystem == null)
         {
-            fireParticleSystem = GetComponentInChildren<ParticleSystem>(true);
+            fireParticleSystem = ResolvePrimaryParticleSystem();
         }
+
+        if (particleVisualRoot == null && fireParticleSystem != null)
+        {
+            particleVisualRoot = ResolveTopLevelParticleBranch(fireParticleSystem.transform);
+        }
+
         CacheManagedParticleSystems();
         CacheParticleRootsAndBaseScales();
 
@@ -460,6 +492,9 @@ public class Fire : MonoBehaviour, IFireTarget
         particleRootTransforms.Clear();
         particleRootBaseLocalScales.Clear();
         particleRootBaseLocalRotations.Clear();
+        particleVisualRootBaseLocalScale = particleVisualRoot != null
+            ? particleVisualRoot.localScale
+            : Vector3.one;
         if (managedParticleSystems.Count == 0)
         {
             return;
@@ -529,6 +564,23 @@ public class Fire : MonoBehaviour, IFireTarget
         UpdateShapeModeParticleSize(scaleMul);
     }
 
+    private void UpdateParticleVisualRootScale(float intensity01)
+    {
+        if (particleVisualRoot == null)
+        {
+            return;
+        }
+
+        if (scaleWithIntensity)
+        {
+            Vector3 visualScale = Vector3.Lerp(Vector3.zero, maxScale, intensity01);
+            particleVisualRoot.localScale = Vector3.Scale(particleVisualRootBaseLocalScale, visualScale);
+            return;
+        }
+
+        particleVisualRoot.localScale = Vector3.Scale(particleVisualRootBaseLocalScale, maxScale);
+    }
+
     private void UpdateShapeModeParticleSize(float scaleMul)
     {
         int count = Mathf.Min(
@@ -595,6 +647,23 @@ public class Fire : MonoBehaviour, IFireTarget
         sphereCollider.isTrigger = true;
     }
 
+    private void EnsureNavMeshModifier()
+    {
+        if (navMeshModifier == null)
+        {
+            navMeshModifier = GetComponent<NavMeshModifier>();
+        }
+
+        if (navMeshModifier == null)
+        {
+            navMeshModifier = gameObject.AddComponent<NavMeshModifier>();
+        }
+
+        navMeshModifier.overrideArea = false;
+        navMeshModifier.ignoreFromBuild = true;
+        navMeshModifier.applyToChildren = navMeshModifierApplyToChildren;
+    }
+
     private void EnsureSpreadBuffer()
     {
         if (spreadMaxOverlaps < 1)
@@ -622,8 +691,76 @@ public class Fire : MonoBehaviour, IFireTarget
         return Mathf.Max(0f, sphereCollider.radius * maxAxisScale);
     }
 
+    private void SyncNavMeshModifier()
+    {
+        EnsureNavMeshModifier();
+        if (navMeshModifier == null)
+        {
+            return;
+        }
+
+        navMeshModifier.enabled = removeFromNavMeshWhileBurning && IsBurning;
+        navMeshModifier.overrideArea = false;
+        navMeshModifier.ignoreFromBuild = true;
+        navMeshModifier.applyToChildren = navMeshModifierApplyToChildren;
+    }
+
     private float GetNormalizedHp()
     {
         return maxHp <= 0f ? 0f : Mathf.Clamp01(currentHp / maxHp);
+    }
+
+    private void ResolveParticleVisualRoot()
+    {
+        if (particleVisualRoot != null)
+        {
+            return;
+        }
+
+        Transform namedParticleChild = transform.Find("Particle");
+        if (namedParticleChild != null)
+        {
+            particleVisualRoot = namedParticleChild;
+        }
+    }
+
+    private ParticleSystem ResolvePrimaryParticleSystem()
+    {
+        if (particleVisualRoot != null)
+        {
+            ParticleSystem particleInVisualRoot = particleVisualRoot.GetComponentInChildren<ParticleSystem>(true);
+            if (particleInVisualRoot != null)
+            {
+                return particleInVisualRoot;
+            }
+        }
+
+        Transform namedParticleChild = transform.Find("Particle");
+        if (namedParticleChild != null)
+        {
+            ParticleSystem particleInNamedChild = namedParticleChild.GetComponentInChildren<ParticleSystem>(true);
+            if (particleInNamedChild != null)
+            {
+                return particleInNamedChild;
+            }
+        }
+
+        return GetComponentInChildren<ParticleSystem>(true);
+    }
+
+    private Transform ResolveTopLevelParticleBranch(Transform particleTransform)
+    {
+        if (particleTransform == null)
+        {
+            return null;
+        }
+
+        Transform current = particleTransform;
+        while (current.parent != null && current.parent != transform)
+        {
+            current = current.parent;
+        }
+
+        return current;
     }
 }

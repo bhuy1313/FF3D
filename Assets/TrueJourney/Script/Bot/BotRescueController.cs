@@ -31,12 +31,12 @@ public sealed class BotRescueController
 
         owner.LogRescueActivityMessage(
             $"rescue-order:{owner.FormatFlowVectorKeyForLog(orderPoint)}",
-            $"Nhận lệnh Rescue tới {orderPoint}.");
+            $"Received Rescue order to {orderPoint}.");
 
         IRescuableTarget rescueTarget = decisionService.ResolveRescueTarget(orderPoint, owner.CurrentRescueTarget, owner.gameObject, rescueSearchRadius);
         if (rescueTarget == null)
         {
-            owner.LogRescueActivityMessage("rescue-notfound", "Không thấy người cần cứu.");
+            owner.LogRescueActivityMessage("rescue-notfound", "No rescue target found.");
             owner.AbortActiveRescueOrder();
             return;
         }
@@ -46,14 +46,14 @@ public sealed class BotRescueController
 
         if (!rescueTarget.NeedsRescue)
         {
-            owner.LogRescueActivityMessage("rescue-complete", "Hoàn tất cứu.");
+            owner.LogRescueActivityMessage("rescue-complete", "Rescue completed.");
             owner.CompleteActiveRescueOrder();
             return;
         }
 
         if (owner.CurrentSafeZoneTarget == null)
         {
-            owner.LogRescueActivityMessage("rescue-no-safezone", "Không thấy vùng an toàn.");
+            owner.LogRescueActivityMessage("rescue-no-safezone", "No safe zone found.");
             owner.AbortActiveRescueOrder();
             return;
         }
@@ -68,7 +68,7 @@ public sealed class BotRescueController
 
             if (!hasReachedSafeZone)
             {
-                owner.LogRescueActivityMessage("rescue-carry", "Mang nạn nhân tới vùng an toàn.");
+                owner.LogRescueActivityMessage("rescue-carry", "Carrying casualty to safe zone.");
                 owner.MoveToCommand(safeZonePosition);
                 return;
             }
@@ -78,7 +78,7 @@ public sealed class BotRescueController
             Vector3 fallbackDropPosition = owner.transform.position + owner.transform.TransformDirection(rescueDropOffset);
             Vector3 dropPosition = owner.CurrentSafeZoneTarget.GetDropPoint(fallbackDropPosition);
             rescueTarget.CompleteRescueAt(dropPosition);
-            owner.LogRescueActivityMessage("rescue-complete", "Hoàn tất cứu.");
+            owner.LogRescueActivityMessage("rescue-complete", "Rescue completed.");
             owner.CompleteActiveRescueOrder();
             return;
         }
@@ -87,7 +87,7 @@ public sealed class BotRescueController
         float horizontalDistance = GetHorizontalDistance(owner.transform.position, targetPosition);
         if (horizontalDistance > rescueInteractionDistance)
         {
-            owner.LogRescueActivityMessage("rescue-move", "Di chuyển tới người bị nạn.");
+            owner.LogRescueActivityMessage("rescue-move", "Moving to casualty.");
             owner.MoveToCommand(targetPosition);
             return;
         }
@@ -98,13 +98,13 @@ public sealed class BotRescueController
 
         if (rescueTarget.IsRescueInProgress && rescueTarget.ActiveRescuer == owner.gameObject)
         {
-            owner.LogRescueActivityMessage("rescue-start", "Bắt đầu cứu.");
+            owner.LogRescueActivityMessage("rescue-start", "Starting rescue.");
             return;
         }
 
         if (rescueTarget.TryBeginCarry(owner.gameObject, owner.EnsureRescueCarryAnchor()))
         {
-            owner.LogRescueActivityMessage("rescue-pickup", "Nhấc nạn nhân.");
+            owner.LogRescueActivityMessage("rescue-pickup", "Picked up casualty.");
             return;
         }
 

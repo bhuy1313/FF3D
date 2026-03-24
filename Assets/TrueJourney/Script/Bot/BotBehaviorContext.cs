@@ -7,6 +7,7 @@ public class BotBehaviorContext : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private NavMeshAgent navMeshAgent;
+    [SerializeField] private Animator animator;
 
     [Header("Orders")]
     [SerializeField] private bool useMoveOrdersAsBehaviorInput;
@@ -22,10 +23,17 @@ public class BotBehaviorContext : MonoBehaviour
     [SerializeField] private Vector2 idleTurnDurationRange = new Vector2(1.25f, 2.5f);
     [SerializeField] private Vector2 idlePauseDurationRange = new Vector2(0.4f, 1.2f);
 
+    [Header("Animation")]
+    [SerializeField] private bool driveMovementAnimation = true;
+    [SerializeField] private string moveAnimationParameter = "IsMoving";
+    [SerializeField] private float movementAnimationThreshold = 0.1f;
+    [SerializeField] private bool movementAnimationActive;
+
     private readonly BotMoveOrderState moveOrderState = new BotMoveOrderState();
     private readonly BotExtinguishOrderState extinguishOrderState = new BotExtinguishOrderState();
     private readonly BotFollowOrderState followOrderState = new BotFollowOrderState();
     private readonly BotRescueOrderState rescueOrderState = new BotRescueOrderState();
+    private int moveAnimationParameterHash;
 
     public NavMeshAgent NavMeshAgent => navMeshAgent;
     public bool UseMoveOrdersAsBehaviorInput => useMoveOrdersAsBehaviorInput;
@@ -45,10 +53,19 @@ public class BotBehaviorContext : MonoBehaviour
 
     private void Awake()
     {
-        if (navMeshAgent == null)
-        {
-            navMeshAgent = GetComponent<NavMeshAgent>();
-        }
+        AutoAssignReferences();
+        CacheAnimationHashes();
+    }
+
+    private void LateUpdate()
+    {
+        UpdateMovementAnimation();
+    }
+
+    private void OnValidate()
+    {
+        AutoAssignReferences();
+        CacheAnimationHashes();
     }
 
     public void SetUseMoveOrdersAsBehaviorInput(bool value)
@@ -81,9 +98,19 @@ public class BotBehaviorContext : MonoBehaviour
         extinguishOrderState.SetDestination(destination);
     }
 
+    public void SetExtinguishOrder(Vector3 destination, Vector3 scanOrigin, BotExtinguishCommandMode mode)
+    {
+        extinguishOrderState.SetDestination(destination, scanOrigin, mode);
+    }
+
     public bool TryGetExtinguishOrder(out Vector3 destination)
     {
         return extinguishOrderState.TryGetDestination(out destination);
+    }
+
+    public bool TryGetExtinguishOrder(out Vector3 destination, out Vector3 scanOrigin, out BotExtinguishCommandMode mode)
+    {
+        return extinguishOrderState.TryGetDestination(out destination, out scanOrigin, out mode);
     }
 
     public void ClearExtinguishOrder()
@@ -200,5 +227,77 @@ public class BotBehaviorContext : MonoBehaviour
         float min = Mathf.Max(minimum, range.x);
         float max = Mathf.Max(min, range.y);
         return new Vector2(min, max);
+    }
+
+    private void AutoAssignReferences()
+    {
+        if (navMeshAgent == null)
+        {
+            navMeshAgent = GetComponent<NavMeshAgent>();
+        }
+
+        if (animator != null)
+        {
+            return;
+        }
+
+        Animator[] animators = GetComponentsInChildren<Animator>(true);
+        for (int i = 0; i < animators.Length; i++)
+        {
+            Animator candidate = animators[i];
+            if (candidate != null && candidate.runtimeAnimatorController != null)
+            {
+                animator = candidate;
+                return;
+            }
+        }
+
+        if (animators.Length > 0)
+        {
+            animator = animators[0];
+        }
+    }
+
+    private void CacheAnimationHashes()
+    {
+        moveAnimationParameterHash = ToHash(moveAnimationParameter);
+    }
+
+    private void UpdateMovementAnimation()
+    {
+        if (!driveMovementAnimation || animator == null)
+        {
+            return;
+        }
+
+        bool shouldUseMoveAnimation = BotMovementAnimationUtility.ShouldUseMoveAnimation(
+            navMeshAgent != null && navMeshAgent.enabled,
+            navMeshAgent != null && navMeshAgent.isOnNavMesh,
+            navMeshAgent != null && navMeshAgent.isStopped,
+            navMeshAgent != null && navMeshAgent.pathPending,
+            navMeshAgent != null && navMeshAgent.hasPath,
+            navMeshAgent != null ? navMeshAgent.remainingDistance : 0f,
+            navMeshAgent != null ? navMeshAgent.stoppingDistance : 0f,
+            navMeshAgent != null ? navMeshAgent.velocity : Vector3.zero,
+            navMeshAgent != null ? navMeshAgent.desiredVelocity : Vector3.zero,
+            movementAnimationThreshold);
+
+        movementAnimationActive = shouldUseMoveAnimation;
+        ApplyMovementAnimationParameter(shouldUseMoveAnimation);
+    }
+
+    private void ApplyMovementAnimationParameter(bool useMoveAnimation)
+    {
+        if (moveAnimationParameterHash == 0)
+        {
+            return;
+        }
+
+        animator.SetBool(moveAnimationParameterHash, useMoveAnimation);
+    }
+
+    private static int ToHash(string stateName)
+    {
+        return string.IsNullOrWhiteSpace(stateName) ? 0 : Animator.StringToHash(stateName);
     }
 }

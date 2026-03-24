@@ -116,6 +116,8 @@ namespace TrueJourney.BotBehavior
             };
 
             // Disable physics so it doesn't collide while inside the "inventory"
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
             rb.isKinematic = true;
             rb.detectCollisions = false;
 

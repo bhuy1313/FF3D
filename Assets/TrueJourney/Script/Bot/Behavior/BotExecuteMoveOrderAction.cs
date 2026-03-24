@@ -54,6 +54,19 @@ namespace TrueJourney.BotBehavior
                 return Status.Success;
             }
 
+            if (commandAgent != null && commandAgent.HasMovePickupTarget)
+            {
+                if (commandAgent.TryCompleteMovePickupTarget())
+                {
+                    context.ClearMoveOrder();
+                    navMeshAgent.ResetPath();
+                    commandAgent.ResetMoveActivityDebug();
+                    return Status.Success;
+                }
+
+                return Status.Running;
+            }
+
             bool destinationChanged = (destination - currentDestination).sqrMagnitude > 0.01f;
             bool requiresNavigationRefresh =
                 !navMeshAgent.pathPending &&

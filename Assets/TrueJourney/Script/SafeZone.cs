@@ -2,7 +2,7 @@ using TrueJourney.BotBehavior;
 using UnityEngine;
 
 [DisallowMultipleComponent]
-public class SafeZone : MonoBehaviour, ISafeZoneTarget
+public class SafeZone : MonoBehaviour, ISafeZoneTarget, IInteractable
 {
     [Header("Zone")]
     [SerializeField] private Transform dropPoint;
@@ -32,6 +32,10 @@ public class SafeZone : MonoBehaviour, ISafeZoneTarget
         return Vector3.Distance(
             new Vector3(zonePosition.x, 0f, zonePosition.z),
             new Vector3(worldPosition.x, 0f, worldPosition.z)) <= Mathf.Max(0.1f, fallbackRadius);
+    }
+
+    public void Interact(GameObject interactor)
+    {
     }
 
     private void OnEnable()

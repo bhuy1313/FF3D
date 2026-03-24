@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 #endif
 
+using TrueJourney.BotBehavior;
 
 namespace StarterAssets
 {
@@ -115,6 +116,11 @@ namespace StarterAssets
 
             if (WasPressed(input != null && input.interact, ref previousInteract))
             {
+                if (TryCompleteCarriedRescueAtCurrentTarget())
+                {
+                    return;
+                }
+
                 if (currentInteractable != null)
                 {
                     currentInteractable.Interact(gameObject);
@@ -194,6 +200,45 @@ namespace StarterAssets
                     return parentInteractable;
                 }
                 parent = parent.parent;
+            }
+
+            return null;
+        }
+
+        private bool TryCompleteCarriedRescueAtCurrentTarget()
+        {
+            if (!(currentInteractable is ISafeZoneTarget safeZone))
+            {
+                return false;
+            }
+
+            IRescuableTarget carriedTarget = FindPlayerCarriedRescuable();
+            if (carriedTarget == null)
+            {
+                return false;
+            }
+
+            Vector3 fallbackDropPosition = transform.position + transform.right * 0.75f;
+            Vector3 dropPosition = safeZone.GetDropPoint(fallbackDropPosition);
+            carriedTarget.CompleteRescueAt(dropPosition);
+            return true;
+        }
+
+        private IRescuableTarget FindPlayerCarriedRescuable()
+        {
+            foreach (IRescuableTarget rescuable in BotRuntimeRegistry.ActiveRescuableTargets)
+            {
+                if (rescuable == null)
+                {
+                    continue;
+                }
+
+                if (!rescuable.IsCarried || rescuable.ActiveRescuer != gameObject)
+                {
+                    continue;
+                }
+
+                return rescuable;
             }
 
             return null;

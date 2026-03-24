@@ -36,5 +36,6 @@ namespace TrueJourney.BotBehavior
         void ApplyWater(float amount);
         bool IsBurning { get; }
         Vector3 GetWorldPosition();
+        float GetWorldRadius();
     }
 }

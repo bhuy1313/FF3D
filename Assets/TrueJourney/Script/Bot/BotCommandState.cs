@@ -26,12 +26,23 @@ public sealed class BotCommandState
 
     public bool TryConfirm(Vector3 worldPoint)
     {
+        return TryConfirm(PendingCommand, worldPoint);
+    }
+
+    public bool TryConfirm(BotCommandType commandType, Vector3 worldPoint)
+    {
         if (!IsAwaitingTarget)
         {
             return false;
         }
 
-        bool accepted = SelectedCommandable.TryIssueCommand(PendingCommand, worldPoint);
+        BotCommandType resolvedCommand = commandType == BotCommandType.None ? PendingCommand : commandType;
+        if (!SelectedCommandable.CanAcceptCommand(resolvedCommand))
+        {
+            return false;
+        }
+
+        bool accepted = SelectedCommandable.TryIssueCommand(resolvedCommand, worldPoint);
         if (accepted)
         {
             Clear();
