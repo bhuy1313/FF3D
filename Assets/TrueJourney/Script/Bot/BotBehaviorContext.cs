@@ -28,12 +28,22 @@ public class BotBehaviorContext : MonoBehaviour
     [SerializeField] private string moveAnimationParameter = "IsMoving";
     [SerializeField] private float movementAnimationThreshold = 0.1f;
     [SerializeField] private bool movementAnimationActive;
+    [SerializeField] private bool driveCrouchAnimation = true;
+    [SerializeField] private string crouchAnimationParameter = "IsCrouching";
+    [SerializeField] private string crouchAnimationLayer = "Base Layer";
+    [SerializeField] private string crouchAnimationState = "Idle Crouching";
+    [SerializeField] private string uncrouchAnimationState = "Breathing Idle";
+    [SerializeField] private bool crouchAnimationActive;
 
     private readonly BotMoveOrderState moveOrderState = new BotMoveOrderState();
     private readonly BotExtinguishOrderState extinguishOrderState = new BotExtinguishOrderState();
     private readonly BotFollowOrderState followOrderState = new BotFollowOrderState();
     private readonly BotRescueOrderState rescueOrderState = new BotRescueOrderState();
     private int moveAnimationParameterHash;
+    private int crouchAnimationParameterHash;
+    private int crouchAnimationLayerIndex = -1;
+    private int crouchAnimationStateHash;
+    private int uncrouchAnimationStateHash;
 
     public NavMeshAgent NavMeshAgent => navMeshAgent;
     public bool UseMoveOrdersAsBehaviorInput => useMoveOrdersAsBehaviorInput;
@@ -222,6 +232,12 @@ public class BotBehaviorContext : MonoBehaviour
         return false;
     }
 
+    public void SetCrouchAnimation(bool active)
+    {
+        crouchAnimationActive = active;
+        ApplyCrouchAnimation();
+    }
+
     private static Vector2 SanitizeRange(Vector2 range, float minimum)
     {
         float min = Mathf.Max(minimum, range.x);
@@ -261,6 +277,12 @@ public class BotBehaviorContext : MonoBehaviour
     private void CacheAnimationHashes()
     {
         moveAnimationParameterHash = ToHash(moveAnimationParameter);
+        crouchAnimationParameterHash = ToHash(crouchAnimationParameter);
+        crouchAnimationStateHash = ToHash(crouchAnimationState);
+        uncrouchAnimationStateHash = ToHash(uncrouchAnimationState);
+        crouchAnimationLayerIndex = animator != null && !string.IsNullOrWhiteSpace(crouchAnimationLayer)
+            ? animator.GetLayerIndex(crouchAnimationLayer)
+            : -1;
     }
 
     private void UpdateMovementAnimation()
@@ -294,6 +316,60 @@ public class BotBehaviorContext : MonoBehaviour
         }
 
         animator.SetBool(moveAnimationParameterHash, useMoveAnimation);
+    }
+
+    private void ApplyCrouchAnimation()
+    {
+        if (!driveCrouchAnimation || animator == null)
+        {
+            return;
+        }
+
+        if (HasBoolParameter(crouchAnimationParameterHash))
+        {
+            animator.SetBool(crouchAnimationParameterHash, crouchAnimationActive);
+            return;
+        }
+
+        if (crouchAnimationLayerIndex < 0)
+        {
+            return;
+        }
+
+        if (crouchAnimationActive)
+        {
+            if (crouchAnimationStateHash != 0 && animator.HasState(crouchAnimationLayerIndex, crouchAnimationStateHash))
+            {
+                animator.CrossFade(crouchAnimationStateHash, 0.1f, crouchAnimationLayerIndex);
+            }
+
+            return;
+        }
+
+        if (uncrouchAnimationStateHash != 0 && animator.HasState(crouchAnimationLayerIndex, uncrouchAnimationStateHash))
+        {
+            animator.CrossFade(uncrouchAnimationStateHash, 0.1f, crouchAnimationLayerIndex);
+        }
+    }
+
+    private bool HasBoolParameter(int parameterHash)
+    {
+        if (parameterHash == 0 || animator == null)
+        {
+            return false;
+        }
+
+        AnimatorControllerParameter[] parameters = animator.parameters;
+        for (int i = 0; i < parameters.Length; i++)
+        {
+            AnimatorControllerParameter parameter = parameters[i];
+            if (parameter.type == AnimatorControllerParameterType.Bool && parameter.nameHash == parameterHash)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static int ToHash(string stateName)

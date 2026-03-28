@@ -20,40 +20,61 @@ namespace LineworkLite.Editor.FreeOutline
                 Debug.LogError($"Mesh {mesh.name} did not contain any tangents.");
                 return null;
             }
+
+            const Allocator allocator = Allocator.TempJob;
 #if HAS_PACKAGE_UNITY_COLLECTIONS_2_1_0_EXP_4
-            var smoothedNormalsMap = new UnsafeParallelHashMap<Vector3, Vector3>(vertexCount, Allocator.Persistent);
+            var smoothedNormalsMap = new UnsafeParallelHashMap<Vector3, Vector3>(vertexCount, allocator);
 #else
-            var smoothedNormalsMap = new UnsafeHashMap<Vector3, Vector3>(vertexCount, Allocator.Persistent);
+            var smoothedNormalsMap = new UnsafeHashMap<Vector3, Vector3>(vertexCount, allocator);
 #endif
-            for (var i = 0; i < vertexCount; i++)
+            var normalsNativeArray = default(NativeArray<Vector3>);
+            var verticesNativeArray = default(NativeArray<Vector3>);
+            var tangentsNativeArray = default(NativeArray<Vector4>);
+            var bakedNormals = default(NativeArray<Vector2>);
+
+            try
             {
-                if (smoothedNormalsMap.ContainsKey(vertices[i]))
+                for (var i = 0; i < vertexCount; i++)
                 {
-                    smoothedNormalsMap[vertices[i]] += normals[i];
+                    if (smoothedNormalsMap.ContainsKey(vertices[i]))
+                    {
+                        smoothedNormalsMap[vertices[i]] += normals[i];
+                    }
+                    else
+                    {
+                        smoothedNormalsMap.Add(vertices[i], normals[i]);
+                    }
                 }
-                else
-                {
-                    smoothedNormalsMap.Add(vertices[i], normals[i]);
-                }
+
+                normalsNativeArray = new NativeArray<Vector3>(normals, allocator);
+                verticesNativeArray = new NativeArray<Vector3>(vertices, allocator);
+                tangentsNativeArray = new NativeArray<Vector4>(tangents, allocator);
+                bakedNormals = new NativeArray<Vector2>(vertexCount, allocator);
+
+                var bakeNormalJob = new BakeNormalJob(verticesNativeArray, normalsNativeArray, tangentsNativeArray, smoothedNormalsMap, bakedNormals);
+                bakeNormalJob.Schedule(vertexCount, 100).Complete();
+
+                var bakedSmoothedNormals = new Vector2[vertexCount];
+                bakedNormals.CopyTo(bakedSmoothedNormals);
+                return bakedSmoothedNormals;
             }
+            finally
+            {
+                if (smoothedNormalsMap.IsCreated)
+                    smoothedNormalsMap.Dispose();
 
-            var normalsNativeArray = new NativeArray<Vector3>(normals, Allocator.Persistent);
-            var verticesNativeArray = new NativeArray<Vector3>(vertices, Allocator.Persistent);
-            var tangentsNativeArray = new NativeArray<Vector4>(tangents, Allocator.Persistent);
-            var bakedNormals = new NativeArray<Vector2>(vertexCount, Allocator.Persistent);
+                if (normalsNativeArray.IsCreated)
+                    normalsNativeArray.Dispose();
 
-            var bakeNormalJob = new BakeNormalJob(verticesNativeArray, normalsNativeArray, tangentsNativeArray, smoothedNormalsMap, bakedNormals);
-            bakeNormalJob.Schedule(vertexCount, 100).Complete();
+                if (verticesNativeArray.IsCreated)
+                    verticesNativeArray.Dispose();
 
-            var bakedSmoothedNormals = new Vector2[vertexCount];
-            bakedNormals.CopyTo(bakedSmoothedNormals);
+                if (tangentsNativeArray.IsCreated)
+                    tangentsNativeArray.Dispose();
 
-            smoothedNormalsMap.Dispose();
-            normalsNativeArray.Dispose();
-            verticesNativeArray.Dispose();
-            tangentsNativeArray.Dispose();
-            bakedNormals.Dispose();
-            return bakedSmoothedNormals;
+                if (bakedNormals.IsCreated)
+                    bakedNormals.Dispose();
+            }
         }
 
         private struct BakeNormalJob : IJobParallelFor

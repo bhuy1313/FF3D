@@ -38,6 +38,11 @@ namespace StarterAssets
         [SerializeField] private float extinguishDebugSphereLifetime = 2.5f;
         [SerializeField] private Color extinguishDebugSphereColor = new Color(1f, 0.45f, 0.1f, 0.2f);
 
+        [Header("Rescue Debug")]
+        [SerializeField] private bool spawnRescueDebugSphere = true;
+        [SerializeField] private float fallbackRescueDebugSphereRadius = 2.25f;
+        [SerializeField] private Color rescueDebugSphereColor = new Color(0.2f, 0.85f, 1f, 0.2f);
+
         [Header("Selection Wheel")]
         [SerializeField] private WheelSelector wheelSelector;
 
@@ -377,6 +382,11 @@ namespace StarterAssets
                 return;
             }
 
+            if (commandType == BotCommandType.Rescue)
+            {
+                SpawnRescueDebugSphere(primaryHit.point, botCommandAgent);
+            }
+
             if (commandState.TryConfirm(commandType, destination))
             {
                 if (logCommandSelection)
@@ -610,9 +620,35 @@ namespace StarterAssets
                 return;
             }
 
-            float radius = Mathf.Max(0.1f, extinguishScanRadius);
+            SpawnCommandDebugSphere(
+                "ExtinguishScanDebugSphere",
+                worldPoint,
+                Mathf.Max(0.1f, extinguishScanRadius),
+                extinguishDebugSphereColor);
+        }
+
+        private void SpawnRescueDebugSphere(Vector3 worldPoint, global::BotCommandAgent botCommandAgent)
+        {
+            if (!spawnRescueDebugSphere)
+            {
+                return;
+            }
+
+            float radius = botCommandAgent != null
+                ? Mathf.Max(0.1f, botCommandAgent.RescueSearchRadius)
+                : Mathf.Max(0.1f, fallbackRescueDebugSphereRadius);
+
+            SpawnCommandDebugSphere(
+                "RescueDebugSphere",
+                worldPoint,
+                radius,
+                rescueDebugSphereColor);
+        }
+
+        private void SpawnCommandDebugSphere(string debugName, Vector3 worldPoint, float radius, Color color)
+        {
             GameObject debugSphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            debugSphere.name = "ExtinguishScanDebugSphere";
+            debugSphere.name = debugName;
             debugSphere.transform.position = worldPoint;
             debugSphere.transform.localScale = Vector3.one * radius * 2f;
             int ignoreRaycastLayer = LayerMask.NameToLayer("Ignore Raycast");
@@ -629,7 +665,7 @@ namespace StarterAssets
             {
                 debugRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 debugRenderer.receiveShadows = false;
-                Material debugMaterial = CreateExtinguishDebugMaterial();
+                Material debugMaterial = CreateDebugSphereMaterial(color);
                 if (debugMaterial != null)
                 {
                     debugRenderer.sharedMaterial = debugMaterial;
@@ -639,7 +675,7 @@ namespace StarterAssets
             Destroy(debugSphere, Mathf.Max(0.1f, extinguishDebugSphereLifetime));
         }
 
-        private Material CreateExtinguishDebugMaterial()
+        private Material CreateDebugSphereMaterial(Color color)
         {
             Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
             if (shader == null)
@@ -653,7 +689,7 @@ namespace StarterAssets
             }
 
             Material material = new Material(shader);
-            ApplyDebugColor(material, extinguishDebugSphereColor);
+            ApplyDebugColor(material, color);
             ConfigureTransparentMaterial(material);
             return material;
         }

@@ -80,6 +80,10 @@ GameObject:
   - component: {fileID: 6682476502136530231}
   - component: {fileID: 6787578418637713305}
   - component: {fileID: 3126292282646842754}
+  - component: {fileID: 789533335894772594}
+  - component: {fileID: 6054947521262004160}
+  - component: {fileID: 526579212534484800}
+  - component: {fileID: 1343230103620248346}
   m_Layer: 7
   m_Name: PlayerCapsule
   m_TagString: Player
@@ -95,7 +99,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2467124115581809103}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 15.125, y: 39.785, z: -22.644001}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -168,7 +172,21 @@ MonoBehaviour:
   CinemachineCameraTarget: {fileID: 2837220257102322015}
   TopClamp: 90
   BottomClamp: -90
-  CameraRotationSmoothTime: 0.05
+  CameraRotationSmoothTime: 0
+  EnableCameraMotion: 1
+  WalkBobFrequency: 10
+  WalkBobHorizontalAmplitude: 0.02
+  WalkBobVerticalAmplitude: 0.035
+  SprintBobFrequencyMultiplier: 1.45
+  SprintBobAmplitudeMultiplier: 1.7
+  CrouchBobFrequencyMultiplier: 0.7
+  CrouchBobAmplitudeMultiplier: 0.55
+  CameraMotionBlendSpeed: 16
+  StrafeTilt: 0.75
+  JumpCameraUpwardOffset: 0.3
+  FallCameraDownwardOffset: 0.5
+  JumpCameraMaxRiseSpeed: 5
+  FallCameraMaxSpeed: 7
 --- !u!114 &6667646138187766528
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -328,18 +346,16 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   drawDebugRay: 1
+  enableOutlineHighlight: 1
+  outlineRenderingLayer: 6
   input: {fileID: 0}
   grabMask:
     serializedVersion: 2
     m_Bits: 4294967295
   grabDistance: 4
   maxGrabMass: 50
-  grabSpring: 600
-  grabDamper: 50
-  heldDrag: 10
-  heldAngularDrag: 10
-  holdSmoothTime: 0.05
-  holdMaxSpeed: 30
+  grabPoint: {fileID: 0}
+  grabPointLocalPosition: {x: 0, y: -0.5, z: 0.75}
   inventory: {fileID: 6787578418637713305}
   currentTarget: {fileID: 0}
 --- !u!114 &6787578418637713305
@@ -358,8 +374,12 @@ MonoBehaviour:
   maxSlots: 6
   viewPointTransform: {fileID: 5943277002950396306}
   inventoryRoot: {fileID: 5778681287040369742}
-  viewPoint: {x: 0, y: 0, z: 0}
+  viewPoint: {x: 0.5, y: -0.5, z: 1}
   hideStoredItems: 1
+  useViewPointRotationLag: 1
+  viewPointRotationFollowSpeed: 15
+  viewPointRotationMaxAngle: 5
+  createRuntimeLagPivot: 1
 --- !u!114 &3126292282646842754
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -385,6 +405,115 @@ MonoBehaviour:
   currentHealth: 0
   currentStamina: 0
   currentOxygen: 0
+--- !u!114 &789533335894772594
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2467124115581809103}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f6bff4c6a0341b4991960878391e7d8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StarterAssets.FirstPersonAnimatorParameterDriver
+  animator: {fileID: 0}
+  characterController: {fileID: 7310261293633705282}
+  velocityReference: {fileID: 6898180818991586604}
+  speedParameter: Speed
+  horizontalSpeedParameter: HorizontalSpeed
+  velocityXParameter: VelocityX
+  velocityYParameter: VelocityY
+  velocityZParameter: VelocityZ
+  parameterDampTime: 0.1
+  worldVelocity: {x: 0, y: 0, z: 0}
+  localVelocity: {x: 0, y: 0, z: 0}
+  speed: 0
+  horizontalSpeed: 0
+--- !u!114 &6054947521262004160
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2467124115581809103}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1834bb068d8349c88fb5fc445a0fa943, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StarterAssets.FPSCommandSystem
+  viewCamera: {fileID: 0}
+  interactionSystem: {fileID: 0}
+  selectionDistance: 300
+  commandableMask:
+    serializedVersion: 2
+    m_Bits: 8
+  selectedRenderingLayer: 7
+  moveCommandKey: 104
+  cancelCommandKey: 27
+  destinationRayDistance: 200
+  destinationMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  drawDebugRay: 1
+  showDebugOverlay: 1
+  logCommandSelection: 1
+  debugOverlayOffset: {x: 16, y: 16}
+  extinguishScanRadius: 5
+  extinguishScanMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  spawnExtinguishScanDebugSphere: 1
+  extinguishDebugSphereLifetime: 5
+  extinguishDebugSphereColor: {r: 1, g: 0.45, b: 0.1, a: 0.2}
+  wheelSelector: {fileID: 526579212534484800}
+  selectedCommandTarget: {fileID: 0}
+--- !u!114 &526579212534484800
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2467124115581809103}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b989c34d26ae2da48947c4266209ec27, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mousePosition: {x: 0, y: 0}
+  currentAngle: 0
+  selection: 0
+  menuItems:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  selectionWheelCanvas: {fileID: 0}
+  selectionWheelCanvasGroup: {fileID: 0}
+  menuItemsParent: {fileID: 0}
+  menuItemPrefab: {fileID: 7600931405032607057, guid: a672729b403704f4293a11ef3e73b500, type: 3}
+  menuItemCount: 4
+  menuItemRadius: 0
+--- !u!114 &1343230103620248346
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2467124115581809103}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshModifier
+  m_SerializedVersion: 0
+  m_OverrideArea: 0
+  m_Area: 0
+  m_OverrideGenerateLinks: 0
+  m_GenerateLinks: 0
+  m_IgnoreFromBuild: 1
+  m_ApplyToChildren: 1
+  m_AffectedAgents: ffffffff
 --- !u!1 &2733702201599794376
 GameObject:
   m_ObjectHideFlags: 0
@@ -524,10 +653,42 @@ Transform:
   m_GameObject: {fileID: 2837220257102322015}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 1.375, z: 0.332}
+  m_LocalPosition: {x: 0, y: 1.375, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 8041142995549467560}
   - {fileID: 5943277002950396306}
   m_Father: {fileID: 6898180818991586604}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &7499267364310285986
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8041142995549467560}
+  m_Layer: 7
+  m_Name: GrabPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8041142995549467560
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7499267364310285986}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0.438}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1976322869918025759}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

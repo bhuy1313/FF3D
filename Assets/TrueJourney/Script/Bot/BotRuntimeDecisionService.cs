@@ -27,36 +27,35 @@ public sealed class BotRuntimeDecisionService
             return committedTarget;
         }
 
-        if (currentTarget != null &&
-            currentTarget.NeedsRescue &&
-            (!currentTarget.IsRescueInProgress || currentTarget.ActiveRescuer == requester) &&
-            GetHorizontalDistance(orderPoint, currentTarget.GetWorldPosition()) <= rescueSearchRadius)
-        {
-            return currentTarget;
-        }
-
         IRescuableTarget bestTarget = null;
         float bestDistance = float.MaxValue;
+        float bestPriority = float.NegativeInfinity;
+
+        if (IsEligibleRescueTarget(currentTarget, requester, orderPoint, rescueSearchRadius))
+        {
+            bestTarget = currentTarget;
+            bestDistance = GetHorizontalDistance(orderPoint, currentTarget.GetWorldPosition());
+            bestPriority = currentTarget.RescuePriority;
+        }
 
         foreach (IRescuableTarget candidate in BotRuntimeRegistry.ActiveRescuableTargets)
         {
-            if (candidate == null || !candidate.NeedsRescue)
+            if (!IsEligibleRescueTarget(candidate, requester, orderPoint, rescueSearchRadius))
             {
                 continue;
             }
 
-            if (candidate.IsRescueInProgress && candidate.ActiveRescuer != requester)
+            float candidateDistance = GetHorizontalDistance(orderPoint, candidate.GetWorldPosition());
+            float candidatePriority = candidate.RescuePriority;
+            bool isBetterPriority = candidatePriority > bestPriority;
+            bool isTieBreakerDistance = Mathf.Approximately(candidatePriority, bestPriority) && candidateDistance < bestDistance;
+            if (!isBetterPriority && !isTieBreakerDistance)
             {
                 continue;
             }
 
-            float distance = GetHorizontalDistance(orderPoint, candidate.GetWorldPosition());
-            if (distance > rescueSearchRadius || distance >= bestDistance)
-            {
-                continue;
-            }
-
-            bestDistance = distance;
+            bestDistance = candidateDistance;
+            bestPriority = candidatePriority;
             bestTarget = candidate;
         }
 
@@ -111,6 +110,21 @@ public sealed class BotRuntimeDecisionService
         }
 
         return currentTarget;
+    }
+
+    private static bool IsEligibleRescueTarget(IRescuableTarget candidate, GameObject requester, Vector3 orderPoint, float rescueSearchRadius)
+    {
+        if (candidate == null || !candidate.NeedsRescue)
+        {
+            return false;
+        }
+
+        if (candidate.IsRescueInProgress && candidate.ActiveRescuer != requester)
+        {
+            return false;
+        }
+
+        return GetHorizontalDistance(orderPoint, candidate.GetWorldPosition()) <= rescueSearchRadius;
     }
 
     private static float GetHorizontalDistance(Vector3 a, Vector3 b)

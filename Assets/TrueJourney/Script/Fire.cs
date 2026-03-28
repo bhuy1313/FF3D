@@ -89,6 +89,7 @@ public class Fire : MonoBehaviour, IFireTarget
     private float lastWaterAppliedTime = float.NegativeInfinity;
 
     public bool IsBurning => currentHp > 0f;
+    public bool AllowRegrowFromZero => allowRegrowFromZero;
 
     public Vector3 GetWorldPosition()
     {
@@ -181,6 +182,11 @@ public class Fire : MonoBehaviour, IFireTarget
 
         if (currentHp <= 0f)
             Extinguish();
+    }
+
+    public void SetAllowRegrowFromZero(bool allow)
+    {
+        allowRegrowFromZero = allow;
     }
 
     private void Extinguish()

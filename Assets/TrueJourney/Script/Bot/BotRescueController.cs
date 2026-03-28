@@ -96,6 +96,24 @@ public sealed class BotRescueController
         navMeshAgent.isStopped = true;
         owner.AimTowardsPoint(targetPosition);
 
+        if (rescueTarget.RequiresStabilization)
+        {
+            if (rescueTarget.IsRescueInProgress && rescueTarget.ActiveRescuer == owner.gameObject)
+            {
+                owner.LogRescueActivityMessage("rescue-stabilize", "Stabilizing casualty.");
+                return;
+            }
+
+            if (rescueTarget.TryStabilize(owner.gameObject))
+            {
+                owner.LogRescueActivityMessage("rescue-stabilize", "Started casualty stabilization.");
+                return;
+            }
+
+            owner.CurrentRescueTarget = null;
+            return;
+        }
+
         if (rescueTarget.IsRescueInProgress && rescueTarget.ActiveRescuer == owner.gameObject)
         {
             owner.LogRescueActivityMessage("rescue-start", "Starting rescue.");

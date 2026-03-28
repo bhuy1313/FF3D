@@ -8,7 +8,10 @@ namespace TrueJourney.BotBehavior
         bool IsRescueInProgress { get; }
         GameObject ActiveRescuer { get; }
         bool IsCarried { get; }
+        bool RequiresStabilization { get; }
+        float RescuePriority { get; }
         Vector3 GetWorldPosition();
+        bool TryStabilize(GameObject rescuer);
         bool TryBeginCarry(GameObject rescuer, Transform carryAnchor);
         void CompleteRescueAt(Vector3 dropPosition);
     }

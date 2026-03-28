@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using TrueJourney.BotBehavior;
 using UnityEngine;
@@ -14,6 +15,10 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
     [SerializeField] private Vector3 carriedLocalEulerAngles = Vector3.zero;
     [FormerlySerializedAs("disableCollidersOnRescue")]
     [SerializeField] private bool disableCollidersWhileCarried = true;
+
+    [Header("Medical")]
+    [SerializeField] private float stabilizeDuration = 1.25f;
+    [SerializeField] private float stabilizeRestoreAmount = 15f;
 
     [Header("Completion")]
     [SerializeField] private bool deactivateOnRescue = false;
@@ -33,8 +38,29 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
     public bool IsRescueInProgress => isRescueInProgress;
     public GameObject ActiveRescuer => activeRescuer;
     public bool IsCarried => isCarried;
+    public bool IsRescued => isRescued;
+    public bool RequiresStabilization
+    {
+        get
+        {
+            CacheVictimCondition();
+            return victimCondition != null && victimCondition.RequiresStabilization;
+        }
+    }
+    public float RescuePriority
+    {
+        get
+        {
+            CacheVictimCondition();
+            return victimCondition != null ? victimCondition.GetRescuePriorityScore() : 0f;
+        }
+    }
+
+    public event Action RescueStarted;
+    public event Action RescueCompleted;
 
     private Coroutine rescueRoutine;
+    private Coroutine stabilizationRoutine;
     private Transform activeCarryAnchor;
     private Transform originalParent;
     private Quaternion originalRotation;
@@ -43,18 +69,24 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
     private bool originalIsKinematic;
     private Collider[] managedColliders;
     private bool[] managedColliderStates;
+    private VictimCondition victimCondition;
 
     private void OnEnable()
     {
+        CacheVictimCondition();
         BotRuntimeRegistry.RegisterRescuableTarget(this);
-        isRescued = false;
         isRescueInProgress = false;
         isCarried = false;
         activeRescuer = null;
         rescueRoutine = null;
+        stabilizationRoutine = null;
         activeCarryAnchor = null;
-        originalParent = transform.parent;
-        originalRotation = transform.rotation;
+        if (!isRescued)
+        {
+            originalParent = transform.parent;
+            originalRotation = transform.rotation;
+        }
+
         CacheRigidbodyState();
         RestoreRigidbodyState();
         CacheColliderStates();
@@ -69,6 +101,12 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
             rescueRoutine = null;
         }
 
+        if (stabilizationRoutine != null)
+        {
+            StopCoroutine(stabilizationRoutine);
+            stabilizationRoutine = null;
+        }
+
         isRescueInProgress = false;
         isCarried = false;
         activeRescuer = null;
@@ -80,6 +118,11 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
 
     public void Interact(GameObject interactor)
     {
+        if (TryStabilize(interactor))
+        {
+            return;
+        }
+
         TryBeginCarry(interactor, interactor != null ? interactor.transform : null);
     }
 
@@ -90,7 +133,13 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
 
     public bool TryBeginCarry(GameObject rescuer, Transform carryAnchor)
     {
+        CacheVictimCondition();
         if (isRescued)
+        {
+            return false;
+        }
+
+        if (victimCondition != null && !victimCondition.CanBeginCarry)
         {
             return false;
         }
@@ -102,14 +151,40 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
 
         if (isRescueInProgress)
         {
-            return activeRescuer == rescuer;
+            return rescueRoutine != null && activeRescuer == rescuer;
         }
 
         isRescueInProgress = true;
         activeRescuer = rescuer;
         activeCarryAnchor = carryAnchor;
         onRescueStarted?.Invoke();
+        RescueStarted?.Invoke();
         rescueRoutine = StartCoroutine(BeginCarryAfterDelay(Mathf.Max(0.01f, pickupDuration)));
+        return true;
+    }
+
+    public bool TryStabilize(GameObject rescuer)
+    {
+        CacheVictimCondition();
+        if (isRescued || isCarried || victimCondition == null || !victimCondition.CanBeStabilized)
+        {
+            return false;
+        }
+
+        if (!victimCondition.RequiresStabilization)
+        {
+            return false;
+        }
+
+        if (isRescueInProgress)
+        {
+            return stabilizationRoutine != null && activeRescuer == rescuer;
+        }
+
+        isRescueInProgress = true;
+        activeRescuer = rescuer;
+        activeCarryAnchor = null;
+        stabilizationRoutine = StartCoroutine(StabilizeAfterDelay(Mathf.Max(0.01f, stabilizeDuration)));
         return true;
     }
 
@@ -126,6 +201,12 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
             rescueRoutine = null;
         }
 
+        if (stabilizationRoutine != null)
+        {
+            StopCoroutine(stabilizationRoutine);
+            stabilizationRoutine = null;
+        }
+
         transform.SetParent(originalParent, true);
         transform.position = dropPosition;
         transform.rotation = originalRotation;
@@ -140,6 +221,7 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
         RestoreColliderStates();
 
         onRescued?.Invoke();
+        RescueCompleted?.Invoke();
 
         if (disableRenderersOnRescue)
         {
@@ -178,6 +260,23 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
         {
             SetColliderStates(false);
         }
+    }
+
+    private IEnumerator StabilizeAfterDelay(float duration)
+    {
+        yield return new WaitForSeconds(duration);
+
+        stabilizationRoutine = null;
+        if (isRescued || isCarried || victimCondition == null)
+        {
+            isRescueInProgress = false;
+            activeRescuer = null;
+            yield break;
+        }
+
+        victimCondition.Stabilize(stabilizeRestoreAmount);
+        isRescueInProgress = false;
+        activeRescuer = null;
     }
 
     private void CacheRigidbodyState()
@@ -286,6 +385,14 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
             {
                 managedColliders[i].enabled = enabled;
             }
+        }
+    }
+
+    private void CacheVictimCondition()
+    {
+        if (victimCondition == null)
+        {
+            victimCondition = GetComponent<VictimCondition>();
         }
     }
 }

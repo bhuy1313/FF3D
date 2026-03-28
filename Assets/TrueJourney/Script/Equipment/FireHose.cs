@@ -441,6 +441,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         float timeStep = effectiveLifetime / segments;
 
         System.Collections.Generic.HashSet<FireGroup> processedGroups = new System.Collections.Generic.HashSet<FireGroup>();
+        System.Collections.Generic.HashSet<Fire> processedFires = new System.Collections.Generic.HashSet<Fire>();
 
         Vector3 currentPos = startPos;
 
@@ -471,7 +472,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
 
                 for (int i = 0; i < hits.Length; i++)
                 {
-                    ApplyWaterToColliderSafe(hits[i].collider, amount, processedGroups);
+                    ApplyWaterToColliderSafe(hits[i].collider, amount, processedGroups, processedFires);
                 }
             }
 
@@ -524,15 +525,25 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         return maxLifetime;
     }
 
-    private static void ApplyWaterToColliderSafe(Collider collider, float amount, System.Collections.Generic.HashSet<FireGroup> processedGroups)
+    private static void ApplyWaterToColliderSafe(
+        Collider collider,
+        float amount,
+        System.Collections.Generic.HashSet<FireGroup> processedGroups,
+        System.Collections.Generic.HashSet<Fire> processedFires)
     {
-        if (collider == null) return;
+        if (collider == null)
+            return;
 
         FireGroup fireGroup = FindFireGroup(collider);
         if (fireGroup != null && processedGroups.Add(fireGroup))
         {
             fireGroup.ApplyWater(amount);
+            return;
         }
+
+        Fire fire = FindFire(collider);
+        if (fire != null && processedFires.Add(fire))
+            fire.ApplyWater(amount);
     }
 
     private static FireGroup FindFireGroup(Collider collider)
@@ -541,6 +552,21 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         if (collider.attachedRigidbody != null && collider.attachedRigidbody.TryGetComponent(out FireGroup rigidbodyOwner)) return rigidbodyOwner;
         Transform parent = collider.transform.parent;
         if (parent != null && parent.TryGetComponent(out FireGroup parentGroup)) return parentGroup;
+        return null;
+    }
+
+    private static Fire FindFire(Collider collider)
+    {
+        if (collider.TryGetComponent(out Fire direct))
+            return direct;
+
+        if (collider.attachedRigidbody != null && collider.attachedRigidbody.TryGetComponent(out Fire rigidbodyOwner))
+            return rigidbodyOwner;
+
+        Transform parent = collider.transform.parent;
+        if (parent != null && parent.TryGetComponent(out Fire parentFire))
+            return parentFire;
+
         return null;
     }
 
