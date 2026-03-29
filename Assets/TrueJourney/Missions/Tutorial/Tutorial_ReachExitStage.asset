@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71d070a933174ca0883d92d5166ea502, type: 3}
+  m_Name: Tutorial_ReachExitStage
+  m_EditorClassIdentifier: Assembly-CSharp::MissionStageDefinition
+  stageId: reach-exit
+  stageTitle: Reach the Exit
+  stageDescription: Move through the cleared route and step into the extraction area.
+  objectives:
+  - {fileID: 11400000, guid: e79f158f6c3743c18190ad8f140b99da, type: 2}
+  onStageStartedActions: []
+  onStageCompletedActions: []

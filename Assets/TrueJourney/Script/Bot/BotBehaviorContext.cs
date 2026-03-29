@@ -19,6 +19,7 @@ public class BotBehaviorContext : MonoBehaviour
     [SerializeField] private float patrolWaitSeconds = 1.5f;
 
     [Header("Idle")]
+    [SerializeField] private bool enableIdleTurning = true;
     [SerializeField] private float idleTurnSpeed = 90f;
     [SerializeField] private Vector2 idleTurnDurationRange = new Vector2(1.25f, 2.5f);
     [SerializeField] private Vector2 idlePauseDurationRange = new Vector2(0.4f, 1.2f);
@@ -54,6 +55,7 @@ public class BotBehaviorContext : MonoBehaviour
     public float ArrivalDistance => Mathf.Max(0.05f, arrivalDistance);
     public float PatrolWaitSeconds => Mathf.Max(0f, patrolWaitSeconds);
     public bool PatrolMovementEnabled => enablePatrolMovement;
+    public bool IdleTurningEnabled => enableIdleTurning;
     public float IdleTurnSpeed => Mathf.Max(0f, idleTurnSpeed);
     public Vector2 IdleTurnDurationRange => SanitizeRange(idleTurnDurationRange, 0.1f);
     public Vector2 IdlePauseDurationRange => SanitizeRange(idlePauseDurationRange, 0f);
@@ -86,6 +88,11 @@ public class BotBehaviorContext : MonoBehaviour
     public void SetPatrolMovementEnabled(bool value)
     {
         enablePatrolMovement = value;
+    }
+
+    public void SetIdleTurningEnabled(bool value)
+    {
+        enableIdleTurning = value;
     }
 
     public void SetMoveOrder(Vector3 destination)
@@ -252,26 +259,31 @@ public class BotBehaviorContext : MonoBehaviour
             navMeshAgent = GetComponent<NavMeshAgent>();
         }
 
-        if (animator != null)
+        if (HasAnimatorController())
         {
             return;
         }
 
         Animator[] animators = GetComponentsInChildren<Animator>(true);
+        Animator fallbackAnimator = animator;
         for (int i = 0; i < animators.Length; i++)
         {
             Animator candidate = animators[i];
-            if (candidate != null && candidate.runtimeAnimatorController != null)
+            if (candidate == null)
+            {
+                continue;
+            }
+
+            fallbackAnimator ??= candidate;
+
+            if (candidate.runtimeAnimatorController != null)
             {
                 animator = candidate;
                 return;
             }
         }
 
-        if (animators.Length > 0)
-        {
-            animator = animators[0];
-        }
+        animator = fallbackAnimator;
     }
 
     private void CacheAnimationHashes()
@@ -280,15 +292,16 @@ public class BotBehaviorContext : MonoBehaviour
         crouchAnimationParameterHash = ToHash(crouchAnimationParameter);
         crouchAnimationStateHash = ToHash(crouchAnimationState);
         uncrouchAnimationStateHash = ToHash(uncrouchAnimationState);
-        crouchAnimationLayerIndex = animator != null && !string.IsNullOrWhiteSpace(crouchAnimationLayer)
+        crouchAnimationLayerIndex = HasAnimatorController() && !string.IsNullOrWhiteSpace(crouchAnimationLayer)
             ? animator.GetLayerIndex(crouchAnimationLayer)
             : -1;
     }
 
     private void UpdateMovementAnimation()
     {
-        if (!driveMovementAnimation || animator == null)
+        if (!driveMovementAnimation || !HasAnimatorController())
         {
+            movementAnimationActive = false;
             return;
         }
 
@@ -310,7 +323,7 @@ public class BotBehaviorContext : MonoBehaviour
 
     private void ApplyMovementAnimationParameter(bool useMoveAnimation)
     {
-        if (moveAnimationParameterHash == 0)
+        if (moveAnimationParameterHash == 0 || !HasAnimatorController())
         {
             return;
         }
@@ -320,7 +333,7 @@ public class BotBehaviorContext : MonoBehaviour
 
     private void ApplyCrouchAnimation()
     {
-        if (!driveCrouchAnimation || animator == null)
+        if (!driveCrouchAnimation || !HasAnimatorController())
         {
             return;
         }
@@ -354,7 +367,7 @@ public class BotBehaviorContext : MonoBehaviour
 
     private bool HasBoolParameter(int parameterHash)
     {
-        if (parameterHash == 0 || animator == null)
+        if (parameterHash == 0 || !HasAnimatorController())
         {
             return false;
         }
@@ -375,5 +388,10 @@ public class BotBehaviorContext : MonoBehaviour
     private static int ToHash(string stateName)
     {
         return string.IsNullOrWhiteSpace(stateName) ? 0 : Animator.StringToHash(stateName);
+    }
+
+    private bool HasAnimatorController()
+    {
+        return animator != null && animator.runtimeAnimatorController != null;
     }
 }

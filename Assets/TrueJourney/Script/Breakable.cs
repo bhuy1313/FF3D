@@ -1,6 +1,7 @@
 using TrueJourney.BotBehavior;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.Events;
 using UnityEngine.Serialization;
 
@@ -46,6 +47,10 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
     [FormerlySerializedAs("freezePlayerWhileBreaking")]
     [SerializeField] private bool lockPlayerWhileBreaking = true;
 
+    [Header("Stand Points")]
+    [SerializeField] private Transform[] breakStandPoints;
+    [SerializeField] private Transform breakLookTarget;
+
     [Header("Break Behavior")]
     [SerializeField] private bool destroyOnBreak = false;
     [SerializeField] private float destroyDelay = 0f;
@@ -75,6 +80,7 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
     public bool CanBeClearedByBot => !isBroken && HasAnyBreakRequirement();
     public bool IsBreakInProgress => isBreakInProgress;
     public GameObject ActiveBreaker => activeBreaker;
+    public event System.Action BreakCompleted;
 
     private void OnEnable()
     {
@@ -96,6 +102,23 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
     public Vector3 GetWorldPosition()
     {
         return transform.position;
+    }
+
+    public bool TryGetBreakStandPose(Vector3 breakerPosition, out Vector3 standPosition, out Quaternion standRotation)
+    {
+        standPosition = default;
+        standRotation = Quaternion.identity;
+
+        Transform selectedStandPoint = GetNearestStandPoint(breakerPosition);
+        if (selectedStandPoint == null)
+        {
+            return false;
+        }
+
+        standPosition = selectedStandPoint.position;
+        standPosition.y = breakerPosition.y;
+        standRotation = ResolveStandRotation(selectedStandPoint);
+        return true;
     }
 
     public void Interact(GameObject interactor)
@@ -151,13 +174,15 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
         isBreakInProgress = true;
         activeBreaker = breaker;
         activeToolKind = toolKind;
-        onBreakStarted?.Invoke();
 
         if (lockPlayerWhileBreaking && breaker != null && breaker.GetComponent<BotCommandAgent>() == null)
         {
             activePlayerLock = BreakActionLock.GetOrCreate(breaker);
             activePlayerLock?.Acquire();
         }
+
+        SnapBreakerToStandPose(breaker);
+        onBreakStarted?.Invoke();
 
         breakRoutine = StartCoroutine(BreakAfterDelay(Mathf.Max(0.01f, requirement.TimeToBreak)));
         return true;
@@ -216,6 +241,7 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
         }
 
         onBroken?.Invoke();
+        BreakCompleted?.Invoke();
 
         if (destroyOnBreak)
         {
@@ -268,6 +294,26 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
         }
 
         return TryGetLegacyRequirement(toolKind, out requirement);
+    }
+
+    private void SnapBreakerToStandPose(GameObject breaker)
+    {
+        if (breaker == null || !TryGetBreakStandPose(breaker.transform.position, out Vector3 standPosition, out Quaternion standRotation))
+        {
+            return;
+        }
+
+        if (TrySnapBotBreaker(breaker, standPosition, standRotation))
+        {
+            return;
+        }
+
+        if (TrySnapPlayerBreaker(breaker, standPosition, standRotation))
+        {
+            return;
+        }
+
+        breaker.transform.SetPositionAndRotation(standPosition, standRotation);
     }
 
     private static bool TryResolveHeldBreakTool(GameObject interactor, out BreakToolKind toolKind)
@@ -402,9 +448,116 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
         return bounds.size.x <= bounds.size.z ? right : forward;
     }
 
+    private Transform GetNearestStandPoint(Vector3 breakerPosition)
+    {
+        if (breakStandPoints == null || breakStandPoints.Length == 0)
+        {
+            return null;
+        }
+
+        Vector3 flattenedBreakerPosition = ProjectToGround(breakerPosition);
+        Transform bestStandPoint = null;
+        float bestDistanceSq = float.PositiveInfinity;
+
+        for (int i = 0; i < breakStandPoints.Length; i++)
+        {
+            Transform candidate = breakStandPoints[i];
+            if (candidate == null)
+            {
+                continue;
+            }
+
+            float distanceSq = (ProjectToGround(candidate.position) - flattenedBreakerPosition).sqrMagnitude;
+            if (distanceSq < bestDistanceSq)
+            {
+                bestDistanceSq = distanceSq;
+                bestStandPoint = candidate;
+            }
+        }
+
+        return bestStandPoint;
+    }
+
+    private Quaternion ResolveStandRotation(Transform standPoint)
+    {
+        if (standPoint == null)
+        {
+            return Quaternion.identity;
+        }
+
+        Vector3 forward = ProjectToGroundDirection(standPoint.forward);
+        if (forward.sqrMagnitude > 0.001f)
+        {
+            return Quaternion.LookRotation(forward, Vector3.up);
+        }
+
+        Vector3 lookTargetPosition = breakLookTarget != null ? breakLookTarget.position : transform.position;
+        Vector3 lookDirection = ProjectToGroundDirection(lookTargetPosition - standPoint.position);
+        if (lookDirection.sqrMagnitude > 0.001f)
+        {
+            return Quaternion.LookRotation(lookDirection, Vector3.up);
+        }
+
+        Vector3 fallbackForward = ProjectToGroundDirection(transform.forward);
+        return fallbackForward.sqrMagnitude > 0.001f
+            ? Quaternion.LookRotation(fallbackForward, Vector3.up)
+            : Quaternion.identity;
+    }
+
+    private bool TrySnapBotBreaker(GameObject breaker, Vector3 standPosition, Quaternion standRotation)
+    {
+        if (breaker == null || !breaker.TryGetComponent(out NavMeshAgent navMeshAgent) || !navMeshAgent.enabled || !navMeshAgent.isOnNavMesh)
+        {
+            return false;
+        }
+
+        Vector3 resolvedPosition = standPosition;
+        float sampleDistance = Mathf.Max(navMeshAgent.radius + 0.5f, 1f);
+        if (NavMesh.SamplePosition(standPosition, out NavMeshHit navMeshHit, sampleDistance, navMeshAgent.areaMask))
+        {
+            resolvedPosition = navMeshHit.position;
+        }
+
+        navMeshAgent.ResetPath();
+        navMeshAgent.isStopped = true;
+        if (!navMeshAgent.Warp(resolvedPosition))
+        {
+            return false;
+        }
+
+        breaker.transform.rotation = standRotation;
+        return true;
+    }
+
+    private bool TrySnapPlayerBreaker(GameObject breaker, Vector3 standPosition, Quaternion standRotation)
+    {
+        if (breaker == null ||
+            (breaker.GetComponent<CharacterController>() == null &&
+            breaker.GetComponent<StarterAssets.FirstPersonController>() == null &&
+            breaker.GetComponent<BreakActionLock>() == null))
+        {
+            return false;
+        }
+
+        BreakActionLock breakActionLock = activePlayerLock ?? BreakActionLock.GetOrCreate(breaker);
+        if (breakActionLock == null)
+        {
+            return false;
+        }
+
+        breakActionLock.SnapToPose(standPosition, standRotation);
+        return true;
+    }
+
     private static Vector3 ProjectToGround(Vector3 point)
     {
         point.y = 0f;
         return point;
+    }
+
+    private static Vector3 ProjectToGroundDirection(Vector3 direction)
+    {
+        direction.y = 0f;
+        return direction.sqrMagnitude > 0.001f ? direction.normalized : Vector3.zero;
     }
 }

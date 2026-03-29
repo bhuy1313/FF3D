@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a0e3d57db364a61982d205f4bd01d6c, type: 3}
+  m_Name: Tutorial_IncidentMission
+  m_EditorClassIdentifier: Assembly-CSharp::MissionDefinition
+  missionId: tutorial-incident
+  missionTitle: Complete Incident Tutorial
+  missionDescription: Open the gate, contain the fire, then move to the extraction
+    point.
+  timeLimitSeconds: 0
+  objectives: []
+  failConditions:
+  - {fileID: 11400000, guid: cc81451aeb8247738c372a03e9d79a14, type: 2}
+  stages:
+  - {fileID: 11400000, guid: e74597aa0e3c42b7807706399347970d, type: 2}
+  - {fileID: 11400000, guid: 393657834c9e4c5a8bc821eef856349e, type: 2}
+  - {fileID: 11400000, guid: 915545b40b779334a8cecacc115e30f0, type: 2}
+  - {fileID: 11400000, guid: bd95d2625fa4b9e43a35c0f15679ace8, type: 2}
+  - {fileID: 11400000, guid: 72238e4e72c3494a9005a83a653386a9, type: 2}

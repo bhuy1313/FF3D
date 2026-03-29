@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71d070a933174ca0883d92d5166ea502, type: 3}
+  m_Name: Tutorial_OpenGateStage
+  m_EditorClassIdentifier: Assembly-CSharp::MissionStageDefinition
+  stageId: open-gate
+  stageTitle: Open the Gate
+  stageDescription: Use the gate to enter the training yard.
+  nextStageDelaySeconds: 1
+  objectives:
+  - {fileID: 11400000, guid: dd3cb05d77144b9e8a14232f538c7330, type: 2}
+  onStageStartedActions: []
+  onStageCompletedActions:
+  - {fileID: 11400000, guid: 040cbde43d644c34b8d562395a7a5ea2, type: 2}

@@ -115,25 +115,38 @@ public partial class BotCommandAgent
         }
 
         Vector3 targetPosition = blockedTarget.GetWorldPosition();
-        float desiredDistance = Mathf.Clamp(equippedBreakTool.PreferredBreakDistance, 0.5f, equippedBreakTool.MaxBreakDistance);
-        Vector3 desiredPosition = ResolveStandPositionAroundPoint(transform.position, targetPosition, desiredDistance);
-        float horizontalDistance = GetHorizontalDistance(transform.position, targetPosition);
-        float standDistanceDelta = horizontalDistance - desiredDistance;
+        bool hasConfiguredStandPose = blockedTarget.TryGetBreakStandPose(transform.position, out Vector3 desiredPosition, out _);
+        float distanceToDesiredPosition;
 
-        if (horizontalDistance > equippedBreakTool.MaxBreakDistance || standDistanceDelta > breakStandDistanceTolerance)
+        if (hasConfiguredStandPose)
+        {
+            if (navMeshSampleDistance > 0f &&
+                NavMesh.SamplePosition(desiredPosition, out NavMeshHit standNavMeshHit, navMeshSampleDistance, navMeshAgent.areaMask))
+            {
+                desiredPosition = standNavMeshHit.position;
+            }
+
+            distanceToDesiredPosition = GetHorizontalDistance(transform.position, desiredPosition);
+        }
+        else
+        {
+            float desiredDistance = Mathf.Clamp(equippedBreakTool.PreferredBreakDistance, 0.5f, equippedBreakTool.MaxBreakDistance);
+            desiredPosition = ResolveStandPositionAroundPoint(transform.position, targetPosition, desiredDistance);
+            float horizontalDistance = GetHorizontalDistance(transform.position, targetPosition);
+            float standDistanceDelta = horizontalDistance - desiredDistance;
+            distanceToDesiredPosition = horizontalDistance > equippedBreakTool.MaxBreakDistance
+                ? horizontalDistance
+                : Mathf.Max(0f, standDistanceDelta);
+        }
+
+        if (distanceToDesiredPosition > breakStandDistanceTolerance)
         {
             UpdatePathClearingDebugStage(PathClearingDebugStage.MovingToBreakable, $"Moving into break range of '{GetDebugTargetName(blockedTarget)}'.");
             LogVerbosePathClearing(
                 VerbosePathClearingLogCategory.Movement,
                 $"movebreak:{GetDebugTargetName(blockedTarget)}:{desiredPosition}",
-                $"Moving to breakable '{GetDebugTargetName(blockedTarget)}'. target={targetPosition}, destination={desiredPosition}, horizontal={horizontalDistance:F2}, desired={desiredDistance:F2}, max={equippedBreakTool.MaxBreakDistance:F2}.");
+                $"Moving to breakable '{GetDebugTargetName(blockedTarget)}'. target={targetPosition}, destination={desiredPosition}, distanceToDestination={distanceToDesiredPosition:F2}, usingConfiguredStandPoint={hasConfiguredStandPose}.");
             navMeshAgent.isStopped = false;
-            if (navMeshSampleDistance > 0f &&
-                NavMesh.SamplePosition(desiredPosition, out NavMeshHit navMeshHit, navMeshSampleDistance, navMeshAgent.areaMask))
-            {
-                desiredPosition = navMeshHit.position;
-            }
-
             navMeshAgent.SetDestination(desiredPosition);
             return true;
         }

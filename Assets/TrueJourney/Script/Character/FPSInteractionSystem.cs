@@ -124,6 +124,7 @@ namespace StarterAssets
                 if (currentInteractable != null)
                 {
                     currentInteractable.Interact(gameObject);
+                    NotifyInteractionSignalRelay(currentTarget, currentInteractable, gameObject);
                 }
             }
 
@@ -519,6 +520,23 @@ namespace StarterAssets
             }
 
             return target;
+        }
+
+        private static void NotifyInteractionSignalRelay(GameObject target, IInteractable interactable, GameObject interactor)
+        {
+            GameObject relayRoot = ResolveHighlightRoot(target, interactable);
+            if (relayRoot == null)
+            {
+                return;
+            }
+
+            MissionInteractionSignalRelay relay = relayRoot.GetComponent<MissionInteractionSignalRelay>();
+            if (relay == null)
+            {
+                relay = relayRoot.GetComponentInParent<MissionInteractionSignalRelay>();
+            }
+
+            relay?.NotifyInteracted(interactor);
         }
     }
 }

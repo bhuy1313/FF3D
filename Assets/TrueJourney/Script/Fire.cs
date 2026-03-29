@@ -91,6 +91,10 @@ public class Fire : MonoBehaviour, IFireTarget
     public bool IsBurning => currentHp > 0f;
     public bool AllowRegrowFromZero => allowRegrowFromZero;
 
+    public event System.Action<bool> BurningStateChanged;
+    public event System.Action Ignited;
+    public event System.Action Extinguished;
+
     public Vector3 GetWorldPosition()
     {
         return transform.position;
@@ -162,10 +166,13 @@ public class Fire : MonoBehaviour, IFireTarget
     {
         if (amount <= 0f) return;
 
+        bool wasBurning = IsBurning;
+
         if (!gameObject.activeSelf)
             gameObject.SetActive(true);
 
         currentHp = Mathf.Clamp(currentHp + amount, 0f, Mathf.Max(0f, maxHp));
+        NotifyBurningStateChangeIfNeeded(wasBurning);
     }
 
     public void ApplyWater(float amount)
@@ -173,6 +180,7 @@ public class Fire : MonoBehaviour, IFireTarget
         if (amount <= 0f) return;
         if (currentHp <= 0f) return;
 
+        bool wasBurning = IsBurning;
         float previousHp = currentHp;
         currentHp = Mathf.Max(0f, currentHp - amount);
         if (currentHp < previousHp)
@@ -181,7 +189,12 @@ public class Fire : MonoBehaviour, IFireTarget
         }
 
         if (currentHp <= 0f)
-            Extinguish();
+        {
+            Extinguish(wasBurning);
+            return;
+        }
+
+        NotifyBurningStateChangeIfNeeded(wasBurning);
     }
 
     public void SetAllowRegrowFromZero(bool allow)
@@ -191,19 +204,46 @@ public class Fire : MonoBehaviour, IFireTarget
 
     private void Extinguish()
     {
+        Extinguish(IsBurning);
+    }
+
+    private void Extinguish(bool wasBurning)
+    {
         currentHp = 0f;
+        NotifyBurningStateChangeIfNeeded(wasBurning);
         if (disableGameObjectOnExtinguish)
             gameObject.SetActive(false);
     }
 
     private void RegrowHp()
     {
+        bool wasBurning = IsBurning;
         if (regrowHpPerSecond <= 0f) return;
         if (!allowRegrowFromZero && currentHp <= 0f) return;
         if (currentHp >= maxHp) return;
         if (Time.time < lastWaterAppliedTime + Mathf.Max(0f, regrowResumeDelay)) return;
 
         currentHp = Mathf.Min(maxHp, currentHp + regrowHpPerSecond * Time.deltaTime);
+        NotifyBurningStateChangeIfNeeded(wasBurning);
+    }
+
+    private void NotifyBurningStateChangeIfNeeded(bool wasBurning)
+    {
+        bool isBurning = IsBurning;
+        if (isBurning == wasBurning)
+        {
+            return;
+        }
+
+        BurningStateChanged?.Invoke(isBurning);
+        if (isBurning)
+        {
+            Ignited?.Invoke();
+        }
+        else
+        {
+            Extinguished?.Invoke();
+        }
     }
 
     private void TrySpreadFire()

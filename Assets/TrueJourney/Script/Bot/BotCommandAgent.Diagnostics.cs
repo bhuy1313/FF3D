@@ -57,12 +57,6 @@ public partial class BotCommandAgent
             return;
         }
 
-        if (inventorySystem != null && inventorySystem.EquippedRoot != null)
-        {
-            viewPoint = inventorySystem.EquippedRoot;
-            return;
-        }
-
         Transform[] childTransforms = GetComponentsInChildren<Transform>(true);
         for (int i = 0; i < childTransforms.Length; i++)
         {
@@ -71,6 +65,11 @@ public partial class BotCommandAgent
                 viewPoint = childTransforms[i];
                 return;
             }
+        }
+
+        if (inventorySystem != null && inventorySystem.EquippedRoot != null)
+        {
+            viewPoint = inventorySystem.EquippedRoot;
         }
     }
 

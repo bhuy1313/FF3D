@@ -46,6 +46,7 @@ public class VictimCondition : MonoBehaviour
     public bool CanBeginCarry => !requireStabilizationBeforeCarryWhenCritical || triageState != TriageState.Critical || isStabilized;
 
     public event Action<TriageState> OnTriageStateChanged;
+    public event Action OnConditionContextChanged;
     public event Action OnVictimStabilized;
     public event Action OnVictimExtracted;
 
@@ -187,6 +188,7 @@ public class VictimCondition : MonoBehaviour
             return;
 
         onConditionChanged?.Invoke();
+        OnConditionContextChanged?.Invoke();
         if (stateChanged)
             OnTriageStateChanged?.Invoke(triageState);
 
@@ -272,5 +274,6 @@ public class VictimCondition : MonoBehaviour
     private void NotifyConditionContextChanged()
     {
         onConditionChanged?.Invoke();
+        OnConditionContextChanged?.Invoke();
     }
 }

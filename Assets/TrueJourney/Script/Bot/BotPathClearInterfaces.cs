@@ -32,6 +32,7 @@ namespace TrueJourney.BotBehavior
         bool IsBreakInProgress { get; }
         GameObject ActiveBreaker { get; }
         Vector3 GetWorldPosition();
+        bool TryGetBreakStandPose(Vector3 breakerPosition, out Vector3 standPosition, out Quaternion standRotation);
         bool IsOnSameSide(Vector3 pointA, Vector3 pointB);
         bool SupportsBreakTool(BreakToolKind toolKind);
         bool TryStartBreak(GameObject breaker, BreakToolKind toolKind);

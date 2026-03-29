@@ -5,6 +5,7 @@ using UnityEngine;
 public class BreakActionLock : MonoBehaviour
 {
     [SerializeField] private FirstPersonController firstPersonController;
+    [SerializeField] private CharacterController characterController;
     [SerializeField] private FPSInteractionSystem interactionSystem;
     [SerializeField] private FPSInventorySystem inventorySystem;
 
@@ -86,11 +87,34 @@ public class BreakActionLock : MonoBehaviour
         }
     }
 
+    public void SnapToPose(Vector3 position, Quaternion rotation)
+    {
+        ResolveReferences();
+
+        bool restoreCharacterController = characterController != null && characterController.enabled;
+        if (restoreCharacterController)
+        {
+            characterController.enabled = false;
+        }
+
+        transform.SetPositionAndRotation(position, rotation);
+
+        if (restoreCharacterController && characterController != null)
+        {
+            characterController.enabled = true;
+        }
+    }
+
     private void ResolveReferences()
     {
         if (firstPersonController == null)
         {
             firstPersonController = GetComponent<FirstPersonController>();
+        }
+
+        if (characterController == null)
+        {
+            characterController = GetComponent<CharacterController>();
         }
 
         if (interactionSystem == null)

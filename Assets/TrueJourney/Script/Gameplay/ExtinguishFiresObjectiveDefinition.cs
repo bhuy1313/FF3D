@@ -1,0 +1,26 @@
+using UnityEngine;
+
+[CreateAssetMenu(
+    fileName = "ExtinguishFiresObjective",
+    menuName = "TrueJourney/Missions/Objectives/Extinguish Fires")]
+public class ExtinguishFiresObjectiveDefinition : MissionObjectiveDefinition
+{
+    [SerializeField] private bool autoDiscoverFires = true;
+
+    public override void CollectTargets(MissionRuntimeSceneData sceneData)
+    {
+        if (autoDiscoverFires && sceneData != null)
+        {
+            sceneData.CollectSceneFires();
+        }
+    }
+
+    public override MissionObjectiveEvaluation Evaluate(MissionProgressSnapshot snapshot)
+    {
+        string title = ResolveTitle("Extinguish Fires");
+        bool isRelevant = snapshot.TotalTrackedFires > 0;
+        bool isComplete = isRelevant && snapshot.ExtinguishedFireCount >= snapshot.TotalTrackedFires;
+        string summary = $"{title}: {snapshot.ExtinguishedFireCount}/{snapshot.TotalTrackedFires} extinguished";
+        return new MissionObjectiveEvaluation(title, summary, isComplete, false, isRelevant);
+    }
+}

@@ -10,6 +10,7 @@ public class Door : MonoBehaviour, IInteractable, IOpenable
 
     private Transform doorTransform;
     private Quaternion closedLocalRotation;
+    private Vector3 closedLocalEulerAngles;
     private Quaternion targetLocalRotation;
     private bool isOpen;
     private bool initialized;
@@ -67,6 +68,7 @@ public class Door : MonoBehaviour, IInteractable, IOpenable
         }
 
         closedLocalRotation = doorTransform.localRotation;
+        closedLocalEulerAngles = doorTransform.localEulerAngles;
         currentOpenDirection = GetDefaultOpenDirection();
         isOpen = startsOpen;
         targetLocalRotation = isOpen ? GetOpenLocalRotation(currentOpenDirection) : closedLocalRotation;
@@ -90,7 +92,8 @@ public class Door : MonoBehaviour, IInteractable, IOpenable
 
     private Quaternion GetOpenLocalRotation(int direction)
     {
-        return closedLocalRotation * Quaternion.Euler(0f, Mathf.Abs(openAngle) * direction, 0f);
+        float targetY = closedLocalEulerAngles.y + Mathf.Abs(openAngle) * direction;
+        return Quaternion.Euler(closedLocalEulerAngles.x, targetY, closedLocalEulerAngles.z);
     }
 
     private int DetermineOpenDirection(GameObject interactor)

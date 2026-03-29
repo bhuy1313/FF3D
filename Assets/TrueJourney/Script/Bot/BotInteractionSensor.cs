@@ -100,6 +100,7 @@ namespace TrueJourney.BotBehavior
 
                     // Otherwise, regular interact (buttons, etc.)
                     interactable.Interact(gameObject);
+                    NotifyInteractionSignalRelay(hit.collider != null ? hit.collider.gameObject : null, interactable, gameObject);
                     lastInteractTime = Time.time;
                 }
             }
@@ -541,6 +542,33 @@ namespace TrueJourney.BotBehavior
         private static string FormatVectorKey(Vector3 value)
         {
             return $"{Mathf.RoundToInt(value.x * 10f)}:{Mathf.RoundToInt(value.y * 10f)}:{Mathf.RoundToInt(value.z * 10f)}";
+        }
+
+        private static void NotifyInteractionSignalRelay(GameObject target, IInteractable interactable, GameObject interactor)
+        {
+            GameObject relayRoot = ResolveInteractionRelayRoot(target, interactable);
+            if (relayRoot == null)
+            {
+                return;
+            }
+
+            relayRoot.SendMessage("NotifyInteracted", interactor, SendMessageOptions.DontRequireReceiver);
+            Transform parent = relayRoot.transform.parent;
+            while (parent != null)
+            {
+                parent.gameObject.SendMessage("NotifyInteracted", interactor, SendMessageOptions.DontRequireReceiver);
+                parent = parent.parent;
+            }
+        }
+
+        private static GameObject ResolveInteractionRelayRoot(GameObject target, IInteractable interactable)
+        {
+            if (interactable is Component interactableComponent)
+            {
+                return interactableComponent.gameObject;
+            }
+
+            return target;
         }
 
         private void OnDrawGizmosSelected()
