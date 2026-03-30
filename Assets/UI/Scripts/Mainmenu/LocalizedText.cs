@@ -22,6 +22,8 @@ public class LocalizedText : MonoBehaviour
     [SerializeField] private Font vietnameseLegacyFont;
     [SerializeField] private Font englishLegacyFont;
 
+    public string LocalizationKey => localizationKey;
+
     private void Awake()
     {
         ResolveTextTargets();

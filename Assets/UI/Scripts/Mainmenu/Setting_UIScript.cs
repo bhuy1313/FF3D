@@ -57,6 +57,7 @@ public class Setting_UIScript : MonoBehaviour
     private void Awake()
     {
         ResolveRuntimeReferences();
+        ValidateResolvedReferences();
 
         cgGen = GetOrAddCanvasGroup(panelGen);
         cgGrap = GetOrAddCanvasGroup(panelGrap);
@@ -291,6 +292,26 @@ public class Setting_UIScript : MonoBehaviour
 
     private void ResolveRuntimeReferences()
     {
+        if (btnGen == null)
+        {
+            btnGen = FindButtonByName("btnGen");
+        }
+
+        if (btnGrap == null)
+        {
+            btnGrap = FindButtonByName("btnGrap");
+        }
+
+        if (btnAud == null)
+        {
+            btnAud = FindButtonByName("btnAud");
+        }
+
+        if (btnCont == null)
+        {
+            btnCont = FindButtonByName("btnCont");
+        }
+
         if (btnSave == null)
         {
             btnSave = FindButtonByName("btnSave");
@@ -304,6 +325,21 @@ public class Setting_UIScript : MonoBehaviour
         if (languageToggleBinder == null)
         {
             languageToggleBinder = GetComponentInChildren<LanguageToggleBinder>(true);
+        }
+
+        ResolvePanelReferences();
+    }
+
+    private void ValidateResolvedReferences()
+    {
+        if (btnGen == null || btnGrap == null || btnAud == null || btnCont == null || btnSave == null)
+        {
+            Debug.LogWarning("Setting_UIScript: One or more navigation/save buttons could not be resolved from the Setting prefab.", this);
+        }
+
+        if (panelGen == null || panelGrap == null || panelAudio == null || panelCont == null)
+        {
+            Debug.LogWarning("Setting_UIScript: One or more content panels could not be resolved from the Setting prefab.", this);
         }
     }
 
@@ -319,6 +355,170 @@ public class Setting_UIScript : MonoBehaviour
         }
 
         return null;
+    }
+
+    private void ResolvePanelReferences()
+    {
+        if (panelGen != null && panelGrap != null && panelAudio != null && panelCont != null)
+        {
+            return;
+        }
+
+        Button[] navigationButtons = new[] { btnGen, btnGrap, btnAud, btnCont };
+        Transform navigationMain = FindNavigationMain(navigationButtons);
+
+        List<GameObject> panelCandidates = new List<GameObject>();
+        RectTransform[] rects = GetComponentsInChildren<RectTransform>(true);
+        foreach (RectTransform rect in rects)
+        {
+            if (rect == null || !string.Equals(rect.name, "Main", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (navigationMain != null && rect == navigationMain)
+            {
+                continue;
+            }
+
+            panelCandidates.Add(rect.gameObject);
+        }
+
+        if (panelCandidates.Count == 0)
+        {
+            return;
+        }
+
+        panelGen ??= FindBestPanel(panelCandidates, IsGeneralPanelCandidate);
+        panelGrap ??= FindBestPanel(panelCandidates, IsGraphicsPanelCandidate);
+        panelAudio ??= FindBestPanel(panelCandidates, IsAudioPanelCandidate);
+        panelCont ??= FindBestPanel(panelCandidates, IsControlPanelCandidate);
+
+        if (panelGen != null)
+        {
+            panelCandidates.Remove(panelGen);
+        }
+
+        if (panelGrap != null)
+        {
+            panelCandidates.Remove(panelGrap);
+        }
+
+        if (panelAudio != null)
+        {
+            panelCandidates.Remove(panelAudio);
+        }
+
+        if (panelCont != null)
+        {
+            panelCandidates.Remove(panelCont);
+        }
+
+        if (panelGen == null && panelCandidates.Count > 0)
+        {
+            panelGen = panelCandidates[0];
+            panelCandidates.RemoveAt(0);
+        }
+
+        if (panelGrap == null && panelCandidates.Count > 0)
+        {
+            panelGrap = panelCandidates[0];
+            panelCandidates.RemoveAt(0);
+        }
+
+        if (panelAudio == null && panelCandidates.Count > 0)
+        {
+            panelAudio = panelCandidates[0];
+            panelCandidates.RemoveAt(0);
+        }
+
+        if (panelCont == null && panelCandidates.Count > 0)
+        {
+            panelCont = panelCandidates[0];
+        }
+    }
+
+    private Transform FindNavigationMain(Button[] navigationButtons)
+    {
+        foreach (Button button in navigationButtons)
+        {
+            if (button == null)
+            {
+                continue;
+            }
+
+            Transform current = button.transform;
+            while (current != null && current != transform)
+            {
+                if (string.Equals(current.name, "Main", StringComparison.Ordinal))
+                {
+                    return current;
+                }
+
+                current = current.parent;
+            }
+        }
+
+        return null;
+    }
+
+    private GameObject FindBestPanel(List<GameObject> candidates, Func<GameObject, bool> predicate)
+    {
+        foreach (GameObject candidate in candidates)
+        {
+            if (candidate != null && predicate(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private bool IsGeneralPanelCandidate(GameObject candidate)
+    {
+        return ContainsNamedTransform(candidate.transform, "Toggle_VI") ||
+               ContainsNamedTransform(candidate.transform, "Toggle_EN") ||
+               candidate.GetComponentInChildren<LanguageToggleBinder>(true) != null;
+    }
+
+    private bool IsGraphicsPanelCandidate(GameObject candidate)
+    {
+        return ContainsNamedTransform(candidate.transform, "Toggle_Graphic_Low") ||
+               ContainsNamedTransform(candidate.transform, "Toggle_Graphic_Medium") ||
+               ContainsNamedTransform(candidate.transform, "Toggle_Graphic_High") ||
+               ContainsNamedTransform(candidate.transform, "Toggle_Graphic_Ultra");
+    }
+
+    private bool IsAudioPanelCandidate(GameObject candidate)
+    {
+        return candidate.GetComponentsInChildren<Slider>(true).Length >= 2;
+    }
+
+    private bool IsControlPanelCandidate(GameObject candidate)
+    {
+        return ContainsNamedTransform(candidate.transform, "Toggle_GameMode_Simulation") ||
+               ContainsNamedTransform(candidate.transform, "Toggle_GameMode_Acade") ||
+               candidate.GetComponentInChildren<SwitchToggleUI>(true) != null;
+    }
+
+    private bool ContainsNamedTransform(Transform root, string objectName)
+    {
+        if (root == null || string.IsNullOrWhiteSpace(objectName))
+        {
+            return false;
+        }
+
+        Transform[] transforms = root.GetComponentsInChildren<Transform>(true);
+        foreach (Transform child in transforms)
+        {
+            if (child != null && string.Equals(child.name, objectName, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void BindDirtyTracking()
