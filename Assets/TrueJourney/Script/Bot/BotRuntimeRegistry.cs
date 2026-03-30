@@ -11,6 +11,7 @@ namespace TrueJourney.BotBehavior
         private static readonly HashSet<IBotBreakableTarget> BreakableTargets = new HashSet<IBotBreakableTarget>();
         private static readonly HashSet<IRescuableTarget> RescuableTargets = new HashSet<IRescuableTarget>();
         private static readonly HashSet<ISafeZoneTarget> SafeZoneTargets = new HashSet<ISafeZoneTarget>();
+        private static readonly HashSet<global::BotCommandAgent> CommandAgents = new HashSet<global::BotCommandAgent>();
 
         public static IEnumerable<IBotExtinguisherItem> ActiveExtinguisherItems => ExtinguisherItems;
         public static IEnumerable<IFireTarget> ActiveFireTargets => FireTargets;
@@ -19,6 +20,23 @@ namespace TrueJourney.BotBehavior
         public static IEnumerable<IBotBreakableTarget> ActiveBreakableTargets => BreakableTargets;
         public static IEnumerable<IRescuableTarget> ActiveRescuableTargets => RescuableTargets;
         public static IEnumerable<ISafeZoneTarget> ActiveSafeZones => SafeZoneTargets;
+        public static IEnumerable<global::BotCommandAgent> ActiveCommandAgents => CommandAgents;
+
+        public static void RegisterCommandAgent(global::BotCommandAgent agent)
+        {
+            if (agent != null)
+            {
+                CommandAgents.Add(agent);
+            }
+        }
+
+        public static void UnregisterCommandAgent(global::BotCommandAgent agent)
+        {
+            if (agent != null)
+            {
+                CommandAgents.Remove(agent);
+            }
+        }
 
         public static void RegisterExtinguisherItem(IBotExtinguisherItem item)
         {

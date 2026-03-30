@@ -1135,7 +1135,7 @@ SkinnedMeshRenderer:
   m_SmallMeshCulling: 1
   m_ForceMeshLod: -1
   m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 257
+  m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: c96b53add07dcf6468d8ddd2da3e49e4, type: 2}
@@ -1503,7 +1503,7 @@ SkinnedMeshRenderer:
   m_SmallMeshCulling: 1
   m_ForceMeshLod: -1
   m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 257
+  m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 542819ed9b71a3a4fb2c913829b361bc, type: 2}
@@ -1794,7 +1794,7 @@ SkinnedMeshRenderer:
   m_SmallMeshCulling: 1
   m_ForceMeshLod: -1
   m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 257
+  m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 597fbafd72946804cb4c447862dceffd, type: 2}
@@ -1935,7 +1935,7 @@ Transform:
   m_GameObject: {fileID: 5998038357310826653}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: -1, z: 0}
+  m_LocalPosition: {x: 0, y: -1.1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -2654,7 +2654,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7871421116444764637}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -4.174156, y: 0, z: 10.309166}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -2761,9 +2761,14 @@ MonoBehaviour:
   pathClearingResumeGraceTime: 0.2
   blockedBreakToolRetryDelay: 1
   followTargetTag: Player
-  followDistance: 2.5
-  followRepathDistance: 0.75
-  followCatchupDistance: 4
+  defaultFollowMode: 1
+  followDistance: 3
+  followRepathDistance: 0.9
+  followCatchupDistance: 5.5
+  followResumeDistanceBuffer: 0.7
+  escortFollowOffset: {x: 1.4, y: 0, z: -2.2}
+  escortSlotPreferenceBias: 1.1
+  followAllowAssist: 0
   rescueSearchRadius: 12
   rescueInteractionDistance: 1.5
   rescueSafeZoneArrivalDistance: 2
@@ -2940,7 +2945,7 @@ SkinnedMeshRenderer:
   m_SmallMeshCulling: 1
   m_ForceMeshLod: -1
   m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 257
+  m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 4a6038e42b107314f9a1b6b6ee47d7f8, type: 2}
@@ -3225,7 +3230,7 @@ SkinnedMeshRenderer:
   m_SmallMeshCulling: 1
   m_ForceMeshLod: -1
   m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 257
+  m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: b0ac0d57082e56246aade3125a871c61, type: 2}
@@ -3352,7 +3357,7 @@ SkinnedMeshRenderer:
   m_SmallMeshCulling: 1
   m_ForceMeshLod: -1
   m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 257
+  m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 5d8460eb3f1269b46a238bdac3beff39, type: 2}
@@ -3515,7 +3520,7 @@ SkinnedMeshRenderer:
   m_SmallMeshCulling: 1
   m_ForceMeshLod: -1
   m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 257
+  m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 350a605642219d844a64e3bc6b4d40ff, type: 2}

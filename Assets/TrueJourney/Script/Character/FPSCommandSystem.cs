@@ -20,8 +20,12 @@ namespace StarterAssets
         [Header("Move Command")]
         [SerializeField] private KeyCode moveCommandKey = KeyCode.H;
         [SerializeField] private KeyCode cancelCommandKey = KeyCode.Escape;
+        [SerializeField] private KeyCode toggleBotOutlineKey = KeyCode.Z;
         [SerializeField] private float destinationRayDistance = 200f;
         [SerializeField] private LayerMask destinationMask = ~0;
+
+        [Header("Bot Outline")]
+        [SerializeField, Range(0, 31)] private int botOutlineRenderingLayer = 7;
 
         [Header("Debug")]
         [SerializeField] private bool drawDebugRay;
@@ -47,6 +51,7 @@ namespace StarterAssets
         [SerializeField] private WheelSelector wheelSelector;
 
         private readonly BotCommandState commandState = new BotCommandState();
+        private readonly ClickReleaseGate destinationConfirmClickGate = new ClickReleaseGate();
         private GUIStyle debugGuiStyle;
 
         private ICommandable hoveredCommandable;
@@ -82,6 +87,8 @@ namespace StarterAssets
             {
                 wheelSelector.OnOptionSelected += OnWheelOptionSelected;
             }
+
+            BotOutlineVisibilityManager.ConfigureRenderingLayer(botOutlineRenderingLayer);
         }
 
         private void OnDestroy()
@@ -97,6 +104,11 @@ namespace StarterAssets
             if (viewCamera == null)
             {
                 return;
+            }
+
+            if (Input.GetKeyDown(toggleBotOutlineKey))
+            {
+                ToggleBotOutlineVisibility();
             }
 
             if (interactionSystem != null && interactionSystem.IsGrabActive)
@@ -137,7 +149,7 @@ namespace StarterAssets
 
             UpdatePreviewPoint();
 
-            if (Input.GetMouseButtonDown(0))
+            if (destinationConfirmClickGate.ShouldProcessClick(Input.GetMouseButtonDown(0), Input.GetMouseButton(0)))
             {
                 TryConfirmPendingCommand();
             }
@@ -232,10 +244,12 @@ namespace StarterAssets
 
             if (commandType == BotCommandType.Follow)
             {
+                destinationConfirmClickGate.Reset();
                 TryConfirmImmediateCommand(commandType);
                 return;
             }
 
+            destinationConfirmClickGate.BlockUntilRelease();
             UpdatePreviewPoint();
 
             if (logCommandSelection)
@@ -263,11 +277,19 @@ namespace StarterAssets
 
         private void TryConfirmImmediateCommand(BotCommandType commandType)
         {
+            BotCommandAgent botCommandAgent = selectedCommandTarget != null
+                ? selectedCommandTarget.GetComponent<BotCommandAgent>()
+                : null;
+            bool canceledFollow = commandType == BotCommandType.Follow &&
+                botCommandAgent != null &&
+                botCommandAgent.HasActiveFollowCommand;
+
             if (commandState.TryConfirm(transform.position))
             {
                 if (logCommandSelection)
                 {
-                    Debug.Log($"[FPSCommandSystem] Issued '{commandType}' to '{GetTargetName(selectedCommandTarget)}'.", this);
+                    string verb = canceledFollow ? "Canceled" : "Issued";
+                    Debug.Log($"[FPSCommandSystem] {verb} '{commandType}' to '{GetTargetName(selectedCommandTarget)}'.", this);
                 }
 
                 selectedCommandTarget = null;
@@ -285,6 +307,7 @@ namespace StarterAssets
             isAwaitingCommandSelection = false;
             pendingCommandable = null;
             pendingCommandTarget = null;
+            destinationConfirmClickGate.Reset();
             if (wheelSelector != null)
             {
                 wheelSelector.CloseWheel();
@@ -422,12 +445,26 @@ namespace StarterAssets
             }
 
             commandState.Cancel();
+            destinationConfirmClickGate.Reset();
             selectedCommandTarget = null;
             UpdateTargetOutline(null);
             hasPreviewPoint = false;
             if (wheelSelector != null)
             {
                 wheelSelector.CloseWheel();
+            }
+        }
+
+        private void ToggleBotOutlineVisibility()
+        {
+            BotOutlineVisibilityManager.ConfigureRenderingLayer(botOutlineRenderingLayer);
+            bool nextVisible = !BotOutlineVisibilityManager.OutlinesVisible;
+            BotOutlineVisibilityManager.SetOutlinesVisible(nextVisible);
+
+            if (logCommandSelection)
+            {
+                string state = nextVisible ? "visible" : "hidden";
+                Debug.Log($"[FPSCommandSystem] Bot outline is now {state}.", this);
             }
         }
 

@@ -135,14 +135,19 @@ public class BotBehaviorContext : MonoBehaviour
         extinguishOrderState.Clear();
     }
 
-    public void SetFollowOrder()
+    public void SetFollowOrder(BotFollowOrder order)
     {
-        followOrderState.SetActive();
+        followOrderState.SetActive(order);
     }
 
     public void ClearFollowOrder()
     {
         followOrderState.Clear();
+    }
+
+    public bool TryGetFollowOrder(out BotFollowOrder order)
+    {
+        return followOrderState.TryGetOrder(out order);
     }
 
     public void SetRescueOrder(Vector3 destination)

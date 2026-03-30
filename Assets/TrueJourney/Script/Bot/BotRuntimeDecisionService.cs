@@ -1,8 +1,11 @@
+using System.Collections.Generic;
 using TrueJourney.BotBehavior;
 using UnityEngine;
 
 public sealed class BotRuntimeDecisionService
 {
+    private readonly List<int> escortFollowerIds = new List<int>(8);
+
     public Transform ResolveFollowTarget(Transform currentTarget, string followTargetTag)
     {
         if (currentTarget != null && currentTarget.gameObject.activeInHierarchy)
@@ -17,6 +20,86 @@ public sealed class BotRuntimeDecisionService
 
         GameObject targetObject = GameObject.FindGameObjectWithTag(followTargetTag);
         return targetObject != null ? targetObject.transform : null;
+    }
+
+    public int ResolveEscortFormationRank(BotCommandAgent owner, Transform target)
+    {
+        if (owner == null || target == null)
+        {
+            return 0;
+        }
+
+        escortFollowerIds.Clear();
+        foreach (BotCommandAgent candidate in BotRuntimeRegistry.ActiveCommandAgents)
+        {
+            if (candidate == null || !candidate.isActiveAndEnabled || !candidate.TryGetFollowOrderSnapshot(out BotFollowOrder followOrder))
+            {
+                continue;
+            }
+
+            if (followOrder.Mode != BotFollowMode.Escort)
+            {
+                continue;
+            }
+
+            Transform candidateTarget = ResolveFollowTarget(
+                followOrder.Target != null ? followOrder.Target : candidate.CurrentFollowTarget,
+                followOrder.TargetTag);
+            if (candidateTarget != target)
+            {
+                continue;
+            }
+
+            escortFollowerIds.Add(candidate.GetInstanceID());
+        }
+
+        if (escortFollowerIds.Count == 0)
+        {
+            escortFollowerIds.Add(owner.GetInstanceID());
+        }
+
+        return BotEscortFormationUtility.ResolveFormationRank(owner.GetInstanceID(), escortFollowerIds);
+    }
+
+    public int FillOccupiedEscortSlots(BotCommandAgent owner, Transform target, int[] buffer, int slotCount)
+    {
+        if (owner == null || target == null || buffer == null || slotCount <= 0)
+        {
+            return 0;
+        }
+
+        int count = 0;
+        int maxCount = Mathf.Min(slotCount, buffer.Length);
+        foreach (BotCommandAgent candidate in BotRuntimeRegistry.ActiveCommandAgents)
+        {
+            if (candidate == null || candidate == owner || !candidate.isActiveAndEnabled || !candidate.TryGetFollowOrderSnapshot(out BotFollowOrder followOrder))
+            {
+                continue;
+            }
+
+            if (followOrder.Mode != BotFollowMode.Escort)
+            {
+                continue;
+            }
+
+            Transform candidateTarget = ResolveFollowTarget(
+                followOrder.Target != null ? followOrder.Target : candidate.CurrentFollowTarget,
+                followOrder.TargetTag);
+            if (candidateTarget != target)
+            {
+                continue;
+            }
+
+            int occupiedSlotIndex = candidate.CurrentEscortSlotIndex;
+            if (occupiedSlotIndex < 0 || occupiedSlotIndex >= slotCount || count >= maxCount)
+            {
+                continue;
+            }
+
+            buffer[count++] = occupiedSlotIndex;
+        }
+
+        return count;
     }
 
     public IRescuableTarget ResolveRescueTarget(Vector3 orderPoint, IRescuableTarget currentTarget, GameObject requester, float rescueSearchRadius)

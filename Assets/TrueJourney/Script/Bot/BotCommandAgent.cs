@@ -109,9 +109,14 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
 
     [Header("Follow")]
     [SerializeField] private string followTargetTag = "Player";
+    [SerializeField] private BotFollowMode defaultFollowMode = BotFollowMode.Passive;
     [SerializeField] private float followDistance = 2.5f;
     [SerializeField] private float followRepathDistance = 0.75f;
     [SerializeField] private float followCatchupDistance = 4f;
+    [SerializeField] private float followResumeDistanceBuffer = 0.5f;
+    [SerializeField] private Vector3 escortFollowOffset = new Vector3(1.25f, 0f, -1.5f);
+    [SerializeField] private float escortSlotPreferenceBias = 0.9f;
+    [SerializeField] private bool followAllowAssist;
 
     [Header("Rescue")]
     [SerializeField] private float rescueSearchRadius = 12f;
@@ -160,6 +165,9 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
     private int currentExtinguishTrajectoryPointCount;
     private Transform followTarget;
     private Vector3 lastFollowDestination;
+    private int currentEscortSlotIndex = -1;
+    private readonly Vector3[] escortSlotOffsets = new Vector3[5];
+    private readonly int[] occupiedEscortSlotIndices = new int[5];
     private BotActivityDebug activityDebug;
     private bool extinguishStartupPending;
     private float sprayReadyTime = -1f;
@@ -185,6 +193,7 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
     public Vector3 LastIssuedDestination => lastIssuedDestination;
     public bool HasIssuedDestination => hasIssuedDestination;
     public float RescueSearchRadius => rescueSearchRadius;
+    public bool HasActiveFollowCommand => behaviorContext != null && behaviorContext.HasFollowOrder;
     public bool IsPathClearingActive =>
         (enablePathClearing &&
         (
@@ -220,6 +229,17 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
         ResolveViewPointReference();
         ResolveHeadAimReferences();
         EnsureHeadAimConstraintConfigured(true);
+    }
+
+    private void OnEnable()
+    {
+        BotRuntimeRegistry.RegisterCommandAgent(this);
+        BotOutlineVisibilityManager.ApplyTo(this);
+    }
+
+    private void OnDisable()
+    {
+        BotRuntimeRegistry.UnregisterCommandAgent(this);
     }
 
     private void LateUpdate()
@@ -352,8 +372,15 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
                     return false;
                 }
 
+                if (behaviorContext.HasFollowOrder)
+                {
+                    CancelFollowCommand();
+                    accepted = true;
+                    break;
+                }
+
                 PrepareForIssuedCommand(BotCommandType.Follow);
-                behaviorContext.SetFollowOrder();
+                behaviorContext.SetFollowOrder(CreateFollowOrder());
                 accepted = true;
                 break;
             case BotCommandType.Rescue:
@@ -486,6 +513,13 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
             ResetMoveActivityDebug();
         }
 
+        if (commandType != BotCommandType.Follow)
+        {
+            followTarget = null;
+            lastFollowDestination = Vector3.zero;
+            currentEscortSlotIndex = -1;
+        }
+
         ClearBlockedPathRuntime();
         ClearRouteFireRuntime();
     }
@@ -502,10 +536,30 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
         set => lastFollowDestination = value;
     }
 
+    internal int CurrentEscortSlotIndex
+    {
+        get => currentEscortSlotIndex;
+        set => currentEscortSlotIndex = value;
+    }
+
+    internal Vector3[] EscortSlotOffsets => escortSlotOffsets;
+    internal int[] OccupiedEscortSlotIndices => occupiedEscortSlotIndices;
+
     internal IRescuableTarget CurrentRescueTarget
     {
         get => currentRescueTarget;
         set => currentRescueTarget = value;
+    }
+
+    internal bool TryGetFollowOrderSnapshot(out BotFollowOrder followOrder)
+    {
+        if (behaviorContext == null)
+        {
+            followOrder = default;
+            return false;
+        }
+
+        return behaviorContext.TryGetFollowOrder(out followOrder);
     }
 
     internal ISafeZoneTarget CurrentSafeZoneTarget
@@ -577,14 +631,60 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
 
     private void ProcessFollowOrder()
     {
+        if (behaviorContext == null || !behaviorContext.TryGetFollowOrder(out BotFollowOrder followOrder))
+        {
+            return;
+        }
+
         followController?.Tick(
             this,
             navMeshAgent,
             navMeshSampleDistance,
-            followTargetTag,
-            followDistance,
+            followOrder,
             followRepathDistance,
-            followCatchupDistance);
+            followCatchupDistance,
+            followResumeDistanceBuffer,
+            escortSlotPreferenceBias);
+    }
+
+    private void CancelFollowCommand()
+    {
+        if (behaviorContext == null)
+        {
+            return;
+        }
+
+        behaviorContext.ClearFollowOrder();
+        followTarget = null;
+        lastFollowDestination = Vector3.zero;
+        currentEscortSlotIndex = -1;
+        ClearBlockedPathRuntime();
+        ClearRouteFireRuntime();
+        ResetMoveActivityDebug();
+        ResetViewPointPitch();
+
+        if (navMeshAgent != null && navMeshAgent.enabled && navMeshAgent.isOnNavMesh)
+        {
+            navMeshAgent.ResetPath();
+            navMeshAgent.isStopped = true;
+        }
+    }
+
+    private BotFollowOrder CreateFollowOrder()
+    {
+        Transform initialTarget = runtimeDecisionService != null
+            ? runtimeDecisionService.ResolveFollowTarget(null, followTargetTag)
+            : null;
+        Vector3 localOffset = defaultFollowMode == BotFollowMode.Escort
+            ? escortFollowOffset
+            : Vector3.zero;
+        return new BotFollowOrder(
+            initialTarget,
+            followTargetTag,
+            defaultFollowMode,
+            followDistance,
+            localOffset,
+            followAllowAssist);
     }
 
     public bool TryNavigateTo(Vector3 destination)

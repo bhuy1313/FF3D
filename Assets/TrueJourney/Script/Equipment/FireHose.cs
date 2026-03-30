@@ -27,6 +27,8 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
     [SerializeField] private float rechargePerSecond = 0f;
     [SerializeField] private float minWaterToUse = 0.05f;
     [SerializeField] private bool toggleUse = true;
+    [SerializeField] private bool requiresConnectionToSpray;
+    [SerializeField] private bool keepConnectionOnDrop;
 
     [Header("Suppression")]
     [SerializeField] private Transform sprayOrigin;
@@ -82,6 +84,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
     [SerializeField] private bool hasExternalAimDirection;
     [SerializeField] private Vector3 externalAimDirection;
     [SerializeField] private GameObject externalAimUser;
+    [SerializeField] private FireHoseConnectionPoint currentConnectionPoint;
 
     [Header("Ballistics")]
     [Tooltip("Initial velocity of the water stream")]
@@ -113,11 +116,16 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
     public float BallisticLaunchSpeed => arcVelocity;
     public float BallisticGravityMultiplier => arcGravityMultiplier;
     public bool RequiresPreciseAim => true;
-    public bool HasUsableCharge => maxWater <= 0f || currentWater >= minWaterToUse;
+    public bool HasUsableCharge => connectionState.CanUse(
+        HasConnectedPressurizedSupply(),
+        requiresConnectionToSpray,
+        HasLocalUsableWater());
     public bool IsHeld => currentHolder != null;
     public GameObject ClaimOwner => claimOwner;
+    public bool IsConnectedToSupply => connectionState.IsConnected;
 
     private Rigidbody cachedRigidbody;
+    private readonly FireHoseConnectionState connectionState = new FireHoseConnectionState();
     private bool particleDefaultsCached;
     private float baseParticleStartSpeedMultiplier = 1f;
     private float baseParticleShapeAngle = 25f;
@@ -189,7 +197,13 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
 
         if (isSpraying)
         {
-            if (maxWater > 0f)
+            if (!CanStartSpraying())
+            {
+                SetSprayState(false);
+                return;
+            }
+
+            if (maxWater > 0f && !HasConnectedPressurizedSupply())
             {
                 currentWater = Mathf.Max(0f, currentWater - currentApplyWaterRate * Time.deltaTime);
                 if (currentWater <= 0f)
@@ -204,9 +218,18 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
                 SprayWaterArc();
             }
         }
-        else if (maxWater > 0f && rechargePerSecond > 0f && currentWater < maxWater)
+        else if (maxWater > 0f && currentWater < maxWater)
         {
-            currentWater = Mathf.Min(maxWater, currentWater + rechargePerSecond * Time.deltaTime);
+            float passiveRechargeRate = rechargePerSecond;
+            if (currentConnectionPoint != null)
+            {
+                passiveRechargeRate += currentConnectionPoint.RefillInternalTankPerSecond;
+            }
+
+            if (passiveRechargeRate > 0f)
+            {
+                currentWater = Mathf.Min(maxWater, currentWater + passiveRechargeRate * Time.deltaTime);
+            }
         }
     }
 
@@ -239,6 +262,10 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         currentUserIsBot = false;
         ClearExternalAimState();
         SetSprayState(false);
+        if (!keepConnectionOnDrop)
+        {
+            DisconnectFromSupply();
+        }
     }
 
     public bool IsAvailableTo(GameObject requester)
@@ -282,7 +309,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
                 return;
             }
 
-            if (HasWaterToUse())
+            if (CanStartSpraying())
             {
                 SetCurrentUser(user);
                 SetSprayState(true);
@@ -291,7 +318,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
             return;
         }
 
-        if (HasWaterToUse())
+        if (CanStartSpraying())
         {
             SetCurrentUser(user);
             SetSprayState(true);
@@ -309,7 +336,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
             return;
         }
 
-        if (!HasWaterToUse())
+        if (!CanStartSpraying())
         {
             currentUser = null;
             currentUserIsBot = false;
@@ -345,6 +372,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
     private void OnDisable()
     {
         BotRuntimeRegistry.UnregisterExtinguisherItem(this);
+        DisconnectFromSupply();
         currentUser = null;
         currentUserIsBot = false;
         ClearExternalAimState();
@@ -369,14 +397,78 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         ApplySprayTuningToVfx();
     }
 
-    private bool HasWaterToUse()
+    public bool TryConnectToSupply(FireHoseConnectionPoint connectionPoint)
     {
-        if (maxWater <= 0f)
+        if (connectionPoint == null)
+        {
+            return false;
+        }
+
+        if (ReferenceEquals(currentConnectionPoint, connectionPoint))
         {
             return true;
         }
 
+        if (!connectionPoint.TryRegisterConnection(this))
+        {
+            return false;
+        }
+
+        FireHoseConnectionPoint previousConnectionPoint = currentConnectionPoint;
+        currentConnectionPoint = connectionPoint;
+        connectionState.TryConnect(connectionPoint);
+        previousConnectionPoint?.ClearConnection(this);
+        return true;
+    }
+
+    public bool DisconnectFromSupply(FireHoseConnectionPoint expectedConnectionPoint = null)
+    {
+        if (!connectionState.IsConnected || currentConnectionPoint == null)
+        {
+            return false;
+        }
+
+        if (expectedConnectionPoint != null && !ReferenceEquals(currentConnectionPoint, expectedConnectionPoint))
+        {
+            return false;
+        }
+
+        FireHoseConnectionPoint previousConnectionPoint = currentConnectionPoint;
+        currentConnectionPoint = null;
+        connectionState.TryDisconnect(previousConnectionPoint);
+        previousConnectionPoint.ClearConnection(this);
+
+        if (isSpraying && !CanStartSpraying())
+        {
+            currentUser = null;
+            currentUserIsBot = false;
+            SetSprayState(false);
+        }
+
+        return true;
+    }
+
+    private bool HasLocalUsableWater()
+    {
+        if (maxWater <= 0f)
+        {
+            return !requiresConnectionToSpray;
+        }
+
         return currentWater >= minWaterToUse;
+    }
+
+    private bool CanStartSpraying()
+    {
+        return connectionState.CanUse(
+            HasConnectedPressurizedSupply(),
+            requiresConnectionToSpray,
+            HasLocalUsableWater());
+    }
+
+    private bool HasConnectedPressurizedSupply()
+    {
+        return currentConnectionPoint != null && currentConnectionPoint.ProvidesPressurizedWater;
     }
 
     private void SetSprayState(bool enable)

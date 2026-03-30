@@ -5,10 +5,17 @@ using UnityEngine;
 [RequireComponent(typeof(BoxCollider))]
 public class FireGroup : MonoBehaviour, IFireGroupTarget
 {
+    private enum WaterDistributionMode
+    {
+        EvenSplit = 0,
+        WeightedByCurrentHp = 1
+    }
+
     [Header("Configuration")]
     [SerializeField] private string waterTag = "Water";
     [Tooltip("If true, automatically uses the BoxCollider to find all Fire scripts within its volume at Start.")]
     [SerializeField] private bool autoCollectOnStart = true;
+    [SerializeField] private WaterDistributionMode waterDistributionMode = WaterDistributionMode.EvenSplit;
     
     [Header("Status")]
     [SerializeField] private List<Fire> managedFires = new List<Fire>();
@@ -69,11 +76,57 @@ public class FireGroup : MonoBehaviour, IFireGroupTarget
 
     public void ApplyWater(float amount)
     {
+        if (amount <= 0f)
+        {
+            return;
+        }
+
+        CleanupManagedFires();
+
+        int activeFireCount = 0;
+        float totalWeight = 0f;
         for (int i = 0; i < managedFires.Count; i++)
         {
-            if (managedFires[i] != null)
+            Fire fire = managedFires[i];
+            if (fire == null || !fire.IsBurning)
             {
-                managedFires[i].ApplyWater(amount);
+                continue;
+            }
+
+            activeFireCount++;
+            if (waterDistributionMode == WaterDistributionMode.WeightedByCurrentHp)
+            {
+                totalWeight += Mathf.Max(0f, fire.CurrentHp);
+            }
+        }
+
+        if (activeFireCount <= 0)
+        {
+            return;
+        }
+
+        FireGroupWaterDistributionMode distributionMode =
+            waterDistributionMode == WaterDistributionMode.WeightedByCurrentHp
+                ? FireGroupWaterDistributionMode.WeightedByCurrentHp
+                : FireGroupWaterDistributionMode.EvenSplit;
+
+        for (int i = 0; i < managedFires.Count; i++)
+        {
+            Fire fire = managedFires[i];
+            if (fire == null || !fire.IsBurning)
+            {
+                continue;
+            }
+
+            float distributedAmount = FireGroupWaterDistributionUtility.GetDistributedAmount(
+                amount,
+                distributionMode,
+                activeFireCount,
+                Mathf.Max(0f, fire.CurrentHp),
+                totalWeight);
+            if (distributedAmount > 0f)
+            {
+                fire.ApplyWater(distributedAmount);
             }
         }
     }

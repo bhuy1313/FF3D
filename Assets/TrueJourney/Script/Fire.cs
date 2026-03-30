@@ -90,6 +90,7 @@ public class Fire : MonoBehaviour, IFireTarget
 
     public bool IsBurning => currentHp > 0f;
     public bool AllowRegrowFromZero => allowRegrowFromZero;
+    public float CurrentHp => currentHp;
 
     public event System.Action<bool> BurningStateChanged;
     public event System.Action Ignited;
