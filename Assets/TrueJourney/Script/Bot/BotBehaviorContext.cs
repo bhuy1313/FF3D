@@ -297,9 +297,7 @@ public class BotBehaviorContext : MonoBehaviour
         crouchAnimationParameterHash = ToHash(crouchAnimationParameter);
         crouchAnimationStateHash = ToHash(crouchAnimationState);
         uncrouchAnimationStateHash = ToHash(uncrouchAnimationState);
-        crouchAnimationLayerIndex = HasAnimatorController() && !string.IsNullOrWhiteSpace(crouchAnimationLayer)
-            ? animator.GetLayerIndex(crouchAnimationLayer)
-            : -1;
+        RefreshCrouchAnimationLayerIndex();
     }
 
     private void UpdateMovementAnimation()
@@ -351,6 +349,11 @@ public class BotBehaviorContext : MonoBehaviour
 
         if (crouchAnimationLayerIndex < 0)
         {
+            RefreshCrouchAnimationLayerIndex();
+        }
+
+        if (crouchAnimationLayerIndex < 0)
+        {
             return;
         }
 
@@ -393,6 +396,27 @@ public class BotBehaviorContext : MonoBehaviour
     private static int ToHash(string stateName)
     {
         return string.IsNullOrWhiteSpace(stateName) ? 0 : Animator.StringToHash(stateName);
+    }
+
+    private void RefreshCrouchAnimationLayerIndex()
+    {
+        crouchAnimationLayerIndex = -1;
+        if (!CanQueryAnimatorLayers() || string.IsNullOrWhiteSpace(crouchAnimationLayer))
+        {
+            return;
+        }
+
+        crouchAnimationLayerIndex = animator.GetLayerIndex(crouchAnimationLayer);
+    }
+
+    private bool CanQueryAnimatorLayers()
+    {
+        if (!HasAnimatorController())
+        {
+            return false;
+        }
+
+        return Application.isPlaying || animator.isInitialized;
     }
 
     private bool HasAnimatorController()

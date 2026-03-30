@@ -3,6 +3,27 @@ using UnityEngine;
 
 namespace TrueJourney.BotBehavior
 {
+    public enum BotEquippedItemPoseKey
+    {
+        Default = 0,
+        Move = 1,
+        Aim = 2,
+        Use = 3,
+        Crouch = 4,
+        Reload = 5
+    }
+
+    [Serializable]
+    public struct BotEquippedItemPoseContext
+    {
+        public BotEquippedItemPoseKey key;
+
+        public static BotEquippedItemPoseContext Default => new BotEquippedItemPoseContext
+        {
+            key = BotEquippedItemPoseKey.Default
+        };
+    }
+
     [Serializable]
     public struct BotEquippedItemPose
     {
@@ -15,10 +36,22 @@ namespace TrueJourney.BotBehavior
         public bool useRightHandIkHint;
         public Vector3 rightHandIkHintLocalPosition;
         public Vector3 rightHandIkHintLocalEulerAngles;
+        public bool useLeftHandIkTarget;
+        [Range(0f, 1f)] public float leftHandIkWeight;
+        public Vector3 leftHandIkLocalPosition;
+        public Vector3 leftHandIkLocalEulerAngles;
+        public bool useLeftHandIkHint;
+        public Vector3 leftHandIkHintLocalPosition;
+        public Vector3 leftHandIkHintLocalEulerAngles;
     }
 
     public interface IBotEquippedItemPoseSource
     {
         bool TryGetBotEquippedItemPose(out BotEquippedItemPose pose);
+    }
+
+    public interface IBotContextualEquippedItemPoseSource
+    {
+        bool TryGetBotEquippedItemPose(BotEquippedItemPoseContext context, out BotEquippedItemPose pose);
     }
 }
