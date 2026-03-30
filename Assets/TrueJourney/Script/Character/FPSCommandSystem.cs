@@ -20,6 +20,7 @@ namespace StarterAssets
         [Header("Move Command")]
         [SerializeField] private KeyCode moveCommandKey = KeyCode.H;
         [SerializeField] private KeyCode cancelCommandKey = KeyCode.Escape;
+        [SerializeField] private KeyCode cancelAllFollowKey = KeyCode.X;
         [SerializeField] private KeyCode toggleBotOutlineKey = KeyCode.Z;
         [SerializeField] private float destinationRayDistance = 200f;
         [SerializeField] private LayerMask destinationMask = ~0;
@@ -109,6 +110,11 @@ namespace StarterAssets
             if (Input.GetKeyDown(toggleBotOutlineKey))
             {
                 ToggleBotOutlineVisibility();
+            }
+
+            if (Input.GetKeyDown(cancelAllFollowKey))
+            {
+                CancelAllFollowCommands();
             }
 
             if (interactionSystem != null && interactionSystem.IsGrabActive)
@@ -277,19 +283,11 @@ namespace StarterAssets
 
         private void TryConfirmImmediateCommand(BotCommandType commandType)
         {
-            BotCommandAgent botCommandAgent = selectedCommandTarget != null
-                ? selectedCommandTarget.GetComponent<BotCommandAgent>()
-                : null;
-            bool canceledFollow = commandType == BotCommandType.Follow &&
-                botCommandAgent != null &&
-                botCommandAgent.HasActiveFollowCommand;
-
             if (commandState.TryConfirm(transform.position))
             {
                 if (logCommandSelection)
                 {
-                    string verb = canceledFollow ? "Canceled" : "Issued";
-                    Debug.Log($"[FPSCommandSystem] {verb} '{commandType}' to '{GetTargetName(selectedCommandTarget)}'.", this);
+                    Debug.Log($"[FPSCommandSystem] Issued '{commandType}' to '{GetTargetName(selectedCommandTarget)}'.", this);
                 }
 
                 selectedCommandTarget = null;
@@ -465,6 +463,23 @@ namespace StarterAssets
             {
                 string state = nextVisible ? "visible" : "hidden";
                 Debug.Log($"[FPSCommandSystem] Bot outline is now {state}.", this);
+            }
+        }
+
+        private void CancelAllFollowCommands()
+        {
+            int canceledCount = 0;
+            foreach (BotCommandAgent bot in BotRuntimeRegistry.ActiveCommandAgents)
+            {
+                if (bot != null && bot.TryCancelFollowCommand())
+                {
+                    canceledCount++;
+                }
+            }
+
+            if (logCommandSelection)
+            {
+                Debug.Log($"[FPSCommandSystem] Cancelled Follow on {canceledCount} bot(s).", this);
             }
         }
 

@@ -4,9 +4,10 @@ using UnityEngine;
 public static class BotOutlineVisibilityManager
 {
     private const int DefaultRenderingLayer = 7;
+    private const bool DefaultOutlinesVisible = false;
 
     private static int renderingLayerIndex = DefaultRenderingLayer;
-    private static bool outlinesVisible = true;
+    private static bool outlinesVisible = DefaultOutlinesVisible;
 
     public static bool OutlinesVisible => outlinesVisible;
     public static int RenderingLayerIndex => renderingLayerIndex;
@@ -71,5 +72,18 @@ public static class BotOutlineVisibilityManager
         {
             ApplyTo(bot);
         }
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetForPlayModeSession()
+    {
+        renderingLayerIndex = DefaultRenderingLayer;
+        outlinesVisible = DefaultOutlinesVisible;
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void ApplyDefaultsOnPlayStart()
+    {
+        ApplyToAllActiveBots();
     }
 }

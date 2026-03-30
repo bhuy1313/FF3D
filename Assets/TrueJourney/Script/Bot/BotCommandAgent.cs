@@ -372,13 +372,6 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
                     return false;
                 }
 
-                if (behaviorContext.HasFollowOrder)
-                {
-                    CancelFollowCommand();
-                    accepted = true;
-                    break;
-                }
-
                 PrepareForIssuedCommand(BotCommandType.Follow);
                 behaviorContext.SetFollowOrder(CreateFollowOrder());
                 accepted = true;
@@ -668,6 +661,17 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
             navMeshAgent.ResetPath();
             navMeshAgent.isStopped = true;
         }
+    }
+
+    public bool TryCancelFollowCommand()
+    {
+        if (!HasActiveFollowCommand)
+        {
+            return false;
+        }
+
+        CancelFollowCommand();
+        return true;
     }
 
     private BotFollowOrder CreateFollowOrder()
