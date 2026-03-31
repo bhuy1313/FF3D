@@ -42,7 +42,7 @@ public class MainMenuScript : MonoBehaviour
 
     private void Awake()
     {
-        settingUI = GetComponent<Setting_UIScript>();
+        settingUI = ResolveSettingUI();
 
         if (!IsPrimaryController)
         {
@@ -137,10 +137,7 @@ public class MainMenuScript : MonoBehaviour
     // Bind this to the Setting button.
     public void OpenSettingPanel()
     {
-        if (settingUI == null)
-        {
-            settingUI = GetComponent<Setting_UIScript>();
-        }
+        settingUI = ResolveSettingUI();
 
         if (settingUI != null)
         {
@@ -235,10 +232,7 @@ public class MainMenuScript : MonoBehaviour
     // Bind this to the Back button.
     public void BackToMain()
     {
-        if (settingUI == null)
-        {
-            settingUI = GetComponent<Setting_UIScript>();
-        }
+        settingUI = ResolveSettingUI();
 
         if (settingUI != null && settingUI.HandleBackRequest(BackToMainImmediate))
         {
@@ -716,6 +710,25 @@ public class MainMenuScript : MonoBehaviour
     {
         Canvas canvas = GetComponentInParent<Canvas>(true);
         return canvas != null ? canvas.transform as RectTransform : null;
+    }
+
+    private Setting_UIScript ResolveSettingUI()
+    {
+        if (settingPanel != null)
+        {
+            Setting_UIScript panelSettingUI = settingPanel.GetComponentInChildren<Setting_UIScript>(true);
+            if (panelSettingUI != null)
+            {
+                return panelSettingUI;
+            }
+        }
+
+        if (settingUI != null)
+        {
+            return settingUI;
+        }
+
+        return GetComponentInChildren<Setting_UIScript>(true);
     }
 
     private Button FindButtonByLocalizationKey(Transform root, string localizationKey)

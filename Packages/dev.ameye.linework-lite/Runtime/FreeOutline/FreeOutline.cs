@@ -310,8 +310,11 @@ namespace LineworkLite.FreeOutline
                 }
             }
 #endif
+#if !UNITY_6000_0_OR_NEWER
             private RTHandle cameraDepthRTHandle;
-            
+
+            // Unity 6 / URP 17 uses the RenderGraph path above. Keep the legacy pass callbacks
+            // only for older URP versions where compatibility-mode custom passes still use them.
             #pragma warning disable 618, 672
             public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData)
             {
@@ -441,11 +444,12 @@ namespace LineworkLite.FreeOutline
                 CommandBufferPool.Release(clearStencilCmd);
             }
             #pragma warning restore 618, 672
-            
+
             public void SetTarget(RTHandle depth)
             {
                 cameraDepthRTHandle = depth;
             }
+#endif
 
             public override void OnCameraCleanup(CommandBuffer cmd)
             {
@@ -453,8 +457,10 @@ namespace LineworkLite.FreeOutline
                 {
                     throw new ArgumentNullException(nameof(cmd));
                 }
-                
+
+#if !UNITY_6000_0_OR_NEWER
                 cameraDepthRTHandle = null;
+#endif
             }
 
             public void Dispose()
@@ -513,6 +519,7 @@ namespace LineworkLite.FreeOutline
             if (render) renderer.EnqueuePass(freeOutlinePass);
         }
         
+#if !UNITY_6000_0_OR_NEWER
         #pragma warning disable 618, 672
         public override void SetupRenderPasses(ScriptableRenderer renderer, in RenderingData renderingData)
         {
@@ -522,6 +529,7 @@ namespace LineworkLite.FreeOutline
             freeOutlinePass.SetTarget(renderer.cameraDepthTargetHandle);
         }
         #pragma warning restore 618, 672
+#endif
         
         /// <summary>
         /// Clean up resources allocated to the Scriptable Renderer Feature such as materials.

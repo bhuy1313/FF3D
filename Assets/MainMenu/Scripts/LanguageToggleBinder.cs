@@ -181,6 +181,45 @@ public class LanguageToggleBinder : MonoBehaviour
         SyncTogglesFromLanguage();
     }
 
+    public void SetSelectedLanguage(AppLanguage language, bool notifyListeners = false)
+    {
+        ResolveToggles();
+        ResolveStyler();
+
+        isSyncing = true;
+
+        if (vietnameseToggle != null)
+        {
+            if (notifyListeners)
+            {
+                vietnameseToggle.isOn = language == AppLanguage.Vietnamese;
+            }
+            else
+            {
+                vietnameseToggle.SetIsOnWithoutNotify(language == AppLanguage.Vietnamese);
+            }
+        }
+
+        if (englishToggle != null)
+        {
+            if (notifyListeners)
+            {
+                englishToggle.isOn = language == AppLanguage.English;
+            }
+            else
+            {
+                englishToggle.SetIsOnWithoutNotify(language == AppLanguage.English);
+            }
+        }
+
+        if (segmentStyler != null)
+        {
+            segmentStyler.RefreshVisualState();
+        }
+
+        isSyncing = false;
+    }
+
     public bool TryGetSelectedLanguage(out AppLanguage language)
     {
         if (englishToggle != null && englishToggle.isOn)
