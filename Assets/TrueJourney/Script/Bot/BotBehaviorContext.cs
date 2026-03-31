@@ -62,6 +62,9 @@ public class BotBehaviorContext : MonoBehaviour
     public int PatrolPointCount => patrolPoints != null ? patrolPoints.Length : 0;
     public bool HasConfiguredPatrolRoute => GetPatrolPointCount() > 0;
     public bool HasPatrolRoute => enablePatrolMovement && HasConfiguredPatrolRoute;
+    public bool IsMovementAnimationActive => movementAnimationActive;
+    public bool IsCrouchAnimationActive => crouchAnimationActive;
+    public float MovementAnimationThreshold => movementAnimationThreshold;
 
     private void Awake()
     {

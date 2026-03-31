@@ -45,11 +45,6 @@ namespace TrueJourney.BotBehavior
         public Vector3 leftHandIkHintLocalEulerAngles;
     }
 
-    public interface IBotEquippedItemPoseSource
-    {
-        bool TryGetBotEquippedItemPose(out BotEquippedItemPose pose);
-    }
-
     public interface IBotContextualEquippedItemPoseSource
     {
         bool TryGetBotEquippedItemPose(BotEquippedItemPoseContext context, out BotEquippedItemPose pose);

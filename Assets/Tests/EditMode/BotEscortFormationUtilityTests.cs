@@ -22,9 +22,45 @@ public class BotEscortFormationUtilityTests
     [Test]
     public void ResolveFormationRank_SortsFollowerIdsDeterministically()
     {
-        int rank = BotEscortFormationUtility.ResolveFormationRank(9, new[] { 17, 9, 25, 4 });
+        GameObject ownerObject = new GameObject("EscortOwner");
+        GameObject followerA = new GameObject("EscortFollowerA");
+        GameObject followerB = new GameObject("EscortFollowerB");
+        GameObject followerC = new GameObject("EscortFollowerC");
 
-        Assert.That(rank, Is.EqualTo(1));
+        try
+        {
+            EntityId ownerId = ownerObject.GetEntityId();
+            EntityId[] followerIds =
+            {
+                followerC.GetEntityId(),
+                ownerId,
+                followerB.GetEntityId(),
+                followerA.GetEntityId()
+            };
+
+            EntityId[] sortedIds = (EntityId[])followerIds.Clone();
+            System.Array.Sort(sortedIds);
+
+            int expectedRank = 0;
+            for (int i = 0; i < sortedIds.Length; i++)
+            {
+                if (sortedIds[i] == ownerId)
+                {
+                    expectedRank = i;
+                    break;
+                }
+            }
+
+            int rank = BotEscortFormationUtility.ResolveFormationRank(ownerId, followerIds);
+            Assert.That(rank, Is.EqualTo(expectedRank));
+        }
+        finally
+        {
+            Object.DestroyImmediate(ownerObject);
+            Object.DestroyImmediate(followerA);
+            Object.DestroyImmediate(followerB);
+            Object.DestroyImmediate(followerC);
+        }
     }
 
     [Test]

@@ -514,12 +514,6 @@ namespace TrueJourney.BotBehavior
                 return true;
             }
 
-            if (pickupable is IBotEquippedItemPoseSource pickupPoseSource &&
-                pickupPoseSource.TryGetBotEquippedItemPose(out pose))
-            {
-                return true;
-            }
-
             if (itemTransform == null)
             {
                 return false;
@@ -531,12 +525,6 @@ namespace TrueJourney.BotBehavior
                 MonoBehaviour component = components[i];
                 if (component is IBotContextualEquippedItemPoseSource contextualPoseSource &&
                     contextualPoseSource.TryGetBotEquippedItemPose(context, out pose))
-                {
-                    return true;
-                }
-
-                if (component is IBotEquippedItemPoseSource poseSource &&
-                    poseSource.TryGetBotEquippedItemPose(out pose))
                 {
                     return true;
                 }

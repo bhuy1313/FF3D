@@ -6,6 +6,7 @@ using TrueJourney.BotBehavior;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(NavMeshAgent))]
+[RequireComponent(typeof(BotEquippedItemPoseDriver))]
 public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
 {
     private enum ExtinguishDebugStage
@@ -204,6 +205,8 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
         IsRouteFireClearingActive();
 
     public bool HasMovePickupTarget => movePickupController != null && movePickupController.HasTarget;
+    public bool IsAimingEquippedItemPose => IsExtinguisherAimPoseActive() || IsBreakToolAimPoseActive();
+    public bool IsUsingEquippedItemPose => IsExtinguisherUsePoseActive();
 
     private void Awake()
     {
@@ -327,6 +330,42 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
             default:
                 return false;
         }
+    }
+
+    private bool IsExtinguisherAimPoseActive()
+    {
+        return HasActiveExtinguisherPoseRequest() && IsInteractionPoseStationary();
+    }
+
+    private bool IsExtinguisherUsePoseActive()
+    {
+        return HasActiveExtinguisherPoseRequest() &&
+               sprayReadyTime >= 0f &&
+               Time.time >= sprayReadyTime;
+    }
+
+    private bool IsBreakToolAimPoseActive()
+    {
+        return activeBreakTool != null &&
+               currentBlockedBreakable != null &&
+               !currentBlockedBreakable.IsBroken &&
+               currentBlockedBreakable.CanBeClearedByBot &&
+               IsInteractionPoseStationary();
+    }
+
+    private bool HasActiveExtinguisherPoseRequest()
+    {
+        return activeExtinguisher != null &&
+               ((behaviorContext != null && behaviorContext.HasExtinguishOrder) || IsRouteFireClearingActive());
+    }
+
+    private bool IsInteractionPoseStationary()
+    {
+        return navMeshAgent == null ||
+               !navMeshAgent.enabled ||
+               !navMeshAgent.isOnNavMesh ||
+               navMeshAgent.isStopped ||
+               !navMeshAgent.hasPath;
     }
 
     public bool TryIssueCommand(BotCommandType commandType, Vector3 worldPoint)

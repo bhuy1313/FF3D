@@ -4,14 +4,14 @@ using UnityEngine;
 
 public static class BotEscortFormationUtility
 {
-    public static int ResolveFormationRank(int ownerId, IReadOnlyList<int> followerIds)
+    public static int ResolveFormationRank(EntityId ownerId, IReadOnlyList<EntityId> followerIds)
     {
         if (followerIds == null || followerIds.Count == 0)
         {
             return 0;
         }
 
-        int[] sortedIds = new int[followerIds.Count];
+        EntityId[] sortedIds = new EntityId[followerIds.Count];
         for (int i = 0; i < followerIds.Count; i++)
         {
             sortedIds[i] = followerIds[i];

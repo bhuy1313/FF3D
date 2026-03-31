@@ -4,7 +4,7 @@ using UnityEngine;
 
 public sealed class BotRuntimeDecisionService
 {
-    private readonly List<int> escortFollowerIds = new List<int>(8);
+    private readonly List<EntityId> escortFollowerIds = new List<EntityId>(8);
 
     public Transform ResolveFollowTarget(Transform currentTarget, string followTargetTag)
     {
@@ -50,15 +50,15 @@ public sealed class BotRuntimeDecisionService
                 continue;
             }
 
-            escortFollowerIds.Add(candidate.GetInstanceID());
+            escortFollowerIds.Add(candidate.GetEntityId());
         }
 
         if (escortFollowerIds.Count == 0)
         {
-            escortFollowerIds.Add(owner.GetInstanceID());
+            escortFollowerIds.Add(owner.GetEntityId());
         }
 
-        return BotEscortFormationUtility.ResolveFormationRank(owner.GetInstanceID(), escortFollowerIds);
+        return BotEscortFormationUtility.ResolveFormationRank(owner.GetEntityId(), escortFollowerIds);
     }
 
     public int FillOccupiedEscortSlots(BotCommandAgent owner, Transform target, int[] buffer, int slotCount)
