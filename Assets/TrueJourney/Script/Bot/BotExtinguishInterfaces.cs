@@ -1,11 +1,26 @@
 using UnityEngine;
 
+public enum FireHazardType
+{
+    OrdinaryCombustibles = 0,
+    Electrical = 1,
+    FlammableLiquid = 2,
+    GasFed = 3
+}
+
+public enum FireSuppressionAgent
+{
+    Water = 0,
+    DryChemical = 1
+}
+
 namespace TrueJourney.BotBehavior
 {
     public interface IBotExtinguisherItem
     {
         Rigidbody Rigidbody { get; }
         float ApplyWaterPerSecond { get; }
+        FireSuppressionAgent SuppressionAgent { get; }
         float PreferredSprayDistance { get; }
         float MaxSprayDistance { get; }
         float MaxVerticalReach { get; }
@@ -34,7 +49,9 @@ namespace TrueJourney.BotBehavior
     public interface IFireTarget
     {
         void ApplyWater(float amount);
+        void ApplySuppression(float amount, FireSuppressionAgent agent);
         bool IsBurning { get; }
+        FireHazardType FireType { get; }
         Vector3 GetWorldPosition();
         float GetWorldRadius();
     }

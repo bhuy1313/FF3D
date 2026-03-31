@@ -85,7 +85,7 @@ public partial class BotCommandAgent
             return;
         }
 
-        fireTarget.ApplyWater(waterAmount);
+        fireTarget.ApplySuppression(waterAmount, tool.SuppressionAgent);
     }
 
     private bool IsAimSettled(IBotExtinguisherItem tool, Vector3 firePosition)

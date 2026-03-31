@@ -7,6 +7,7 @@ public class Door : MonoBehaviour, IInteractable, IOpenable
     [SerializeField] private float openAngle = -90f;
     [SerializeField] private float animationSpeed = 6f;
     [SerializeField] private bool startsOpen;
+    [SerializeField] private float smokeVentilationReliefWhenOpen = 0.2f;
 
     private Transform doorTransform;
     private Quaternion closedLocalRotation;
@@ -17,10 +18,16 @@ public class Door : MonoBehaviour, IInteractable, IOpenable
     private int currentOpenDirection = -1;
 
     public bool IsOpen => isOpen;
+    public float SmokeVentilationRelief => isOpen ? smokeVentilationReliefWhenOpen : 0f;
 
     private void Awake()
     {
         InitializeDoorState();
+    }
+
+    private void OnValidate()
+    {
+        smokeVentilationReliefWhenOpen = Mathf.Max(0f, smokeVentilationReliefWhenOpen);
     }
 
     private void Update()

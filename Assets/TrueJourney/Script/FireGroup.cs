@@ -126,7 +126,7 @@ public class FireGroup : MonoBehaviour, IFireGroupTarget
                 totalWeight);
             if (distributedAmount > 0f)
             {
-                fire.ApplyWater(distributedAmount);
+                fire.ApplySuppression(distributedAmount, FireSuppressionAgent.Water);
             }
         }
     }

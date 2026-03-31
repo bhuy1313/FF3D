@@ -47,6 +47,14 @@ public class Fire : MonoBehaviour, IFireTarget
     [Header("Extinguish")]
     [SerializeField] private bool disableGameObjectOnExtinguish = false;
 
+    [Header("Hazard Type")]
+    [SerializeField] private FireHazardType fireType = FireHazardType.OrdinaryCombustibles;
+    [SerializeField] private bool startHazardIsolated = false;
+    [SerializeField] private bool requiresIsolationToFullyExtinguish = false;
+    [SerializeField] private float hazardActiveRegrowMultiplier = 2f;
+    [Range(0f, 1f)]
+    [SerializeField] private float hazardActiveMinimumHpNormalized = 0.18f;
+
     [Header("Player Damage")]
     [SerializeField] private float damagePerSecond = 10f;
     [SerializeField] private string playerTag = "Player";
@@ -87,10 +95,14 @@ public class Fire : MonoBehaviour, IFireTarget
     private readonly List<Vector3> particleBaseStartSize3DMultipliers = new List<Vector3>();
     private Vector3 particleVisualRootBaseLocalScale = Vector3.one;
     private float lastWaterAppliedTime = float.NegativeInfinity;
+    [SerializeField] private bool hazardSourceIsolated;
 
     public bool IsBurning => currentHp > 0f;
     public bool AllowRegrowFromZero => allowRegrowFromZero;
     public float CurrentHp => currentHp;
+    public float NormalizedHp => GetNormalizedHp();
+    public FireHazardType FireType => fireType;
+    public bool IsHazardSourceIsolated => hazardSourceIsolated;
 
     public event System.Action<bool> BurningStateChanged;
     public event System.Action Ignited;
@@ -123,6 +135,7 @@ public class Fire : MonoBehaviour, IFireTarget
         EnsureCollider();
         EnsureNavMeshModifier();
         EnsureSpreadBuffer();
+        ApplyHazardDefaults();
     }
 
     private void OnEnable()
@@ -135,6 +148,7 @@ public class Fire : MonoBehaviour, IFireTarget
         currentHp = Mathf.Clamp(currentHp, 0f, Mathf.Max(0f, maxHp));
         spreadTimer = 0f;
         lastWaterAppliedTime = float.NegativeInfinity;
+        hazardSourceIsolated = startHazardIsolated;
         SyncRadiusAndCollider();
         SyncNavMeshModifier();
         ApplyVisuals(forcePlayState: true);
@@ -178,12 +192,23 @@ public class Fire : MonoBehaviour, IFireTarget
 
     public void ApplyWater(float amount)
     {
+        ApplySuppression(amount, FireSuppressionAgent.Water);
+    }
+
+    public void ApplySuppression(float amount, FireSuppressionAgent agent)
+    {
         if (amount <= 0f) return;
         if (currentHp <= 0f) return;
 
+        float effectiveAmount = amount * GetSuppressionEffectiveness(agent);
+        if (effectiveAmount <= 0f)
+        {
+            return;
+        }
+
         bool wasBurning = IsBurning;
         float previousHp = currentHp;
-        currentHp = Mathf.Max(0f, currentHp - amount);
+        currentHp = Mathf.Max(GetMinimumRemainingHpWhileHazardActive(), currentHp - effectiveAmount);
         if (currentHp < previousHp)
         {
             lastWaterAppliedTime = Time.time;
@@ -201,6 +226,16 @@ public class Fire : MonoBehaviour, IFireTarget
     public void SetAllowRegrowFromZero(bool allow)
     {
         allowRegrowFromZero = allow;
+    }
+
+    public void SetHazardSourceIsolated(bool isolated)
+    {
+        hazardSourceIsolated = isolated;
+    }
+
+    public void ToggleHazardSourceIsolation()
+    {
+        SetHazardSourceIsolated(!hazardSourceIsolated);
     }
 
     private void Extinguish()
@@ -224,7 +259,7 @@ public class Fire : MonoBehaviour, IFireTarget
         if (currentHp >= maxHp) return;
         if (Time.time < lastWaterAppliedTime + Mathf.Max(0f, regrowResumeDelay)) return;
 
-        currentHp = Mathf.Min(maxHp, currentHp + regrowHpPerSecond * Time.deltaTime);
+        currentHp = Mathf.Min(maxHp, currentHp + regrowHpPerSecond * GetHazardRegrowMultiplier() * Time.deltaTime);
         NotifyBurningStateChangeIfNeeded(wasBurning);
     }
 
@@ -424,6 +459,17 @@ public class Fire : MonoBehaviour, IFireTarget
 
         currentRadius = Mathf.Clamp(currentRadius, minRadius, maxRadius);
         sphereCollider.radius = currentRadius;
+    }
+
+    private void OnValidate()
+    {
+        maxHp = Mathf.Max(0.01f, maxHp);
+        minHpToLive = Mathf.Clamp(minHpToLive, 0f, maxHp);
+        regrowHpPerSecond = Mathf.Max(0f, regrowHpPerSecond);
+        regrowResumeDelay = Mathf.Max(0f, regrowResumeDelay);
+        hazardActiveRegrowMultiplier = Mathf.Max(0f, hazardActiveRegrowMultiplier);
+        hazardActiveMinimumHpNormalized = Mathf.Clamp01(hazardActiveMinimumHpNormalized);
+        ApplyHazardDefaults();
     }
 
     private void CacheReferences()
@@ -718,6 +764,69 @@ public class Fire : MonoBehaviour, IFireTarget
 
         if (spreadBuffer == null || spreadBuffer.Length != spreadMaxOverlaps)
             spreadBuffer = new Collider[spreadMaxOverlaps];
+    }
+
+    private void ApplyHazardDefaults()
+    {
+        if (fireType == FireHazardType.GasFed && !requiresIsolationToFullyExtinguish)
+        {
+            requiresIsolationToFullyExtinguish = true;
+        }
+    }
+
+    private float GetSuppressionEffectiveness(FireSuppressionAgent agent)
+    {
+        switch (fireType)
+        {
+            case FireHazardType.Electrical:
+                if (agent == FireSuppressionAgent.Water)
+                {
+                    return hazardSourceIsolated ? 0.8f : 0f;
+                }
+
+                return hazardSourceIsolated ? 1.05f : 1.25f;
+
+            case FireHazardType.FlammableLiquid:
+                return agent == FireSuppressionAgent.Water ? 0.2f : 1.2f;
+
+            case FireHazardType.GasFed:
+                if (agent == FireSuppressionAgent.Water)
+                {
+                    return hazardSourceIsolated ? 0.85f : 0.3f;
+                }
+
+                return hazardSourceIsolated ? 1.1f : 0.45f;
+
+            default:
+                return agent == FireSuppressionAgent.Water ? 1f : 0.8f;
+        }
+    }
+
+    private float GetHazardRegrowMultiplier()
+    {
+        if (hazardSourceIsolated)
+        {
+            return 1f;
+        }
+
+        switch (fireType)
+        {
+            case FireHazardType.Electrical:
+            case FireHazardType.GasFed:
+                return hazardActiveRegrowMultiplier;
+            default:
+                return 1f;
+        }
+    }
+
+    private float GetMinimumRemainingHpWhileHazardActive()
+    {
+        if (hazardSourceIsolated || !requiresIsolationToFullyExtinguish || currentHp <= 0f)
+        {
+            return 0f;
+        }
+
+        return Mathf.Clamp01(hazardActiveMinimumHpNormalized) * maxHp;
     }
 
     private Vector3 GetSpreadCenterWorld()

@@ -108,6 +108,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
 
     public float CurrentApplyWaterRate => currentApplyWaterRate;
     public float ApplyWaterPerSecond => currentApplyWaterRate;
+    public FireSuppressionAgent SuppressionAgent => FireSuppressionAgent.Water;
     public float PreferredSprayDistance => botStandDistanceOverride > 0f
         ? Mathf.Min(botStandDistanceOverride, MaxSprayDistance)
         : Mathf.Max(4f, currentSprayRange * 0.75f);
@@ -635,7 +636,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
 
         Fire fire = FindFire(collider);
         if (fire != null && processedFires.Add(fire))
-            fire.ApplyWater(amount);
+            fire.ApplySuppression(amount, FireSuppressionAgent.Water);
     }
 
     private static FireGroup FindFireGroup(Collider collider)

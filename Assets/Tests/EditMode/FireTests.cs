@@ -7,6 +7,8 @@ public class FireTests
 {
     private const BindingFlags InstanceFlags = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
     private static readonly Type FireType = FindType("Fire");
+    private static readonly Type FireHazardType = FindType("FireHazardType");
+    private static readonly Type FireSuppressionAgentType = FindType("FireSuppressionAgent");
 
     [Test]
     public void ApplyWater_FiresBurningStateChanged_WhenFireIsFullyExtinguished()
@@ -49,6 +51,94 @@ public class FireTests
         finally
         {
             UnityEngine.Object.DestroyImmediate(fireObject);
+        }
+    }
+
+    [Test]
+    public void ElectricalFire_BlocksWaterUntilHazardIsolated()
+    {
+        GameObject fireObject = new GameObject("ElectricalFire");
+
+        try
+        {
+            fireObject.AddComponent<SphereCollider>();
+            Component fire = fireObject.AddComponent(FireType);
+
+            SetPrivateField(fire, "fireType", Enum.Parse(FireHazardType, "Electrical"));
+            SetPrivateField(fire, "currentHp", 1f);
+            SetPrivateField(fire, "maxHp", 1f);
+
+            InvokeInstanceMethod(fire, "ApplySuppression", 0.5f, Enum.Parse(FireSuppressionAgentType, "Water"));
+            Assert.That(GetFieldValue<float>(fire, "currentHp"), Is.EqualTo(1f).Within(0.001f));
+
+            InvokeInstanceMethod(fire, "SetHazardSourceIsolated", true);
+            InvokeInstanceMethod(fire, "ApplySuppression", 0.5f, Enum.Parse(FireSuppressionAgentType, "Water"));
+            Assert.That(GetFieldValue<float>(fire, "currentHp"), Is.LessThan(1f));
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(fireObject);
+        }
+    }
+
+    [Test]
+    public void GasFedFire_CannotBeFullyExtinguishedUntilHazardIsolated()
+    {
+        GameObject fireObject = new GameObject("GasFire");
+
+        try
+        {
+            fireObject.AddComponent<SphereCollider>();
+            Component fire = fireObject.AddComponent(FireType);
+
+            SetPrivateField(fire, "fireType", Enum.Parse(FireHazardType, "GasFed"));
+            SetPrivateField(fire, "currentHp", 1f);
+            SetPrivateField(fire, "maxHp", 1f);
+            SetPrivateField(fire, "requiresIsolationToFullyExtinguish", true);
+            SetPrivateField(fire, "hazardActiveMinimumHpNormalized", 0.2f);
+
+            InvokeInstanceMethod(fire, "ApplySuppression", 5f, Enum.Parse(FireSuppressionAgentType, "DryChemical"));
+            Assert.That(GetFieldValue<float>(fire, "currentHp"), Is.GreaterThan(0.19f));
+
+            InvokeInstanceMethod(fire, "SetHazardSourceIsolated", true);
+            InvokeInstanceMethod(fire, "ApplySuppression", 5f, Enum.Parse(FireSuppressionAgentType, "DryChemical"));
+            Assert.That(GetFieldValue<float>(fire, "currentHp"), Is.EqualTo(0f).Within(0.001f));
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(fireObject);
+        }
+    }
+
+    [Test]
+    public void FlammableLiquidFire_PrefersDryChemicalOverWater()
+    {
+        GameObject waterFireObject = new GameObject("WaterSuppressedFire");
+        GameObject dryFireObject = new GameObject("DrySuppressedFire");
+
+        try
+        {
+            waterFireObject.AddComponent<SphereCollider>();
+            dryFireObject.AddComponent<SphereCollider>();
+            Component waterFire = waterFireObject.AddComponent(FireType);
+            Component dryFire = dryFireObject.AddComponent(FireType);
+
+            SetPrivateField(waterFire, "fireType", Enum.Parse(FireHazardType, "FlammableLiquid"));
+            SetPrivateField(dryFire, "fireType", Enum.Parse(FireHazardType, "FlammableLiquid"));
+            SetPrivateField(waterFire, "currentHp", 1f);
+            SetPrivateField(dryFire, "currentHp", 1f);
+            SetPrivateField(waterFire, "maxHp", 1f);
+            SetPrivateField(dryFire, "maxHp", 1f);
+
+            InvokeInstanceMethod(waterFire, "ApplySuppression", 0.5f, Enum.Parse(FireSuppressionAgentType, "Water"));
+            InvokeInstanceMethod(dryFire, "ApplySuppression", 0.5f, Enum.Parse(FireSuppressionAgentType, "DryChemical"));
+
+            Assert.That(GetFieldValue<float>(dryFire, "currentHp"), Is.LessThan(GetFieldValue<float>(waterFire, "currentHp")));
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(waterFireObject);
+            UnityEngine.Object.DestroyImmediate(dryFireObject);
         }
     }
 

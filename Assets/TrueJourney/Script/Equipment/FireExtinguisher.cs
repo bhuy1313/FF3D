@@ -43,6 +43,7 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
     private Rigidbody cachedRigidbody;
     public Rigidbody Rigidbody => cachedRigidbody;
     public float ApplyWaterPerSecond => botApplyWaterPerSecond;
+    public FireSuppressionAgent SuppressionAgent => FireSuppressionAgent.DryChemical;
     public float PreferredSprayDistance => Mathf.Clamp(maxSprayDistance * Mathf.Clamp01(botStandDistanceFactor), 0.75f, maxSprayDistance);
     public float MaxSprayDistance => maxSprayDistance;
     public float MaxVerticalReach => Mathf.Tan(coneHalfAngle * Mathf.Deg2Rad) * maxSprayDistance;
@@ -336,7 +337,7 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
         Fire fire = FindFire(collider);
         if (fire != null && processedFires.Add(fire))
         {
-            fire.ApplyWater(amount);
+            fire.ApplySuppression(amount, FireSuppressionAgent.DryChemical);
         }
     }
 

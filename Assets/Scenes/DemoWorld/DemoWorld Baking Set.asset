@@ -12,6 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4881f9a2c4d568047b316028d20a8dca, type: 3}
   m_Name: DemoWorld Baking Set
   m_EditorClassIdentifier: Unity.RenderPipelines.Core.Runtime::UnityEngine.Rendering.ProbeVolumeBakingSet
+  m_SceneBakeData:
+    m_Keys:
+    - 39940d4b495c7a14a9cab326f9916151
+    m_Values:
+    - hasProbeVolume: 1
+      bakeScene: 1
+      bounds:
+        m_Center: {x: 364.5, y: 40.5, z: 364.5}
+        m_Extent: {x: 121.5, y: 40.5, z: 121.5}
   singleSceneMode: 1
   dialogNoProbeVolumeInSetShown: 0
   settings:
@@ -276,12 +285,3 @@ MonoBehaviour:
   skyOcclusionShadingDirection: 0
   useRenderingLayers: 0
   renderingLayerMasks: []
-  m_SceneBakeData:
-    m_Keys:
-    - 39940d4b495c7a14a9cab326f9916151
-    m_Values:
-    - hasProbeVolume: 1
-      bakeScene: 1
-      bounds:
-        m_Center: {x: 364.5, y: 40.5, z: 364.5}
-        m_Extent: {x: 121.5, y: 40.5, z: 121.5}
