@@ -36,3 +36,9 @@ public interface IOpenable
 {
     bool IsOpen { get; }
 }
+
+public interface ISmokeVentPoint : IOpenable
+{
+    float SmokeVentilationRelief { get; }
+    float FireDraftRisk { get; }
+}

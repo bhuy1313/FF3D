@@ -5,7 +5,6 @@ using UnityEngine;
 public sealed class BotRuntimeDecisionService
 {
     private readonly List<EntityId> escortFollowerIds = new List<EntityId>(8);
-
     public Transform ResolveFollowTarget(Transform currentTarget, string followTargetTag)
     {
         if (currentTarget != null && currentTarget.gameObject.activeInHierarchy)

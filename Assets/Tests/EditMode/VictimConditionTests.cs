@@ -44,6 +44,25 @@ public class VictimConditionTests
     }
 
     [Test]
+    public void VictimCondition_UsesExpectedAnimatorParameterNames()
+    {
+        GameObject victimObject = new GameObject("Victim");
+
+        try
+        {
+            Component victim = victimObject.AddComponent(VictimConditionType);
+
+            Assert.That(GetFieldValue<string>(victim, "urgentAnimatorParameter"), Is.EqualTo("IsUrgent"));
+            Assert.That(GetFieldValue<string>(victim, "criticalAnimatorParameter"), Is.EqualTo("IsCritical"));
+            Assert.That(GetFieldValue<string>(victim, "deceasedAnimatorParameter"), Is.EqualTo("IsDeceased"));
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(victimObject);
+        }
+    }
+
+    [Test]
     public void Mission_Fails_WhenTrackedVictimDies_AndFailOnDeathIsEnabled()
     {
         GameObject missionObject = new GameObject("Mission");

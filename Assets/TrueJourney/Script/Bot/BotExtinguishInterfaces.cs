@@ -11,7 +11,15 @@ public enum FireHazardType
 public enum FireSuppressionAgent
 {
     Water = 0,
-    DryChemical = 1
+    DryChemical = 1,
+    CO2 = 2
+}
+
+public enum FireExtinguisherType
+{
+    Water = 0,
+    DryChemical = 1,
+    CO2 = 2
 }
 
 namespace TrueJourney.BotBehavior

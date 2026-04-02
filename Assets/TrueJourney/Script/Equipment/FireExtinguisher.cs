@@ -1,7 +1,11 @@
 using TrueJourney.BotBehavior;
 using UnityEngine;
+using UnityEngine.Serialization;
 public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotExtinguisherItem
 {
+    [Header("Extinguisher")]
+    [SerializeField] private FireExtinguisherType extinguisherType = FireExtinguisherType.DryChemical;
+
     [Header("Charge")]
     [SerializeField] private float maxCharge = 10f;
     [SerializeField] private float rechargePerSecond = 0f;
@@ -11,8 +15,10 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
     [SerializeField] private bool toggleUse = true;
 
     [Header("Suppression")]
-    [SerializeField] private float playerApplyWaterPerSecond = 1.5f;
-    [SerializeField] private float botApplyWaterPerSecond = 1.5f;
+    [FormerlySerializedAs("playerApplyWaterPerSecond")]
+    [SerializeField] private float playerDischargePerSecond = 1.5f;
+    [FormerlySerializedAs("botApplyWaterPerSecond")]
+    [SerializeField] private float botDischargePerSecond = 1.5f;
     [SerializeField] private float maxSprayDistance = 4.25f;
     [Range(0f, 1f)]
     [Tooltip("Bot stand distance as a ratio of Max Spray Distance.")]
@@ -42,8 +48,8 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
 
     private Rigidbody cachedRigidbody;
     public Rigidbody Rigidbody => cachedRigidbody;
-    public float ApplyWaterPerSecond => botApplyWaterPerSecond;
-    public FireSuppressionAgent SuppressionAgent => FireSuppressionAgent.DryChemical;
+    public float ApplyWaterPerSecond => botDischargePerSecond;
+    public FireSuppressionAgent SuppressionAgent => ResolveSuppressionAgent();
     public float PreferredSprayDistance => Mathf.Clamp(maxSprayDistance * Mathf.Clamp01(botStandDistanceFactor), 0.75f, maxSprayDistance);
     public float MaxSprayDistance => maxSprayDistance;
     public float MaxVerticalReach => Mathf.Tan(coneHalfAngle * Mathf.Deg2Rad) * maxSprayDistance;
@@ -108,7 +114,7 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
 
     private float GetActiveWaterPerSecond()
     {
-        return Mathf.Max(0f, IsBotControlled ? botApplyWaterPerSecond : playerApplyWaterPerSecond);
+        return Mathf.Max(0f, IsBotControlled ? botDischargePerSecond : playerDischargePerSecond);
     }
 
     public void Interact(GameObject interactor)
@@ -265,7 +271,7 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
 
     private void ApplyExtinguishCone()
     {
-        if (playerApplyWaterPerSecond <= 0f || maxSprayDistance <= 0f)
+        if (playerDischargePerSecond <= 0f || maxSprayDistance <= 0f)
         {
             return;
         }
@@ -285,7 +291,7 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
             return;
         }
 
-        float amount = playerApplyWaterPerSecond * Time.deltaTime;
+        float amount = playerDischargePerSecond * Time.deltaTime;
         float segmentLength = maxSprayDistance / Mathf.Max(1, coneSegments);
 
         System.Collections.Generic.HashSet<Fire> processedFires = new System.Collections.Generic.HashSet<Fire>();
@@ -319,7 +325,7 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
                     continue;
                 }
 
-                ApplyWaterToColliderSafe(hit, amount, processedFires);
+                ApplyWaterToColliderSafe(hit, amount, processedFires, SuppressionAgent);
             }
         }
     }
@@ -327,7 +333,8 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
     private static void ApplyWaterToColliderSafe(
         Collider collider,
         float amount,
-        System.Collections.Generic.HashSet<Fire> processedFires)
+        System.Collections.Generic.HashSet<Fire> processedFires,
+        FireSuppressionAgent suppressionAgent)
     {
         if (collider == null)
         {
@@ -337,7 +344,20 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
         Fire fire = FindFire(collider);
         if (fire != null && processedFires.Add(fire))
         {
-            fire.ApplySuppression(amount, FireSuppressionAgent.DryChemical);
+            fire.ApplySuppression(amount, suppressionAgent);
+        }
+    }
+
+    private FireSuppressionAgent ResolveSuppressionAgent()
+    {
+        switch (extinguisherType)
+        {
+            case FireExtinguisherType.Water:
+                return FireSuppressionAgent.Water;
+            case FireExtinguisherType.CO2:
+                return FireSuppressionAgent.CO2;
+            default:
+                return FireSuppressionAgent.DryChemical;
         }
     }
 
@@ -385,6 +405,19 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
     private static bool IsFinite(Vector3 value)
     {
         return float.IsFinite(value.x) && float.IsFinite(value.y) && float.IsFinite(value.z);
+    }
+
+    private void OnValidate()
+    {
+        maxCharge = Mathf.Max(0f, maxCharge);
+        rechargePerSecond = Mathf.Max(0f, rechargePerSecond);
+        minChargeToUse = Mathf.Clamp(minChargeToUse, 0f, maxCharge);
+        playerDischargePerSecond = Mathf.Max(0f, playerDischargePerSecond);
+        botDischargePerSecond = Mathf.Max(0f, botDischargePerSecond);
+        maxSprayDistance = Mathf.Max(0f, maxSprayDistance);
+        coneHalfAngle = Mathf.Clamp(coneHalfAngle, 0f, 89f);
+        coneBaseRadius = Mathf.Max(0f, coneBaseRadius);
+        coneSegments = Mathf.Max(1, coneSegments);
     }
 
 #if UNITY_EDITOR

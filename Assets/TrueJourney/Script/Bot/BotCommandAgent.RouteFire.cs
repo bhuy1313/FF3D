@@ -55,7 +55,33 @@ public partial class BotCommandAgent
             return false;
         }
 
+        IFireTarget lockedBlockingFire = currentRouteBlockingFire != null &&
+                                         currentRouteBlockingFire.IsBurning &&
+                                         IsExtinguisherTargetLocked(currentRouteBlockingFire)
+            ? currentRouteBlockingFire
+            : null;
+
         if (!TryResolveBlockingFireOnPath(previewPath, out IFireTarget blockingFire))
+        {
+            if (lockedBlockingFire != null)
+            {
+                blockingFire = lockedBlockingFire;
+            }
+            else
+            {
+                if (currentRouteBlockingFire != null)
+                {
+                    LogPathClearingFlow(
+                        $"route-fire-open:{GetDebugTargetName(currentRouteBlockingFire)}",
+                        "Route is clear.");
+                }
+
+                ClearRouteFireRuntime();
+                return false;
+            }
+        }
+
+        if (blockingFire == null)
         {
             if (currentRouteBlockingFire != null)
             {
@@ -119,10 +145,12 @@ public partial class BotCommandAgent
         float allowedEdgeRange = GetAllowedExtinguisherEdgeRange(equippedTool);
         float verticalOffsetToFire = Mathf.Abs(firePosition.y - transform.position.y);
         bool keepCurrentStandDistance = IsExtinguisherTargetLocked(blockingFire);
+        bool canExtinguishFromCurrentPosition = CanExtinguishFromCurrentPosition(equippedTool, firePosition, blockingFire);
         bool shouldReposition =
             edgeDistanceToFire > allowedEdgeRange ||
             verticalOffsetToFire > equippedTool.MaxVerticalReach ||
-            (!keepCurrentStandDistance && edgeDistanceToFire < desiredStandOffDistance - extinguisherStandDistanceTolerance);
+            (!keepCurrentStandDistance && edgeDistanceToFire < desiredStandOffDistance - extinguisherStandDistanceTolerance) ||
+            !canExtinguishFromCurrentPosition;
 
         if (shouldReposition)
         {

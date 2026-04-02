@@ -6,12 +6,24 @@ using UnityEngine;
 
 public class DoorTests
 {
+    private sealed class DamageableProbe : MonoBehaviour, IDamageable
+    {
+        public float ReceivedDamage { get; private set; }
+
+        public void TakeDamage(float amount, GameObject source, Vector3 hitPoint, Vector3 hitNormal)
+        {
+            ReceivedDamage += amount;
+        }
+    }
+
     private const BindingFlags InstanceFlags = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
     private static readonly Type DoorType = FindType("Door");
     private static readonly Type FireType = FindType("Fire");
     private static readonly Type SmokeHazardType = FindType("SmokeHazard");
     private static readonly Type VentType = FindType("Vent");
     private static readonly Type PlayerVitalsType = FindType("PlayerVitals");
+    private static readonly Type ToolType = FindType("Tool");
+    private static readonly Type BreakToolKindType = FindType("BreakToolKind");
 
     [Test]
     public void Interact_ComputesOpenRotationBySettingLocalYForStraightDoor()
@@ -121,8 +133,7 @@ public class DoorTests
             SetPrivateField(vent, "isOpen", true);
             SetPrivateField(vent, "smokeVentilationReliefWhenOpen", 0.4f);
             SetPrivateField(smokeHazard, "linkedFires", CreateSingleEntryArray(FireType, fire));
-            SetPrivateField(smokeHazard, "linkedDoors", CreateSingleEntryArray(DoorType, door));
-            SetPrivateField(smokeHazard, "linkedVents", CreateSingleEntryArray(VentType, vent));
+            SetPrivateField(smokeHazard, "linkedVentPoints", CreateCombinedArray(new[] { door, vent }));
             SetPrivateField(smokeHazard, "passiveVentilationRelief", 0.05f);
             SetPrivateField(smokeHazard, "smokePerBurningFire", 0.4f);
             SetPrivateField(smokeHazard, "smokePerFireIntensity", 0.6f);
@@ -137,6 +148,39 @@ public class DoorTests
             UnityEngine.Object.DestroyImmediate(fireObject);
             UnityEngine.Object.DestroyImmediate(doorObject);
             UnityEngine.Object.DestroyImmediate(ventObject);
+        }
+    }
+
+    [Test]
+    public void SmokeHazard_OpenVentPointDraftRiskFeedsBurningFire()
+    {
+        GameObject zone = new GameObject("SmokeZone");
+        GameObject fireObject = new GameObject("Fire");
+        GameObject doorObject = new GameObject("DoorRoot");
+
+        try
+        {
+            Component smokeHazard = zone.AddComponent(SmokeHazardType);
+            Component fire = fireObject.AddComponent(FireType);
+            Component door = doorObject.AddComponent(DoorType);
+
+            SetPrivateField(fire, "maxHp", 2f);
+            SetPrivateField(fire, "currentHp", 1f);
+            SetPrivateField(door, "isOpen", true);
+            SetPrivateField(door, "fireDraftRiskWhenOpen", 0.5f);
+            SetPrivateField(smokeHazard, "linkedFires", CreateSingleEntryArray(FireType, fire));
+            SetPrivateField(smokeHazard, "linkedVentPoints", CreateSingleEntryArray(DoorType, door));
+            SetPrivateField(smokeHazard, "fireDraftBoostPerSecond", 0.4f);
+
+            InvokeInstanceMethod(smokeHazard, "ApplyVentilationDraftToLinkedFires", 1f);
+
+            Assert.That(GetPrivateField<float>(fire, "currentHp"), Is.GreaterThan(1f));
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(zone);
+            UnityEngine.Object.DestroyImmediate(fireObject);
+            UnityEngine.Object.DestroyImmediate(doorObject);
         }
     }
 
@@ -171,6 +215,113 @@ public class DoorTests
         }
     }
 
+    [Test]
+    public void SmokeHazard_TriggerVolumeModeCollectsNonChildFiresInsideTrigger()
+    {
+        GameObject zone = new GameObject("SmokeZone");
+        GameObject fireInsideObject = new GameObject("FireInside");
+        GameObject fireOutsideObject = new GameObject("FireOutside");
+
+        try
+        {
+            BoxCollider trigger = zone.AddComponent<BoxCollider>();
+            trigger.size = new Vector3(4f, 4f, 4f);
+
+            Component smokeHazard = zone.AddComponent(SmokeHazardType);
+            Component fireInside = fireInsideObject.AddComponent(FireType);
+            fireOutsideObject.AddComponent(FireType);
+
+            fireInsideObject.transform.position = new Vector3(0.5f, 0f, 0f);
+            fireOutsideObject.transform.position = new Vector3(6f, 0f, 0f);
+
+            SetPrivateField(smokeHazard, "autoCollectMode", Enum.Parse(FindType("SmokeHazard+AutoCollectMode"), "TriggerVolume"));
+            SetPrivateField(smokeHazard, "linkedFires", Array.CreateInstance(FireType, 0));
+            InvokeInstanceMethod(smokeHazard, "ResolveLinkedObjects");
+
+            Array linkedFires = GetPrivateField<Array>(smokeHazard, "linkedFires");
+            Assert.That(linkedFires.Length, Is.EqualTo(1));
+            Assert.That(linkedFires.GetValue(0), Is.EqualTo(fireInside));
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(zone);
+            UnityEngine.Object.DestroyImmediate(fireInsideObject);
+            UnityEngine.Object.DestroyImmediate(fireOutsideObject);
+        }
+    }
+
+    [Test]
+    public void SmokeHazard_TriggerVolumeModeCollectsNonChildVentPointsInsideTrigger()
+    {
+        GameObject zone = new GameObject("SmokeZone");
+        GameObject doorInsideObject = new GameObject("DoorInside");
+        GameObject doorOutsideObject = new GameObject("DoorOutside");
+
+        try
+        {
+            BoxCollider trigger = zone.AddComponent<BoxCollider>();
+            trigger.size = new Vector3(4f, 4f, 4f);
+
+            Component smokeHazard = zone.AddComponent(SmokeHazardType);
+            Component doorInside = doorInsideObject.AddComponent(DoorType);
+            doorOutsideObject.AddComponent(DoorType);
+
+            doorInsideObject.transform.position = new Vector3(0f, 0f, 1f);
+            doorOutsideObject.transform.position = new Vector3(0f, 0f, 5f);
+
+            SetPrivateField(smokeHazard, "autoCollectMode", Enum.Parse(FindType("SmokeHazard+AutoCollectMode"), "TriggerVolume"));
+            SetPrivateField(smokeHazard, "linkedVentPoints", Array.CreateInstance(typeof(MonoBehaviour), 0));
+            SetPrivateField(smokeHazard, "autoCollectChildVentPoints", true);
+            InvokeInstanceMethod(smokeHazard, "ResolveLinkedObjects");
+
+            Array linkedVentPoints = GetPrivateField<Array>(smokeHazard, "linkedVentPoints");
+            Assert.That(linkedVentPoints.Length, Is.EqualTo(1));
+            Assert.That(linkedVentPoints.GetValue(0), Is.EqualTo(doorInside));
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(zone);
+            UnityEngine.Object.DestroyImmediate(doorInsideObject);
+            UnityEngine.Object.DestroyImmediate(doorOutsideObject);
+        }
+    }
+
+    [Test]
+    public void ToolUse_DamagesDamageableTargetWhenNoBreakableIsHit()
+    {
+        GameObject user = new GameObject("User");
+        GameObject cameraRoot = new GameObject("PlayerCameraRoot");
+        GameObject toolObject = new GameObject("Tool");
+        GameObject target = GameObject.CreatePrimitive(PrimitiveType.Cube);
+
+        try
+        {
+            cameraRoot.transform.SetParent(user.transform, false);
+            cameraRoot.transform.localPosition = Vector3.zero;
+            cameraRoot.transform.forward = Vector3.forward;
+
+            Component tool = toolObject.AddComponent(ToolType);
+            DamageableProbe probe = target.AddComponent<DamageableProbe>();
+
+            target.transform.position = new Vector3(0f, 0f, 1.5f);
+
+            SetPrivateField(tool, "toolKind", Enum.Parse(BreakToolKindType, "FireAxe"));
+            SetPrivateField(tool, "useRange", 3f);
+            SetPrivateField(tool, "damagePerUse", 1f);
+            SetPrivateField(tool, "hitMask", ~0);
+
+            InvokeInstanceMethod(tool, "Use", user);
+
+            Assert.That(probe.ReceivedDamage, Is.EqualTo(1f).Within(0.001f));
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(user);
+            UnityEngine.Object.DestroyImmediate(toolObject);
+            UnityEngine.Object.DestroyImmediate(target);
+        }
+    }
+
     private static object InvokeInstanceMethod(object target, string methodName, params object[] args)
     {
         Type[] parameterTypes = args?.Select(argument => argument?.GetType() ?? typeof(object)).ToArray() ?? Type.EmptyTypes;
@@ -197,6 +348,17 @@ public class DoorTests
     {
         Array array = Array.CreateInstance(elementType, 1);
         array.SetValue(value, 0);
+        return array;
+    }
+
+    private static MonoBehaviour[] CreateCombinedArray(object[] values)
+    {
+        MonoBehaviour[] array = new MonoBehaviour[values.Length];
+        for (int i = 0; i < values.Length; i++)
+        {
+            array[i] = values[i] as MonoBehaviour;
+        }
+
         return array;
     }
 

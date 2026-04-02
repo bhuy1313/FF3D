@@ -1,21 +1,31 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Rigidbody))]
 public class SmokeHazard : MonoBehaviour
 {
+    private enum AutoCollectMode
+    {
+        ChildHierarchy = 0,
+        TriggerVolume = 1
+    }
+
     [Header("Trigger")]
     [SerializeField] private Collider triggerZone;
     [SerializeField] private Rigidbody triggerBody;
 
     [Header("Smoke Sources")]
+    [SerializeField] private AutoCollectMode autoCollectMode = AutoCollectMode.ChildHierarchy;
     [SerializeField] private bool autoCollectChildFires = true;
     [SerializeField] private Fire[] linkedFires = System.Array.Empty<Fire>();
-    [SerializeField] private bool autoCollectChildDoors;
-    [SerializeField] private Door[] linkedDoors = System.Array.Empty<Door>();
-    [SerializeField] private bool autoCollectChildVents;
-    [SerializeField] private Vent[] linkedVents = System.Array.Empty<Vent>();
+    [FormerlySerializedAs("autoCollectChildDoors")]
+    [FormerlySerializedAs("autoCollectChildVents")]
+    [SerializeField] private bool autoCollectChildVentPoints;
+    [FormerlySerializedAs("linkedDoors")]
+    [FormerlySerializedAs("linkedVents")]
+    [SerializeField] private MonoBehaviour[] linkedVentPoints = System.Array.Empty<MonoBehaviour>();
 
     [Header("Smoke Simulation")]
     [Range(0f, 1f)]
@@ -25,6 +35,7 @@ public class SmokeHazard : MonoBehaviour
     [SerializeField] private float passiveVentilationRelief = 0.05f;
     [SerializeField] private float smokeAccumulationRate = 0.75f;
     [SerializeField] private float smokeDissipationRate = 1f;
+    [SerializeField] private float fireDraftBoostPerSecond = 0.2f;
 
     [Header("Effects")]
     [SerializeField] private bool affectPlayers = true;
@@ -72,6 +83,7 @@ public class SmokeHazard : MonoBehaviour
         passiveVentilationRelief = Mathf.Max(0f, passiveVentilationRelief);
         smokeAccumulationRate = Mathf.Max(0f, smokeAccumulationRate);
         smokeDissipationRate = Mathf.Max(0f, smokeDissipationRate);
+        fireDraftBoostPerSecond = Mathf.Max(0f, fireDraftBoostPerSecond);
         minimumDangerousDensity = Mathf.Clamp01(minimumDangerousDensity);
         oxygenDrainPerSecond = Mathf.Max(0f, oxygenDrainPerSecond);
         victimConditionDamagePerSecond = Mathf.Max(0f, victimConditionDamagePerSecond);
@@ -86,6 +98,7 @@ public class SmokeHazard : MonoBehaviour
 
     private void Update()
     {
+        ApplyVentilationDraftToLinkedFires(Time.deltaTime);
         UpdateSmokeDensity(Time.deltaTime);
     }
 
@@ -125,8 +138,7 @@ public class SmokeHazard : MonoBehaviour
         }
 
         density -= passiveVentilationRelief;
-        density -= GetDoorVentilationRelief();
-        density -= GetVentVentilationRelief();
+        density -= GetVentilationRelief();
         return Mathf.Clamp01(density);
     }
 
@@ -190,44 +202,166 @@ public class SmokeHazard : MonoBehaviour
     private void ResolveLinkedObjects()
     {
         if (autoCollectChildFires && (linkedFires == null || linkedFires.Length == 0))
-            linkedFires = GetComponentsInChildren<Fire>(true);
+            linkedFires = CollectAutoFires();
 
-        if (autoCollectChildDoors && (linkedDoors == null || linkedDoors.Length == 0))
-            linkedDoors = GetComponentsInChildren<Door>(true);
-
-        if (autoCollectChildVents && (linkedVents == null || linkedVents.Length == 0))
-            linkedVents = GetComponentsInChildren<Vent>(true);
+        if (autoCollectChildVentPoints && (linkedVentPoints == null || linkedVentPoints.Length == 0))
+            linkedVentPoints = CollectAutoVentPoints();
     }
 
-    private float GetDoorVentilationRelief()
+    private void ApplyVentilationDraftToLinkedFires(float deltaTime)
+    {
+        if (linkedFires == null || linkedFires.Length == 0 || fireDraftBoostPerSecond <= 0f)
+            return;
+
+        float draftRisk = GetVentilationDraftRisk();
+        if (draftRisk <= 0f)
+            return;
+
+        float delta = Mathf.Max(0f, deltaTime);
+        if (delta <= 0f)
+            return;
+
+        for (int i = 0; i < linkedFires.Length; i++)
+        {
+            Fire fire = linkedFires[i];
+            if (fire == null || !fire.IsBurning)
+                continue;
+
+            float intensityScale = Mathf.Max(0.35f, fire.NormalizedHp);
+            fire.Ignite(draftRisk * fireDraftBoostPerSecond * intensityScale * delta);
+        }
+    }
+
+    private float GetVentilationRelief()
     {
         float relief = 0f;
-        if (linkedDoors == null)
+        if (linkedVentPoints == null)
             return relief;
 
-        for (int i = 0; i < linkedDoors.Length; i++)
+        for (int i = 0; i < linkedVentPoints.Length; i++)
         {
-            Door door = linkedDoors[i];
-            if (door != null)
-                relief += door.SmokeVentilationRelief;
+            if (linkedVentPoints[i] is ISmokeVentPoint ventPoint)
+                relief += Mathf.Max(0f, ventPoint.SmokeVentilationRelief);
         }
 
         return relief;
     }
 
-    private float GetVentVentilationRelief()
+    private float GetVentilationDraftRisk()
     {
-        float relief = 0f;
-        if (linkedVents == null)
-            return relief;
+        float risk = 0f;
+        if (linkedVentPoints == null)
+            return risk;
 
-        for (int i = 0; i < linkedVents.Length; i++)
+        for (int i = 0; i < linkedVentPoints.Length; i++)
         {
-            Vent vent = linkedVents[i];
-            if (vent != null)
-                relief += vent.SmokeVentilationRelief;
+            if (linkedVentPoints[i] is ISmokeVentPoint ventPoint)
+                risk += Mathf.Max(0f, ventPoint.FireDraftRisk);
         }
 
-        return relief;
+        return risk;
+    }
+
+    private Fire[] CollectAutoFires()
+    {
+        if (autoCollectMode == AutoCollectMode.TriggerVolume)
+            return CollectVolumeFires();
+
+        return GetComponentsInChildren<Fire>(true);
+    }
+
+    private MonoBehaviour[] CollectAutoVentPoints()
+    {
+        if (autoCollectMode == AutoCollectMode.TriggerVolume)
+            return CollectVolumeVentPoints();
+
+        return CollectChildVentPoints();
+    }
+
+    private Fire[] CollectVolumeFires()
+    {
+        Fire[] fires = FindObjectsByType<Fire>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        List<Fire> results = new List<Fire>();
+        for (int i = 0; i < fires.Length; i++)
+        {
+            Fire fire = fires[i];
+            if (fire != null && IsComponentWithinTriggerVolume(fire))
+                results.Add(fire);
+        }
+
+        return results.ToArray();
+    }
+
+    private MonoBehaviour[] CollectVolumeVentPoints()
+    {
+        MonoBehaviour[] behaviours = FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        List<MonoBehaviour> results = new List<MonoBehaviour>();
+        for (int i = 0; i < behaviours.Length; i++)
+        {
+            MonoBehaviour behaviour = behaviours[i];
+            if (behaviour is ISmokeVentPoint && IsComponentWithinTriggerVolume(behaviour))
+                results.Add(behaviour);
+        }
+
+        return results.ToArray();
+    }
+
+    private MonoBehaviour[] CollectChildVentPoints()
+    {
+        MonoBehaviour[] childBehaviours = GetComponentsInChildren<MonoBehaviour>(true);
+        List<MonoBehaviour> results = new List<MonoBehaviour>();
+        for (int i = 0; i < childBehaviours.Length; i++)
+        {
+            MonoBehaviour behaviour = childBehaviours[i];
+            if (behaviour is ISmokeVentPoint)
+                results.Add(behaviour);
+        }
+
+        return results.ToArray();
+    }
+
+    private bool IsComponentWithinTriggerVolume(Component component)
+    {
+        if (component == null || triggerZone == null)
+            return false;
+
+        Collider componentCollider = component.GetComponent<Collider>();
+        if (componentCollider != null &&
+            componentCollider.enabled &&
+            triggerZone.enabled &&
+            Physics.ComputePenetration(
+                triggerZone,
+                triggerZone.transform.position,
+                triggerZone.transform.rotation,
+                componentCollider,
+                componentCollider.transform.position,
+                componentCollider.transform.rotation,
+                out _,
+                out _))
+        {
+            return true;
+        }
+
+        if (IsPointWithinTriggerVolume(component.transform.position))
+            return true;
+
+        Renderer renderer = component.GetComponentInChildren<Renderer>();
+        if (renderer != null)
+        {
+            Bounds bounds = renderer.bounds;
+            if (IsPointWithinTriggerVolume(bounds.center))
+                return true;
+        }
+
+        return false;
+    }
+
+    private bool IsPointWithinTriggerVolume(Vector3 point)
+    {
+        if (triggerZone == null || !triggerZone.bounds.Contains(point))
+            return false;
+
+        Vector3 closestPoint = triggerZone.ClosestPoint(point);
+        return (closestPoint - point).sqrMagnitude <= 0.0001f;
     }
 }

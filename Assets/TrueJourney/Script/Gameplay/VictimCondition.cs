@@ -30,6 +30,12 @@ public class VictimCondition : MonoBehaviour
     [SerializeField] private bool isStabilized;
     [SerializeField] private bool isExtracted;
 
+    [Header("Animation")]
+    [SerializeField] private Animator victimAnimator;
+    [SerializeField] private string urgentAnimatorParameter = "IsUrgent";
+    [SerializeField] private string criticalAnimatorParameter = "IsCritical";
+    [SerializeField] private string deceasedAnimatorParameter = "IsDeceased";
+
     [Header("Events")]
     [SerializeField] private UnityEvent onConditionChanged;
     [SerializeField] private UnityEvent onVictimDeceased;
@@ -59,6 +65,7 @@ public class VictimCondition : MonoBehaviour
         currentCondition = Mathf.Clamp(currentCondition, 0f, maxCondition);
         RefreshTriageState(raiseEvents: false);
         SyncRuntimeFlags();
+        SyncTriageAnimation();
     }
 
     private void OnEnable()
@@ -68,12 +75,18 @@ public class VictimCondition : MonoBehaviour
             rescuable.RescueCompleted += HandleRescueCompleted;
 
         SyncRuntimeFlags();
+        SyncTriageAnimation();
     }
 
     private void OnDisable()
     {
         if (rescuable != null)
             rescuable.RescueCompleted -= HandleRescueCompleted;
+    }
+
+    private void Start()
+    {
+        SyncTriageAnimation();
     }
 
     private void OnValidate()
@@ -83,6 +96,9 @@ public class VictimCondition : MonoBehaviour
         currentCondition = Mathf.Clamp(currentCondition, 0f, maxCondition);
         RefreshTriageState(raiseEvents: false);
         SyncRuntimeFlags();
+
+        if (Application.isPlaying)
+            SyncTriageAnimation();
     }
 
     private void Update()
@@ -184,6 +200,8 @@ public class VictimCondition : MonoBehaviour
         if (!IsAlive)
             isStabilized = false;
 
+        SyncTriageAnimation();
+
         if (!raiseEvents)
             return;
 
@@ -231,6 +249,15 @@ public class VictimCondition : MonoBehaviour
     {
         if (rescuable == null)
             rescuable = GetComponent<Rescuable>();
+
+        if (victimAnimator == null)
+        {
+            victimAnimator = GetComponent<Animator>();
+            if (victimAnimator == null)
+                victimAnimator = GetComponentInChildren<Animator>(true);
+            if (victimAnimator == null)
+                victimAnimator = GetComponentInParent<Animator>();
+        }
     }
 
     private void HandleRescueCompleted()
@@ -275,5 +302,24 @@ public class VictimCondition : MonoBehaviour
     {
         onConditionChanged?.Invoke();
         OnConditionContextChanged?.Invoke();
+    }
+
+    private void SyncTriageAnimation()
+    {
+        CacheReferences();
+        if (victimAnimator == null || victimAnimator.runtimeAnimatorController == null)
+            return;
+
+        SetAnimatorBoolParameter(urgentAnimatorParameter, triageState == TriageState.Urgent);
+        SetAnimatorBoolParameter(criticalAnimatorParameter, triageState == TriageState.Critical);
+        SetAnimatorBoolParameter(deceasedAnimatorParameter, triageState == TriageState.Deceased);
+    }
+
+    private void SetAnimatorBoolParameter(string parameterName, bool value)
+    {
+        if (string.IsNullOrWhiteSpace(parameterName))
+            return;
+
+        victimAnimator.SetBool(parameterName, value);
     }
 }

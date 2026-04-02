@@ -11,6 +11,7 @@ public class Tool : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotBrea
     [Header("Use")]
     [SerializeField] private float useRange = 2f;
     [SerializeField] private LayerMask hitMask = ~0;
+    [SerializeField] private float damagePerUse = 1f;
 
     [Header("Bot")]
     [SerializeField] private float botUseRange = 1.75f;
@@ -117,6 +118,7 @@ public class Tool : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotBrea
         Breakable breakable = FindBreakableInView(user);
         if (breakable == null)
         {
+            UseDamageableInView(user);
             return;
         }
 
@@ -145,25 +147,54 @@ public class Tool : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotBrea
 
     private Breakable FindBreakableInView(GameObject user)
     {
-        float range = GetUseRange(user);
-        if (range <= 0f)
-        {
-            return null;
-        }
-
-        Transform aim = GetAimTransform(user);
-        if (aim == null)
-        {
-            return null;
-        }
-
-        Ray ray = new Ray(aim.position, aim.forward);
-        if (!Physics.Raycast(ray, out RaycastHit hit, range, hitMask, QueryTriggerInteraction.Ignore))
+        if (!TryGetUseHit(user, out RaycastHit hit))
         {
             return null;
         }
 
         return FindBreakable(hit.collider);
+    }
+
+    private void UseDamageableInView(GameObject user)
+    {
+        if (damagePerUse <= 0f)
+        {
+            return;
+        }
+
+        if (!TryGetUseHit(user, out RaycastHit hit))
+        {
+            return;
+        }
+
+        IDamageable damageable = FindDamageable(hit.collider);
+        if (damageable == null)
+        {
+            return;
+        }
+
+        GameObject source = user != null ? user : gameObject;
+        damageable.TakeDamage(damagePerUse, source, hit.point, hit.normal);
+    }
+
+    private bool TryGetUseHit(GameObject user, out RaycastHit hit)
+    {
+        hit = default;
+
+        float range = GetUseRange(user);
+        if (range <= 0f)
+        {
+            return false;
+        }
+
+        Transform aim = GetAimTransform(user);
+        if (aim == null)
+        {
+            return false;
+        }
+
+        Ray ray = new Ray(aim.position, aim.forward);
+        return Physics.Raycast(ray, out hit, range, hitMask, QueryTriggerInteraction.Ignore);
     }
 
     private float GetUseRange(GameObject user)
@@ -220,6 +251,38 @@ public class Tool : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotBrea
             if (parent.TryGetComponent(out Breakable parentBreakable))
             {
                 return parentBreakable;
+            }
+
+            parent = parent.parent;
+        }
+
+        return null;
+    }
+
+    private static IDamageable FindDamageable(Collider collider)
+    {
+        if (collider == null)
+        {
+            return null;
+        }
+
+        if (collider.TryGetComponent(out IDamageable direct))
+        {
+            return direct;
+        }
+
+        if (collider.attachedRigidbody != null &&
+            collider.attachedRigidbody.TryGetComponent(out IDamageable rigidbodyOwner))
+        {
+            return rigidbodyOwner;
+        }
+
+        Transform parent = collider.transform.parent;
+        while (parent != null)
+        {
+            if (parent.TryGetComponent(out IDamageable parentDamageable))
+            {
+                return parentDamageable;
             }
 
             parent = parent.parent;

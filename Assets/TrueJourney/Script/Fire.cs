@@ -779,26 +779,48 @@ public class Fire : MonoBehaviour, IFireTarget
         switch (fireType)
         {
             case FireHazardType.Electrical:
-                if (agent == FireSuppressionAgent.Water)
+                switch (agent)
                 {
-                    return hazardSourceIsolated ? 0.8f : 0f;
+                    case FireSuppressionAgent.Water:
+                        return hazardSourceIsolated ? 0.8f : 0f;
+                    case FireSuppressionAgent.CO2:
+                        return hazardSourceIsolated ? 1f : 1.35f;
+                    default:
+                        return hazardSourceIsolated ? 1.05f : 1.25f;
                 }
-
-                return hazardSourceIsolated ? 1.05f : 1.25f;
 
             case FireHazardType.FlammableLiquid:
-                return agent == FireSuppressionAgent.Water ? 0.2f : 1.2f;
-
-            case FireHazardType.GasFed:
-                if (agent == FireSuppressionAgent.Water)
+                switch (agent)
                 {
-                    return hazardSourceIsolated ? 0.85f : 0.3f;
+                    case FireSuppressionAgent.Water:
+                        return 0.2f;
+                    case FireSuppressionAgent.CO2:
+                        return 1f;
+                    default:
+                        return 1.2f;
                 }
 
-                return hazardSourceIsolated ? 1.1f : 0.45f;
+            case FireHazardType.GasFed:
+                switch (agent)
+                {
+                    case FireSuppressionAgent.Water:
+                        return hazardSourceIsolated ? 0.85f : 0.3f;
+                    case FireSuppressionAgent.CO2:
+                        return hazardSourceIsolated ? 1f : 0.4f;
+                    default:
+                        return hazardSourceIsolated ? 1.1f : 0.45f;
+                }
 
             default:
-                return agent == FireSuppressionAgent.Water ? 1f : 0.8f;
+                switch (agent)
+                {
+                    case FireSuppressionAgent.Water:
+                        return 1f;
+                    case FireSuppressionAgent.CO2:
+                        return 0.55f;
+                    default:
+                        return 0.8f;
+                }
         }
     }
 

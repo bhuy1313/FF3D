@@ -20,6 +20,11 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
     [SerializeField] private float stabilizeDuration = 1.25f;
     [SerializeField] private float stabilizeRestoreAmount = 15f;
 
+    [Header("Player Locking")]
+    [SerializeField] private bool lockPlayerWhilePickingUp = true;
+    [SerializeField] private bool lockPlayerWhileStabilizing = true;
+    [SerializeField] private bool restrictPlayerActionsWhileCarried = true;
+
     [Header("Completion")]
     [SerializeField] private bool deactivateOnRescue = false;
     [SerializeField] private bool disableRenderersOnRescue = false;
@@ -70,6 +75,9 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
     private Collider[] managedColliders;
     private bool[] managedColliderStates;
     private VictimCondition victimCondition;
+    private PlayerActionLock activePlayerActionLock;
+    private bool hasActiveProgressLock;
+    private bool hasActiveCarryRestriction;
 
     private void OnEnable()
     {
@@ -81,6 +89,9 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
         rescueRoutine = null;
         stabilizationRoutine = null;
         activeCarryAnchor = null;
+        activePlayerActionLock = null;
+        hasActiveProgressLock = false;
+        hasActiveCarryRestriction = false;
         if (!isRescued)
         {
             originalParent = transform.parent;
@@ -111,6 +122,7 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
         isCarried = false;
         activeRescuer = null;
         activeCarryAnchor = null;
+        ReleasePlayerLocks();
         RestoreRigidbodyState();
         RestoreColliderStates();
         BotRuntimeRegistry.UnregisterRescuableTarget(this);
@@ -157,6 +169,7 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
         isRescueInProgress = true;
         activeRescuer = rescuer;
         activeCarryAnchor = carryAnchor;
+        AcquirePlayerProgressLock(rescuer, lockPlayerWhilePickingUp);
         onRescueStarted?.Invoke();
         RescueStarted?.Invoke();
         rescueRoutine = StartCoroutine(BeginCarryAfterDelay(Mathf.Max(0.01f, pickupDuration)));
@@ -184,6 +197,7 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
         isRescueInProgress = true;
         activeRescuer = rescuer;
         activeCarryAnchor = null;
+        AcquirePlayerProgressLock(rescuer, lockPlayerWhileStabilizing);
         stabilizationRoutine = StartCoroutine(StabilizeAfterDelay(Mathf.Max(0.01f, stabilizeDuration)));
         return true;
     }
@@ -216,6 +230,7 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
         isCarried = false;
         activeRescuer = null;
         activeCarryAnchor = null;
+        ReleasePlayerLocks();
 
         RestoreRigidbodyState();
         RestoreColliderStates();
@@ -247,15 +262,18 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
         {
             isRescueInProgress = false;
             activeRescuer = null;
+            ReleasePlayerProgressLock();
             yield break;
         }
 
+        ReleasePlayerProgressLock();
         isRescueInProgress = false;
         isCarried = true;
         PrepareRigidbodyForCarry();
         transform.SetParent(activeCarryAnchor, false);
         transform.localPosition = carriedLocalPosition;
         transform.localRotation = Quaternion.Euler(carriedLocalEulerAngles);
+        AcquirePlayerCarryRestriction();
         if (disableCollidersWhileCarried)
         {
             SetColliderStates(false);
@@ -271,12 +289,14 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
         {
             isRescueInProgress = false;
             activeRescuer = null;
+            ReleasePlayerProgressLock();
             yield break;
         }
 
         victimCondition.Stabilize(stabilizeRestoreAmount);
         isRescueInProgress = false;
         activeRescuer = null;
+        ReleasePlayerProgressLock();
     }
 
     private void CacheRigidbodyState()
@@ -394,5 +414,68 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
         {
             victimCondition = GetComponent<VictimCondition>();
         }
+    }
+
+    private void AcquirePlayerProgressLock(GameObject rescuer, bool shouldLock)
+    {
+        if (!shouldLock || !IsPlayerRescuer(rescuer) || hasActiveProgressLock)
+        {
+            return;
+        }
+
+        activePlayerActionLock = PlayerActionLock.GetOrCreate(rescuer);
+        activePlayerActionLock?.AcquireFullLock();
+        hasActiveProgressLock = activePlayerActionLock != null;
+    }
+
+    private void ReleasePlayerProgressLock()
+    {
+        if (!hasActiveProgressLock || activePlayerActionLock == null)
+        {
+            hasActiveProgressLock = false;
+            return;
+        }
+
+        activePlayerActionLock.ReleaseFullLock();
+        hasActiveProgressLock = false;
+    }
+
+    private void AcquirePlayerCarryRestriction()
+    {
+        if (!restrictPlayerActionsWhileCarried || !IsPlayerRescuer(activeRescuer) || hasActiveCarryRestriction)
+        {
+            return;
+        }
+
+        activePlayerActionLock = PlayerActionLock.GetOrCreate(activeRescuer);
+        activePlayerActionLock?.AcquireCarryRestriction();
+        hasActiveCarryRestriction = activePlayerActionLock != null;
+    }
+
+    private void ReleasePlayerCarryRestriction()
+    {
+        if (!hasActiveCarryRestriction || activePlayerActionLock == null)
+        {
+            hasActiveCarryRestriction = false;
+            return;
+        }
+
+        activePlayerActionLock.ReleaseCarryRestriction();
+        hasActiveCarryRestriction = false;
+    }
+
+    private void ReleasePlayerLocks()
+    {
+        ReleasePlayerProgressLock();
+        ReleasePlayerCarryRestriction();
+        if (!hasActiveProgressLock && !hasActiveCarryRestriction)
+        {
+            activePlayerActionLock = null;
+        }
+    }
+
+    private static bool IsPlayerRescuer(GameObject rescuer)
+    {
+        return rescuer != null && rescuer.GetComponent<BotCommandAgent>() == null;
     }
 }

@@ -12,6 +12,8 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
     private const float LegacyWoodFireAxeTime = 1.25f;
     private const float LegacyWoodChainSawTime = 0.75f;
     private const float LegacyStoneSledgeHammerTime = 1.5f;
+    private const float LegacyGlassFireAxeTime = 0.1f;
+    private const float LegacyGlassSledgeHammerTime = 0.1f;
 
     [System.Serializable]
     private class BreakToolRequirement
@@ -36,7 +38,8 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
     public enum BreakableType
     {
         Wood,
-        Stone
+        Stone,
+        Glass
     }
 
     [Header("Type")]
@@ -73,7 +76,7 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
     [SerializeField] private BreakToolKind activeToolKind = BreakToolKind.None;
 
     private Coroutine breakRoutine;
-    private BreakActionLock activePlayerLock;
+    private PlayerActionLock activePlayerLock;
 
     public BreakableType Type => breakableType;
     public bool IsBroken => isBroken;
@@ -123,17 +126,12 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
 
     public void Interact(GameObject interactor)
     {
-        if (interactor == null || isBroken)
+        if (isBroken)
         {
             return;
         }
 
-        if (!TryResolveHeldBreakTool(interactor, out BreakToolKind toolKind))
-        {
-            return;
-        }
-
-        TryStartBreak(interactor, toolKind);
+        TryForwardInteractionToParent(interactor);
     }
 
     public bool IsOnSameSide(Vector3 pointA, Vector3 pointB)
@@ -177,8 +175,8 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
 
         if (lockPlayerWhileBreaking && breaker != null && breaker.GetComponent<BotCommandAgent>() == null)
         {
-            activePlayerLock = BreakActionLock.GetOrCreate(breaker);
-            activePlayerLock?.Acquire();
+            activePlayerLock = PlayerActionLock.GetOrCreate(breaker);
+            activePlayerLock?.AcquireFullLock();
         }
 
         SnapBreakerToStandPose(breaker);
@@ -214,6 +212,7 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
         }
 
         isBroken = true;
+        GameObject breaker = activeBreaker;
         EndActiveBreakInteraction();
 
         if (brokenPrefab != null)
@@ -221,6 +220,8 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
             Transform spawn = brokenSpawnPoint != null ? brokenSpawnPoint : transform;
             Instantiate(brokenPrefab, spawn.position, spawn.rotation);
         }
+
+        TriggerShatterEffects(breaker);
 
         if (disableCollidersOnBreak)
         {
@@ -272,7 +273,7 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
 
         if (activePlayerLock != null)
         {
-            activePlayerLock.Release();
+            activePlayerLock.ReleaseFullLock();
             activePlayerLock = null;
         }
     }
@@ -316,24 +317,19 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
         breaker.transform.SetPositionAndRotation(standPosition, standRotation);
     }
 
-    private static bool TryResolveHeldBreakTool(GameObject interactor, out BreakToolKind toolKind)
+    private bool TryForwardInteractionToParent(GameObject interactor)
     {
-        toolKind = BreakToolKind.None;
-        if (interactor == null || !interactor.TryGetComponent(out FPSInventorySystem inventory))
+        Transform parent = transform.parent;
+        while (parent != null)
         {
-            return false;
-        }
+            if (parent.TryGetComponent(out IInteractable parentInteractable) &&
+                parentInteractable is not Breakable)
+            {
+                parentInteractable.Interact(interactor);
+                return true;
+            }
 
-        GameObject heldObject = inventory.HeldObject;
-        if (heldObject == null)
-        {
-            return false;
-        }
-
-        if (heldObject.TryGetComponent(out Tool tool))
-        {
-            toolKind = tool.ToolKind;
-            return toolKind != BreakToolKind.None;
+            parent = parent.parent;
         }
 
         return false;
@@ -357,6 +353,7 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
         {
             case BreakableType.Wood:
             case BreakableType.Stone:
+            case BreakableType.Glass:
                 return true;
             default:
                 return false;
@@ -392,8 +389,45 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
 
                 return false;
 
+            case BreakableType.Glass:
+                if (toolKind == BreakToolKind.FireAxe)
+                {
+                    requirement = new BreakToolRequirement(toolKind, LegacyGlassFireAxeTime);
+                    return true;
+                }
+
+                if (toolKind == BreakToolKind.SledgeHammer)
+                {
+                    requirement = new BreakToolRequirement(toolKind, LegacyGlassSledgeHammerTime);
+                    return true;
+                }
+
+                return false;
+
             default:
                 return false;
+        }
+    }
+
+    private void TriggerShatterEffects(GameObject breaker)
+    {
+        MeshShatter[] shatterComponents = GetComponentsInChildren<MeshShatter>(true);
+        if (shatterComponents.Length == 0)
+        {
+            return;
+        }
+
+        Vector3 impactDirection = breaker != null
+            ? (transform.position - breaker.transform.position).normalized
+            : transform.forward;
+
+        for (int i = 0; i < shatterComponents.Length; i++)
+        {
+            MeshShatter shatterComponent = shatterComponents[i];
+            if (shatterComponent != null)
+            {
+                shatterComponent.Shatter(transform.position, impactDirection, 1f);
+            }
         }
     }
 
@@ -534,12 +568,12 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
         if (breaker == null ||
             (breaker.GetComponent<CharacterController>() == null &&
             breaker.GetComponent<StarterAssets.FirstPersonController>() == null &&
-            breaker.GetComponent<BreakActionLock>() == null))
+            breaker.GetComponent<PlayerActionLock>() == null))
         {
             return false;
         }
 
-        BreakActionLock breakActionLock = activePlayerLock ?? BreakActionLock.GetOrCreate(breaker);
+        PlayerActionLock breakActionLock = activePlayerLock ?? PlayerActionLock.GetOrCreate(breaker);
         if (breakActionLock == null)
         {
             return false;

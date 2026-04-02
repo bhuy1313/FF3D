@@ -100,7 +100,6 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
 
     [Header("Path Clearing")]
     [SerializeField] private bool enablePathClearing = true;
-    [SerializeField] private float breakableSearchRadius = 18f;
     [SerializeField] private float breakableCorridorWidth = 1.5f;
     [SerializeField] private float breakableLookAheadDistance = 8f;
     [SerializeField] private float pathClearingRefreshInterval = 0.2f;

@@ -295,6 +295,13 @@ public partial class BotCommandAgent
         lockedExtinguisherStandOffDistance = 0f;
     }
 
+    private IFireTarget GetLockedExtinguisherFireTarget()
+    {
+        return lockedExtinguisherFireTarget != null && lockedExtinguisherFireTarget.IsBurning
+            ? lockedExtinguisherFireTarget
+            : null;
+    }
+
     private static float DistanceToSegment2D(Vector3 point, Vector3 segmentStart, Vector3 segmentEnd, out float t)
     {
         Vector2 point2 = new Vector2(point.x, point.z);

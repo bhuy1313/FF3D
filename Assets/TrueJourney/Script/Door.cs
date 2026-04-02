@@ -1,13 +1,14 @@
 using UnityEngine;
 
 [DisallowMultipleComponent]
-public class Door : MonoBehaviour, IInteractable, IOpenable
+public class Door : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint
 {
     [SerializeField] private string doorChildName = "Door";
     [SerializeField] private float openAngle = -90f;
     [SerializeField] private float animationSpeed = 6f;
     [SerializeField] private bool startsOpen;
     [SerializeField] private float smokeVentilationReliefWhenOpen = 0.2f;
+    [SerializeField] private float fireDraftRiskWhenOpen;
 
     private Transform doorTransform;
     private Quaternion closedLocalRotation;
@@ -19,6 +20,7 @@ public class Door : MonoBehaviour, IInteractable, IOpenable
 
     public bool IsOpen => isOpen;
     public float SmokeVentilationRelief => isOpen ? smokeVentilationReliefWhenOpen : 0f;
+    public float FireDraftRisk => isOpen ? fireDraftRiskWhenOpen : 0f;
 
     private void Awake()
     {
@@ -28,6 +30,7 @@ public class Door : MonoBehaviour, IInteractable, IOpenable
     private void OnValidate()
     {
         smokeVentilationReliefWhenOpen = Mathf.Max(0f, smokeVentilationReliefWhenOpen);
+        fireDraftRiskWhenOpen = Mathf.Max(0f, fireDraftRiskWhenOpen);
     }
 
     private void Update()

@@ -53,6 +53,7 @@ namespace StarterAssets
         private GameObject outlinedTargetRoot;
         private Renderer[] outlinedRenderers;
         private bool[] outlinedRendererHadBit;
+        private PlayerActionLock playerActionLock;
 
         private void Awake()
         {
@@ -70,6 +71,8 @@ namespace StarterAssets
             {
                 input = GetComponent<StarterAssetsInputs>();
             }
+
+            playerActionLock = GetComponent<PlayerActionLock>();
 
             grabDistance = interactDistance;
             ResolveGrabPoint();
@@ -94,7 +97,7 @@ namespace StarterAssets
             bool currentGrab = input != null && input.grab;
             bool grabPressed = WasPressed(currentGrab, ref previousGrab);
 
-            if (grabPressed)
+            if (grabPressed && !IsCarryRestricted())
             {
                 ToggleGrab();
             }
@@ -107,6 +110,11 @@ namespace StarterAssets
 
             if (WasPressed(input != null && input.pickup, ref previousPickup) && inventory != null)
             {
+                if (IsInventoryActionBlockedByCarry())
+                {
+                    return;
+                }
+
                 if (currentTarget != null)
                 {
                     inventory.TryPickup(currentTarget, gameObject);
@@ -121,7 +129,7 @@ namespace StarterAssets
                     return;
                 }
 
-                if (currentInteractable != null)
+                if (currentInteractable != null && !IsGeneralInteractionBlockedByCarry(currentInteractable))
                 {
                     currentInteractable.Interact(gameObject);
                     NotifyInteractionSignalRelay(currentTarget, currentInteractable, gameObject);
@@ -130,9 +138,8 @@ namespace StarterAssets
 
             if (WasPressed(input != null && input.use, ref previousUse) && inventory != null && inventory.HasItem)
             {
-                if (currentInteractable is Breakable breakable)
+                if (IsInventoryActionBlockedByCarry())
                 {
-                    breakable.Interact(gameObject);
                     return;
                 }
 
@@ -141,11 +148,22 @@ namespace StarterAssets
 
             if (WasPressed(input != null && input.drop, ref previousDrop) && inventory != null && inventory.HasItem)
             {
+                if (IsInventoryActionBlockedByCarry())
+                {
+                    return;
+                }
+
                 inventory.Drop(gameObject);
             }
 
             if (inventory != null && inventory.ItemCount > 0 && input != null && input.slot >= 0)
             {
+                if (IsInventoryActionBlockedByCarry())
+                {
+                    input.slot = -1;
+                    return;
+                }
+
                 int maxSelectable = Mathf.Min(6, inventory.MaxSlots);
                 int slotIndex = Mathf.Clamp(input.slot, 0, maxSelectable - 1);
                 inventory.TrySelectSlot(slotIndex);
@@ -436,6 +454,26 @@ namespace StarterAssets
             previousPickup = false;
             previousUse = false;
             previousDrop = false;
+        }
+
+        private bool IsCarryRestricted()
+        {
+            return playerActionLock != null && playerActionLock.HasCarryRestriction;
+        }
+
+        private bool IsInventoryActionBlockedByCarry()
+        {
+            return playerActionLock != null && !playerActionLock.AllowsInventoryActions;
+        }
+
+        private bool IsGeneralInteractionBlockedByCarry(IInteractable interactable)
+        {
+            if (playerActionLock == null || playerActionLock.AllowsGeneralInteraction)
+            {
+                return false;
+            }
+
+            return !(playerActionLock.AllowsSafeZoneInteractionOnly && interactable is ISafeZoneTarget);
         }
 
         private static bool WasPressed(bool current, ref bool previous)

@@ -5,6 +5,18 @@ using UnityEngine;
 
 public class BreakableTests
 {
+    private sealed class DummyInteractable : MonoBehaviour, IInteractable
+    {
+        public int InteractionCount { get; private set; }
+        public GameObject LastInteractor { get; private set; }
+
+        public void Interact(GameObject interactor)
+        {
+            InteractionCount++;
+            LastInteractor = interactor;
+        }
+    }
+
     private const BindingFlags InstanceFlags = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
     private static readonly Type BreakableType = FindType("Breakable");
 
@@ -99,6 +111,104 @@ public class BreakableTests
         }
     }
 
+    [Test]
+    public void SupportsBreakTool_AllowsFireAxeForGlassBreakables()
+    {
+        GameObject breakableObject = new GameObject("GlassBreakable");
+
+        try
+        {
+            Component breakable = breakableObject.AddComponent(BreakableType);
+            Type breakableTypeEnum = FindNestedType(BreakableType, "BreakableType");
+            Type breakToolKindType = FindType("BreakToolKind");
+
+            SetPrivateField(breakable, "breakableType", Enum.Parse(breakableTypeEnum, "Glass"));
+            bool supports = (bool)BreakableType.GetMethod("SupportsBreakTool", InstanceFlags)
+                .Invoke(breakable, new[] { Enum.Parse(breakToolKindType, "FireAxe") });
+
+            Assert.That(supports, Is.True);
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(breakableObject);
+        }
+    }
+
+    [Test]
+    public void Interact_ForwardsToParentInteractable_WhenBreakerHasNoValidTool()
+    {
+        GameObject parentObject = new GameObject("WindowParent");
+        GameObject breakableObject = new GameObject("GlassPane");
+        GameObject interactor = new GameObject("Interactor");
+
+        try
+        {
+            DummyInteractable parentInteractable = parentObject.AddComponent<DummyInteractable>();
+            breakableObject.transform.SetParent(parentObject.transform, false);
+
+            Component breakable = breakableObject.AddComponent(BreakableType);
+            Type breakableTypeEnum = FindNestedType(BreakableType, "BreakableType");
+            SetPrivateField(breakable, "breakableType", Enum.Parse(breakableTypeEnum, "Glass"));
+
+            BreakableType.GetMethod("Interact", InstanceFlags)?.Invoke(breakable, new object[] { interactor });
+
+            Assert.That(parentInteractable.InteractionCount, Is.EqualTo(1));
+            Assert.That(parentInteractable.LastInteractor, Is.SameAs(interactor));
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(interactor);
+            UnityEngine.Object.DestroyImmediate(parentObject);
+        }
+    }
+
+    [Test]
+    public void CompleteBreak_ShattersChildGlassComponentsForGlassBreakables()
+    {
+        GameObject breakableObject = new GameObject("GlassBreakable");
+        GameObject glassChild = new GameObject("GlassPane");
+        Mesh mesh = CreateQuadMesh();
+
+        try
+        {
+            Component breakable = breakableObject.AddComponent(BreakableType);
+            Type breakableTypeEnum = FindNestedType(BreakableType, "BreakableType");
+            SetPrivateField(breakable, "breakableType", Enum.Parse(breakableTypeEnum, "Glass"));
+            SetPrivateField(breakable, "deactivateOnBreak", false);
+            SetPrivateField(breakable, "disableRenderersOnBreak", false);
+            SetPrivateField(breakable, "disableCollidersOnBreak", false);
+
+            glassChild.transform.SetParent(breakableObject.transform, false);
+            MeshFilter meshFilter = glassChild.AddComponent<MeshFilter>();
+            meshFilter.sharedMesh = mesh;
+            MeshRenderer meshRenderer = glassChild.AddComponent<MeshRenderer>();
+            glassChild.AddComponent<BoxCollider>();
+
+            Component glassShatter = glassChild.AddComponent(FindType("MeshShatter"));
+            SetPrivateField(glassShatter, "subdivisionDepth", 0);
+            SetPrivateField(glassShatter, "destroyAfterSeconds", 0f);
+
+            MethodInfo completeBreak = BreakableType.GetMethod("CompleteBreak", InstanceFlags);
+            Assert.That(completeBreak, Is.Not.Null, "Could not find method 'CompleteBreak'.");
+            completeBreak.Invoke(breakable, null);
+
+            bool isShattered = (bool)glassShatter.GetType().GetProperty("IsShattered", InstanceFlags).GetValue(glassShatter);
+            Assert.That(isShattered, Is.True);
+            Assert.That(meshRenderer.enabled, Is.False);
+        }
+        finally
+        {
+            GameObject shardRoot = GameObject.Find("GlassPane_Shards");
+            if (shardRoot != null)
+            {
+                UnityEngine.Object.DestroyImmediate(shardRoot);
+            }
+
+            UnityEngine.Object.DestroyImmediate(breakableObject);
+            UnityEngine.Object.DestroyImmediate(mesh);
+        }
+    }
+
     private static bool InvokeTryGetBreakStandPose(Component breakable, object[] args)
     {
         MethodInfo method = BreakableType.GetMethod("TryGetBreakStandPose", InstanceFlags);
@@ -150,5 +260,31 @@ public class BreakableTests
 
         Assert.Fail($"Could not find type '{typeName}'.");
         return null;
+    }
+
+    private static Type FindNestedType(Type parentType, string typeName)
+    {
+        Type nestedType = parentType.GetNestedType(typeName, BindingFlags.Public | BindingFlags.NonPublic);
+        Assert.That(nestedType, Is.Not.Null, $"Could not find nested type '{typeName}'.");
+        return nestedType;
+    }
+
+    private static Mesh CreateQuadMesh()
+    {
+        Mesh mesh = new Mesh
+        {
+            name = "Quad"
+        };
+        mesh.vertices = new[]
+        {
+            new Vector3(-0.5f, -0.5f, 0f),
+            new Vector3(0.5f, -0.5f, 0f),
+            new Vector3(-0.5f, 0.5f, 0f),
+            new Vector3(0.5f, 0.5f, 0f)
+        };
+        mesh.triangles = new[] { 0, 2, 1, 2, 3, 1 };
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+        return mesh;
     }
 }

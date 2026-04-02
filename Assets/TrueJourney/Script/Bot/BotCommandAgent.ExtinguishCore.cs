@@ -156,10 +156,12 @@ public partial class BotCommandAgent
             desiredHorizontalDistance = GetDesiredExtinguisherCenterDistance(activeExtinguisher, fireTarget);
             float verticalOffsetToFire = Mathf.Abs(firePosition.y - botPosition.y);
             bool keepCurrentStandDistance = IsExtinguisherTargetLocked(fireTarget);
+            bool canExtinguishFromCurrentPosition = CanExtinguishFromCurrentPosition(activeExtinguisher, firePosition, fireTarget);
             shouldReposition =
                 edgeDistanceToFire > allowedEdgeRange ||
                 verticalOffsetToFire > activeExtinguisher.MaxVerticalReach ||
-                (!keepCurrentStandDistance && edgeDistanceToFire < desiredStandOffDistance - extinguisherStandDistanceTolerance);
+                (!keepCurrentStandDistance && edgeDistanceToFire < desiredStandOffDistance - extinguisherStandDistanceTolerance) ||
+                !canExtinguishFromCurrentPosition;
         }
 
         if (shouldReposition)

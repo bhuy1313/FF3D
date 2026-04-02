@@ -227,13 +227,6 @@ public partial class BotCommandAgent
             return false;
         }
 
-        Vector3 candidatePosition = candidate.GetWorldPosition();
-        float horizontalDistance = GetHorizontalDistance(transform.position, candidatePosition);
-        if (horizontalDistance > breakableSearchRadius)
-        {
-            return false;
-        }
-
         if (interactionSensor != null && interactionSensor.TryFindBreakableAhead(out IBotBreakableTarget sensedBreakable))
         {
             return ReferenceEquals(candidate, sensedBreakable);
@@ -244,7 +237,7 @@ public partial class BotCommandAgent
             return ReferenceEquals(candidate, fallbackBreakable);
         }
 
-        return horizontalDistance <= Mathf.Max(breakableLookAheadDistance, breakableCorridorWidth + GetBreakableRouteRadius(candidate));
+        return false;
     }
 
     private bool TryFindBreakableInFront(Vector3 destination, out IBotBreakableTarget breakableTarget)
@@ -257,7 +250,6 @@ public partial class BotCommandAgent
         }
 
         float bestDistance = float.PositiveInfinity;
-        float searchRadiusSq = breakableSearchRadius * breakableSearchRadius;
         Vector3 origin = transform.position;
 
         foreach (IBotBreakableTarget candidate in BotRuntimeRegistry.ActiveBreakableTargets)
@@ -268,12 +260,6 @@ public partial class BotCommandAgent
             }
 
             Vector3 candidatePosition = candidate.GetWorldPosition();
-            float toBotSq = (candidatePosition - origin).sqrMagnitude;
-            if (toBotSq > searchRadiusSq)
-            {
-                continue;
-            }
-
             Vector3 toCandidate = candidatePosition - origin;
             float forwardDistance = Vector3.Dot(forwardDirection, toCandidate);
             if (forwardDistance < 0f || forwardDistance > breakableLookAheadDistance)

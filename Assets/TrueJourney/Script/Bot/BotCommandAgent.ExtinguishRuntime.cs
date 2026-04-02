@@ -79,6 +79,11 @@ public partial class BotCommandAgent
             return;
         }
 
+        if (!HasLineOfSightToFireTarget(transform.position, firePosition, fireTarget))
+        {
+            return;
+        }
+
         float waterAmount = Mathf.Max(0f, tool.ApplyWaterPerSecond) * Time.deltaTime;
         if (waterAmount <= 0f)
         {
@@ -334,7 +339,113 @@ public partial class BotCommandAgent
         }
 
         float verticalOffset = Mathf.Abs(firePosition.y - position.y);
-        return verticalOffset <= tool.MaxVerticalReach;
+        if (verticalOffset > tool.MaxVerticalReach)
+        {
+            return false;
+        }
+
+        return HasLineOfSightToFireTarget(position, firePosition, fireTarget);
+    }
+
+    private bool HasLineOfSightToFireTarget(Vector3 originPosition, Vector3 firePosition, IFireTarget fireTarget)
+    {
+        Vector3 targetPoint = ResolveExtinguishVisibilityTargetPoint(firePosition, fireTarget);
+        Vector3 origin = ResolveExtinguishVisibilityOrigin(originPosition, targetPoint);
+        Vector3 toTarget = targetPoint - origin;
+        float distance = toTarget.magnitude;
+        if (distance <= 0.001f)
+        {
+            return true;
+        }
+
+        Vector3 direction = toTarget / distance;
+        float castStartOffset = Mathf.Min(0.05f, distance * 0.25f);
+        Vector3 castOrigin = origin + direction * castStartOffset;
+        float castDistance = Mathf.Max(0f, distance - castStartOffset);
+        if (castDistance <= 0.001f)
+        {
+            return true;
+        }
+
+        RaycastHit[] hits = Physics.RaycastAll(castOrigin, direction, castDistance, ~0, QueryTriggerInteraction.Ignore);
+        RaycastHit nearestHit = default;
+        bool hasNearestHit = false;
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            RaycastHit hit = hits[i];
+            Collider collider = hit.collider;
+            if (collider == null || ShouldIgnoreExtinguishOccluder(collider))
+            {
+                continue;
+            }
+
+            if (!hasNearestHit || hit.distance < nearestHit.distance)
+            {
+                nearestHit = hit;
+                hasNearestHit = true;
+            }
+        }
+
+        if (!hasNearestHit)
+        {
+            return true;
+        }
+
+        return IsColliderPartOfFireTarget(nearestHit.collider, fireTarget);
+    }
+
+    private Vector3 ResolveExtinguishVisibilityOrigin(Vector3 originPosition, Vector3 targetPoint)
+    {
+        if (ApproximatelySameXZ(originPosition, transform.position) && viewPoint != null)
+        {
+            return viewPoint.position;
+        }
+
+        Vector3 offsetOrigin = originPosition + Vector3.up * Mathf.Max(0.6f, headAimVerticalOffset);
+        Vector3 toTarget = targetPoint - offsetOrigin;
+        if (toTarget.sqrMagnitude <= 0.001f)
+        {
+            return offsetOrigin;
+        }
+
+        return offsetOrigin + toTarget.normalized * 0.05f;
+    }
+
+    private static Vector3 ResolveExtinguishVisibilityTargetPoint(Vector3 firePosition, IFireTarget fireTarget)
+    {
+        float fireRadius = fireTarget != null ? Mathf.Max(0f, fireTarget.GetWorldRadius()) : 0f;
+        return firePosition + Vector3.up * Mathf.Min(0.5f, fireRadius * 0.35f);
+    }
+
+    private bool ShouldIgnoreExtinguishOccluder(Collider collider)
+    {
+        return collider != null &&
+               (collider.transform.IsChildOf(transform) ||
+                (activeExtinguisher is Component extinguisherComponent &&
+                 collider.transform.IsChildOf(extinguisherComponent.transform)));
+    }
+
+    private static bool IsColliderPartOfFireTarget(Collider collider, IFireTarget fireTarget)
+    {
+        if (collider == null || fireTarget == null)
+        {
+            return false;
+        }
+
+        if (!(fireTarget is Component targetComponent) || targetComponent == null)
+        {
+            return false;
+        }
+
+        return collider.transform.IsChildOf(targetComponent.transform) ||
+               targetComponent.transform.IsChildOf(collider.transform);
+    }
+
+    private static bool ApproximatelySameXZ(Vector3 a, Vector3 b)
+    {
+        Vector2 delta = new Vector2(a.x - b.x, a.z - b.z);
+        return delta.sqrMagnitude <= 0.0001f;
     }
 
     private bool TryResolveReachableReferencePosition(Vector3 referencePoint, out Vector3 resolvedPosition)
@@ -555,6 +666,13 @@ public partial class BotCommandAgent
 
     private IFireTarget ResolveActiveFireTarget(Vector3 orderPoint)
     {
+        IFireTarget lockedTarget = GetLockedExtinguisherFireTarget();
+        if (lockedTarget != null)
+        {
+            currentFireTarget = lockedTarget;
+            return currentFireTarget;
+        }
+
         if (currentFireTarget != null && currentFireTarget.IsBurning)
         {
             return currentFireTarget;
@@ -566,6 +684,13 @@ public partial class BotCommandAgent
 
     private IFireTarget ResolvePointFireTarget(Vector3 scanOrigin)
     {
+        IFireTarget lockedTarget = GetLockedExtinguisherFireTarget();
+        if (lockedTarget != null)
+        {
+            currentFireTarget = lockedTarget;
+            return currentFireTarget;
+        }
+
         float keepRange = GetExtinguisherOrderAreaRadius();
         if (currentFireTarget != null && currentFireTarget.IsBurning)
         {
@@ -596,6 +721,13 @@ public partial class BotCommandAgent
 
     private IFireTarget ResolveExtinguisherRouteTarget(Vector3 orderPoint)
     {
+        IFireTarget lockedTarget = GetLockedExtinguisherFireTarget();
+        if (lockedTarget != null)
+        {
+            currentFireTarget = lockedTarget;
+            return currentFireTarget;
+        }
+
         if (currentFireTarget != null && currentFireTarget.IsBurning)
         {
             float keepTargetRange = GetExtinguisherOrderAreaRadius();
