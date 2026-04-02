@@ -212,10 +212,10 @@ public partial class BotCommandAgent
         Gizmos.color = Color.yellow;
         Gizmos.DrawRay(transform.position + Vector3.up * 0.1f, transform.forward * rayLength);
 
-        if (viewPoint != null)
+        if (handAimTarget != null)
         {
             Gizmos.color = Color.green;
-            Gizmos.DrawRay(viewPoint.position, viewPoint.forward * rayLength);
+            Gizmos.DrawRay(GetPreciseAimOrigin(), GetPreciseAimForward() * rayLength);
         }
 
         if (behaviorContext != null && behaviorContext.HasFollowOrder && followTarget != null)
@@ -253,7 +253,9 @@ public partial class BotCommandAgent
 
             if (hasCurrentExtinguishAimPoint)
             {
-                Vector3 aimOrigin = viewPoint != null ? viewPoint.position : transform.position;
+                Vector3 aimOrigin = preferredExtinguishTool != null && preferredExtinguishTool.RequiresPreciseAim
+                    ? GetPreciseAimOrigin()
+                    : transform.position;
                 Gizmos.color = new Color(1f, 0.5f, 0f);
                 Gizmos.DrawLine(aimOrigin, currentExtinguishAimPoint);
                 Gizmos.DrawWireSphere(currentExtinguishAimPoint, 0.15f);
@@ -270,7 +272,7 @@ public partial class BotCommandAgent
             else if (preferredExtinguishTool != null && preferredExtinguishTool.RequiresPreciseAim)
             {
                 Gizmos.color = Color.red;
-                Gizmos.DrawRay(viewPoint != null ? viewPoint.position : transform.position, (viewPoint != null ? viewPoint.forward : transform.forward) * rayLength);
+                Gizmos.DrawRay(GetPreciseAimOrigin(), GetPreciseAimForward() * rayLength);
             }
         }
     }

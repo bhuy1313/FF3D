@@ -35,14 +35,13 @@ namespace TrueJourney.BotBehavior
         public Vector3 rightHandIkLocalEulerAngles;
         public bool useRightHandIkHint;
         public Vector3 rightHandIkHintLocalPosition;
-        public Vector3 rightHandIkHintLocalEulerAngles;
         public bool useLeftHandIkTarget;
         [Range(0f, 1f)] public float leftHandIkWeight;
         public Vector3 leftHandIkLocalPosition;
-        public Vector3 leftHandIkLocalEulerAngles;
         public bool useLeftHandIkHint;
         public Vector3 leftHandIkHintLocalPosition;
-        public Vector3 leftHandIkHintLocalEulerAngles;
+        public bool overrideSpineAimMaxWeight;
+        [Range(0f, 1f)] public float spineAimMaxWeight;
     }
 
     public interface IBotContextualEquippedItemPoseSource

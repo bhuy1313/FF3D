@@ -57,6 +57,9 @@ public class BotEquippedItemPoseProfileTests
         Assert.That(found, Is.True);
         Assert.That(pose.equippedLocalPosition, Is.EqualTo(new Vector3(2f, 0f, 0f)));
         Assert.That(pose.rightHandIkWeight, Is.EqualTo(0.75f).Within(0.0001f));
+        Assert.That(pose.rightHandIkLocalEulerAngles, Is.EqualTo(new Vector3(40f, 50f, 60f)));
+        Assert.That(pose.overrideSpineAimMaxWeight, Is.True);
+        Assert.That(pose.spineAimMaxWeight, Is.EqualTo(0.3f).Within(0.0001f));
     }
 
     [Test]
@@ -78,6 +81,9 @@ public class BotEquippedItemPoseProfileTests
         Assert.That(found, Is.True);
         Assert.That(pose.equippedLocalPosition, Is.EqualTo(new Vector3(3f, 0f, 0f)));
         Assert.That(pose.rightHandIkWeight, Is.EqualTo(0.6f).Within(0.0001f));
+        Assert.That(pose.rightHandIkLocalEulerAngles, Is.EqualTo(new Vector3(40f, 50f, 60f)));
+        Assert.That(pose.overrideSpineAimMaxWeight, Is.True);
+        Assert.That(pose.spineAimMaxWeight, Is.EqualTo(0.3f).Within(0.0001f));
     }
 
     private static BotEquippedItemPose CreatePose(Vector3 equippedLocalPosition, float rightHandIkWeight)
@@ -92,14 +98,13 @@ public class BotEquippedItemPoseProfileTests
             rightHandIkLocalEulerAngles = new Vector3(40f, 50f, 60f),
             useRightHandIkHint = true,
             rightHandIkHintLocalPosition = new Vector3(0.8f, 0.9f, 1f),
-            rightHandIkHintLocalEulerAngles = new Vector3(70f, 80f, 90f),
             useLeftHandIkTarget = true,
             leftHandIkWeight = rightHandIkWeight * 0.5f,
             leftHandIkLocalPosition = new Vector3(1.5f, 1.6f, 1.7f),
-            leftHandIkLocalEulerAngles = new Vector3(14f, 15f, 16f),
             useLeftHandIkHint = true,
             leftHandIkHintLocalPosition = new Vector3(1.8f, 1.9f, 2f),
-            leftHandIkHintLocalEulerAngles = new Vector3(17f, 18f, 19f)
+            overrideSpineAimMaxWeight = true,
+            spineAimMaxWeight = 0.3f
         };
     }
 

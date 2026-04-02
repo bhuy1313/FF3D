@@ -9,6 +9,9 @@ using TrueJourney.BotBehavior;
 [RequireComponent(typeof(BotEquippedItemPoseDriver))]
 public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
 {
+    private const float MinExtinguisherStandOffDistance = 0.25f;
+    private const float ExtinguisherRangeSlack = 0.1f;
+
     private enum ExtinguishDebugStage
     {
         None = 0,
@@ -60,7 +63,9 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
     [SerializeField] private NavMeshAgent navMeshAgent;
     [SerializeField] private BotBehaviorContext behaviorContext;
     [SerializeField] private Transform viewPoint;
+    [SerializeField] private Transform handAimTarget;
     [SerializeField] private MultiAimConstraint headAimConstraint;
+    [SerializeField] private MultiAimConstraint spineAimConstraint;
     [SerializeField] private RigBuilder headAimRigBuilder;
 
     [Header("Navigation")]
@@ -68,14 +73,15 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
     [SerializeField] private float turnSpeed = 360f;
 
     [Header("Aim")]
-    [SerializeField] private float pitchTurnSpeed = 180f;
-    [SerializeField] private float minPitchAngle = -45f;
-    [SerializeField] private float maxPitchAngle = 60f;
-    [SerializeField] private float settleFacingThreshold = 0.96f;
+    [SerializeField] private float handAimDefaultDistance = 4f;
+    [SerializeField] private float handAimVerticalOffset = 0.9f;
+    [SerializeField] private float handAimTargetLerpSpeed = 12f;
     [SerializeField] private bool enableHeadAim = true;
-    [SerializeField] private float headAimDefaultDistance = 4f;
+    [SerializeField] private bool enableSpineAim = true;
     [SerializeField] private float headAimVerticalOffset = 0.9f;
     [SerializeField] private float headAimTargetLerpSpeed = 12f;
+    [SerializeField, Range(0f, 1f)] private float defaultSpineAimMaxWeight = 0.3f;
+    [SerializeField] private float spineAimWeightLerpSpeed = 12f;
 
     [Header("Extinguish")]
     [SerializeField] private float toolSearchRadius = 30f;
@@ -86,7 +92,6 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
     [SerializeField] private bool crouchBeforeFireHoseSpray = true;
     [SerializeField] private float fireHoseCrouchDelay = 0.35f;
     [SerializeField] private float extinguisherRouteCorridorWidth = 3f;
-    [SerializeField] private float extinguisherStandDistanceTolerance = 0.5f;
     [SerializeField] private float extinguisherApproachRetargetDistance = 0.75f;
     [SerializeField] private float pointFireApproachSearchRadius = 8f;
     [SerializeField] private float pointFireApproachSampleStep = 1.5f;
@@ -183,12 +188,13 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
     private BotMovePickupController movePickupController;
     private BotFollowController followController;
     private BotRescueController rescueController;
-    private Transform runtimeHeadAimTarget;
     private bool headAimConstraintConfigured;
-    private Vector3 currentHeadAimWorldPosition;
-    private bool headAimWorldPositionInitialized;
+    private bool spineAimConstraintConfigured;
+    private Vector3 currentHandAimWorldPosition;
+    private bool handAimWorldPositionInitialized;
+    private bool handAimFocusActive;
+    private Vector3 handAimFocusWorldPosition;
     private bool headAimFocusActive;
-    private Vector3 headAimFocusWorldPosition;
 
     public Vector3 LastIssuedDestination => lastIssuedDestination;
     public bool HasIssuedDestination => hasIssuedDestination;
@@ -229,8 +235,11 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
         rescueController = new BotRescueController(runtimeDecisionService);
         activityDebug = new BotActivityDebug();
         ResolveViewPointReference();
+        ResolveHandAimReference();
         ResolveHeadAimReferences();
+        ResolveSpineAimReferences();
         EnsureHeadAimConstraintConfigured(true);
+        EnsureSpineAimConstraintConfigured(true);
     }
 
     private void OnEnable()
@@ -247,13 +256,18 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
     private void LateUpdate()
     {
         ResolveViewPointReference();
+        ResolveHandAimReference();
         ResolveHeadAimReferences();
+        ResolveSpineAimReferences();
+        UpdateHandAimTarget();
         UpdateHeadAimTarget();
+        UpdateSpineAimTarget();
     }
 
     private void Update()
     {
         ResolveViewPointReference();
+        ResolveHandAimReference();
         if (behaviorContext == null)
         {
             return;
@@ -511,7 +525,7 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
 
     private void PrepareNonExtinguishCommandRuntime()
     {
-        ResetViewPointPitch();
+        ClearHandAimFocus();
         if (activityDebug == null || !activityDebug.HasExtinguishDebugStage)
         {
             return;
@@ -692,7 +706,6 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
         ClearBlockedPathRuntime();
         ClearRouteFireRuntime();
         ResetMoveActivityDebug();
-        ResetViewPointPitch();
 
         if (navMeshAgent != null && navMeshAgent.enabled && navMeshAgent.isOnNavMesh)
         {
@@ -838,23 +851,6 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
             Quaternion targetYaw = Quaternion.LookRotation(yawDirection.normalized, Vector3.up);
             transform.rotation = Quaternion.RotateTowards(transform.rotation, targetYaw, turnSpeed * Time.deltaTime);
         }
-
-        if (viewPoint == null)
-        {
-            return;
-        }
-
-        Vector3 localDirection = transform.InverseTransformPoint(worldPoint);
-        float horizontalMagnitude = new Vector2(localDirection.x, localDirection.z).magnitude;
-        if (horizontalMagnitude <= 0.001f && Mathf.Abs(localDirection.y) <= 0.001f)
-        {
-            return;
-        }
-
-        float targetPitch = -Mathf.Atan2(localDirection.y, Mathf.Max(0.001f, horizontalMagnitude)) * Mathf.Rad2Deg;
-        targetPitch = Mathf.Clamp(targetPitch, minPitchAngle, maxPitchAngle);
-        Quaternion targetLocalRotation = Quaternion.Euler(targetPitch, 0f, 0f);
-        viewPoint.localRotation = Quaternion.RotateTowards(viewPoint.localRotation, targetLocalRotation, pitchTurnSpeed * Time.deltaTime);
     }
 
 }

@@ -30,7 +30,6 @@ public partial class BotCommandAgent
             behaviorContext.ClearExtinguishOrder();
             navMeshAgent.ResetPath();
             navMeshAgent.isStopped = false;
-            ResetViewPointPitch();
             return;
         }
 
@@ -62,13 +61,13 @@ public partial class BotCommandAgent
             behaviorContext.ClearExtinguishOrder();
             navMeshAgent.ResetPath();
             navMeshAgent.isStopped = false;
-            ResetViewPointPitch();
             return;
         }
 
         if (!TryEnsureExtinguisherEquipped(preferredExtinguishTool))
         {
             ClearHeadAimFocus();
+            ClearHandAimFocus();
             ResetExtinguishCrouchState();
             return;
         }
@@ -76,6 +75,7 @@ public partial class BotCommandAgent
         if (extinguishStartupPending)
         {
             ClearHeadAimFocus();
+            ClearHandAimFocus();
             extinguishStartupPending = false;
             return;
         }
@@ -123,7 +123,6 @@ public partial class BotCommandAgent
             UpdateExtinguishDebugStage(ExtinguishDebugStage.OutOfCharge, "Extinguisher is out of charge.");
             ClearExtinguishRuntimeState();
             behaviorContext.ClearExtinguishOrder();
-            ResetViewPointPitch();
             return;
         }
 
@@ -151,16 +150,17 @@ public partial class BotCommandAgent
         else
         {
             float edgeDistanceToFire = GetFireEdgeDistance(botPosition, firePosition, fireTarget);
+            float distanceToFire = GetDistanceToFireEdge(botPosition, firePosition, fireTarget);
             float desiredStandOffDistance = GetDesiredExtinguisherStandOffDistanceLocked(activeExtinguisher, fireTarget);
             float allowedEdgeRange = GetAllowedExtinguisherEdgeRange(activeExtinguisher);
             desiredHorizontalDistance = GetDesiredExtinguisherCenterDistance(activeExtinguisher, fireTarget);
-            float verticalOffsetToFire = Mathf.Abs(firePosition.y - botPosition.y);
             bool keepCurrentStandDistance = IsExtinguisherTargetLocked(fireTarget);
             bool canExtinguishFromCurrentPosition = CanExtinguishFromCurrentPosition(activeExtinguisher, firePosition, fireTarget);
+            bool isFartherThanPreferred = edgeDistanceToFire > desiredStandOffDistance + ExtinguisherRangeSlack;
+            bool isCloserThanPreferred = edgeDistanceToFire + ExtinguisherRangeSlack < desiredStandOffDistance;
             shouldReposition =
-                edgeDistanceToFire > allowedEdgeRange ||
-                verticalOffsetToFire > activeExtinguisher.MaxVerticalReach ||
-                (!keepCurrentStandDistance && edgeDistanceToFire < desiredStandOffDistance - extinguisherStandDistanceTolerance) ||
+                distanceToFire > allowedEdgeRange ||
+                (!keepCurrentStandDistance && (isFartherThanPreferred || isCloserThanPreferred)) ||
                 !canExtinguishFromCurrentPosition;
         }
 
@@ -172,10 +172,10 @@ public partial class BotCommandAgent
             {
                 UpdateExtinguishDebugStage(ExtinguishDebugStage.MovingToFire, $"Moving to point-fire approach position {orderPoint}.");
                 ClearHeadAimFocus();
+                ClearHandAimFocus();
                 ResetExtinguishCrouchState();
                 StopExtinguisher();
                 sprayReadyTime = -1f;
-                ResetViewPointPitch();
                 MoveTo(orderPoint);
                 return;
             }
@@ -196,10 +196,10 @@ public partial class BotCommandAgent
                 $"Repositioning. horizontal={horizontalDistanceToFire:F2}, desired={desiredHorizontalDistance:F2}, max={activeExtinguisher.MaxSprayDistance:F2}, preciseAim={UsesPreciseAim(activeExtinguisher)}, target={firePosition}, destination={desiredPosition}.");
             UpdateExtinguishDebugStage(ExtinguishDebugStage.MovingToFire, $"Moving to extinguish position {desiredPosition} for fire at horizontal distance {horizontalDistanceToFire:F2}m.");
             ClearHeadAimFocus();
+            ClearHandAimFocus();
             ResetExtinguishCrouchState();
             StopExtinguisher();
             sprayReadyTime = -1f;
-            ResetViewPointPitch();
             if (ShouldIssueExtinguisherApproachMove(desiredPosition))
             {
                 MoveTo(desiredPosition);
@@ -222,6 +222,7 @@ public partial class BotCommandAgent
         }
 
         AimTowards(aimPoint);
+        SetHandAimFocus(aimPoint);
         SetHeadAimFocus(firePosition);
 
         if (ShouldUseFireHoseCrouch(activeExtinguisher))

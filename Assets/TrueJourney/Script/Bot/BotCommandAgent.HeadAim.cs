@@ -7,7 +7,43 @@ public partial class BotCommandAgent
     {
         if (headAimConstraint == null)
         {
-            headAimConstraint = GetComponentInChildren<MultiAimConstraint>(true);
+            MultiAimConstraint[] constraints = GetComponentsInChildren<MultiAimConstraint>(true);
+            for (int i = 0; i < constraints.Length; i++)
+            {
+                MultiAimConstraint candidate = constraints[i];
+                if (candidate != null && candidate.gameObject.name == "HeadAim")
+                {
+                    headAimConstraint = candidate;
+                    break;
+                }
+            }
+        }
+
+        if (headAimRigBuilder == null)
+        {
+            headAimRigBuilder = GetComponentInChildren<RigBuilder>(true);
+        }
+    }
+
+    private void ResolveSpineAimReferences()
+    {
+        if (spineAimConstraint == null)
+        {
+            MultiAimConstraint[] constraints = GetComponentsInChildren<MultiAimConstraint>(true);
+            for (int i = 0; i < constraints.Length; i++)
+            {
+                MultiAimConstraint candidate = constraints[i];
+                if (candidate == null)
+                {
+                    continue;
+                }
+
+                if (candidate.gameObject.name == "SpineIK" || candidate.gameObject.name == "SpineAim")
+                {
+                    spineAimConstraint = candidate;
+                    break;
+                }
+            }
         }
 
         if (headAimRigBuilder == null)
@@ -23,18 +59,15 @@ public partial class BotCommandAgent
             return;
         }
 
-        if (runtimeHeadAimTarget == null)
+        Transform activeTarget = handAimTarget;
+        if (activeTarget == null)
         {
-            runtimeHeadAimTarget = FindRuntimeHeadAimTarget();
-            if (runtimeHeadAimTarget == null)
-            {
-                GameObject headAimTargetObject = new GameObject("HeadAimTarget");
-                runtimeHeadAimTarget = headAimTargetObject.transform;
-                runtimeHeadAimTarget.SetParent(transform, false);
-            }
+            headAimConstraintConfigured = false;
+            headAimConstraint.weight = 0f;
+            return;
         }
 
-        if (HeadAimConstraintUsesTarget(runtimeHeadAimTarget))
+        if (HeadAimConstraintUsesTarget(activeTarget))
         {
             headAimConstraintConfigured = true;
             return;
@@ -42,7 +75,7 @@ public partial class BotCommandAgent
 
         MultiAimConstraintData data = headAimConstraint.data;
         WeightedTransformArray sourceObjects = new WeightedTransformArray(0);
-        sourceObjects.Add(new WeightedTransform(runtimeHeadAimTarget, 1f));
+        sourceObjects.Add(new WeightedTransform(activeTarget, 1f));
         data.sourceObjects = sourceObjects;
         headAimConstraint.data = data;
         headAimConstraintConfigured = true;
@@ -53,18 +86,43 @@ public partial class BotCommandAgent
         }
     }
 
-    private Transform FindRuntimeHeadAimTarget()
+    private void EnsureSpineAimConstraintConfigured(bool rebuildRig)
     {
-        Transform[] childTransforms = GetComponentsInChildren<Transform>(true);
-        for (int i = 0; i < childTransforms.Length; i++)
+        if (!enableSpineAim || spineAimConstraint == null)
         {
-            if (childTransforms[i] != null && childTransforms[i].name == "HeadAimTarget")
+            spineAimConstraintConfigured = false;
+            if (spineAimConstraint != null)
             {
-                return childTransforms[i];
+                spineAimConstraint.weight = 0f;
             }
+            return;
         }
 
-        return null;
+        Transform activeTarget = handAimTarget;
+        if (activeTarget == null)
+        {
+            spineAimConstraintConfigured = false;
+            spineAimConstraint.weight = 0f;
+            return;
+        }
+
+        if (SpineAimConstraintUsesTarget(activeTarget))
+        {
+            spineAimConstraintConfigured = true;
+            return;
+        }
+
+        MultiAimConstraintData data = spineAimConstraint.data;
+        WeightedTransformArray sourceObjects = new WeightedTransformArray(0);
+        sourceObjects.Add(new WeightedTransform(activeTarget, 1f));
+        data.sourceObjects = sourceObjects;
+        spineAimConstraint.data = data;
+        spineAimConstraintConfigured = true;
+
+        if (rebuildRig && Application.isPlaying && headAimRigBuilder != null)
+        {
+            headAimRigBuilder.Build();
+        }
     }
 
     private bool HeadAimConstraintUsesTarget(Transform target)
@@ -78,6 +136,17 @@ public partial class BotCommandAgent
         return sourceObjects.Count == 1 && sourceObjects[0].transform == target;
     }
 
+    private bool SpineAimConstraintUsesTarget(Transform target)
+    {
+        if (spineAimConstraint == null || target == null)
+        {
+            return false;
+        }
+
+        WeightedTransformArray sourceObjects = spineAimConstraint.data.sourceObjects;
+        return sourceObjects.Count == 1 && sourceObjects[0].transform == target;
+    }
+
     private void UpdateHeadAimTarget()
     {
         if (!enableHeadAim)
@@ -86,36 +155,36 @@ public partial class BotCommandAgent
         }
 
         EnsureHeadAimConstraintConfigured(!headAimConstraintConfigured);
-        if (!headAimConstraintConfigured || runtimeHeadAimTarget == null)
+        if (!headAimConstraintConfigured)
         {
             return;
         }
 
-        Vector3 desiredPosition = GetDefaultHeadAimPosition();
-        if (headAimFocusActive)
+        UpdateHeadAimWeight();
+    }
+
+    private void UpdateSpineAimTarget()
+    {
+        if (!enableSpineAim)
         {
-            desiredPosition = headAimFocusWorldPosition + Vector3.up * headAimVerticalOffset;
+            if (spineAimConstraint != null)
+            {
+                spineAimConstraint.weight = 0f;
+            }
+            return;
         }
 
-        if (!headAimWorldPositionInitialized)
+        EnsureSpineAimConstraintConfigured(!spineAimConstraintConfigured);
+        if (!spineAimConstraintConfigured)
         {
-            currentHeadAimWorldPosition = desiredPosition;
-            headAimWorldPositionInitialized = true;
-        }
-        else
-        {
-            float blend = headAimTargetLerpSpeed > 0f
-                ? 1f - Mathf.Exp(-headAimTargetLerpSpeed * Time.deltaTime)
-                : 1f;
-            currentHeadAimWorldPosition = Vector3.Lerp(currentHeadAimWorldPosition, desiredPosition, blend);
+            return;
         }
 
-        runtimeHeadAimTarget.position = currentHeadAimWorldPosition;
+        UpdateSpineAimWeight();
     }
 
     private void SetHeadAimFocus(Vector3 worldPosition)
     {
-        headAimFocusWorldPosition = worldPosition;
         headAimFocusActive = true;
     }
 
@@ -124,9 +193,45 @@ public partial class BotCommandAgent
         headAimFocusActive = false;
     }
 
-    private Vector3 GetDefaultHeadAimPosition()
+    private void UpdateHeadAimWeight()
     {
-        Vector3 origin = viewPoint != null ? viewPoint.position : transform.position + Vector3.up * headAimVerticalOffset;
-        return origin + transform.forward * Mathf.Max(0.5f, headAimDefaultDistance);
+        if (headAimConstraint == null)
+        {
+            return;
+        }
+
+        float targetWeight = headAimFocusActive ? 1f : 0f;
+        if (!Application.isPlaying || headAimTargetLerpSpeed <= 0f)
+        {
+            headAimConstraint.weight = targetWeight;
+            return;
+        }
+
+        float blend = 1f - Mathf.Exp(-headAimTargetLerpSpeed * Time.deltaTime);
+        headAimConstraint.weight = Mathf.Lerp(headAimConstraint.weight, targetWeight, blend);
+    }
+
+    private void UpdateSpineAimWeight()
+    {
+        if (spineAimConstraint == null)
+        {
+            return;
+        }
+
+        float configuredWeight = defaultSpineAimMaxWeight;
+        if (inventorySystem != null && inventorySystem.TryGetCurrentSpineAimMaxWeight(out float poseWeight))
+        {
+            configuredWeight = poseWeight;
+        }
+
+        float targetWeight = headAimFocusActive ? Mathf.Clamp01(configuredWeight) : 0f;
+        if (!Application.isPlaying || spineAimWeightLerpSpeed <= 0f)
+        {
+            spineAimConstraint.weight = targetWeight;
+            return;
+        }
+
+        float blend = 1f - Mathf.Exp(-spineAimWeightLerpSpeed * Time.deltaTime);
+        spineAimConstraint.weight = Mathf.Lerp(spineAimConstraint.weight, targetWeight, blend);
     }
 }

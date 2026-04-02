@@ -12,6 +12,7 @@ namespace TrueJourney.BotBehavior
         [SerializeField] private Transform inventoryRoot;
         [Tooltip("Optional: Transform where the equipped item should be displayed.")]
         [SerializeField] private Transform equippedRoot;
+        [SerializeField] private BotCommandAgent commandAgent;
         [SerializeField] private BotEquippedItemPoseKey equippedPoseKey = BotEquippedItemPoseKey.Default;
         [SerializeField] private Vector3 equippedLocalPosition = new Vector3(0f, 1.1f, 0.45f);
         [SerializeField] private Vector3 equippedLocalEulerAngles;
@@ -19,8 +20,10 @@ namespace TrueJourney.BotBehavior
         [Header("Hand IK")]
         [SerializeField] private bool driveRightHandIk = true;
         [SerializeField] private TwoBoneIKConstraint rightHandIkConstraint;
+        [SerializeField] private MultiAimConstraint rightHandAimConstraint;
         [SerializeField] private Transform rightHandIkTarget;
         [SerializeField] private Transform rightHandIkHint;
+        [SerializeField] private float handAimWeightLerpSpeed = 12f;
         [SerializeField] private bool driveLeftHandIk = true;
         [SerializeField] private TwoBoneIKConstraint leftHandIkConstraint;
         [SerializeField] private Transform leftHandIkTarget;
@@ -45,17 +48,17 @@ namespace TrueJourney.BotBehavior
         private Vector3 defaultRightHandIkLocalPosition;
         private Quaternion defaultRightHandIkLocalRotation = Quaternion.identity;
         private Vector3 defaultRightHandIkHintLocalPosition;
-        private Quaternion defaultRightHandIkHintLocalRotation = Quaternion.identity;
         private float defaultRightHandIkWeight;
         private bool hasDefaultRightHandIkTargetPose;
         private bool hasDefaultRightHandIkHintPose;
         private Vector3 defaultLeftHandIkLocalPosition;
-        private Quaternion defaultLeftHandIkLocalRotation = Quaternion.identity;
         private Vector3 defaultLeftHandIkHintLocalPosition;
-        private Quaternion defaultLeftHandIkHintLocalRotation = Quaternion.identity;
         private float defaultLeftHandIkWeight;
         private bool hasDefaultLeftHandIkTargetPose;
         private bool hasDefaultLeftHandIkHintPose;
+        private bool hasCurrentSpineAimMaxWeightOverride;
+        private float currentSpineAimMaxWeight;
+        private bool currentRightHandIkUsesTarget;
 
         public bool IsFull => slots.Count >= maxSlots;
         public int ItemCount => slots.Count;
@@ -69,6 +72,7 @@ namespace TrueJourney.BotBehavior
 
         private void Awake()
         {
+            commandAgent ??= GetComponent<BotCommandAgent>();
             ResolveDefaultRoots();
             ResolveHandIkReferences();
 
@@ -83,6 +87,14 @@ namespace TrueJourney.BotBehavior
             }
 
             CacheHandIkDefaults();
+            ApplyRightHandIkTargetRotationWeight();
+            UpdateRightHandAimWeight(true);
+        }
+
+        private void LateUpdate()
+        {
+            ApplyRightHandIkTargetRotationWeight();
+            UpdateRightHandAimWeight(false);
         }
 
         private void ResolveDefaultRoots()
@@ -134,7 +146,7 @@ namespace TrueJourney.BotBehavior
 
         private void ResolveHandIkConstraints()
         {
-            if (rightHandIkConstraint != null && leftHandIkConstraint != null)
+            if (rightHandIkConstraint != null && leftHandIkConstraint != null && rightHandAimConstraint != null)
             {
                 return;
             }
@@ -157,10 +169,19 @@ namespace TrueJourney.BotBehavior
                 {
                     leftHandIkConstraint = candidate;
                 }
+            }
 
-                if (rightHandIkConstraint != null && leftHandIkConstraint != null)
+            if (rightHandAimConstraint == null)
+            {
+                MultiAimConstraint[] aimConstraints = GetComponentsInChildren<MultiAimConstraint>(true);
+                for (int i = 0; i < aimConstraints.Length; i++)
                 {
-                    return;
+                    MultiAimConstraint candidate = aimConstraints[i];
+                    if (candidate != null && candidate.gameObject.name == "HandAim")
+                    {
+                        rightHandAimConstraint = candidate;
+                        break;
+                    }
                 }
             }
         }
@@ -218,7 +239,6 @@ namespace TrueJourney.BotBehavior
             if (rightHandIkHint != null)
             {
                 defaultRightHandIkHintLocalPosition = rightHandIkHint.localPosition;
-                defaultRightHandIkHintLocalRotation = rightHandIkHint.localRotation;
                 hasDefaultRightHandIkHintPose = true;
             }
 
@@ -227,14 +247,12 @@ namespace TrueJourney.BotBehavior
             if (leftHandIkTarget != null)
             {
                 defaultLeftHandIkLocalPosition = leftHandIkTarget.localPosition;
-                defaultLeftHandIkLocalRotation = leftHandIkTarget.localRotation;
                 hasDefaultLeftHandIkTargetPose = true;
             }
 
             if (leftHandIkHint != null)
             {
                 defaultLeftHandIkHintLocalPosition = leftHandIkHint.localPosition;
-                defaultLeftHandIkHintLocalRotation = leftHandIkHint.localRotation;
                 hasDefaultLeftHandIkHintPose = true;
             }
 
@@ -417,6 +435,18 @@ namespace TrueJourney.BotBehavior
             SetEquippedPoseKey(BotEquippedItemPoseKey.Default);
         }
 
+        public bool TryGetCurrentSpineAimMaxWeight(out float maxWeight)
+        {
+            if (hasCurrentSpineAimMaxWeightOverride)
+            {
+                maxWeight = currentSpineAimMaxWeight;
+                return true;
+            }
+
+            maxWeight = 0f;
+            return false;
+        }
+
         private bool ContainsItem(IPickupable pickupable)
         {
             for (int i = 0; i < slots.Count; i++)
@@ -472,12 +502,14 @@ namespace TrueJourney.BotBehavior
             {
                 itemTransform.localPosition = pose.equippedLocalPosition;
                 itemTransform.localRotation = Quaternion.Euler(pose.equippedLocalEulerAngles);
+                ApplySpineAimPose(pose);
                 ApplyHandIkPose(pose);
                 return;
             }
 
             itemTransform.localPosition = equippedLocalPosition;
             itemTransform.localRotation = Quaternion.Euler(equippedLocalEulerAngles);
+            ResetSpineAimPose();
             ResetHandIkPose();
         }
 
@@ -539,6 +571,12 @@ namespace TrueJourney.BotBehavior
             ApplyLeftHandIkPose(pose);
         }
 
+        private void ApplySpineAimPose(BotEquippedItemPose pose)
+        {
+            hasCurrentSpineAimMaxWeightOverride = pose.overrideSpineAimMaxWeight;
+            currentSpineAimMaxWeight = Mathf.Clamp01(pose.spineAimMaxWeight);
+        }
+
         private void ApplyRightHandIkPose(BotEquippedItemPose pose)
         {
             if (!driveRightHandIk || rightHandIkTarget == null)
@@ -549,6 +587,8 @@ namespace TrueJourney.BotBehavior
             rightHandIkTarget.localPosition = pose.rightHandIkLocalPosition;
             rightHandIkTarget.localRotation = Quaternion.Euler(pose.rightHandIkLocalEulerAngles);
             ApplyRightHandIkHintPose(pose);
+            currentRightHandIkUsesTarget = pose.useRightHandIkTarget;
+            ApplyRightHandIkTargetRotationWeight();
 
             if (rightHandIkConstraint != null)
             {
@@ -564,7 +604,6 @@ namespace TrueJourney.BotBehavior
             }
 
             leftHandIkTarget.localPosition = pose.leftHandIkLocalPosition;
-            leftHandIkTarget.localRotation = Quaternion.Euler(pose.leftHandIkLocalEulerAngles);
             ApplyLeftHandIkHintPose(pose);
 
             if (leftHandIkConstraint != null)
@@ -587,7 +626,6 @@ namespace TrueJourney.BotBehavior
             }
 
             rightHandIkHint.localPosition = pose.rightHandIkHintLocalPosition;
-            rightHandIkHint.localRotation = Quaternion.Euler(pose.rightHandIkHintLocalEulerAngles);
         }
 
         private void ApplyLeftHandIkHintPose(BotEquippedItemPose pose)
@@ -604,13 +642,19 @@ namespace TrueJourney.BotBehavior
             }
 
             leftHandIkHint.localPosition = pose.leftHandIkHintLocalPosition;
-            leftHandIkHint.localRotation = Quaternion.Euler(pose.leftHandIkHintLocalEulerAngles);
         }
 
         private void ResetHandIkPose()
         {
+            ResetSpineAimPose();
             ResetRightHandIkPose();
             ResetLeftHandIkPose();
+        }
+
+        private void ResetSpineAimPose()
+        {
+            hasCurrentSpineAimMaxWeightOverride = false;
+            currentSpineAimMaxWeight = 0f;
         }
 
         private void ResetRightHandIkPose()
@@ -627,6 +671,8 @@ namespace TrueJourney.BotBehavior
             }
 
             ResetRightHandIkHintPose();
+            currentRightHandIkUsesTarget = false;
+            ApplyRightHandIkTargetRotationWeight();
 
             if (rightHandIkConstraint != null)
             {
@@ -644,7 +690,6 @@ namespace TrueJourney.BotBehavior
             if (hasDefaultLeftHandIkTargetPose && leftHandIkTarget != null)
             {
                 leftHandIkTarget.localPosition = defaultLeftHandIkLocalPosition;
-                leftHandIkTarget.localRotation = defaultLeftHandIkLocalRotation;
             }
 
             ResetLeftHandIkHintPose();
@@ -663,7 +708,6 @@ namespace TrueJourney.BotBehavior
             }
 
             rightHandIkHint.localPosition = defaultRightHandIkHintLocalPosition;
-            rightHandIkHint.localRotation = defaultRightHandIkHintLocalRotation;
         }
 
         private void ResetLeftHandIkHintPose()
@@ -674,7 +718,63 @@ namespace TrueJourney.BotBehavior
             }
 
             leftHandIkHint.localPosition = defaultLeftHandIkHintLocalPosition;
-            leftHandIkHint.localRotation = defaultLeftHandIkHintLocalRotation;
+        }
+
+        private bool ShouldHandAimDriveRightHandRotation()
+        {
+            return rightHandAimConstraint != null && ShouldHandAimBeActive();
+        }
+
+        private void ApplyRightHandIkTargetRotationWeight()
+        {
+            if (rightHandIkConstraint == null)
+            {
+                return;
+            }
+
+            TwoBoneIKConstraintData data = rightHandIkConstraint.data;
+            float desiredWeight = currentRightHandIkUsesTarget && !ShouldHandAimDriveRightHandRotation()
+                ? 1f
+                : 0f;
+
+            if (Mathf.Approximately(data.targetRotationWeight, desiredWeight))
+            {
+                return;
+            }
+
+            data.targetRotationWeight = desiredWeight;
+            rightHandIkConstraint.data = data;
+        }
+
+        private void UpdateRightHandAimWeight(bool instant)
+        {
+            if (rightHandAimConstraint == null)
+            {
+                return;
+            }
+
+            float targetWeight = rightHandAimConstraint != null && ShouldHandAimBeActive()
+                ? 1f
+                : 0f;
+
+            if (!Application.isPlaying || instant || handAimWeightLerpSpeed <= 0f)
+            {
+                rightHandAimConstraint.weight = targetWeight;
+                return;
+            }
+
+            float blend = 1f - Mathf.Exp(-handAimWeightLerpSpeed * Time.deltaTime);
+            rightHandAimConstraint.weight = Mathf.Lerp(rightHandAimConstraint.weight, targetWeight, blend);
+        }
+
+        private bool ShouldHandAimBeActive()
+        {
+            if (commandAgent == null)
+            {
+                return false;
+            }
+
+            return commandAgent.IsAimingEquippedItemPose || commandAgent.IsUsingEquippedItemPose;
         }
     }
 }

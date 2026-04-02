@@ -50,9 +50,9 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
     public Rigidbody Rigidbody => cachedRigidbody;
     public float ApplyWaterPerSecond => botDischargePerSecond;
     public FireSuppressionAgent SuppressionAgent => ResolveSuppressionAgent();
-    public float PreferredSprayDistance => Mathf.Clamp(maxSprayDistance * Mathf.Clamp01(botStandDistanceFactor), 0.75f, maxSprayDistance);
+    public float PreferredSprayDistance => Mathf.Clamp(maxSprayDistance * Mathf.Clamp01(botStandDistanceFactor), 0f, maxSprayDistance);
     public float MaxSprayDistance => maxSprayDistance;
-    public float MaxVerticalReach => Mathf.Tan(coneHalfAngle * Mathf.Deg2Rad) * maxSprayDistance;
+    public float MaxVerticalReach => maxSprayDistance;
     public float BallisticLaunchSpeed => 0f;
     public float BallisticGravityMultiplier => 1f;
     public bool RequiresPreciseAim => false;

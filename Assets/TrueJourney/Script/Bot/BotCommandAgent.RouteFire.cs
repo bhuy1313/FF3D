@@ -12,6 +12,7 @@ public partial class BotCommandAgent
     private void ClearRouteFireRuntime()
     {
         ClearHeadAimFocus();
+        ClearHandAimFocus();
         ResetExtinguishCrouchState();
         StopExtinguisher();
         ClearExtinguisherTargetLock();
@@ -109,6 +110,7 @@ public partial class BotCommandAgent
         if (routeTool == null || UsesPreciseAim(routeTool))
         {
             ClearHeadAimFocus();
+            ClearHandAimFocus();
             navMeshAgent.ResetPath();
             navMeshAgent.isStopped = true;
             LogPathClearingFlow(
@@ -123,6 +125,7 @@ public partial class BotCommandAgent
         if (!TryEnsureExtinguisherEquipped(routeTool))
         {
             ClearHeadAimFocus();
+            ClearHandAimFocus();
             LogPathClearingFlow(
                 $"route-fire-search-tool:{GetToolName(routeTool)}",
                 "Searching for Fire Extinguisher.");
@@ -133,6 +136,7 @@ public partial class BotCommandAgent
         if (equippedTool == null || UsesPreciseAim(equippedTool))
         {
             ClearHeadAimFocus();
+            ClearHandAimFocus();
             return true;
         }
 
@@ -142,14 +146,15 @@ public partial class BotCommandAgent
         float desiredHorizontalDistance = GetDesiredExtinguisherCenterDistance(equippedTool, blockingFire);
         float horizontalDistanceToFire = GetHorizontalDistance(transform.position, firePosition);
         float edgeDistanceToFire = GetFireEdgeDistance(transform.position, firePosition, blockingFire);
+        float distanceToFire = GetDistanceToFireEdge(transform.position, firePosition, blockingFire);
         float allowedEdgeRange = GetAllowedExtinguisherEdgeRange(equippedTool);
-        float verticalOffsetToFire = Mathf.Abs(firePosition.y - transform.position.y);
         bool keepCurrentStandDistance = IsExtinguisherTargetLocked(blockingFire);
         bool canExtinguishFromCurrentPosition = CanExtinguishFromCurrentPosition(equippedTool, firePosition, blockingFire);
+        bool isFartherThanPreferred = edgeDistanceToFire > desiredStandOffDistance + ExtinguisherRangeSlack;
+        bool isCloserThanPreferred = edgeDistanceToFire + ExtinguisherRangeSlack < desiredStandOffDistance;
         bool shouldReposition =
-            edgeDistanceToFire > allowedEdgeRange ||
-            verticalOffsetToFire > equippedTool.MaxVerticalReach ||
-            (!keepCurrentStandDistance && edgeDistanceToFire < desiredStandOffDistance - extinguisherStandDistanceTolerance) ||
+            distanceToFire > allowedEdgeRange ||
+            (!keepCurrentStandDistance && (isFartherThanPreferred || isCloserThanPreferred)) ||
             !canExtinguishFromCurrentPosition;
 
         if (shouldReposition)
@@ -159,6 +164,7 @@ public partial class BotCommandAgent
                 $"route-fire-move:{GetDebugTargetName(blockingFire)}:{FormatFlowVectorKey(desiredPosition)}",
                 "Moving.");
             ClearHeadAimFocus();
+            ClearHandAimFocus();
             StopExtinguisher();
             sprayReadyTime = -1f;
             TrySetDestinationDirect(desiredPosition);
@@ -168,6 +174,7 @@ public partial class BotCommandAgent
         navMeshAgent.ResetPath();
         navMeshAgent.isStopped = true;
         AimTowards(firePosition);
+        SetHandAimFocus(firePosition);
         SetHeadAimFocus(firePosition);
 
         if (sprayReadyTime < 0f)

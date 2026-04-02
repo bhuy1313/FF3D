@@ -69,6 +69,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
     [SerializeField] private float particleGravityModifier = 0.35f;
     [SerializeField] private string waterTag = "Water";
     [SerializeField] private bool setWaterTag = true;
+    [SerializeField] private bool ignoreBotLayerInParticleCollision = true;
     [SerializeField] private bool removeParticleBounce = true;
 
     [Header("Runtime (Debug)")]
@@ -81,9 +82,6 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
     [SerializeField] private GameObject currentUser;
     [SerializeField] private bool currentUserIsBot;
     [SerializeField] private GameObject claimOwner;
-    [SerializeField] private bool hasExternalAimDirection;
-    [SerializeField] private Vector3 externalAimDirection;
-    [SerializeField] private GameObject externalAimUser;
     [SerializeField] private FireHoseConnectionPoint currentConnectionPoint;
 
     [Header("Ballistics")]
@@ -189,7 +187,6 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
     {
         HandleRuntimeTuningInput();
         RecalculateSprayRuntimeValues();
-        ApplyExternalAimToVfx();
 
         if (!enableParticle && waterParticles != null && waterParticles.isPlaying)
         {
@@ -244,7 +241,6 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         claimOwner = picker;
         currentUser = null;
         currentUserIsBot = false;
-        ClearExternalAimState();
         AlignWaterVfxToSprayOrigin();
         ConfigureWaterParticleCollision();
         CacheWaterParticleDefaults();
@@ -261,7 +257,6 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
 
         currentUser = null;
         currentUserIsBot = false;
-        ClearExternalAimState();
         SetSprayState(false);
         if (!keepConnectionOnDrop)
         {
@@ -351,23 +346,10 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
 
     public void SetExternalAimDirection(Vector3 worldDirection, GameObject user)
     {
-        if (user == null || worldDirection.sqrMagnitude <= 0.001f)
-        {
-            return;
-        }
-
-        externalAimUser = user;
-        externalAimDirection = worldDirection.normalized;
-        hasExternalAimDirection = true;
-        ApplyExternalAimToVfx();
     }
 
     public void ClearExternalAimDirection(GameObject user)
     {
-        if (user == null || externalAimUser == user)
-        {
-            ClearExternalAimState();
-        }
     }
 
     private void OnDisable()
@@ -376,7 +358,6 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         DisconnectFromSupply();
         currentUser = null;
         currentUserIsBot = false;
-        ClearExternalAimState();
         SetSprayState(false);
     }
 
@@ -487,7 +468,6 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
             {
                 AlignWaterVfxToSprayOrigin();
                 ApplySprayTuningToVfx();
-                ApplyExternalAimToVfx();
                 waterParticles.Play();
             }
             else
@@ -680,43 +660,29 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         particleTransform.localRotation = Quaternion.identity;
     }
 
-    private void ApplyExternalAimToVfx()
+    private void ConfigureWaterParticleCollision()
     {
         if (waterParticles == null)
         {
             return;
         }
 
-        Transform particleTransform = waterParticles.transform;
-        if (hasExternalAimDirection && externalAimDirection.sqrMagnitude > 0.001f)
-        {
-            particleTransform.rotation = Quaternion.LookRotation(externalAimDirection.normalized, Vector3.up);
-            return;
-        }
-
-        if (particleTransform.localRotation != Quaternion.identity)
-        {
-            particleTransform.localRotation = Quaternion.identity;
-        }
-    }
-
-    private void ClearExternalAimState()
-    {
-        hasExternalAimDirection = false;
-        externalAimDirection = Vector3.zero;
-        externalAimUser = null;
-        ApplyExternalAimToVfx();
-    }
-
-    private void ConfigureWaterParticleCollision()
-    {
-        if (!removeParticleBounce || waterParticles == null)
-        {
-            return;
-        }
-
         ParticleSystem.CollisionModule collision = waterParticles.collision;
         if (!collision.enabled)
+        {
+            return;
+        }
+
+        if (ignoreBotLayerInParticleCollision)
+        {
+            int botLayer = LayerMask.NameToLayer("Bot");
+            if (botLayer >= 0)
+            {
+                collision.collidesWith &= ~(1 << botLayer);
+            }
+        }
+
+        if (!removeParticleBounce)
         {
             return;
         }

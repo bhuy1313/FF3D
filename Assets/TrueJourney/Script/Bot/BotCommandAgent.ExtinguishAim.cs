@@ -4,53 +4,27 @@ using TrueJourney.BotBehavior;
 
 public partial class BotCommandAgent
 {
-    private void ResetViewPointPitch()
-    {
-        if (viewPoint == null)
-        {
-            return;
-        }
-
-        viewPoint.localRotation = Quaternion.RotateTowards(viewPoint.localRotation, Quaternion.identity, pitchTurnSpeed * Time.deltaTime);
-    }
-
     private float GetRequiredHorizontalDistanceForAim(IBotExtinguisherItem tool, Vector3 worldPoint)
     {
-        if (tool == null || !UsesPreciseAim(tool) || viewPoint == null)
+        if (tool == null || !UsesPreciseAim(tool))
         {
             return 0f;
         }
 
-        Vector3 fromViewPoint = worldPoint - viewPoint.position;
-        float horizontalDistance = new Vector2(fromViewPoint.x, fromViewPoint.z).magnitude;
-        float verticalOffset = fromViewPoint.y;
-
-        if (horizontalDistance <= 0.001f)
-        {
-            horizontalDistance = 0.001f;
-        }
-
-        float requiredPitch = -Mathf.Atan2(verticalOffset, horizontalDistance) * Mathf.Rad2Deg;
-        if (requiredPitch >= minPitchAngle && requiredPitch <= maxPitchAngle)
-        {
-            return 0f;
-        }
-
-        float allowedPitch = requiredPitch < minPitchAngle ? minPitchAngle : maxPitchAngle;
-        float allowedPitchAbs = Mathf.Max(1f, Mathf.Abs(allowedPitch));
-        return Mathf.Abs(verticalOffset) / Mathf.Tan(allowedPitchAbs * Mathf.Deg2Rad);
+        return 0f;
     }
 
     private Vector3 GetAimPoint(IBotExtinguisherItem tool, Vector3 firePosition)
     {
-        if (tool == null || !UsesPreciseAim(tool) || viewPoint == null)
+        if (tool == null || !UsesPreciseAim(tool))
         {
             return firePosition;
         }
 
-        if (TryGetBallisticAimDirection(tool, viewPoint.position, firePosition, out Vector3 aimDirection))
+        Vector3 aimOrigin = GetPreciseAimOrigin();
+        if (TryGetBallisticAimDirection(tool, aimOrigin, firePosition, out Vector3 aimDirection))
         {
-            return viewPoint.position + aimDirection * Mathf.Max(5f, tool.MaxSprayDistance);
+            return aimOrigin + aimDirection * Mathf.Max(5f, tool.MaxSprayDistance);
         }
 
         return firePosition;
@@ -64,20 +38,21 @@ public partial class BotCommandAgent
         hasCurrentExtinguishLaunchDirection = false;
         currentExtinguishTrajectoryPointCount = 0;
 
-        if (tool == null || !UsesPreciseAim(tool) || viewPoint == null)
+        if (tool == null || !UsesPreciseAim(tool))
         {
             return;
         }
 
-        if (!TryGetBallisticAimDirection(tool, viewPoint.position, firePosition, out Vector3 launchDirection))
+        Vector3 aimOrigin = GetPreciseAimOrigin();
+        if (!TryGetBallisticAimDirection(tool, aimOrigin, firePosition, out Vector3 launchDirection))
         {
             return;
         }
 
         currentExtinguishLaunchDirection = launchDirection;
         hasCurrentExtinguishLaunchDirection = true;
-        currentExtinguishAimPoint = viewPoint.position + launchDirection * Mathf.Max(5f, tool.MaxSprayDistance);
-        BuildBallisticTrajectoryPoints(tool, viewPoint.position, launchDirection, currentExtinguishTrajectoryPoints, out currentExtinguishTrajectoryPointCount);
+        currentExtinguishAimPoint = aimOrigin + launchDirection * Mathf.Max(5f, tool.MaxSprayDistance);
+        BuildBallisticTrajectoryPoints(tool, aimOrigin, launchDirection, currentExtinguishTrajectoryPoints, out currentExtinguishTrajectoryPointCount);
     }
 
     private static void BuildBallisticTrajectoryPoints(
@@ -167,23 +142,7 @@ public partial class BotCommandAgent
 
     private float GetVerticalAimPenalty(Vector3 originPosition, Vector3 firePosition)
     {
-        float horizontalDistance = new Vector2(firePosition.x - originPosition.x, firePosition.z - originPosition.z).magnitude;
-        float verticalOffset = firePosition.y - originPosition.y;
-        if (horizontalDistance <= 0.001f)
-        {
-            horizontalDistance = 0.001f;
-        }
-
-        float requiredPitch = -Mathf.Atan2(verticalOffset, horizontalDistance) * Mathf.Rad2Deg;
-        if (requiredPitch >= minPitchAngle && requiredPitch <= maxPitchAngle)
-        {
-            return 0f;
-        }
-
-        float deltaToNearestLimit = requiredPitch < minPitchAngle
-            ? minPitchAngle - requiredPitch
-            : requiredPitch - maxPitchAngle;
-        return deltaToNearestLimit * 0.5f;
+        return 0f;
     }
 
     private static float GetHorizontalDistance(Vector3 a, Vector3 b)
@@ -195,9 +154,13 @@ public partial class BotCommandAgent
 
     private static float GetDesiredExtinguisherStandOffDistance(IBotExtinguisherItem tool)
     {
-        return tool != null
-            ? Mathf.Clamp(tool.PreferredSprayDistance, 0.5f, tool.MaxSprayDistance)
-            : 0f;
+        if (tool == null)
+        {
+            return 0f;
+        }
+
+        float minStandOff = Mathf.Min(MinExtinguisherStandOffDistance, tool.MaxSprayDistance);
+        return Mathf.Clamp(tool.PreferredSprayDistance, minStandOff, tool.MaxSprayDistance);
     }
 
     private float GetDesiredExtinguisherStandOffDistanceLocked(IBotExtinguisherItem tool, IFireTarget fireTarget)
@@ -224,7 +187,7 @@ public partial class BotCommandAgent
             return 0f;
         }
 
-        return tool.MaxSprayDistance + Mathf.Max(0.25f, extinguisherStandDistanceTolerance);
+        return tool.MaxSprayDistance + ExtinguisherRangeSlack;
     }
 
     private float GetFireEdgeDistance(Vector3 fromPosition, Vector3 firePosition, IFireTarget fireTarget)

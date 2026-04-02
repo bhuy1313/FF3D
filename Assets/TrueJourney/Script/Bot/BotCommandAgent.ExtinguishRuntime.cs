@@ -20,10 +20,10 @@ public partial class BotCommandAgent
             return;
         }
 
-        Transform aimTransform = UsesPreciseAim(tool) && viewPoint != null ? viewPoint : transform;
+        Vector3 aimOrigin = UsesPreciseAim(tool) ? GetPreciseAimOrigin() : transform.position;
         Vector3 toFire = hasCurrentExtinguishLaunchDirection
             ? currentExtinguishLaunchDirection
-            : GetAimPoint(tool, firePosition) - aimTransform.position;
+            : GetAimPoint(tool, firePosition) - aimOrigin;
         if (toFire.sqrMagnitude <= 0.001f)
         {
             return;
@@ -34,7 +34,7 @@ public partial class BotCommandAgent
             toFire.y = 0f;
         }
 
-        Vector3 forward = aimTransform.forward;
+        Vector3 forward = UsesPreciseAim(tool) ? GetPreciseAimForward() : transform.forward;
         if (forward.sqrMagnitude <= 0.001f)
         {
             return;
@@ -67,14 +67,7 @@ public partial class BotCommandAgent
             return;
         }
 
-        float edgeDistance = GetFireEdgeDistance(transform.position, firePosition, fireTarget);
-        if (edgeDistance > GetAllowedExtinguisherEdgeRange(tool))
-        {
-            return;
-        }
-
-        float verticalOffset = Mathf.Abs(firePosition.y - transform.position.y);
-        if (verticalOffset > tool.MaxVerticalReach)
+        if (GetDistanceToFireEdge(transform.position, firePosition, fireTarget) > GetAllowedExtinguisherEdgeRange(tool))
         {
             return;
         }
@@ -119,23 +112,23 @@ public partial class BotCommandAgent
             return Vector3.Dot(flatForward.normalized, flatToFire.normalized) >= 0.7f;
         }
 
-        Transform aimTransform = UsesPreciseAim(tool) && viewPoint != null ? viewPoint : transform;
+        Vector3 aimOrigin = UsesPreciseAim(tool) ? GetPreciseAimOrigin() : transform.position;
         Vector3 toFire = hasCurrentExtinguishLaunchDirection
             ? currentExtinguishLaunchDirection
-            : GetAimPoint(tool, firePosition) - aimTransform.position;
+            : GetAimPoint(tool, firePosition) - aimOrigin;
         if (toFire.sqrMagnitude <= 0.001f)
         {
             return false;
         }
 
-        Vector3 forward = aimTransform.forward;
+        Vector3 forward = UsesPreciseAim(tool) ? GetPreciseAimForward() : transform.forward;
         if (forward.sqrMagnitude <= 0.001f)
         {
             return false;
         }
 
         float facingDot = Vector3.Dot(forward.normalized, toFire.normalized);
-        return facingDot >= Mathf.Max(sprayFacingThreshold, settleFacingThreshold);
+        return facingDot >= sprayFacingThreshold;
     }
 
     private float ScoreSuppressionTool(IBotExtinguisherItem tool, Vector3 orderPoint, Vector3 firePosition, Vector3 toolPosition, IFireTarget fireTarget)
@@ -279,7 +272,7 @@ public partial class BotCommandAgent
         }
 
         Vector3 primaryDirection = primaryOffset.sqrMagnitude > 0.001f ? primaryOffset.normalized : Vector3.forward;
-        float standDistance = Mathf.Max(0.75f, preferredDistance);
+        float standDistance = Mathf.Max(MinExtinguisherStandOffDistance, preferredDistance);
         float sampleDistance = Mathf.Max(navMeshSampleDistance, standDistance + 2f, 8f);
         float bestScore = float.PositiveInfinity;
         NavMeshPath path = new NavMeshPath();
@@ -287,7 +280,7 @@ public partial class BotCommandAgent
 
         for (int distanceIndex = 0; distanceIndex < distanceScales.Length; distanceIndex++)
         {
-            float candidateDistance = Mathf.Max(0.75f, standDistance * distanceScales[distanceIndex]);
+            float candidateDistance = Mathf.Max(MinExtinguisherStandOffDistance, standDistance * distanceScales[distanceIndex]);
             for (int i = 0; i < 16; i++)
             {
                 float angle = i * 22.5f;
@@ -332,19 +325,18 @@ public partial class BotCommandAgent
             return false;
         }
 
-        float edgeDistance = GetFireEdgeDistance(position, firePosition, fireTarget);
-        if (edgeDistance > GetAllowedExtinguisherEdgeRange(tool))
-        {
-            return false;
-        }
-
-        float verticalOffset = Mathf.Abs(firePosition.y - position.y);
-        if (verticalOffset > tool.MaxVerticalReach)
+        if (GetDistanceToFireEdge(position, firePosition, fireTarget) > GetAllowedExtinguisherEdgeRange(tool))
         {
             return false;
         }
 
         return HasLineOfSightToFireTarget(position, firePosition, fireTarget);
+    }
+
+    private static float GetDistanceToFireEdge(Vector3 fromPosition, Vector3 firePosition, IFireTarget fireTarget)
+    {
+        float fireRadius = fireTarget != null ? Mathf.Max(0f, fireTarget.GetWorldRadius()) : 0f;
+        return Mathf.Max(0f, Vector3.Distance(fromPosition, firePosition) - fireRadius);
     }
 
     private bool HasLineOfSightToFireTarget(Vector3 originPosition, Vector3 firePosition, IFireTarget fireTarget)
@@ -869,12 +861,12 @@ public partial class BotCommandAgent
         ClearExtinguishRuntimeState();
         behaviorContext.ClearExtinguishOrder();
         navMeshAgent.isStopped = false;
-        ResetViewPointPitch();
     }
 
     private void ClearExtinguishRuntimeState()
     {
         ClearHeadAimFocus();
+        ClearHandAimFocus();
         ResetExtinguishCrouchState();
         StopExtinguisher();
         ClearExtinguisherTargetLock();
