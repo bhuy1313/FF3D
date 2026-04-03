@@ -199,7 +199,7 @@ namespace StarterAssets
 			{
 				StopClimb();
 			}
-			if (_isClimbing && _currentLadder != null && transform.position.y >= _currentLadder.GetClimbMaxY())
+			if (_isClimbing && HasReachedLadderTop())
 			{
 				StopClimb();
 			}
@@ -529,11 +529,14 @@ namespace StarterAssets
 		private void ClimbMove()
 		{
 			float verticalInput = _input.move.y;
-			if (_currentLadder != null && verticalInput > 0f && transform.position.y >= _currentLadder.GetClimbMaxY())
+			if (_currentLadder != null && verticalInput > 0f && HasReachedLadderTop())
 			{
 				return;
 			}
-			Vector3 climbVelocity = Vector3.up * (verticalInput * ClimbSpeed);
+			Vector3 climbDirection = _currentLadder != null
+				? _currentLadder.GetClimbDirection()
+				: Vector3.up;
+			Vector3 climbVelocity = climbDirection * (verticalInput * ClimbSpeed);
 			_controller.Move(climbVelocity * Time.deltaTime);
 		}
 
@@ -577,15 +580,37 @@ namespace StarterAssets
 				return;
 			}
 
+			Vector3 climbDirection = _currentLadder != null
+				? _currentLadder.GetClimbDirection()
+				: Vector3.up;
+			if (climbDirection.sqrMagnitude <= _threshold)
+			{
+				climbDirection = Vector3.up;
+			}
+
 			for (int i = 0; i < ClimbStartMaxSteps; i++)
 			{
-				transform.position += Vector3.up * ClimbStartStep;
+				transform.position += climbDirection.normalized * ClimbStartStep;
 				GroundedCheck();
 				if (!Grounded)
 				{
 					break;
 				}
 			}
+		}
+
+		private bool HasReachedLadderTop()
+		{
+			if (_currentLadder == null)
+			{
+				return false;
+			}
+
+			Vector3 climbDirection = _currentLadder.GetClimbDirection();
+			Vector3 bottom = _currentLadder.GetClimbBottomWorld();
+			float maxDistance = _currentLadder.GetClimbExtent();
+			float currentDistance = Vector3.Dot(transform.position - bottom, climbDirection);
+			return currentDistance >= maxDistance;
 		}
 
 		private static float ClampAngle(float lfAngle, float lfMin, float lfMax)

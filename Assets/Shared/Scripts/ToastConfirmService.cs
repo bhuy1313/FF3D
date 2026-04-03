@@ -46,7 +46,7 @@ public static class ToastConfirmService
             return explicitParent;
         }
 
-        Canvas canvas = UnityEngine.Object.FindFirstObjectByType<Canvas>();
+        Canvas canvas = UnityEngine.Object.FindAnyObjectByType<Canvas>();
         if (canvas != null)
         {
             return canvas.transform;

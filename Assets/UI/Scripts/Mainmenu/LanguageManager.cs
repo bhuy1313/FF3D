@@ -13,7 +13,7 @@ public class LanguageManager : MonoBehaviour
         {
             if (instance == null)
             {
-                instance = FindFirstObjectByType<LanguageManager>();
+                instance = FindAnyObjectByType<LanguageManager>();
             }
 
             return instance;

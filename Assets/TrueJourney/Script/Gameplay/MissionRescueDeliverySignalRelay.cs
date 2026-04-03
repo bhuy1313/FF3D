@@ -61,12 +61,12 @@ public class MissionRescueDeliverySignalRelay : MonoBehaviour, IMissionSignalRes
 
         if (safeZone == null)
         {
-            safeZone = FindFirstObjectByType<SafeZone>();
+            safeZone = FindAnyObjectByType<SafeZone>();
         }
 
         if (missionSystem == null)
         {
-            missionSystem = FindFirstObjectByType<IncidentMissionSystem>();
+            missionSystem = FindAnyObjectByType<IncidentMissionSystem>();
         }
     }
 

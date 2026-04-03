@@ -48,7 +48,7 @@ public class MissionHudPresenter : MonoBehaviour
     {
         if (missionSystem == null)
         {
-            missionSystem = FindFirstObjectByType<IncidentMissionSystem>();
+            missionSystem = FindAnyObjectByType<IncidentMissionSystem>();
         }
 
         if (rootCanvasGroup == null)

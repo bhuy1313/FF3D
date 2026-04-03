@@ -39,7 +39,7 @@ public class MissionInteractionSignalRelay : MonoBehaviour, IMissionSignalResett
     {
         if (missionSystem == null)
         {
-            missionSystem = FindFirstObjectByType<IncidentMissionSystem>();
+            missionSystem = FindAnyObjectByType<IncidentMissionSystem>();
         }
     }
 

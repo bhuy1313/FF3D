@@ -1064,7 +1064,7 @@ public class LevelSelectSceneController : MonoBehaviour
             return;
         }
 
-        runtimeToastContainer = FindFirstObjectByType<ToastContainerController>();
+        runtimeToastContainer = FindAnyObjectByType<ToastContainerController>();
         if (runtimeToastContainer != null)
         {
             return;

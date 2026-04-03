@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
@@ -30,6 +31,11 @@ namespace StarterAssets
         [SerializeField] private float maxGrabMass = 50f;
         [SerializeField] private Transform grabPoint;
         [SerializeField] private Vector3 grabPointLocalPosition = Vector3.zero;
+        [SerializeField] private bool enableGrabPlacement = true;
+        [SerializeField] private LayerMask grabPlacementMask = ~0;
+        [SerializeField] private float grabPlacementDistance = 4f;
+        [SerializeField] private float grabPlacementSurfacePadding = 0.02f;
+        [SerializeField] private Color grabPlacementPreviewColor = new Color(0.45f, 0.95f, 0.65f, 0.4f);
 
         [Header("References")]
         [SerializeField] private FPSInventorySystem inventory;
@@ -54,6 +60,9 @@ namespace StarterAssets
         private Renderer[] outlinedRenderers;
         private bool[] outlinedRendererHadBit;
         private PlayerActionLock playerActionLock;
+        private GameObject grabbedPreviewRoot;
+        private Material grabbedPreviewMaterial;
+        private ICustomGrabPlacement grabbedPlacementOverride;
 
         private void Awake()
         {
@@ -104,6 +113,18 @@ namespace StarterAssets
 
             if (IsGrabActive)
             {
+                bool usePressedWhileGrabbed = WasPressed(input != null && input.use, ref previousUse);
+                WasPressed(input != null && input.interact, ref previousInteract);
+                WasPressed(input != null && input.pickup, ref previousPickup);
+                WasPressed(input != null && input.drop, ref previousDrop);
+
+                UpdateGrabPlacementPreview();
+
+                if (usePressedWhileGrabbed)
+                {
+                    TryPlaceGrabbed();
+                }
+
                 BlockGameplayActionsWhileGrabbed();
                 return;
             }
@@ -367,6 +388,9 @@ namespace StarterAssets
             grabbedTransform.SetParent(grabPoint, false);
             grabbedTransform.localPosition = Vector3.zero;
             grabbedTransform.localRotation = Quaternion.identity;
+            grabbedPlacementOverride = FindCustomGrabPlacement(grabbedTransform);
+            grabbedPlacementOverride?.OnGrabStarted();
+            RebuildGrabPreview();
         }
 
         private void ToggleGrab()
@@ -393,8 +417,12 @@ namespace StarterAssets
                 grabbedBody.angularVelocity = Vector3.zero;
             }
 
+            grabbedPlacementOverride?.OnGrabCancelled();
+
+            DestroyGrabPreview();
             grabbedBody = null;
             grabbedOriginalParent = null;
+            grabbedPlacementOverride = null;
         }
 
         private void ResolveGrabPoint()
@@ -449,11 +477,320 @@ namespace StarterAssets
             {
                 input.ClearGameplayActionInputs();
             }
+        }
 
-            previousInteract = false;
-            previousPickup = false;
-            previousUse = false;
-            previousDrop = false;
+        private void UpdateGrabPlacementPreview()
+        {
+            if (!enableGrabPlacement || !TryResolveGrabPlacementPose(out Vector3 position, out Quaternion rotation))
+            {
+                SetGrabPreviewVisible(false);
+                return;
+            }
+
+            GameObject previewRoot = EnsureGrabPreview();
+            if (previewRoot == null)
+            {
+                return;
+            }
+
+            previewRoot.transform.SetPositionAndRotation(position, rotation);
+            SetGrabPreviewVisible(true);
+        }
+
+        private void TryPlaceGrabbed()
+        {
+            if (!enableGrabPlacement || !TryResolveGrabPlacementPose(out Vector3 position, out Quaternion rotation))
+            {
+                return;
+            }
+
+            ReleaseGrabAt(position, rotation);
+        }
+
+        private bool TryResolveGrabPlacementPose(out Vector3 position, out Quaternion rotation)
+        {
+            position = default;
+            rotation = Quaternion.identity;
+
+            if (grabbedBody == null || viewCamera == null)
+            {
+                return false;
+            }
+
+            if (grabbedPlacementOverride != null)
+            {
+                return grabbedPlacementOverride.TryGetGrabPlacementPose(
+                    viewCamera.transform,
+                    grabPlacementMask,
+                    grabPlacementDistance,
+                    out position,
+                    out rotation);
+            }
+
+            float maxDistance = Mathf.Max(0.1f, grabPlacementDistance > 0f ? grabPlacementDistance : grabDistance);
+            Ray ray = viewCamera.ScreenPointToRay(new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 0f));
+            RaycastHit[] hits = Physics.RaycastAll(ray, maxDistance, grabPlacementMask, QueryTriggerInteraction.Ignore);
+            if (hits == null || hits.Length == 0)
+            {
+                return false;
+            }
+
+            System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+            for (int i = 0; i < hits.Length; i++)
+            {
+                RaycastHit hit = hits[i];
+                if (hit.collider == null || hit.collider.transform.IsChildOf(grabbedBody.transform))
+                {
+                    continue;
+                }
+
+                rotation = GetGrabPlacementRotation();
+                float surfaceOffset = GetGrabbedPlacementSurfaceOffset(hit.normal);
+                position = hit.point + hit.normal * surfaceOffset;
+                return true;
+            }
+
+            return false;
+        }
+
+        private float GetGrabbedPlacementSurfaceOffset(Vector3 surfaceNormal)
+        {
+            if (grabbedBody == null)
+            {
+                return grabPlacementSurfacePadding;
+            }
+
+            Vector3 normal = surfaceNormal.sqrMagnitude > 0.0001f
+                ? surfaceNormal.normalized
+                : Vector3.up;
+            float maxExtent = 0f;
+            Collider[] colliders = grabbedBody.GetComponentsInChildren<Collider>(true);
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                Collider collider = colliders[i];
+                if (collider == null)
+                {
+                    continue;
+                }
+
+                Bounds bounds = collider.bounds;
+                float extent =
+                    Mathf.Abs(normal.x) * bounds.extents.x +
+                    Mathf.Abs(normal.y) * bounds.extents.y +
+                    Mathf.Abs(normal.z) * bounds.extents.z;
+                if (extent > maxExtent)
+                {
+                    maxExtent = extent;
+                }
+            }
+
+            return maxExtent + Mathf.Max(0f, grabPlacementSurfacePadding);
+        }
+
+        private Quaternion GetGrabPlacementRotation()
+        {
+            Vector3 forward = viewCamera != null ? viewCamera.transform.forward : transform.forward;
+            forward = Vector3.ProjectOnPlane(forward, Vector3.up);
+            if (forward.sqrMagnitude <= 0.0001f)
+            {
+                forward = Vector3.ProjectOnPlane(transform.forward, Vector3.up);
+            }
+
+            if (forward.sqrMagnitude <= 0.0001f)
+            {
+                return Quaternion.identity;
+            }
+
+            return Quaternion.LookRotation(forward.normalized, Vector3.up);
+        }
+
+        private void ReleaseGrabAt(Vector3 worldPosition, Quaternion worldRotation)
+        {
+            if (grabbedBody == null)
+            {
+                return;
+            }
+
+            Transform grabbedTransform = grabbedBody.transform;
+            grabbedTransform.SetParent(grabbedOriginalParent, true);
+            grabbedTransform.SetPositionAndRotation(worldPosition, worldRotation);
+
+            grabbedBody.isKinematic = grabbedOriginalIsKinematic;
+            grabbedBody.detectCollisions = grabbedOriginalDetectCollisions;
+            grabbedBody.linearVelocity = Vector3.zero;
+            grabbedBody.angularVelocity = Vector3.zero;
+            grabbedPlacementOverride?.OnGrabPlaced(worldPosition, worldRotation);
+
+            DestroyGrabPreview();
+            grabbedBody = null;
+            grabbedOriginalParent = null;
+            grabbedPlacementOverride = null;
+        }
+
+        private GameObject EnsureGrabPreview()
+        {
+            if (grabbedPreviewRoot != null)
+            {
+                return grabbedPreviewRoot;
+            }
+
+            if (grabbedBody == null)
+            {
+                return null;
+            }
+
+            grabbedPreviewRoot = Instantiate(grabbedBody.gameObject);
+            grabbedPreviewRoot.name = "GrabPlacementPreview";
+            grabbedPreviewRoot.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
+            grabbedPreviewRoot.SetActive(false);
+            PrepareGrabPreviewClone(grabbedPreviewRoot);
+            SetGrabPreviewVisible(false);
+            return grabbedPreviewRoot;
+        }
+
+        private void RebuildGrabPreview()
+        {
+            DestroyGrabPreview();
+            EnsureGrabPreview();
+        }
+
+        private void DestroyGrabPreview()
+        {
+            if (grabbedPreviewRoot != null)
+            {
+                DestroyRuntimeSafe(grabbedPreviewRoot);
+                grabbedPreviewRoot = null;
+            }
+        }
+
+        private void SetGrabPreviewVisible(bool visible)
+        {
+            if (grabbedPreviewRoot != null && grabbedPreviewRoot.activeSelf != visible)
+            {
+                grabbedPreviewRoot.SetActive(visible);
+            }
+        }
+
+        private void PrepareGrabPreviewClone(GameObject previewObject)
+        {
+            if (previewObject == null)
+            {
+                return;
+            }
+
+            previewObject.tag = "Untagged";
+            previewObject.transform.SetParent(null, true);
+            Component[] components = previewObject.GetComponentsInChildren<Component>(true);
+            for (int i = 0; i < components.Length; i++)
+            {
+                Component component = components[i];
+                if (component == null || component is Transform)
+                {
+                    continue;
+                }
+
+                if (component is Renderer renderer)
+                {
+                    Material previewMaterial = GetGrabPreviewMaterial();
+                    Material[] previewMaterials = new Material[renderer.sharedMaterials != null ? renderer.sharedMaterials.Length : 0];
+                    for (int materialIndex = 0; materialIndex < previewMaterials.Length; materialIndex++)
+                    {
+                        previewMaterials[materialIndex] = previewMaterial;
+                    }
+
+                    if (previewMaterials.Length > 0)
+                    {
+                        renderer.sharedMaterials = previewMaterials;
+                    }
+
+                    renderer.shadowCastingMode = ShadowCastingMode.Off;
+                    renderer.receiveShadows = false;
+                    renderer.lightProbeUsage = LightProbeUsage.Off;
+                    renderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
+                    renderer.motionVectorGenerationMode = MotionVectorGenerationMode.ForceNoMotion;
+                    renderer.allowOcclusionWhenDynamic = false;
+                    continue;
+                }
+
+                if (component is MeshFilter)
+                {
+                    continue;
+                }
+
+                DestroyRuntimeSafe(component);
+            }
+        }
+
+        private Material GetGrabPreviewMaterial()
+        {
+            if (grabbedPreviewMaterial != null)
+            {
+                ApplyPreviewMaterialColor(grabbedPreviewMaterial);
+                return grabbedPreviewMaterial;
+            }
+
+            Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (shader == null)
+            {
+                shader = Shader.Find("Unlit/Color");
+            }
+
+            if (shader == null)
+            {
+                shader = Shader.Find("Standard");
+            }
+
+            grabbedPreviewMaterial = new Material(shader)
+            {
+                name = "GrabPlacementPreviewMaterial"
+            };
+
+            ApplyPreviewMaterialColor(grabbedPreviewMaterial);
+            if (grabbedPreviewMaterial.HasProperty("_Surface"))
+            {
+                grabbedPreviewMaterial.SetFloat("_Surface", 1f);
+            }
+
+            if (grabbedPreviewMaterial.HasProperty("_Blend"))
+            {
+                grabbedPreviewMaterial.SetFloat("_Blend", 0f);
+            }
+
+            grabbedPreviewMaterial.SetOverrideTag("RenderType", "Transparent");
+            grabbedPreviewMaterial.renderQueue = (int)RenderQueue.Transparent;
+            grabbedPreviewMaterial.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            return grabbedPreviewMaterial;
+        }
+
+        private void ApplyPreviewMaterialColor(Material material)
+        {
+            if (material == null)
+            {
+                return;
+            }
+
+            material.color = grabPlacementPreviewColor;
+            if (material.HasProperty("_BaseColor"))
+            {
+                material.SetColor("_BaseColor", grabPlacementPreviewColor);
+            }
+        }
+
+        private static void DestroyRuntimeSafe(Object target)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            if (Application.isPlaying)
+            {
+                Destroy(target);
+            }
+            else
+            {
+                DestroyImmediate(target);
+            }
         }
 
         private bool IsCarryRestricted()
@@ -486,6 +823,8 @@ namespace StarterAssets
         private void OnDisable()
         {
             ReleaseGrab();
+            DestroyRuntimeSafe(grabbedPreviewMaterial);
+            grabbedPreviewMaterial = null;
             ClearOutlineHighlight();
         }
 
@@ -575,6 +914,32 @@ namespace StarterAssets
             }
 
             relay?.NotifyInteracted(interactor);
+        }
+
+        private static ICustomGrabPlacement FindCustomGrabPlacement(Transform grabbedTransform)
+        {
+            if (grabbedTransform == null)
+            {
+                return null;
+            }
+
+            if (grabbedTransform.TryGetComponent(out ICustomGrabPlacement direct))
+            {
+                return direct;
+            }
+
+            Transform parent = grabbedTransform.parent;
+            while (parent != null)
+            {
+                if (parent.TryGetComponent(out ICustomGrabPlacement parentPlacement))
+                {
+                    return parentPlacement;
+                }
+
+                parent = parent.parent;
+            }
+
+            return null;
         }
     }
 }

@@ -47,7 +47,7 @@ public class CallPhaseScenarioContext : MonoBehaviour
     {
         PrepareScenarioRun();
 
-        if (Object.FindFirstObjectByType<CallInScheduler>(FindObjectsInactive.Include) == null)
+        if (Object.FindAnyObjectByType<CallInScheduler>(FindObjectsInactive.Include) == null)
         {
             BeginCallSession();
         }
@@ -96,7 +96,7 @@ public class CallPhaseScenarioContext : MonoBehaviour
         CallPhaseScenarioContext context = source.GetComponentInParent<CallPhaseScenarioContext>();
         if (context == null)
         {
-            context = Object.FindFirstObjectByType<CallPhaseScenarioContext>(FindObjectsInactive.Include);
+            context = Object.FindAnyObjectByType<CallPhaseScenarioContext>(FindObjectsInactive.Include);
         }
 
         return context != null ? context.ScenarioData : null;
@@ -313,7 +313,7 @@ public class CallPhaseScenarioContext : MonoBehaviour
             }
         }
 
-        TMP_Text[] sceneTextComponents = Object.FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        TMP_Text[] sceneTextComponents = Object.FindObjectsByType<TMP_Text>(FindObjectsInactive.Include);
         for (int i = 0; i < sceneTextComponents.Length; i++)
         {
             TMP_Text textComponent = sceneTextComponents[i];

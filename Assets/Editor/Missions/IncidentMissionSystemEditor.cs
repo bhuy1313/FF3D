@@ -252,7 +252,7 @@ public class IncidentMissionSystemEditor : Editor
         MissionSceneObjectRegistry registry = missionSystem.GetComponent<MissionSceneObjectRegistry>();
         if (registry == null && includeSceneSearch)
         {
-            registry = FindFirstObjectByType<MissionSceneObjectRegistry>(FindObjectsInactive.Include);
+            registry = FindAnyObjectByType<MissionSceneObjectRegistry>(FindObjectsInactive.Include);
         }
 
         if (registry == null && addIfMissing)
@@ -607,10 +607,10 @@ public class IncidentMissionSystemEditor : Editor
     private static HashSet<string> CollectSceneSignalKeys()
     {
         HashSet<string> keys = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
-        AppendSignalKeys(FindObjectsByType<MissionSignalSource>(FindObjectsInactive.Include, FindObjectsSortMode.None), keys);
-        AppendSignalKeys(FindObjectsByType<MissionInteractionSignalRelay>(FindObjectsInactive.Include, FindObjectsSortMode.None), keys);
-        AppendSignalKeys(FindObjectsByType<MissionBreakableSignalRelay>(FindObjectsInactive.Include, FindObjectsSortMode.None), keys);
-        AppendSignalKeys(FindObjectsByType<MissionRescueDeliverySignalRelay>(FindObjectsInactive.Include, FindObjectsSortMode.None), keys);
+        AppendSignalKeys(FindObjectsByType<MissionSignalSource>(FindObjectsInactive.Include), keys);
+        AppendSignalKeys(FindObjectsByType<MissionInteractionSignalRelay>(FindObjectsInactive.Include), keys);
+        AppendSignalKeys(FindObjectsByType<MissionBreakableSignalRelay>(FindObjectsInactive.Include), keys);
+        AppendSignalKeys(FindObjectsByType<MissionRescueDeliverySignalRelay>(FindObjectsInactive.Include), keys);
         return keys;
     }
 

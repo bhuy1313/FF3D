@@ -22,6 +22,14 @@ public interface IGrabbable
     //None
 }
 
+public interface ICustomGrabPlacement
+{
+    bool TryGetGrabPlacementPose(Transform aimTransform, LayerMask placementMask, float maxDistance, out Vector3 position, out Quaternion rotation);
+    void OnGrabStarted();
+    void OnGrabCancelled();
+    void OnGrabPlaced(Vector3 position, Quaternion rotation);
+}
+
 public interface IDamageable
 {
     void TakeDamage(float amount, GameObject source, Vector3 hitPoint, Vector3 hitNormal);

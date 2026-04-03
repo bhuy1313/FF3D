@@ -44,7 +44,7 @@ public sealed class MissionRuntimeSceneData
             return;
         }
 
-        T[] found = Object.FindObjectsByType<T>(FindObjectsSortMode.None);
+        T[] found = Object.FindObjectsByType<T>();
         for (int i = 0; i < found.Length; i++)
         {
             T candidate = found[i];

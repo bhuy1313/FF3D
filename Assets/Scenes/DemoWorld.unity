@@ -15,18 +15,18 @@ RenderSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 10
   m_Fog: 1
-  m_FogColor: {r: 0.3, g: 0.25, b: 0.3, a: 1}
+  m_FogColor: {r: 0.72, g: 0.84, b: 0.94, a: 1}
   m_FogMode: 1
   m_FogDensity: 0.01
   m_LinearFogStart: 0
-  m_LinearFogEnd: 210
-  m_AmbientSkyColor: {r: 0.25, g: 0.22, b: 0.28, a: 1}
-  m_AmbientEquatorColor: {r: 0.18, g: 0.15, b: 0.18, a: 1}
-  m_AmbientGroundColor: {r: 0.08, g: 0.07, b: 0.08, a: 1}
-  m_AmbientIntensity: 0.7
+  m_LinearFogEnd: 420
+  m_AmbientSkyColor: {r: 0.56, g: 0.73, b: 0.92, a: 1}
+  m_AmbientEquatorColor: {r: 0.36, g: 0.5, b: 0.61, a: 1}
+  m_AmbientGroundColor: {r: 0.21, g: 0.25, b: 0.27, a: 1}
+  m_AmbientIntensity: 1
   m_AmbientMode: 1
   m_SubtractiveShadowColor: {r: 0.08, g: 0.1, b: 0.14, a: 1}
-  m_SkyboxMaterial: {fileID: 2100000, guid: 7416536dbe0334cfd888dd1beb75a9fb, type: 2}
+  m_SkyboxMaterial: {fileID: 2100000, guid: c56e28e54cac24b04ae3dd957d214534, type: 2}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -35,7 +35,7 @@ RenderSettings:
   m_DefaultReflectionMode: 0
   m_DefaultReflectionResolution: 128
   m_ReflectionBounces: 1
-  m_ReflectionIntensity: 0.12
+  m_ReflectionIntensity: 0.24
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 173444508}
   m_UseRadianceAmbientProbe: 0
@@ -93,7 +93,7 @@ LightmapSettings:
     m_ExportTrainingData: 0
     m_TrainingDataDestination: TrainingData
     m_LightProbeSampleCountMultiplier: 4
-  m_LightingDataAsset: {fileID: 112000000, guid: daaa2afb51480a54eb34eef92e54acdb, type: 2}
+  m_LightingDataAsset: {fileID: 112000000, guid: bbba94596847a2542b9e766f2f6e9f76, type: 2}
   m_LightingSettings: {fileID: 0}
 --- !u!196 &4
 NavMeshSettings:
@@ -1996,8 +1996,8 @@ Light:
   m_Enabled: 1
   serializedVersion: 13
   m_Type: 1
-  m_Color: {r: 1, g: 0.72, b: 0.52, a: 1}
-  m_Intensity: 0.88
+  m_Color: {r: 1, g: 0.97, b: 0.91, a: 1}
+  m_Intensity: 1.35
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -2059,7 +2059,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 173444507}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.10047921, y: -0.2741274, z: 0.02881195, w: 0.9559958}
+  m_LocalRotation: {x: 0.57139385, y: -0.0713938, z: 0.04999048, w: 0.816035}
   m_LocalPosition: {x: 0, y: 22.5, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -2107,7 +2107,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 54eab5657c1f4767afba15fd59f81695, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TimeOfDayPresetController
-  selectedPreset: 2
+  selectedPreset: 1
   applyOnEnable: 1
   sunLight: {fileID: 173444508}
   morningSkybox: {fileID: 2100000, guid: 8b7dd0809c7c6498789fa32a61eaa6cb, type: 2}
@@ -17667,10 +17667,25 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SmokeHazard
   triggerZone: {fileID: 1584360747}
   triggerBody: {fileID: 1584360749}
+  autoCollectMode: 0
+  autoCollectChildFires: 1
+  linkedFires: []
+  autoCollectChildVentPoints: 0
+  linkedVentPoints: []
+  startSmokeDensity: 0
+  smokePerBurningFire: 0.3
+  smokePerFireIntensity: 0.7
+  passiveVentilationRelief: 0.05
+  smokeAccumulationRate: 0.75
+  smokeDissipationRate: 1
+  fireDraftBoostPerSecond: 0.2
   affectPlayers: 1
   affectVictims: 1
+  minimumDangerousDensity: 0.05
   oxygenDrainPerSecond: 0.75
   victimConditionDamagePerSecond: 0.75
+  maxVisibilityPenalty: 0.8
+  currentSmokeDensity: 0
 --- !u!54 &1584360749
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -22344,6 +22359,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e61ba35b01f89cc47b8789adfd2ab66b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Vent
+  startsOpen: 0
+  smokeVentilationReliefWhenOpen: 0.35
+  fireDraftRiskWhenOpen: 0
 --- !u!54 &1906557808
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -25021,6 +25039,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e61ba35b01f89cc47b8789adfd2ab66b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Vent
+  startsOpen: 0
+  smokeVentilationReliefWhenOpen: 0.35
+  fireDraftRiskWhenOpen: 0
 --- !u!54 &2092437056
 Rigidbody:
   m_ObjectHideFlags: 0

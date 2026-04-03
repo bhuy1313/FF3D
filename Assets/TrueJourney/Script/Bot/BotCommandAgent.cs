@@ -71,6 +71,9 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
     [Header("Navigation")]
     [SerializeField] private float navMeshSampleDistance = 2f;
     [SerializeField] private float turnSpeed = 360f;
+    [SerializeField] private bool enableManualOffMeshTraversal = true;
+    [SerializeField] private float offMeshTraverseSpeed = 2.25f;
+    [SerializeField] private float offMeshArrivalDistance = 0.05f;
 
     [Header("Aim")]
     [SerializeField] private float handAimDefaultDistance = 4f;
@@ -158,6 +161,7 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
     private IFireTarget lockedExtinguisherFireTarget;
     private float lockedExtinguisherFireRadius;
     private float lockedExtinguisherStandOffDistance;
+    private bool lockedExtinguisherHasConfirmedLineOfSight;
     private IRescuableTarget currentRescueTarget;
     private ISafeZoneTarget currentSafeZoneTarget;
     private Vector3 currentExtinguishTargetPosition;
@@ -268,6 +272,11 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
     {
         ResolveViewPointReference();
         ResolveHandAimReference();
+        if (TryTraverseOffMeshLink())
+        {
+            return;
+        }
+
         if (behaviorContext == null)
         {
             return;
@@ -834,6 +843,37 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
         return pathClearingController != null
             ? pathClearingController.TryNavigateTo(destination)
             : TryNavigateTo(destination);
+    }
+
+    private bool TryTraverseOffMeshLink()
+    {
+        if (navMeshAgent == null || !navMeshAgent.enabled)
+        {
+            return false;
+        }
+
+        navMeshAgent.autoTraverseOffMeshLink = !enableManualOffMeshTraversal;
+        if (!enableManualOffMeshTraversal || !navMeshAgent.isOnNavMesh || !navMeshAgent.isOnOffMeshLink)
+        {
+            return false;
+        }
+
+        OffMeshLinkData offMeshLinkData = navMeshAgent.currentOffMeshLinkData;
+        Vector3 endPosition = offMeshLinkData.endPos + Vector3.up * navMeshAgent.baseOffset;
+        float moveSpeed = Mathf.Max(0.1f, offMeshTraverseSpeed);
+        float arrivalDistance = Mathf.Max(0.01f, offMeshArrivalDistance);
+
+        transform.position = Vector3.MoveTowards(transform.position, endPosition, moveSpeed * Time.deltaTime);
+        AimTowards(endPosition);
+
+        if ((endPosition - transform.position).sqrMagnitude > arrivalDistance * arrivalDistance)
+        {
+            return true;
+        }
+
+        transform.position = endPosition;
+        navMeshAgent.CompleteOffMeshLink();
+        return true;
     }
 
     private bool IsWithinArrivalDistance(Vector3 destination)

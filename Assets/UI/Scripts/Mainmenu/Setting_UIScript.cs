@@ -242,7 +242,7 @@ public class Setting_UIScript : MonoBehaviour
     {
         if (toastContainer == null)
         {
-            toastContainer = FindFirstObjectByType<ToastContainerController>();
+            toastContainer = FindAnyObjectByType<ToastContainerController>();
         }
 
         if (toastContainer == null)
@@ -319,7 +319,7 @@ public class Setting_UIScript : MonoBehaviour
 
         if (toastContainer == null)
         {
-            toastContainer = FindFirstObjectByType<ToastContainerController>();
+            toastContainer = FindAnyObjectByType<ToastContainerController>();
         }
 
         if (languageToggleBinder == null)

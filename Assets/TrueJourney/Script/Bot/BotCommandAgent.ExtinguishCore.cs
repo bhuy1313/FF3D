@@ -166,30 +166,9 @@ public partial class BotCommandAgent
 
         if (shouldReposition)
         {
-            if (orderMode == BotExtinguishCommandMode.PointFire &&
-                !CanExtinguishFromCurrentPosition(activeExtinguisher, firePosition, fireTarget) &&
-                !IsNearOrderPoint(orderPoint))
-            {
-                UpdateExtinguishDebugStage(ExtinguishDebugStage.MovingToFire, $"Moving to point-fire approach position {orderPoint}.");
-                ClearHeadAimFocus();
-                ClearHandAimFocus();
-                ResetExtinguishCrouchState();
-                StopExtinguisher();
-                sprayReadyTime = -1f;
-                MoveTo(orderPoint);
-                return;
-            }
-
-            if (!UsesPreciseAim(activeExtinguisher) && orderMode == BotExtinguishCommandMode.PointFire)
-            {
-                desiredPosition = orderPoint;
-            }
-            else
-            {
-                desiredPosition = UsesPreciseAim(activeExtinguisher)
-                    ? ResolveExtinguishPosition(targetSearchPoint, firePosition, desiredHorizontalDistance)
-                    : ResolveExtinguisherApproachPosition(orderPoint, firePosition, desiredHorizontalDistance);
-            }
+            desiredPosition = UsesPreciseAim(activeExtinguisher)
+                ? ResolveExtinguishPosition(targetSearchPoint, firePosition, desiredHorizontalDistance)
+                : ResolveExtinguisherApproachPosition(orderPoint, firePosition, desiredHorizontalDistance);
             LogVerboseExtinguish(
                 VerboseExtinguishLogCategory.Movement,
                 $"movefire:{desiredPosition}",

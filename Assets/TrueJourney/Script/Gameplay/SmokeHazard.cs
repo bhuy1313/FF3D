@@ -51,7 +51,7 @@ public class SmokeHazard : MonoBehaviour
     [Range(0f, 1f)]
     [SerializeField] private float currentSmokeDensity;
 
-    private readonly HashSet<int> processedTargets = new HashSet<int>();
+    private readonly HashSet<Component> processedTargets = new HashSet<Component>();
     private int processedFrame = -1;
 
     public float CurrentSmokeDensity => currentSmokeDensity;
@@ -153,14 +153,14 @@ public class SmokeHazard : MonoBehaviour
         if (affectPlayers)
         {
             PlayerVitals vitals = other.GetComponentInParent<PlayerVitals>();
-            if (vitals != null && processedTargets.Add(vitals.GetInstanceID()))
+            if (vitals != null && processedTargets.Add(vitals))
                 vitals.ConsumeOxygen(oxygenDrainPerSecond * effectScale * scaledDeltaTime);
         }
 
         if (affectVictims)
         {
             VictimCondition victim = other.GetComponentInParent<VictimCondition>();
-            if (victim != null && processedTargets.Add(victim.GetInstanceID()))
+            if (victim != null && processedTargets.Add(victim))
                 victim.ApplySmokeExposure(victimConditionDamagePerSecond * effectScale * scaledDeltaTime);
         }
     }
@@ -280,7 +280,7 @@ public class SmokeHazard : MonoBehaviour
 
     private Fire[] CollectVolumeFires()
     {
-        Fire[] fires = FindObjectsByType<Fire>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        Fire[] fires = FindObjectsByType<Fire>(FindObjectsInactive.Include);
         List<Fire> results = new List<Fire>();
         for (int i = 0; i < fires.Length; i++)
         {
@@ -294,7 +294,7 @@ public class SmokeHazard : MonoBehaviour
 
     private MonoBehaviour[] CollectVolumeVentPoints()
     {
-        MonoBehaviour[] behaviours = FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        MonoBehaviour[] behaviours = FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include);
         List<MonoBehaviour> results = new List<MonoBehaviour>();
         for (int i = 0; i < behaviours.Length; i++)
         {

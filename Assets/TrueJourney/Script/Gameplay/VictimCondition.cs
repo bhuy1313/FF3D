@@ -306,6 +306,9 @@ public class VictimCondition : MonoBehaviour
 
     private void SyncTriageAnimation()
     {
+        if (!Application.isPlaying)
+            return;
+
         CacheReferences();
         if (victimAnimator == null || victimAnimator.runtimeAnimatorController == null)
             return;

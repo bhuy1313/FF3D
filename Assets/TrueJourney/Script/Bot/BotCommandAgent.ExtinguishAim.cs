@@ -204,12 +204,19 @@ public partial class BotCommandAgent
             return currentRadius;
         }
 
+        if (lockedExtinguisherHasConfirmedLineOfSight)
+        {
+            return lockedExtinguisherFireRadius;
+        }
+
         return Mathf.Max(currentRadius, lockedExtinguisherFireRadius);
     }
 
     private bool IsExtinguisherTargetLocked(IFireTarget fireTarget)
     {
-        return fireTarget != null && ReferenceEquals(lockedExtinguisherFireTarget, fireTarget);
+        return fireTarget != null &&
+               ReferenceEquals(lockedExtinguisherFireTarget, fireTarget) &&
+               lockedExtinguisherHasConfirmedLineOfSight;
     }
 
     private void LockExtinguisherTarget(IFireTarget fireTarget)
@@ -224,10 +231,16 @@ public partial class BotCommandAgent
         {
             lockedExtinguisherFireTarget = fireTarget;
             lockedExtinguisherFireRadius = currentRadius;
+            lockedExtinguisherHasConfirmedLineOfSight = true;
             return;
         }
 
-        lockedExtinguisherFireRadius = Mathf.Max(lockedExtinguisherFireRadius, currentRadius);
+        if (!lockedExtinguisherHasConfirmedLineOfSight)
+        {
+            lockedExtinguisherFireRadius = currentRadius;
+        }
+
+        lockedExtinguisherHasConfirmedLineOfSight = true;
     }
 
     private void PrimeExtinguisherTargetLock(IBotExtinguisherItem tool, IFireTarget fireTarget)
@@ -244,11 +257,15 @@ public partial class BotCommandAgent
             lockedExtinguisherFireTarget = fireTarget;
             lockedExtinguisherFireRadius = currentRadius;
             lockedExtinguisherStandOffDistance = currentStandOff;
+            lockedExtinguisherHasConfirmedLineOfSight = false;
             return;
         }
 
-        lockedExtinguisherFireRadius = Mathf.Max(lockedExtinguisherFireRadius, currentRadius);
-        lockedExtinguisherStandOffDistance = Mathf.Max(lockedExtinguisherStandOffDistance, currentStandOff);
+        if (!lockedExtinguisherHasConfirmedLineOfSight)
+        {
+            lockedExtinguisherFireRadius = currentRadius;
+            lockedExtinguisherStandOffDistance = currentStandOff;
+        }
     }
 
     private void ClearExtinguisherTargetLock()
@@ -256,6 +273,7 @@ public partial class BotCommandAgent
         lockedExtinguisherFireTarget = null;
         lockedExtinguisherFireRadius = 0f;
         lockedExtinguisherStandOffDistance = 0f;
+        lockedExtinguisherHasConfirmedLineOfSight = false;
     }
 
     private IFireTarget GetLockedExtinguisherFireTarget()

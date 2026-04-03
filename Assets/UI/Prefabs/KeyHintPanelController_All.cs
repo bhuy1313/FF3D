@@ -19,7 +19,7 @@ public class KeyHintPanelController_All : MonoBehaviour
 
     private void Awake()
     {
-        if (playerInput == null) playerInput = FindFirstObjectByType<PlayerInput>();
+        if (playerInput == null) playerInput = FindAnyObjectByType<PlayerInput>();
         if (container == null) container = transform;
     }
 

@@ -50,7 +50,7 @@ public class MeshShatterTests
             InvokeInstanceMethod(shatter, "Shatter", Vector3.zero, Vector3.forward, 1f);
 
             bool isShattered = (bool)MeshShatterType.GetProperty("IsShattered", InstanceFlags).GetValue(shatter);
-            Rigidbody[] rigidbodies = UnityEngine.Object.FindObjectsByType<Rigidbody>(FindObjectsSortMode.None);
+            Rigidbody[] rigidbodies = UnityEngine.Object.FindObjectsByType<Rigidbody>();
 
             Assert.That(isShattered, Is.True);
             Assert.That(meshRenderer.enabled, Is.False);
@@ -61,6 +61,7 @@ public class MeshShatterTests
             GameObject shardRoot = GameObject.Find("Glass_Shards");
             if (shardRoot != null)
             {
+                DestroyChildSharedMeshes(shardRoot.transform);
                 UnityEngine.Object.DestroyImmediate(shardRoot);
             }
 
@@ -103,6 +104,7 @@ public class MeshShatterTests
             Assert.That(preserved, Is.Not.Null);
             Assert.That(preserved.subMeshCount, Is.EqualTo(1));
             Assert.That(preserved.GetTriangles(0).Length, Is.EqualTo(3));
+            UnityEngine.Object.DestroyImmediate(preserved);
         }
         finally
         {
@@ -217,6 +219,26 @@ public class MeshShatterTests
         mesh.RecalculateNormals();
         mesh.RecalculateBounds();
         return mesh;
+    }
+
+    private static void DestroyChildSharedMeshes(Transform root)
+    {
+        if (root == null)
+        {
+            return;
+        }
+
+        MeshFilter[] filters = root.GetComponentsInChildren<MeshFilter>(true);
+        for (int i = 0; i < filters.Length; i++)
+        {
+            MeshFilter filter = filters[i];
+            if (filter == null || filter.sharedMesh == null)
+            {
+                continue;
+            }
+
+            UnityEngine.Object.DestroyImmediate(filter.sharedMesh);
+        }
     }
 
     private static object InvokeInstanceMethod(object target, string methodName, params object[] args)

@@ -129,26 +129,18 @@ public class FPSInventorySystem : MonoBehaviour
             return;
         }
 
-        InventorySlot slot = slots[activeIndex];
-        Rigidbody rb = slot.Item.Rigidbody;
-        rb.transform.SetParent(slot.OriginalParent, true);
-        rb.isKinematic = slot.WasKinematic;
-        rb.detectCollisions = slot.DetectCollisions;
-        if (hideStoredItems && slot.WasActive)
+        RemoveSlotAt(activeIndex, dropper, destroyItem: false);
+    }
+
+    public bool RemoveHeld(GameObject owner, bool destroyItem = true)
+    {
+        if (!HasItem)
         {
-            rb.gameObject.SetActive(true);
+            return false;
         }
 
-        slot.Item.OnDrop(dropper);
-
-        slots.RemoveAt(activeIndex);
-        if (slots.Count == 0)
-        {
-            activeIndex = -1;
-            return;
-        }
-
-        activeIndex = -1;
+        RemoveSlotAt(activeIndex, owner, destroyItem);
+        return true;
     }
 
     public void UseHeld(GameObject user)
@@ -223,6 +215,56 @@ public class FPSInventorySystem : MonoBehaviour
         {
             slot.Item.Rigidbody.gameObject.SetActive(false);
         }
+    }
+
+    private void RemoveSlotAt(int index, GameObject owner, bool destroyItem)
+    {
+        if (index < 0 || index >= slots.Count)
+        {
+            return;
+        }
+
+        InventorySlot slot = slots[index];
+        Rigidbody rb = slot.Item != null ? slot.Item.Rigidbody : null;
+
+        if (slot.Item != null)
+        {
+            slot.Item.OnDrop(owner);
+        }
+
+        if (rb != null && !destroyItem)
+        {
+            rb.transform.SetParent(slot.OriginalParent, true);
+            rb.isKinematic = slot.WasKinematic;
+            rb.detectCollisions = slot.DetectCollisions;
+            if (hideStoredItems && slot.WasActive)
+            {
+                rb.gameObject.SetActive(true);
+            }
+        }
+
+        slots.RemoveAt(index);
+
+        if (rb != null && destroyItem)
+        {
+            if (Application.isPlaying)
+            {
+                Object.Destroy(rb.gameObject);
+            }
+            else
+            {
+                Object.DestroyImmediate(rb.gameObject);
+            }
+        }
+
+        if (slots.Count == 0)
+        {
+            activeIndex = -1;
+            return;
+        }
+
+        activeIndex = Mathf.Clamp(index, 0, slots.Count - 1);
+        EquipSlot(slots[activeIndex]);
     }
 
     private static IPickupable FindPickupable(GameObject target)

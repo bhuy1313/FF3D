@@ -333,14 +333,19 @@ public partial class BotCommandAgent
         return HasLineOfSightToFireTarget(position, firePosition, fireTarget);
     }
 
-    private static float GetDistanceToFireEdge(Vector3 fromPosition, Vector3 firePosition, IFireTarget fireTarget)
+    private float GetDistanceToFireEdge(Vector3 fromPosition, Vector3 firePosition, IFireTarget fireTarget)
     {
-        float fireRadius = fireTarget != null ? Mathf.Max(0f, fireTarget.GetWorldRadius()) : 0f;
+        float fireRadius = GetTrackedExtinguisherFireRadius(fireTarget);
         return Mathf.Max(0f, Vector3.Distance(fromPosition, firePosition) - fireRadius);
     }
 
     private bool HasLineOfSightToFireTarget(Vector3 originPosition, Vector3 firePosition, IFireTarget fireTarget)
     {
+        if (IsExtinguisherTargetLocked(fireTarget))
+        {
+            return true;
+        }
+
         Vector3 targetPoint = ResolveExtinguishVisibilityTargetPoint(firePosition, fireTarget);
         Vector3 origin = ResolveExtinguishVisibilityOrigin(originPosition, targetPoint);
         Vector3 toTarget = targetPoint - origin;

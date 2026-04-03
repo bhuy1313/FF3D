@@ -15,7 +15,7 @@ public class PlayerVitalsUI : MonoBehaviour
     {
         if (vitals == null)
         {
-            vitals = FindFirstObjectByType<PlayerVitals>();
+            vitals = FindAnyObjectByType<PlayerVitals>();
         }
     }
 

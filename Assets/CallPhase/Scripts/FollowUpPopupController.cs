@@ -435,7 +435,7 @@ public class FollowUpPopupController : MonoBehaviour
             }
         }
 
-        Transform[] sceneTransforms = FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        Transform[] sceneTransforms = FindObjectsByType<Transform>(FindObjectsInactive.Include);
         for (int i = 0; i < sceneTransforms.Length; i++)
         {
             Transform candidate = sceneTransforms[i];

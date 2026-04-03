@@ -169,7 +169,7 @@ public class SmokeVentVfxController : MonoBehaviour
 
     private SmokeHazard FindNearestSmokeHazard()
     {
-        SmokeHazard[] hazards = FindObjectsByType<SmokeHazard>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        SmokeHazard[] hazards = FindObjectsByType<SmokeHazard>(FindObjectsInactive.Exclude);
         SmokeHazard nearest = null;
         float nearestDistanceSq = autoFindRadius <= 0f ? float.PositiveInfinity : autoFindRadius * autoFindRadius;
         Vector3 origin = transform.position;

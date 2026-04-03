@@ -444,7 +444,7 @@ public class IncidentMissionSystem : MonoBehaviour
 
     private static List<T> CollectSceneObjects<T>() where T : Component
     {
-        T[] found = FindObjectsByType<T>(FindObjectsSortMode.None);
+        T[] found = FindObjectsByType<T>();
         List<T> results = new List<T>(found.Length);
         for (int i = 0; i < found.Length; i++)
         {
@@ -1286,7 +1286,7 @@ public class IncidentMissionSystem : MonoBehaviour
             return sceneObjectRegistry;
         }
 
-        sceneObjectRegistry = FindFirstObjectByType<MissionSceneObjectRegistry>(FindObjectsInactive.Exclude);
+        sceneObjectRegistry = FindAnyObjectByType<MissionSceneObjectRegistry>(FindObjectsInactive.Exclude);
         return sceneObjectRegistry;
     }
 
@@ -1349,7 +1349,7 @@ public class IncidentMissionSystem : MonoBehaviour
 
     private void ResetSignalEmitters()
     {
-        MonoBehaviour[] behaviours = FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        MonoBehaviour[] behaviours = FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include);
         for (int i = 0; i < behaviours.Length; i++)
         {
             if (behaviours[i] is IMissionSignalResettable resettable)

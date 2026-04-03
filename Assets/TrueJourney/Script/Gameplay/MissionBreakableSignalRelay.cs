@@ -54,7 +54,7 @@ public class MissionBreakableSignalRelay : MonoBehaviour, IMissionSignalResettab
 
         if (missionSystem == null)
         {
-            missionSystem = FindFirstObjectByType<IncidentMissionSystem>();
+            missionSystem = FindAnyObjectByType<IncidentMissionSystem>();
         }
     }
 

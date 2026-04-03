@@ -110,7 +110,7 @@ public class MissionSignalSource : MonoBehaviour, IMissionSignalResettable
     {
         if (missionSystem == null)
         {
-            missionSystem = FindFirstObjectByType<IncidentMissionSystem>();
+            missionSystem = FindAnyObjectByType<IncidentMissionSystem>();
         }
     }
 }
