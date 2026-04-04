@@ -102,6 +102,48 @@ public static class PlayerProgressProfileStore
         SaveProfile(profile);
     }
 
+    public static bool DeleteProfile(string playerName)
+    {
+        string normalizedPlayerName = NormalizePlayerName(playerName);
+        if (string.IsNullOrWhiteSpace(normalizedPlayerName))
+        {
+            return false;
+        }
+
+        ProfileIndexData index = GetProfileIndex();
+        bool removedFromIndex = false;
+
+        for (int i = index.profileNames.Count - 1; i >= 0; i--)
+        {
+            if (!string.Equals(index.profileNames[i], normalizedPlayerName, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            index.profileNames.RemoveAt(i);
+            removedFromIndex = true;
+        }
+
+        string profileKey = GetProfileDataKey(normalizedPlayerName);
+        bool hadProfileData = PlayerPrefs.HasKey(profileKey);
+
+        if (hadProfileData)
+        {
+            PlayerPrefs.DeleteKey(profileKey);
+        }
+
+        if (removedFromIndex)
+        {
+            SaveProfileIndex(index);
+        }
+        else if (hadProfileData)
+        {
+            PlayerPrefs.Save();
+        }
+
+        return removedFromIndex || hadProfileData;
+    }
+
     public static void MarkLevelCompleted(string playerName, string levelId)
     {
         string normalizedPlayerName = NormalizePlayerName(playerName);

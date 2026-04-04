@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -8,6 +9,16 @@ using UnityEngine.UI;
 [DisallowMultipleComponent]
 public class LevelSelectSceneController : MonoBehaviour
 {
+    private const string RegionSuburbanLocalizationKey = "levelselect.region.suburban";
+    private const string RegionCityLocalizationKey = "levelselect.region.city";
+    private const string PlayButtonLocalizationKey = "levelselect.btn.play";
+    private const string NoDescriptionLocalizationKey = "levelselect.placeholder.description";
+    private const string NoObjectiveLocalizationKey = "levelselect.placeholder.objective";
+    private const string FallbackLevelNameLocalizationKey = "levelselect.placeholder.level_name";
+    private const string DifficultyNormalLocalizationKey = "levelselect.difficulty.normal";
+    private const string DifficultyOptionalLocalizationKey = "levelselect.difficulty.optional";
+    private const string DifficultyTbdLocalizationKey = "levelselect.difficulty.tbd";
+
     private enum RegionSelection
     {
         None = 0,
@@ -21,9 +32,13 @@ public class LevelSelectSceneController : MonoBehaviour
         public string buttonName;
         public string levelId;
         public string levelName;
+        public string levelNameLocalizationKey;
         [TextArea(2, 4)] public string description;
+        public string descriptionLocalizationKey;
         [TextArea(2, 4)] public string objective;
+        public string objectiveLocalizationKey;
         public string difficulty = "Normal";
+        public string difficultyLocalizationKey;
         public string caseId;
         public string targetSceneName;
         public string scenarioResourcePath;
@@ -35,6 +50,7 @@ public class LevelSelectSceneController : MonoBehaviour
     private sealed class RegionCard
     {
         public string name;
+        public string titleLocalizationKey;
         public RectTransform root;
         public TMP_Text title;
         public Sprite mapSprite;
@@ -106,6 +122,14 @@ public class LevelSelectSceneController : MonoBehaviour
     [SerializeField] private float mapScaleCollapsed = 1.12f;
     [SerializeField] private float mapScaleSelected = 1.01f;
 
+    [Header("Scene Intro")]
+    [SerializeField] private bool playSceneIntro = true;
+    [SerializeField] private float sceneIntroDelay = 0.04f;
+    [SerializeField] private float sceneIntroDuration = 0.48f;
+    [SerializeField] private float sceneIntroVerticalOffset = 26f;
+    [SerializeField] private float sceneIntroCardHorizontalOffset = 36f;
+    [SerializeField] [Range(0.85f, 1f)] private float sceneIntroStartScale = 0.985f;
+
     [Header("Content")]
     [SerializeField] private float outerContentPadding = 28f;
     [SerializeField] private float seamContentPadding = 34f;
@@ -143,12 +167,25 @@ public class LevelSelectSceneController : MonoBehaviour
     private Setting_UIScript settingsUI;
     private Button settingsBackButton;
     private ToastContainerController runtimeToastContainer;
+    private CanvasGroup panelCanvasGroup;
+    private Coroutine sceneIntroCoroutine;
+    private Vector2 panelRootBaseAnchoredPosition;
+    private Vector3 panelRootBaseScale = Vector3.one;
+    private float sceneIntroProgress = 1f;
+    private bool isSceneIntroPlaying;
 
     private void Awake()
     {
         if (panelRoot == null)
         {
             panelRoot = transform as RectTransform;
+        }
+
+        if (panelRoot != null)
+        {
+            panelRootBaseAnchoredPosition = panelRoot.anchoredPosition;
+            panelRootBaseScale = panelRoot.localScale;
+            panelCanvasGroup = GetOrAddComponent<CanvasGroup>(panelRoot.gameObject);
         }
 
         EnsureDivider();
@@ -161,11 +198,57 @@ public class LevelSelectSceneController : MonoBehaviour
 
         currentLeftRatio = neutralRatio;
         targetLeftRatio = neutralRatio;
+        InitializeSceneIntroState();
         ApplyAnimatedState(instant: true);
+        RefreshLocalizedContent();
+    }
+
+    private void Start()
+    {
+        if (!playSceneIntro || !Application.isPlaying)
+        {
+            CompleteSceneIntro();
+            return;
+        }
+
+        if (sceneIntroCoroutine != null)
+        {
+            StopCoroutine(sceneIntroCoroutine);
+        }
+
+        sceneIntroCoroutine = StartCoroutine(PlaySceneIntro());
+    }
+
+    private void OnEnable()
+    {
+        LanguageManager.LanguageChanged -= OnLanguageChanged;
+        LanguageManager.LanguageChanged += OnLanguageChanged;
+        RefreshLocalizedContent();
+    }
+
+    private void OnDisable()
+    {
+        LanguageManager.LanguageChanged -= OnLanguageChanged;
     }
 
     private void Update()
     {
+        if (isSceneIntroPlaying)
+        {
+            if (panelRoot != null)
+            {
+                Vector2 currentSize = panelRoot.rect.size;
+                if (!Mathf.Approximately(currentSize.x, lastPanelSize.x) ||
+                    !Mathf.Approximately(currentSize.y, lastPanelSize.y))
+                {
+                    lastPanelSize = currentSize;
+                    ApplyAnimatedState(instant: true);
+                }
+            }
+
+            return;
+        }
+
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             HandleEscapePressed();
@@ -190,6 +273,84 @@ public class LevelSelectSceneController : MonoBehaviour
         }
 
         ApplyAnimatedState(instant: false);
+    }
+
+    private void InitializeSceneIntroState()
+    {
+        sceneIntroProgress = playSceneIntro && Application.isPlaying ? 0f : 1f;
+        isSceneIntroPlaying = sceneIntroProgress < 0.999f;
+        ApplySceneIntroVisualState();
+    }
+
+    private IEnumerator PlaySceneIntro()
+    {
+        isSceneIntroPlaying = true;
+        sceneIntroProgress = 0f;
+        ApplyAnimatedState(instant: true);
+
+        if (sceneIntroDelay > 0f)
+        {
+            yield return new WaitForSecondsRealtime(sceneIntroDelay);
+        }
+
+        float duration = Mathf.Max(0.01f, sceneIntroDuration);
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            sceneIntroProgress = Mathf.Clamp01(elapsed / duration);
+            ApplyAnimatedState(instant: true);
+            yield return null;
+        }
+
+        CompleteSceneIntro();
+    }
+
+    private void CompleteSceneIntro()
+    {
+        if (sceneIntroCoroutine != null)
+        {
+            StopCoroutine(sceneIntroCoroutine);
+            sceneIntroCoroutine = null;
+        }
+
+        sceneIntroProgress = 1f;
+        isSceneIntroPlaying = false;
+        ApplyAnimatedState(instant: true);
+    }
+
+    private void ApplySceneIntroVisualState()
+    {
+        float introVisibility = GetSceneIntroVisibility();
+
+        if (panelRoot != null)
+        {
+            float scale = Mathf.Lerp(sceneIntroStartScale, 1f, introVisibility);
+            panelRoot.anchoredPosition = panelRootBaseAnchoredPosition +
+                                         new Vector2(0f, Mathf.Lerp(sceneIntroVerticalOffset, 0f, introVisibility));
+            panelRoot.localScale = new Vector3(
+                panelRootBaseScale.x * scale,
+                panelRootBaseScale.y * scale,
+                panelRootBaseScale.z);
+        }
+
+        if (panelCanvasGroup != null)
+        {
+            panelCanvasGroup.alpha = introVisibility;
+            panelCanvasGroup.interactable = !isSceneIntroPlaying;
+            panelCanvasGroup.blocksRaycasts = !isSceneIntroPlaying;
+        }
+    }
+
+    private float GetSceneIntroVisibility()
+    {
+        return Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(sceneIntroProgress));
+    }
+
+    private float GetSceneIntroOffset()
+    {
+        return (1f - GetSceneIntroVisibility()) * sceneIntroCardHorizontalOffset;
     }
 
     public void SelectSuburban()
@@ -648,9 +809,9 @@ public class LevelSelectSceneController : MonoBehaviour
                 buttonName = $"LevelButton_{i + 1:00}",
                 levelId = $"{card.name.ToLowerInvariant()}_{i + 1:00}",
                 levelName = fallbackLevelName,
-                description = "Level route is not configured yet.",
-                objective = "Configure target scene and scenario for this level.",
-                difficulty = "TBD",
+                description = string.Empty,
+                objective = string.Empty,
+                difficulty = string.Empty,
                 caseId = string.Empty,
                 targetSceneName = string.Empty,
                 scenarioResourcePath = string.Empty
@@ -675,7 +836,7 @@ public class LevelSelectSceneController : MonoBehaviour
             }
         }
 
-        return $"Level {index + 1:00}";
+        return $"{LanguageManager.Tr(FallbackLevelNameLocalizationKey, "Level")} {index + 1:00}";
     }
 
     private LevelDefinition GetLevelDefinition(RegionCard card, Button levelButton, int fallbackIndex)
@@ -870,23 +1031,9 @@ public class LevelSelectSceneController : MonoBehaviour
 
         selectedLevelCard = card;
         selectedLevelDefinition = definition;
-
-        string buttonLabel = GetButtonLabel(sourceButton);
-        string levelName = !string.IsNullOrWhiteSpace(definition.levelName)
-            ? definition.levelName
-            : SanitizeLevelName(buttonLabel);
-        string areaName = card != null && card.title != null
-            ? card.title.text
-            : card != null ? card.name : string.Empty;
-
         selectedLevelSourceButton = sourceButton;
 
-        SetText(levelInfoPopup.levelNameText, levelName);
-        SetText(levelInfoPopup.areaText, areaName);
-        SetText(levelInfoPopup.descriptionText, !string.IsNullOrWhiteSpace(definition.description) ? definition.description : "No description configured.");
-        SetText(levelInfoPopup.objectiveText, !string.IsNullOrWhiteSpace(definition.objective) ? definition.objective : "No objective configured.");
-        SetText(levelInfoPopup.difficultyText, !string.IsNullOrWhiteSpace(definition.difficulty) ? definition.difficulty : "TBD");
-
+        ApplyLevelInfoTexts(card, definition, sourceButton);
         RefreshLevelInfoLayout();
 
         bool canPlay = HasPlayableRoute(definition);
@@ -1254,6 +1401,143 @@ public class LevelSelectSceneController : MonoBehaviour
         }
     }
 
+    private void OnLanguageChanged(AppLanguage _)
+    {
+        RefreshLocalizedContent();
+    }
+
+    private void RefreshLocalizedContent()
+    {
+        RefreshRegionCardFonts(suburbanCard);
+        RefreshRegionCardFonts(cityCard);
+        RefreshLevelInfoFonts();
+        RefreshRegionCardTexts(suburbanCard);
+        RefreshRegionCardTexts(cityCard);
+        RefreshRegionCardLayout(suburbanCard);
+        RefreshRegionCardLayout(cityCard);
+        RefreshPlayButtonText();
+
+        if (selectedLevelDefinition != null)
+        {
+            ApplyLevelInfoTexts(selectedLevelCard, selectedLevelDefinition, selectedLevelSourceButton);
+            RefreshLevelInfoLayout();
+        }
+    }
+
+    private void RefreshRegionCardTexts(RegionCard card)
+    {
+        if (card == null)
+        {
+            return;
+        }
+
+        SetText(card.title, ResolveRegionTitle(card));
+
+        if (card.levelListContentRoot == null || card.levelLabels == null || card.levelLabels.Count <= 0)
+        {
+            return;
+        }
+
+        for (int i = 0; i < card.levelLabels.Count; i++)
+        {
+            TMP_Text label = card.levelLabels[i];
+            if (label == null)
+            {
+                continue;
+            }
+
+            LevelDefinition definition = GetLevelDefinitionByIndex(card, i);
+            string resolvedBaseName = ResolveLevelListBaseName(card, definition, i);
+            label.text = FormatLevelLabel(card, definition, resolvedBaseName, i);
+        }
+    }
+
+    private void RefreshPlayButtonText()
+    {
+        if (levelInfoPopup.playButtonLabel == null)
+        {
+            return;
+        }
+
+        SetText(levelInfoPopup.playButtonLabel, LanguageManager.Tr(PlayButtonLocalizationKey, "Play"));
+    }
+
+    private void ApplyLevelInfoTexts(RegionCard card, LevelDefinition definition, Button sourceButton)
+    {
+        if (definition == null)
+        {
+            return;
+        }
+
+        SetText(levelInfoPopup.levelNameText, ResolveLevelName(definition, sourceButton));
+        SetText(levelInfoPopup.areaText, ResolveRegionTitle(card));
+        SetText(levelInfoPopup.descriptionText, ResolveDescription(definition));
+        SetText(levelInfoPopup.objectiveText, ResolveObjective(definition));
+        SetText(levelInfoPopup.difficultyText, ResolveDifficulty(definition));
+        RefreshPlayButtonText();
+    }
+
+    private void RefreshRegionCardFonts(RegionCard card)
+    {
+        if (card == null)
+        {
+            return;
+        }
+
+        ApplyLanguageFontToChildren(card.root, LanguageFontRole.Default);
+        ApplyLanguageFont(card.title, LanguageFontRole.Heading);
+
+        if (card.levelLabels == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < card.levelLabels.Count; i++)
+        {
+            ApplyLanguageFont(card.levelLabels[i], LanguageFontRole.Default);
+        }
+    }
+
+    private void RefreshLevelInfoFonts()
+    {
+        ApplyLanguageFontToChildren(levelInfoPopup.root, LanguageFontRole.Default);
+        ApplyLanguageFont(levelInfoPopup.levelNameText, LanguageFontRole.Heading);
+        ApplyLanguageFont(levelInfoPopup.playButtonLabel, LanguageFontRole.Default);
+    }
+
+    private void RefreshRegionCardLayout(RegionCard card)
+    {
+        if (card == null)
+        {
+            return;
+        }
+
+        ForceTextLayoutUpdate(card.title);
+
+        if (card.levelLabels != null)
+        {
+            for (int i = 0; i < card.levelLabels.Count; i++)
+            {
+                ForceTextLayoutUpdate(card.levelLabels[i]);
+            }
+        }
+
+        if (card.levelListContentRoot != null)
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(card.levelListContentRoot);
+        }
+
+        if (card.levelListRoot != null)
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(card.levelListRoot);
+        }
+
+        if (card.root != null)
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(card.root);
+        }
+    }
+
     private void RefreshLevelInfoLayout()
     {
         Canvas.ForceUpdateCanvases();
@@ -1534,7 +1818,8 @@ public class LevelSelectSceneController : MonoBehaviour
             return card.levels;
         }
 
-        return new[] { "Level 01", "Level 02", "Level 03" };
+        string levelFallback = LanguageManager.Tr(FallbackLevelNameLocalizationKey, "Level");
+        return new[] { $"{levelFallback} 01", $"{levelFallback} 02", $"{levelFallback} 03" };
     }
 
     private string FormatLevelLabel(RegionCard card, LevelDefinition definition, string rawText, int index)
@@ -1544,16 +1829,17 @@ public class LevelSelectSceneController : MonoBehaviour
         string baseLabel;
         if (string.IsNullOrWhiteSpace(rawText))
         {
+            string levelFallback = LanguageManager.Tr(FallbackLevelNameLocalizationKey, "Level");
             baseLabel = card != null && card.isLeftCard
-                ? $"{sequence}  Level {sequence}"
-                : $"Level {sequence}  {sequence}";
+                ? $"{sequence}  {levelFallback} {sequence}"
+                : $"{levelFallback} {sequence}  {sequence}";
             return AppendCompletedMarker(baseLabel, definition);
         }
 
         string normalized = NormalizeLevelBaseName(rawText);
         if (string.IsNullOrWhiteSpace(normalized))
         {
-            normalized = "Level";
+            normalized = LanguageManager.Tr(FallbackLevelNameLocalizationKey, "Level");
         }
 
         baseLabel = card != null && card.isLeftCard
@@ -1621,6 +1907,174 @@ public class LevelSelectSceneController : MonoBehaviour
         label.raycastTarget = false;
 
         return label;
+    }
+
+    private string ResolveRegionTitle(RegionCard card)
+    {
+        if (card == null)
+        {
+            return string.Empty;
+        }
+
+        string localizationKey = !string.IsNullOrWhiteSpace(card.titleLocalizationKey)
+            ? card.titleLocalizationKey
+            : GetDefaultRegionLocalizationKey(card.name);
+        string fallback = card.title != null ? card.title.text : card.name;
+        return ResolveLocalizedText(localizationKey, fallback);
+    }
+
+    private string ResolveLevelName(LevelDefinition definition, Button sourceButton)
+    {
+        string buttonLabel = GetButtonLabel(sourceButton);
+        string fallback = !string.IsNullOrWhiteSpace(definition.levelName)
+            ? definition.levelName
+            : SanitizeLevelName(buttonLabel);
+        string localizationKey = GetLevelFieldLocalizationKey(definition, definition.levelNameLocalizationKey, "name");
+        return ResolveLocalizedText(localizationKey, fallback);
+    }
+
+    private string ResolveDescription(LevelDefinition definition)
+    {
+        string fallback = !string.IsNullOrWhiteSpace(definition.description)
+            ? definition.description
+            : LanguageManager.Tr(NoDescriptionLocalizationKey, "No description configured.");
+        string localizationKey = GetLevelFieldLocalizationKey(definition, definition.descriptionLocalizationKey, "description");
+        return ResolveLocalizedText(localizationKey, fallback);
+    }
+
+    private string ResolveObjective(LevelDefinition definition)
+    {
+        string fallback = !string.IsNullOrWhiteSpace(definition.objective)
+            ? definition.objective
+            : LanguageManager.Tr(NoObjectiveLocalizationKey, "No objective configured.");
+        string localizationKey = GetLevelFieldLocalizationKey(definition, definition.objectiveLocalizationKey, "objective");
+        return ResolveLocalizedText(localizationKey, fallback);
+    }
+
+    private string ResolveDifficulty(LevelDefinition definition)
+    {
+        string localizationKey = !string.IsNullOrWhiteSpace(definition.difficultyLocalizationKey)
+            ? definition.difficultyLocalizationKey
+            : GetDefaultDifficultyLocalizationKey(definition.difficulty);
+        string fallback = !string.IsNullOrWhiteSpace(definition.difficulty)
+            ? definition.difficulty
+            : LanguageManager.Tr(DifficultyTbdLocalizationKey, "TBD");
+        return ResolveLocalizedText(localizationKey, fallback);
+    }
+
+    private string ResolveLevelListBaseName(RegionCard card, LevelDefinition definition, int index)
+    {
+        if (definition != null)
+        {
+            string localizedName = ResolveLevelName(definition, definition.button);
+            if (!string.IsNullOrWhiteSpace(localizedName))
+            {
+                return localizedName;
+            }
+        }
+
+        string[] levels = GetDisplayLevels(card.levelListContentRoot, card);
+        if (levels != null && index >= 0 && index < levels.Length)
+        {
+            return levels[index];
+        }
+
+        return LanguageManager.Tr(FallbackLevelNameLocalizationKey, "Level");
+    }
+
+    private static string GetDefaultRegionLocalizationKey(string regionName)
+    {
+        if (string.Equals(regionName, "Suburban", StringComparison.OrdinalIgnoreCase))
+        {
+            return RegionSuburbanLocalizationKey;
+        }
+
+        if (string.Equals(regionName, "City", StringComparison.OrdinalIgnoreCase))
+        {
+            return RegionCityLocalizationKey;
+        }
+
+        return string.Empty;
+    }
+
+    private static string GetLevelFieldLocalizationKey(LevelDefinition definition, string explicitKey, string suffix)
+    {
+        if (!string.IsNullOrWhiteSpace(explicitKey))
+        {
+            return explicitKey;
+        }
+
+        if (definition == null || string.IsNullOrWhiteSpace(definition.levelId))
+        {
+            return string.Empty;
+        }
+
+        return $"levelselect.level.{NormalizeLocalizationToken(definition.levelId)}.{suffix}";
+    }
+
+    private static string GetDefaultDifficultyLocalizationKey(string difficulty)
+    {
+        if (string.IsNullOrWhiteSpace(difficulty))
+        {
+            return DifficultyTbdLocalizationKey;
+        }
+
+        switch (difficulty.Trim().ToLowerInvariant())
+        {
+            case "normal":
+                return DifficultyNormalLocalizationKey;
+            case "optional":
+                return DifficultyOptionalLocalizationKey;
+            case "tbd":
+                return DifficultyTbdLocalizationKey;
+            default:
+                return string.Empty;
+        }
+    }
+
+    private static string ResolveLocalizedText(string key, string fallback)
+    {
+        return string.IsNullOrWhiteSpace(key)
+            ? fallback
+            : LanguageManager.Tr(key, fallback);
+    }
+
+    private static void ApplyLanguageFontToChildren(Transform root, LanguageFontRole role)
+    {
+        if (root == null || LanguageManager.Instance == null)
+        {
+            return;
+        }
+
+        TMP_Text[] texts = root.GetComponentsInChildren<TMP_Text>(true);
+        for (int i = 0; i < texts.Length; i++)
+        {
+            ApplyLanguageFont(texts[i], role);
+        }
+    }
+
+    private static void ApplyLanguageFont(TMP_Text target, LanguageFontRole role)
+    {
+        if (target == null || LanguageManager.Instance == null)
+        {
+            return;
+        }
+
+        TMP_FontAsset font = LanguageManager.Instance.GetCurrentTMPFont(role);
+        if (font != null)
+        {
+            target.font = font;
+        }
+    }
+
+    private static string NormalizeLocalizationToken(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        return value.Trim().ToLowerInvariant().Replace(' ', '_');
     }
 
     private static string NormalizeLevelBaseName(string value)
@@ -1709,6 +2163,7 @@ public class LevelSelectSceneController : MonoBehaviour
         UpdateCardVisuals(suburbanCard, suburbanFocus);
         UpdateCardVisuals(cityCard, cityFocus);
         UpdateDivider(Mathf.Max(suburbanFocus, cityFocus), contentWidth, splitX, seamInset);
+        ApplySceneIntroVisualState();
 
         if (levelInfoPopup != null &&
             levelInfoPopup.root != null &&
@@ -1724,6 +2179,7 @@ public class LevelSelectSceneController : MonoBehaviour
     {
         float topSeamX = splitX + seamInset * 0.5f;
         float bottomSeamX = splitX - seamInset * 0.5f;
+        float introOffset = GetSceneIntroOffset();
 
         if (suburbanCard != null && suburbanCard.root != null)
         {
@@ -1732,7 +2188,7 @@ public class LevelSelectSceneController : MonoBehaviour
             root.anchorMax = new Vector2(0f, 1f);
             root.pivot = new Vector2(0f, 0.5f);
             root.sizeDelta = new Vector2(Mathf.Max(0f, topSeamX - cardSpacing * 0.5f), -(panelPadding.z + panelPadding.w));
-            root.anchoredPosition = new Vector2(panelPadding.x, (panelPadding.w - panelPadding.z) * 0.5f);
+            root.anchoredPosition = new Vector2(panelPadding.x - introOffset, (panelPadding.w - panelPadding.z) * 0.5f);
 
             if (suburbanCard.shapeGraphic != null)
             {
@@ -1749,7 +2205,7 @@ public class LevelSelectSceneController : MonoBehaviour
             root.anchorMax = new Vector2(0f, 1f);
             root.pivot = new Vector2(0f, 0.5f);
             root.sizeDelta = new Vector2(Mathf.Max(0f, contentWidth - bottomSeamX - cardSpacing * 0.5f), -(panelPadding.z + panelPadding.w));
-            root.anchoredPosition = new Vector2(panelPadding.x + bottomSeamX + cardSpacing * 0.5f, (panelPadding.w - panelPadding.z) * 0.5f);
+            root.anchoredPosition = new Vector2(panelPadding.x + bottomSeamX + cardSpacing * 0.5f + introOffset, (panelPadding.w - panelPadding.z) * 0.5f);
 
             if (cityCard.shapeGraphic != null)
             {

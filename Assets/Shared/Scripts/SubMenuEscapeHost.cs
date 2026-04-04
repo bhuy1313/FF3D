@@ -17,6 +17,8 @@ public class SubMenuEscapeHost : MonoBehaviour
     private Button settingsBackButton;
     private ToastContainerController runtimeToastContainer;
 
+    public bool IsSettingsVisible => settingsCanvasGroup != null && settingsCanvasGroup.alpha > 0.001f;
+
     private void Start()
     {
         ResolveController();

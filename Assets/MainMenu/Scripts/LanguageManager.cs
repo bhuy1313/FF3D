@@ -1,10 +1,21 @@
 using System;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
 [DisallowMultipleComponent]
 public class LanguageManager : MonoBehaviour
 {
+    [Serializable]
+    private class LanguageFontEntry
+    {
+        public LanguageFontRole role = LanguageFontRole.Default;
+        public TMP_FontAsset vietnameseTMPFont;
+        public TMP_FontAsset englishTMPFont;
+        public Font vietnameseLegacyFont;
+        public Font englishLegacyFont;
+    }
+
     private const string PlayerPrefsLanguageKey = "game.language";
 
     public static LanguageManager Instance
@@ -32,6 +43,9 @@ public class LanguageManager : MonoBehaviour
     [SerializeField] private TMP_FontAsset englishTMPFont;
     [SerializeField] private Font vietnameseLegacyFont;
     [SerializeField] private Font englishLegacyFont;
+
+    [Header("Font Sets By Role (Optional)")]
+    [SerializeField] private List<LanguageFontEntry> fontEntries = new List<LanguageFontEntry>();
 
     [Header("Optional Auto Load")]
     [SerializeField] private bool autoLoadTableFromResources = false;
@@ -164,12 +178,56 @@ public class LanguageManager : MonoBehaviour
 
     public TMP_FontAsset GetTMPFontFor(AppLanguage language)
     {
-        return language == AppLanguage.Vietnamese ? vietnameseTMPFont : englishTMPFont;
+        return GetTMPFontFor(language, LanguageFontRole.Default);
+    }
+
+    public TMP_FontAsset GetTMPFontFor(AppLanguage language, LanguageFontRole role)
+    {
+        if (TryGetFontEntry(role, out LanguageFontEntry entry))
+        {
+            TMP_FontAsset roleFont = language == AppLanguage.Vietnamese
+                ? entry.vietnameseTMPFont
+                : entry.englishTMPFont;
+
+            if (roleFont != null)
+            {
+                return roleFont;
+            }
+        }
+
+        return GetDefaultTMPFont(language);
+    }
+
+    public TMP_FontAsset GetCurrentTMPFont(LanguageFontRole role = LanguageFontRole.Default)
+    {
+        return GetTMPFontFor(CurrentLanguage, role);
     }
 
     public Font GetLegacyFontFor(AppLanguage language)
     {
-        return language == AppLanguage.Vietnamese ? vietnameseLegacyFont : englishLegacyFont;
+        return GetLegacyFontFor(language, LanguageFontRole.Default);
+    }
+
+    public Font GetLegacyFontFor(AppLanguage language, LanguageFontRole role)
+    {
+        if (TryGetFontEntry(role, out LanguageFontEntry entry))
+        {
+            Font roleFont = language == AppLanguage.Vietnamese
+                ? entry.vietnameseLegacyFont
+                : entry.englishLegacyFont;
+
+            if (roleFont != null)
+            {
+                return roleFont;
+            }
+        }
+
+        return GetDefaultLegacyFont(language);
+    }
+
+    public Font GetCurrentLegacyFont(LanguageFontRole role = LanguageFontRole.Default)
+    {
+        return GetLegacyFontFor(CurrentLanguage, role);
     }
 
     private void LoadSavedLanguage()
@@ -186,5 +244,31 @@ public class LanguageManager : MonoBehaviour
         }
 
         SetLanguage(languageToUse, false, true);
+    }
+
+    private TMP_FontAsset GetDefaultTMPFont(AppLanguage language)
+    {
+        return language == AppLanguage.Vietnamese ? vietnameseTMPFont : englishTMPFont;
+    }
+
+    private Font GetDefaultLegacyFont(AppLanguage language)
+    {
+        return language == AppLanguage.Vietnamese ? vietnameseLegacyFont : englishLegacyFont;
+    }
+
+    private bool TryGetFontEntry(LanguageFontRole role, out LanguageFontEntry entry)
+    {
+        for (int i = 0; i < fontEntries.Count; i++)
+        {
+            LanguageFontEntry candidate = fontEntries[i];
+            if (candidate != null && candidate.role == role)
+            {
+                entry = candidate;
+                return true;
+            }
+        }
+
+        entry = null;
+        return false;
     }
 }

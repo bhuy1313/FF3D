@@ -17,6 +17,7 @@ public class LocalizedText : MonoBehaviour
     [SerializeField] private bool autoFindTextComponent = true;
 
     [Header("Font By Language (Optional)")]
+    [SerializeField] private LanguageFontRole fontRole = LanguageFontRole.Default;
     [SerializeField] private TMP_FontAsset vietnameseTMPFont;
     [SerializeField] private TMP_FontAsset englishTMPFont;
     [SerializeField] private Font vietnameseLegacyFont;
@@ -162,7 +163,7 @@ public class LocalizedText : MonoBehaviour
 
             if (selectedTMPFont == null && manager != null)
             {
-                selectedTMPFont = manager.GetTMPFontFor(language);
+                selectedTMPFont = manager.GetTMPFontFor(language, fontRole);
             }
 
             if (selectedTMPFont != null)
@@ -179,7 +180,7 @@ public class LocalizedText : MonoBehaviour
 
             if (selectedLegacyFont == null && manager != null)
             {
-                selectedLegacyFont = manager.GetLegacyFontFor(language);
+                selectedLegacyFont = manager.GetLegacyFontFor(language, fontRole);
             }
 
             if (selectedLegacyFont != null)
