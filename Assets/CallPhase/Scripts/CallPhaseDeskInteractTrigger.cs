@@ -9,6 +9,7 @@ public class CallPhaseDeskInteractTrigger : MonoBehaviour, IInteractable
     [Header("Call Phase Canvas")]
     [SerializeField] private GameObject callPhaseCanvas;
     [SerializeField] private CanvasGroup callPhaseCanvasGroup;
+    [SerializeField] private CallInScheduler callInScheduler;
 
     [Header("Camera Switch")]
     [SerializeField] private CinemachineCamera playerFollowCamera;
@@ -30,6 +31,7 @@ public class CallPhaseDeskInteractTrigger : MonoBehaviour, IInteractable
     [Header("Behavior")]
     [SerializeField] private float openDelaySeconds = 0f;
     [SerializeField] private bool allowRetrigger = false;
+    [SerializeField] private bool startDutyWhenCanvasOpens = true;
 
     private bool hasOpened;
     private bool isOpening;
@@ -38,6 +40,16 @@ public class CallPhaseDeskInteractTrigger : MonoBehaviour, IInteractable
     private void Awake()
     {
         ResolveReferences(null);
+    }
+
+    private void Start()
+    {
+        ResolveReferences(null);
+
+        if (!IsCallPhaseCanvasOpen())
+        {
+            RestoreGameplayInputState();
+        }
     }
 
     public void Interact(GameObject interactor)
@@ -112,6 +124,11 @@ public class CallPhaseDeskInteractTrigger : MonoBehaviour, IInteractable
             callPhaseCanvasGroup.blocksRaycasts = true;
         }
 
+        if (startDutyWhenCanvasOpens && callInScheduler != null)
+        {
+            callInScheduler.StartDutySession();
+        }
+
         hasOpened = true;
         isOpening = false;
         openRoutine = null;
@@ -141,6 +158,19 @@ public class CallPhaseDeskInteractTrigger : MonoBehaviour, IInteractable
         if (callPhaseCanvasGroup == null && callPhaseCanvas != null)
         {
             callPhaseCanvasGroup = callPhaseCanvas.GetComponent<CanvasGroup>();
+        }
+
+        if (callInScheduler == null)
+        {
+            if (callPhaseCanvas != null)
+            {
+                callInScheduler = callPhaseCanvas.GetComponent<CallInScheduler>();
+            }
+
+            if (callInScheduler == null)
+            {
+                callInScheduler = FindFirstObjectByType<CallInScheduler>(FindObjectsInactive.Include);
+            }
         }
 
         if (playerFollowCamera == null)
@@ -197,6 +227,46 @@ public class CallPhaseDeskInteractTrigger : MonoBehaviour, IInteractable
         {
             commandSystem = playerRoot.GetComponent<FPSCommandSystem>();
         }
+    }
+
+    private bool IsCallPhaseCanvasOpen()
+    {
+        if (callPhaseCanvas == null)
+        {
+            return false;
+        }
+
+        if (!callPhaseCanvas.activeInHierarchy)
+        {
+            return false;
+        }
+
+        if (callPhaseCanvasGroup == null)
+        {
+            return true;
+        }
+
+        return callPhaseCanvasGroup.alpha > 0.001f
+               && callPhaseCanvasGroup.interactable
+               && callPhaseCanvasGroup.blocksRaycasts;
+    }
+
+    private void RestoreGameplayInputState()
+    {
+        if (starterAssetsInputs != null)
+        {
+            starterAssetsInputs.cursorLocked = true;
+            starterAssetsInputs.cursorInputForLook = true;
+            starterAssetsInputs.look = Vector2.zero;
+        }
+
+        if (commandSystem != null)
+        {
+            commandSystem.enabled = true;
+        }
+
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
     }
 
     private System.Collections.IEnumerator WaitForCameraBlendToFinish()

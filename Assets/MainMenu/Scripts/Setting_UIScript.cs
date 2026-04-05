@@ -45,6 +45,14 @@ public class Setting_UIScript : MonoBehaviour
     [SerializeField] private TMP_Dropdown resolutionDropdown;
     [SerializeField] private Toggle vsyncToggle;
     [SerializeField] private Toggle fpsToggle;
+    [SerializeField] private Slider fovSlider;
+    [SerializeField] private SliderPercentText fovSliderValueText;
+    [SerializeField] private TMP_Text fovValueText;
+
+    [Header("Call Phase Settings")]
+    [SerializeField] private ThreeStepSlider responseSpeedSlider;
+    [SerializeField] private Toggle autoQuestionToggle;
+    [SerializeField] private Toggle autoValidateToggle;
 
     [Header("Active Visual")]
     [Range(1f, 1.5f)] [SerializeField] private float activeBrightness = 1.12f;
@@ -88,6 +96,11 @@ public class Setting_UIScript : MonoBehaviour
 
         ResolveRuntimeReferences();
         ConfigureResolutionDropdown(useSavedSelection: false);
+        ConfigureFovSlider();
+        InitializeResponseSpeedDefaultSelection();
+        InitializeFovDefaultSelection();
+        InitializeAutoQuestionDefaultSelection();
+        InitializeAutoValidateDefaultSelection();
         ValidateResolvedReferences();
         CaptureDefaultState();
         Debug.Log($"Setting_UIScript[{GetInstanceLabel()}]: Awake", this);
@@ -124,6 +137,7 @@ public class Setting_UIScript : MonoBehaviour
         if (btnSave != null) btnSave.onClick.AddListener(OnSaveButtonClicked);
         if (btnExit != null) btnExit.onClick.AddListener(OnExitButtonClicked);
         if (fpsToggle != null) fpsToggle.onValueChanged.AddListener(OnFpsToggleValueChanged);
+        if (fovSlider != null) fovSlider.onValueChanged.AddListener(OnFovSliderValueChanged);
 
     }
 
@@ -157,6 +171,10 @@ public class Setting_UIScript : MonoBehaviour
         LoadSavedResolutionSelection();
         LoadSavedVSyncSelection();
         LoadSavedFpsSelection();
+        LoadSavedFovSelection();
+        LoadSavedResponseSpeedSelection();
+        LoadSavedAutoQuestionSelection();
+        LoadSavedAutoValidateSelection();
         ApplyFpsTogglePreview();
         BindDirtyTracking();
         BeginEditSession();
@@ -428,6 +446,18 @@ public class Setting_UIScript : MonoBehaviour
         {
             fpsToggle = FindToggleByName("ToggFPS");
         }
+
+        fovSlider = FindSliderInNamedPanelChild(panelGrap, "FOV");
+        fovSliderValueText = FindSliderPercentTextInNamedPanelChild(panelGrap, "FOV");
+        fovValueText = FindTextInNamedPanelChild(panelGrap, "FOV", "FOVValueText");
+
+        if (responseSpeedSlider == null)
+        {
+            responseSpeedSlider = FindResponseSpeedSlider();
+        }
+
+        autoQuestionToggle = FindFirstToggleInNamedPanelChild("AutoQuestion");
+        autoValidateToggle = FindFirstToggleInNamedPanelChild("AutoConfirm");
     }
 
     private void ValidateResolvedReferences()
@@ -455,6 +485,26 @@ public class Setting_UIScript : MonoBehaviour
         if (fpsToggle == null)
         {
             Debug.LogWarning("Setting_UIScript: FPS toggle could not be resolved from the settings UI.", this);
+        }
+
+        if (panelGrap != null && fovSlider == null)
+        {
+            Debug.LogWarning("Setting_UIScript: FOV slider could not be resolved from the graphics panel.", this);
+        }
+
+        if (panelGen != null && responseSpeedSlider == null)
+        {
+            Debug.LogWarning("Setting_UIScript: Call Phase response speed slider could not be resolved from the general panel.", this);
+        }
+
+        if (panelGen != null && autoQuestionToggle == null)
+        {
+            Debug.LogWarning("Setting_UIScript: Call Phase auto-question toggle could not be resolved from the general panel.", this);
+        }
+
+        if (panelGen != null && autoValidateToggle == null)
+        {
+            Debug.LogWarning("Setting_UIScript: Call Phase auto-validate toggle could not be resolved from the general panel.", this);
         }
     }
 
@@ -499,6 +549,113 @@ public class Setting_UIScript : MonoBehaviour
             if (toggle != null && string.Equals(toggle.name, toggleName, StringComparison.OrdinalIgnoreCase))
             {
                 return toggle;
+            }
+        }
+
+        return null;
+    }
+
+    private ThreeStepSlider FindResponseSpeedSlider()
+    {
+        if (panelGen == null)
+        {
+            return null;
+        }
+
+        Transform[] transforms = panelGen.GetComponentsInChildren<Transform>(true);
+        foreach (Transform child in transforms)
+        {
+            if (child == null || !string.Equals(child.name, "ResponseSpeed", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            ThreeStepSlider namedSlider = child.GetComponentInChildren<ThreeStepSlider>(true);
+            if (namedSlider != null)
+            {
+                return namedSlider;
+            }
+        }
+
+        return panelGen.GetComponentInChildren<ThreeStepSlider>(true);
+    }
+
+    private Toggle FindFirstToggleInNamedPanelChild(string childName)
+    {
+        if (panelGen == null || string.IsNullOrWhiteSpace(childName))
+        {
+            return null;
+        }
+
+        Transform[] transforms = panelGen.GetComponentsInChildren<Transform>(true);
+        foreach (Transform child in transforms)
+        {
+            if (child == null || !string.Equals(child.name, childName, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            Toggle namedToggle = child.GetComponentInChildren<Toggle>(true);
+            if (namedToggle != null)
+            {
+                return namedToggle;
+            }
+        }
+
+        return null;
+    }
+
+    private Slider FindSliderInNamedPanelChild(GameObject panelRoot, string childName)
+    {
+        Transform namedChild = FindNamedPanelChild(panelRoot, childName);
+        return namedChild != null ? namedChild.GetComponentInChildren<Slider>(true) : null;
+    }
+
+    private SliderPercentText FindSliderPercentTextInNamedPanelChild(GameObject panelRoot, string childName)
+    {
+        Transform namedChild = FindNamedPanelChild(panelRoot, childName);
+        return namedChild != null ? namedChild.GetComponentInChildren<SliderPercentText>(true) : null;
+    }
+
+    private TMP_Text FindTextInNamedPanelChild(GameObject panelRoot, string childName, string textObjectName)
+    {
+        Transform namedChild = FindNamedPanelChild(panelRoot, childName);
+        if (namedChild == null || string.IsNullOrWhiteSpace(textObjectName))
+        {
+            return null;
+        }
+
+        Transform[] transforms = namedChild.GetComponentsInChildren<Transform>(true);
+        foreach (Transform child in transforms)
+        {
+            if (child == null || !string.Equals(child.name, textObjectName, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            TMP_Text text = child.GetComponent<TMP_Text>();
+            if (text != null)
+            {
+                return text;
+            }
+        }
+
+        return null;
+    }
+
+    private Transform FindNamedPanelChild(GameObject panelRoot, string childName)
+    {
+        if (panelRoot == null || string.IsNullOrWhiteSpace(childName))
+        {
+            return null;
+        }
+
+        Transform[] transforms = panelRoot.GetComponentsInChildren<Transform>(true);
+        foreach (Transform child in transforms)
+        {
+            if (child != null && string.Equals(child.name, childName, StringComparison.OrdinalIgnoreCase))
+            {
+                return child;
             }
         }
 
@@ -775,6 +932,10 @@ public class Setting_UIScript : MonoBehaviour
         SaveResolutionSelection();
         SaveVSyncSelection();
         SaveFpsSelection();
+        SaveFovSelection();
+        SaveResponseSpeedSelection();
+        SaveAutoQuestionSelection();
+        SaveAutoValidateSelection();
         SaveLanguageSelection();
 
         PlayerPrefs.Save();
@@ -914,6 +1075,150 @@ public class Setting_UIScript : MonoBehaviour
         fpsToggle.SetIsOnWithoutNotify(showFps);
     }
 
+    private void ConfigureFovSlider()
+    {
+        if (fovSlider == null)
+        {
+            return;
+        }
+
+        HideFovMilestoneLabels();
+
+        fovSlider.minValue = GameplayFovSettings.MinFov;
+        fovSlider.maxValue = GameplayFovSettings.MaxFov;
+        fovSlider.wholeNumbers = false;
+
+        if (fovSliderValueText != null)
+        {
+            fovSliderValueText.ConfigureDisplay(SliderPercentText.PercentMode.RawSliderValue, string.Empty, string.Empty, false);
+        }
+    }
+
+    private void HideFovMilestoneLabels()
+    {
+        Transform fovRoot = FindNamedPanelChild(panelGrap, "FOV");
+        if (fovRoot == null)
+        {
+            return;
+        }
+
+        ThreeStepSlider threeStepSlider = fovRoot.GetComponentInChildren<ThreeStepSlider>(true);
+        if (threeStepSlider != null)
+        {
+            threeStepSlider.enabled = false;
+        }
+
+        LocalizedText[] localizedTexts = fovRoot.GetComponentsInChildren<LocalizedText>(true);
+        for (int i = 0; i < localizedTexts.Length; i++)
+        {
+            LocalizedText localizedText = localizedTexts[i];
+            if (localizedText == null)
+            {
+                continue;
+            }
+
+            string key = localizedText.LocalizationKey;
+            if (!string.Equals(key, "slider.triple.milestone.low", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(key, "slider.triple.milestone.medium", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(key, "slider.triple.milestone.high", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            localizedText.gameObject.SetActive(false);
+        }
+    }
+
+    private void LoadSavedFovSelection()
+    {
+        if (fovSlider == null)
+        {
+            return;
+        }
+
+        fovSlider.SetValueWithoutNotify(GameplayFovSettings.GetSavedOrDefaultFov());
+        if (fovSliderValueText != null)
+        {
+            fovSliderValueText.RefreshDisplay();
+        }
+        ApplyFovSliderPreview();
+    }
+
+    private void InitializeFovDefaultSelection()
+    {
+        if (fovSlider == null)
+        {
+            return;
+        }
+
+        fovSlider.SetValueWithoutNotify(GameplayFovSettings.DefaultFov);
+        if (fovSliderValueText != null)
+        {
+            fovSliderValueText.RefreshDisplay();
+        }
+        ApplyFovSliderPreview();
+    }
+
+    private void LoadSavedResponseSpeedSelection()
+    {
+        if (responseSpeedSlider == null)
+        {
+            return;
+        }
+
+        responseSpeedSlider.SetStep(CallPhaseResponseSpeedSettings.GetSavedOrDefaultStep(), false);
+    }
+
+    private void InitializeResponseSpeedDefaultSelection()
+    {
+        if (responseSpeedSlider == null)
+        {
+            return;
+        }
+
+        responseSpeedSlider.SetStep(CallPhaseResponseSpeedSettings.DefaultStep, false);
+    }
+
+    private void LoadSavedAutoQuestionSelection()
+    {
+        if (autoQuestionToggle == null)
+        {
+            return;
+        }
+
+        autoQuestionToggle.isOn = CallPhaseAutoQuestionSettings.GetSavedOrDefaultEnabled();
+    }
+
+    private void InitializeAutoQuestionDefaultSelection()
+    {
+        if (autoQuestionToggle == null)
+        {
+            return;
+        }
+
+        autoQuestionToggle.isOn = CallPhaseAutoQuestionSettings.DefaultEnabled;
+    }
+
+    private void LoadSavedAutoValidateSelection()
+    {
+        if (autoValidateToggle == null)
+        {
+            return;
+        }
+
+        autoValidateToggle.isOn = CallPhaseAutoValidateSettings.GetSavedOrDefaultEnabled();
+    }
+
+    private void InitializeAutoValidateDefaultSelection()
+    {
+        if (autoValidateToggle == null)
+        {
+            return;
+        }
+
+        autoValidateToggle.isOn = CallPhaseAutoValidateSettings.DefaultEnabled;
+    }
+
     private void SaveFpsSelection()
     {
         if (fpsToggle == null)
@@ -928,6 +1233,68 @@ public class Setting_UIScript : MonoBehaviour
         }
 
         FPSOverlayRuntimeController.SetOverlayVisible(fpsToggle.isOn);
+    }
+
+    private void SaveFovSelection()
+    {
+        if (fovSlider == null)
+        {
+            return;
+        }
+
+        float selectedValue = GameplayFovSettings.ClampFov(fovSlider.value);
+        bool hasSavedValue = GameplayFovSettings.TryGetSavedFov(out float savedValue);
+        if (!hasSavedValue || !Mathf.Approximately(savedValue, selectedValue))
+        {
+            GameplayFovSettings.SaveFov(selectedValue);
+        }
+
+        GameplayFovRuntimeApplier.ApplyFov(selectedValue);
+    }
+
+    private void SaveResponseSpeedSelection()
+    {
+        if (responseSpeedSlider == null)
+        {
+            return;
+        }
+
+        int selectedStep = responseSpeedSlider.GetCurrentStep();
+        bool hasSavedStep = CallPhaseResponseSpeedSettings.TryGetSavedStep(out int savedStep);
+        if (!hasSavedStep || savedStep != selectedStep)
+        {
+            CallPhaseResponseSpeedSettings.SaveStep(selectedStep);
+        }
+    }
+
+    private void SaveAutoQuestionSelection()
+    {
+        if (autoQuestionToggle == null)
+        {
+            return;
+        }
+
+        bool selectedValue = autoQuestionToggle.isOn;
+        bool hasSavedValue = CallPhaseAutoQuestionSettings.TryGetSavedEnabled(out bool savedValue);
+        if (!hasSavedValue || savedValue != selectedValue)
+        {
+            CallPhaseAutoQuestionSettings.SaveEnabled(selectedValue);
+        }
+    }
+
+    private void SaveAutoValidateSelection()
+    {
+        if (autoValidateToggle == null)
+        {
+            return;
+        }
+
+        bool selectedValue = autoValidateToggle.isOn;
+        bool hasSavedValue = CallPhaseAutoValidateSettings.TryGetSavedEnabled(out bool savedValue);
+        if (!hasSavedValue || savedValue != selectedValue)
+        {
+            CallPhaseAutoValidateSettings.SaveEnabled(selectedValue);
+        }
     }
 
     private void SaveLanguageSelection()
@@ -955,6 +1322,11 @@ public class Setting_UIScript : MonoBehaviour
         ApplyFpsTogglePreview();
     }
 
+    private void OnFovSliderValueChanged(float _)
+    {
+        ApplyFovSliderPreview();
+    }
+
     private void ApplyFpsTogglePreview()
     {
         if (fpsToggle == null)
@@ -963,6 +1335,27 @@ public class Setting_UIScript : MonoBehaviour
         }
 
         FPSOverlayRuntimeController.SetOverlayVisible(fpsToggle.isOn);
+    }
+
+    private void ApplyFovSliderPreview()
+    {
+        if (fovSlider == null)
+        {
+            return;
+        }
+
+        RefreshFovValueText();
+        GameplayFovRuntimeApplier.ApplyFov(fovSlider.value);
+    }
+
+    private void RefreshFovValueText()
+    {
+        if (fovValueText == null || fovSlider == null)
+        {
+            return;
+        }
+
+        fovValueText.text = Mathf.RoundToInt(GameplayFovSettings.ClampFov(fovSlider.value)).ToString();
     }
 
     private void SetResolutionDropdownValue(int index)

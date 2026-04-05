@@ -18,6 +18,14 @@ public class LevelSelectSceneController : MonoBehaviour
     private const string DifficultyNormalLocalizationKey = "levelselect.difficulty.normal";
     private const string DifficultyOptionalLocalizationKey = "levelselect.difficulty.optional";
     private const string DifficultyTbdLocalizationKey = "levelselect.difficulty.tbd";
+    private const string RandomIncidentLocalizationKey = "levelselect.info.random_incident";
+    private const string PossibleIncidentsLocalizationKey = "levelselect.info.possible_incidents";
+    private const string SelectedScenarioLocalizationKey = "levelselect.info.selected_scenario";
+    private const string SelectedScenarioObjectiveLocalizationKey = "levelselect.info.selected_scenario_objective";
+    private const float ScenarioDropdownDoubleClickWindow = 0.35f;
+    private static readonly Color ScenarioDropdownItemColor = new Color(0f, 0f, 0f, 1f);
+    private static readonly Color ScenarioDropdownSelectedItemColor = new Color(0.15f, 0.58f, 0.22f, 1f);
+    private static readonly Color ScenarioToggleSelectedTextColor = new Color32(0x77, 0xFF, 0x00, 0xFF);
 
     private enum RegionSelection
     {
@@ -42,8 +50,19 @@ public class LevelSelectSceneController : MonoBehaviour
         public string caseId;
         public string targetSceneName;
         public string scenarioResourcePath;
+        public ScenarioDefinition[] scenarioDefinitions = Array.Empty<ScenarioDefinition>();
 
         [NonSerialized] public Button button;
+    }
+
+    [Serializable]
+    private sealed class ScenarioDefinition
+    {
+        public string scenarioId;
+        public string displayName;
+        public string caseId;
+        public string targetSceneName;
+        public string scenarioResourcePath;
     }
 
     [Serializable]
@@ -87,6 +106,23 @@ public class LevelSelectSceneController : MonoBehaviour
         public TMP_Text difficultyText;
         public Button playButton;
         public TMP_Text playButtonLabel;
+        public RectTransform scenarioDropdownRoot;
+        public RectTransform scenarioDropdownContentRoot;
+        public Button scenarioDropdownTemplateButton;
+        public TMP_Text scenarioDropdownTemplateLabel;
+        [NonSerialized] public CanvasGroup scenarioDropdownCanvasGroup;
+        [NonSerialized] public Button scenarioDropdownToggleButton;
+        [NonSerialized] public TMP_Text scenarioDropdownToggleLabel;
+        [NonSerialized] public Color scenarioDropdownToggleDefaultTextColor;
+        [NonSerialized] public CanvasGroup levelNameCanvasGroup;
+        [NonSerialized] public CanvasGroup areaCanvasGroup;
+        [NonSerialized] public CanvasGroup descriptionCanvasGroup;
+        [NonSerialized] public CanvasGroup objectiveCanvasGroup;
+        [NonSerialized] public CanvasGroup difficultyCanvasGroup;
+        [NonSerialized] public CanvasGroup playButtonCanvasGroup;
+        [NonSerialized] public CanvasGroup scenarioToggleButtonCanvasGroup;
+        [NonSerialized] public RectTransform scenarioDropdownToggleProxyRoot;
+        [NonSerialized] public Button scenarioDropdownToggleProxyButton;
     }
 
     [Header("Scene References")]
@@ -151,6 +187,16 @@ public class LevelSelectSceneController : MonoBehaviour
     [SerializeField] private float popupVerticalOffset = 12f;
     [SerializeField] private float popupScreenMargin = 24f;
 
+    [Header("Level Info Motion")]
+    [SerializeField] private bool animateLevelInfoPopup = true;
+    [SerializeField] private float levelInfoOpenDuration = 0.26f;
+    [SerializeField] private float levelInfoCloseDuration = 0.16f;
+    [SerializeField] private float levelInfoVerticalIntroOffset = 20f;
+    [SerializeField] [Range(0.85f, 1f)] private float levelInfoStartScale = 0.965f;
+    [SerializeField] private float levelInfoContentStagger = 0.04f;
+    [SerializeField] private float levelInfoContentFadeDuration = 0.14f;
+    [SerializeField] private float levelInfoButtonsDelay = 0.08f;
+
     private const string LoadingSceneName = "LoadingScene";
     private const string CompletedLevelMarker = "✓";
 
@@ -169,10 +215,15 @@ public class LevelSelectSceneController : MonoBehaviour
     private ToastContainerController runtimeToastContainer;
     private CanvasGroup panelCanvasGroup;
     private Coroutine sceneIntroCoroutine;
+    private Coroutine levelInfoPopupCoroutine;
     private Vector2 panelRootBaseAnchoredPosition;
     private Vector3 panelRootBaseScale = Vector3.one;
+    private Vector3 levelInfoPopupBaseScale = Vector3.one;
     private float sceneIntroProgress = 1f;
     private bool isSceneIntroPlaying;
+    private ScenarioDefinition selectedScenarioOverride;
+    private string lastScenarioDropdownClickKey = string.Empty;
+    private float lastScenarioDropdownClickTime = -10f;
 
     private void Awake()
     {
@@ -229,6 +280,7 @@ public class LevelSelectSceneController : MonoBehaviour
     private void OnDisable()
     {
         LanguageManager.LanguageChanged -= OnLanguageChanged;
+        StopLevelInfoPopupAnimation();
     }
 
     private void Update()
@@ -905,6 +957,12 @@ public class LevelSelectSceneController : MonoBehaviour
             return;
         }
 
+        if (IsScenarioDropdownOpen())
+        {
+            SetScenarioDropdownVisible(false);
+            return;
+        }
+
         if (IsSubMenuOpen())
         {
             CloseSubMenu();
@@ -972,17 +1030,74 @@ public class LevelSelectSceneController : MonoBehaviour
             levelInfoPopup.playButtonLabel = levelInfoPopup.playButton.GetComponentInChildren<TMP_Text>(true);
         }
 
+        if (levelInfoPopup.scenarioDropdownRoot == null)
+        {
+            levelInfoPopup.scenarioDropdownRoot = FindNestedRect(levelInfoPopup.root, "customDropdown");
+        }
+
+        if (levelInfoPopup.scenarioDropdownContentRoot == null && levelInfoPopup.scenarioDropdownRoot != null)
+        {
+            levelInfoPopup.scenarioDropdownContentRoot = FindNestedRect(levelInfoPopup.scenarioDropdownRoot, "Content");
+        }
+
+        if (levelInfoPopup.scenarioDropdownTemplateButton == null && levelInfoPopup.scenarioDropdownContentRoot != null)
+        {
+            levelInfoPopup.scenarioDropdownTemplateButton = levelInfoPopup.scenarioDropdownContentRoot.GetComponentInChildren<Button>(true);
+        }
+
+        if (levelInfoPopup.scenarioDropdownTemplateLabel == null && levelInfoPopup.scenarioDropdownTemplateButton != null)
+        {
+            levelInfoPopup.scenarioDropdownTemplateLabel = levelInfoPopup.scenarioDropdownTemplateButton.GetComponentInChildren<TMP_Text>(true);
+        }
+
+        if (levelInfoPopup.scenarioDropdownToggleButton == null)
+        {
+            levelInfoPopup.scenarioDropdownToggleButton = FindNestedButton(levelInfoPopup.root, "btnSelectManual");
+        }
+
+        if (levelInfoPopup.scenarioDropdownToggleLabel == null && levelInfoPopup.scenarioDropdownToggleButton != null)
+        {
+            levelInfoPopup.scenarioDropdownToggleLabel = levelInfoPopup.scenarioDropdownToggleButton.GetComponentInChildren<TMP_Text>(true);
+            if (levelInfoPopup.scenarioDropdownToggleLabel != null)
+            {
+                levelInfoPopup.scenarioDropdownToggleDefaultTextColor = levelInfoPopup.scenarioDropdownToggleLabel.color;
+            }
+        }
+
         levelInfoPopup.root.gameObject.SetActive(true);
+        levelInfoPopupBaseScale = levelInfoPopup.root.localScale;
         levelInfoPopup.canvasGroup = GetOrAddComponent<CanvasGroup>(levelInfoPopup.root.gameObject);
         levelInfoPopup.canvasGroup.alpha = 0f;
         levelInfoPopup.canvasGroup.interactable = false;
         levelInfoPopup.canvasGroup.blocksRaycasts = false;
 
+        if (levelInfoPopup.scenarioDropdownRoot != null)
+        {
+            levelInfoPopup.scenarioDropdownRoot.gameObject.SetActive(true);
+            levelInfoPopup.scenarioDropdownCanvasGroup = GetOrAddComponent<CanvasGroup>(levelInfoPopup.scenarioDropdownRoot.gameObject);
+            SetScenarioDropdownVisible(false);
+        }
+
         if (levelInfoPopup.playButton != null)
         {
             levelInfoPopup.playButton.onClick.RemoveAllListeners();
             levelInfoPopup.playButton.onClick.AddListener(PlaySelectedLevel);
+            levelInfoPopup.playButtonCanvasGroup = GetOrAddComponent<CanvasGroup>(levelInfoPopup.playButton.gameObject);
         }
+
+        levelInfoPopup.levelNameCanvasGroup = GetCanvasGroup(levelInfoPopup.levelNameText);
+        levelInfoPopup.areaCanvasGroup = GetCanvasGroup(levelInfoPopup.areaText);
+        levelInfoPopup.descriptionCanvasGroup = GetCanvasGroup(levelInfoPopup.descriptionText);
+        levelInfoPopup.objectiveCanvasGroup = GetCanvasGroup(levelInfoPopup.objectiveText);
+        levelInfoPopup.difficultyCanvasGroup = GetCanvasGroup(levelInfoPopup.difficultyText);
+        levelInfoPopup.scenarioToggleButtonCanvasGroup = levelInfoPopup.scenarioDropdownToggleButton != null
+            ? GetOrAddComponent<CanvasGroup>(levelInfoPopup.scenarioDropdownToggleButton.gameObject)
+            : null;
+
+        EnsureScenarioDropdownToggleProxy();
+        EnsureScenarioDropdownToggleButton();
+        ApplyLevelInfoContentAlpha(0f, 0f);
+        RefreshScenarioDropdownToggleVisualState();
     }
 
     private void EnsureSubMenuPopup()
@@ -1032,20 +1147,26 @@ public class LevelSelectSceneController : MonoBehaviour
         selectedLevelCard = card;
         selectedLevelDefinition = definition;
         selectedLevelSourceButton = sourceButton;
+        selectedScenarioOverride = null;
+        ResetScenarioDropdownClickState();
 
+        BuildScenarioDropdown(definition);
         ApplyLevelInfoTexts(card, definition, sourceButton);
         RefreshLevelInfoLayout();
-
-        bool canPlay = HasPlayableRoute(definition);
-        if (levelInfoPopup.playButton != null)
-        {
-            levelInfoPopup.playButton.interactable = canPlay;
-        }
+        RefreshPlayButtonState(definition);
+        RefreshScenarioDropdownToggleVisualState();
 
         PositionLevelInfoPopupNearSource(sourceButton);
-        levelInfoPopup.canvasGroup.alpha = 1f;
-        levelInfoPopup.canvasGroup.interactable = true;
-        levelInfoPopup.canvasGroup.blocksRaycasts = true;
+        Vector2 targetPosition = levelInfoPopup.root.anchoredPosition;
+        StopLevelInfoPopupAnimation();
+
+        if (!Application.isPlaying || !animateLevelInfoPopup)
+        {
+            ShowLevelInfoImmediately(targetPosition);
+            return;
+        }
+
+        levelInfoPopupCoroutine = StartCoroutine(AnimateOpenLevelInfoPopup(targetPosition));
     }
 
     private void CloseLevelInfo(bool instant = false)
@@ -1055,7 +1176,7 @@ public class LevelSelectSceneController : MonoBehaviour
             return;
         }
 
-        levelInfoPopup.canvasGroup.alpha = 0f;
+        StopLevelInfoPopupAnimation();
         levelInfoPopup.canvasGroup.interactable = false;
         levelInfoPopup.canvasGroup.blocksRaycasts = false;
 
@@ -1065,7 +1186,163 @@ public class LevelSelectSceneController : MonoBehaviour
             selectedLevelDefinition = null;
         }
 
+        selectedScenarioOverride = null;
+        ResetScenarioDropdownClickState();
+        SetScenarioDropdownVisible(false);
         selectedLevelSourceButton = null;
+        RefreshScenarioDropdownToggleVisualState();
+
+        if (instant || !Application.isPlaying || !animateLevelInfoPopup)
+        {
+            HideLevelInfoImmediately();
+            return;
+        }
+
+        levelInfoPopupCoroutine = StartCoroutine(AnimateCloseLevelInfoPopup());
+    }
+
+    private void StopLevelInfoPopupAnimation()
+    {
+        if (levelInfoPopupCoroutine == null)
+        {
+            return;
+        }
+
+        StopCoroutine(levelInfoPopupCoroutine);
+        levelInfoPopupCoroutine = null;
+    }
+
+    private void ShowLevelInfoImmediately(Vector2 targetPosition)
+    {
+        if (levelInfoPopup.root == null || levelInfoPopup.canvasGroup == null)
+        {
+            return;
+        }
+
+        levelInfoPopup.root.anchoredPosition = targetPosition;
+        levelInfoPopup.root.localScale = levelInfoPopupBaseScale;
+        levelInfoPopup.canvasGroup.alpha = 1f;
+        levelInfoPopup.canvasGroup.interactable = true;
+        levelInfoPopup.canvasGroup.blocksRaycasts = true;
+        ApplyLevelInfoContentAlpha(1f, 1f);
+    }
+
+    private void HideLevelInfoImmediately()
+    {
+        if (levelInfoPopup.root == null || levelInfoPopup.canvasGroup == null)
+        {
+            return;
+        }
+
+        levelInfoPopup.root.localScale = levelInfoPopupBaseScale;
+        levelInfoPopup.canvasGroup.alpha = 0f;
+        levelInfoPopup.canvasGroup.interactable = false;
+        levelInfoPopup.canvasGroup.blocksRaycasts = false;
+        ApplyLevelInfoContentAlpha(0f, 0f);
+    }
+
+    private IEnumerator AnimateOpenLevelInfoPopup(Vector2 targetPosition)
+    {
+        levelInfoPopup.canvasGroup.alpha = 0f;
+        levelInfoPopup.canvasGroup.interactable = false;
+        levelInfoPopup.canvasGroup.blocksRaycasts = false;
+        levelInfoPopup.root.localScale = levelInfoPopupBaseScale * levelInfoStartScale;
+        levelInfoPopup.root.anchoredPosition = targetPosition + Vector2.down * levelInfoVerticalIntroOffset;
+        ApplyLevelInfoContentAlpha(0f, 0f);
+
+        float duration = Mathf.Max(0.01f, levelInfoOpenDuration);
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float progress = Mathf.Clamp01(elapsed / duration);
+            float eased = EaseOutQuart(progress);
+            levelInfoPopup.canvasGroup.alpha = eased;
+            levelInfoPopup.root.localScale = Vector3.LerpUnclamped(levelInfoPopupBaseScale * levelInfoStartScale, levelInfoPopupBaseScale, eased);
+            levelInfoPopup.root.anchoredPosition = Vector2.LerpUnclamped(
+                targetPosition + Vector2.down * levelInfoVerticalIntroOffset,
+                targetPosition,
+                eased);
+
+            ApplyLevelInfoSequenceAlpha(GetLevelInfoTextGroups(), elapsed, 0f);
+            ApplyLevelInfoSequenceAlpha(GetLevelInfoButtonGroups(), elapsed, levelInfoButtonsDelay);
+            yield return null;
+        }
+
+        ShowLevelInfoImmediately(targetPosition);
+        levelInfoPopupCoroutine = null;
+    }
+
+    private IEnumerator AnimateCloseLevelInfoPopup()
+    {
+        Vector2 startPosition = levelInfoPopup.root.anchoredPosition;
+        Vector2 endPosition = startPosition + Vector2.down * (levelInfoVerticalIntroOffset * 0.35f);
+        Vector3 startScale = levelInfoPopup.root.localScale;
+        Vector3 endScale = levelInfoPopupBaseScale * Mathf.Lerp(levelInfoStartScale, 1f, 0.55f);
+        float startAlpha = levelInfoPopup.canvasGroup.alpha;
+        float duration = Mathf.Max(0.01f, levelInfoCloseDuration);
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float progress = Mathf.Clamp01(elapsed / duration);
+            float eased = EaseOutCubic(progress);
+            float visibility = 1f - eased;
+            levelInfoPopup.canvasGroup.alpha = startAlpha * visibility;
+            levelInfoPopup.root.localScale = Vector3.LerpUnclamped(startScale, endScale, eased);
+            levelInfoPopup.root.anchoredPosition = Vector2.LerpUnclamped(startPosition, endPosition, eased);
+            ApplyLevelInfoContentAlpha(visibility, visibility);
+            yield return null;
+        }
+
+        HideLevelInfoImmediately();
+        levelInfoPopupCoroutine = null;
+    }
+
+    private void ApplyLevelInfoContentAlpha(float textAlpha, float buttonAlpha)
+    {
+        SetCanvasGroupAlpha(levelInfoPopup.levelNameCanvasGroup, textAlpha);
+        SetCanvasGroupAlpha(levelInfoPopup.areaCanvasGroup, textAlpha);
+        SetCanvasGroupAlpha(levelInfoPopup.descriptionCanvasGroup, textAlpha);
+        SetCanvasGroupAlpha(levelInfoPopup.objectiveCanvasGroup, textAlpha);
+        SetCanvasGroupAlpha(levelInfoPopup.difficultyCanvasGroup, textAlpha);
+        SetCanvasGroupAlpha(levelInfoPopup.scenarioToggleButtonCanvasGroup, buttonAlpha);
+        SetCanvasGroupAlpha(levelInfoPopup.playButtonCanvasGroup, buttonAlpha);
+    }
+
+    private void ApplyLevelInfoSequenceAlpha(CanvasGroup[] groups, float elapsed, float baseDelay)
+    {
+        float fadeDuration = Mathf.Max(0.01f, levelInfoContentFadeDuration);
+        float stagger = Mathf.Max(0f, levelInfoContentStagger);
+
+        for (int i = 0; i < groups.Length; i++)
+        {
+            float visibility = EaseOutCubic(Mathf.Clamp01((elapsed - baseDelay - i * stagger) / fadeDuration));
+            SetCanvasGroupAlpha(groups[i], visibility);
+        }
+    }
+
+    private CanvasGroup[] GetLevelInfoTextGroups()
+    {
+        return new[]
+        {
+            levelInfoPopup.levelNameCanvasGroup,
+            levelInfoPopup.areaCanvasGroup,
+            levelInfoPopup.descriptionCanvasGroup,
+            levelInfoPopup.objectiveCanvasGroup,
+            levelInfoPopup.difficultyCanvasGroup
+        };
+    }
+
+    private CanvasGroup[] GetLevelInfoButtonGroups()
+    {
+        return new[]
+        {
+            levelInfoPopup.scenarioToggleButtonCanvasGroup,
+            levelInfoPopup.playButtonCanvasGroup
+        };
     }
 
     private void OpenSubMenu()
@@ -1267,7 +1544,16 @@ public class LevelSelectSceneController : MonoBehaviour
             return;
         }
 
-        LoadingFlowState.SetPendingTargetScene(selectedLevelDefinition.targetSceneName);
+        ScenarioDefinition scenario = IsPlayableScenario(selectedLevelDefinition, selectedScenarioOverride)
+            ? selectedScenarioOverride
+            : GetRandomPlayableScenario(selectedLevelDefinition);
+        string targetSceneName = ResolveTargetSceneName(selectedLevelDefinition, scenario);
+        if (!IsPlayableScene(targetSceneName))
+        {
+            return;
+        }
+
+        LoadingFlowState.SetPendingTargetScene(targetSceneName);
         if (!string.IsNullOrWhiteSpace(selectedLevelDefinition.levelId))
         {
             LoadingFlowState.SetCurrentLevelId(selectedLevelDefinition.levelId);
@@ -1277,18 +1563,20 @@ public class LevelSelectSceneController : MonoBehaviour
             LoadingFlowState.ClearCurrentLevelId();
         }
 
-        if (!string.IsNullOrWhiteSpace(selectedLevelDefinition.scenarioResourcePath))
+        string scenarioResourcePath = ResolveScenarioResourcePath(selectedLevelDefinition, scenario);
+        if (!string.IsNullOrWhiteSpace(scenarioResourcePath))
         {
-            LoadingFlowState.SetPendingScenarioResourcePath(selectedLevelDefinition.scenarioResourcePath);
+            LoadingFlowState.SetPendingScenarioResourcePath(scenarioResourcePath);
         }
         else
         {
             LoadingFlowState.ClearPendingScenarioResourcePath();
         }
 
-        if (!string.IsNullOrWhiteSpace(selectedLevelDefinition.caseId))
+        string caseId = ResolveCaseId(selectedLevelDefinition, scenario);
+        if (!string.IsNullOrWhiteSpace(caseId))
         {
-            LoadingFlowState.SetPendingCaseId(selectedLevelDefinition.caseId);
+            LoadingFlowState.SetPendingCaseId(caseId);
         }
         else
         {
@@ -1301,9 +1589,496 @@ public class LevelSelectSceneController : MonoBehaviour
 
     private bool HasPlayableRoute(LevelDefinition definition)
     {
-        return definition != null &&
-               !string.IsNullOrWhiteSpace(definition.targetSceneName) &&
-               Application.CanStreamedLevelBeLoaded(definition.targetSceneName);
+        if (definition == null)
+        {
+            return false;
+        }
+
+        if (HasPlayableScenarioRoute(definition))
+        {
+            return true;
+        }
+
+        return IsPlayableScene(definition.targetSceneName);
+    }
+
+    private bool HasPlayableScenarioRoute(LevelDefinition definition)
+    {
+        if (definition == null || definition.scenarioDefinitions == null || definition.scenarioDefinitions.Length == 0)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < definition.scenarioDefinitions.Length; i++)
+        {
+            if (IsPlayableScenario(definition, definition.scenarioDefinitions[i]))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool HasMultipleConfiguredScenarios(LevelDefinition definition)
+    {
+        return GetConfiguredScenarioCount(definition) > 1;
+    }
+
+    private ScenarioDefinition GetRandomPlayableScenario(LevelDefinition definition)
+    {
+        if (!HasPlayableScenarioRoute(definition))
+        {
+            return null;
+        }
+
+        int playableScenarioCount = 0;
+        for (int i = 0; i < definition.scenarioDefinitions.Length; i++)
+        {
+            if (IsPlayableScenario(definition, definition.scenarioDefinitions[i]))
+            {
+                playableScenarioCount++;
+            }
+        }
+
+        if (playableScenarioCount <= 0)
+        {
+            return null;
+        }
+
+        int selectedIndex = UnityEngine.Random.Range(0, playableScenarioCount);
+        int currentIndex = 0;
+
+        for (int i = 0; i < definition.scenarioDefinitions.Length; i++)
+        {
+            ScenarioDefinition scenario = definition.scenarioDefinitions[i];
+            if (!IsPlayableScenario(definition, scenario))
+            {
+                continue;
+            }
+
+            if (currentIndex == selectedIndex)
+            {
+                return scenario;
+            }
+
+            currentIndex++;
+        }
+
+        return null;
+    }
+
+    private bool IsPlayableScenario(LevelDefinition definition, ScenarioDefinition scenario)
+    {
+        return scenario != null && IsPlayableScene(ResolveTargetSceneName(definition, scenario));
+    }
+
+    private static bool IsPlayableScene(string sceneName)
+    {
+        return !string.IsNullOrWhiteSpace(sceneName) &&
+               Application.CanStreamedLevelBeLoaded(sceneName.Trim());
+    }
+
+    private static string ResolveTargetSceneName(LevelDefinition definition, ScenarioDefinition scenario)
+    {
+        if (scenario != null && !string.IsNullOrWhiteSpace(scenario.targetSceneName))
+        {
+            return scenario.targetSceneName.Trim();
+        }
+
+        return definition != null && !string.IsNullOrWhiteSpace(definition.targetSceneName)
+            ? definition.targetSceneName.Trim()
+            : string.Empty;
+    }
+
+    private static string ResolveScenarioResourcePath(LevelDefinition definition, ScenarioDefinition scenario)
+    {
+        if (scenario != null && !string.IsNullOrWhiteSpace(scenario.scenarioResourcePath))
+        {
+            return scenario.scenarioResourcePath.Trim();
+        }
+
+        return definition != null && !string.IsNullOrWhiteSpace(definition.scenarioResourcePath)
+            ? definition.scenarioResourcePath.Trim()
+            : string.Empty;
+    }
+
+    private static string ResolveCaseId(LevelDefinition definition, ScenarioDefinition scenario)
+    {
+        if (scenario != null && !string.IsNullOrWhiteSpace(scenario.caseId))
+        {
+            return scenario.caseId.Trim();
+        }
+
+        return definition != null && !string.IsNullOrWhiteSpace(definition.caseId)
+            ? definition.caseId.Trim()
+            : string.Empty;
+    }
+
+    private void EnsureScenarioDropdownToggleButton()
+    {
+        if (levelInfoPopup.scenarioDropdownToggleButton == null)
+        {
+            return;
+        }
+
+        Button toggleButton = levelInfoPopup.scenarioDropdownToggleButton;
+        toggleButton.onClick.RemoveAllListeners();
+        toggleButton.onClick.AddListener(ToggleScenarioDropdown);
+    }
+
+    private void EnsureScenarioDropdownToggleProxy()
+    {
+        if (levelInfoPopup == null || levelInfoPopup.root == null)
+        {
+            return;
+        }
+
+        if (levelInfoPopup.scenarioDropdownToggleProxyRoot == null)
+        {
+            Transform existing = levelInfoPopup.root.Find("ScenarioDropdownToggleProxy");
+            if (existing != null)
+            {
+                levelInfoPopup.scenarioDropdownToggleProxyRoot = existing as RectTransform;
+            }
+        }
+
+        if (levelInfoPopup.scenarioDropdownToggleProxyRoot == null)
+        {
+            GameObject proxyObject = new GameObject("ScenarioDropdownToggleProxy", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
+            RectTransform proxyRect = proxyObject.GetComponent<RectTransform>();
+            proxyRect.SetParent(levelInfoPopup.root, false);
+            proxyRect.anchorMin = new Vector2(0.5f, 0.5f);
+            proxyRect.anchorMax = new Vector2(0.5f, 0.5f);
+            proxyRect.pivot = new Vector2(0.5f, 0.5f);
+            proxyRect.sizeDelta = new Vector2(30f, 30f);
+
+            Image proxyImage = proxyObject.GetComponent<Image>();
+            proxyImage.color = new Color(1f, 1f, 1f, 0f);
+            proxyImage.raycastTarget = true;
+
+            LayoutElement layoutElement = proxyObject.GetComponent<LayoutElement>();
+            layoutElement.ignoreLayout = true;
+            layoutElement.minWidth = 30f;
+            layoutElement.minHeight = 30f;
+            layoutElement.preferredWidth = 30f;
+            layoutElement.preferredHeight = 30f;
+
+            levelInfoPopup.scenarioDropdownToggleProxyRoot = proxyRect;
+        }
+
+        levelInfoPopup.scenarioDropdownToggleProxyButton = levelInfoPopup.scenarioDropdownToggleProxyRoot.GetComponent<Button>();
+        if (levelInfoPopup.scenarioDropdownToggleProxyButton == null)
+        {
+            levelInfoPopup.scenarioDropdownToggleProxyButton = levelInfoPopup.scenarioDropdownToggleProxyRoot.gameObject.AddComponent<Button>();
+        }
+
+        levelInfoPopup.scenarioDropdownToggleProxyButton.onClick.RemoveAllListeners();
+        levelInfoPopup.scenarioDropdownToggleProxyButton.onClick.AddListener(CloseScenarioDropdownFromProxy);
+        levelInfoPopup.scenarioDropdownToggleProxyRoot.gameObject.SetActive(false);
+    }
+
+    private void ToggleScenarioDropdown()
+    {
+        if (selectedLevelDefinition == null || !HasMultipleConfiguredScenarios(selectedLevelDefinition))
+        {
+            return;
+        }
+
+        BuildScenarioDropdown(selectedLevelDefinition);
+        SetScenarioDropdownVisible(!IsScenarioDropdownOpen());
+    }
+
+    private bool IsScenarioDropdownOpen()
+    {
+        return levelInfoPopup != null &&
+               levelInfoPopup.scenarioDropdownCanvasGroup != null &&
+               levelInfoPopup.scenarioDropdownCanvasGroup.alpha > 0.001f;
+    }
+
+    private void SetScenarioDropdownVisible(bool visible)
+    {
+        if (levelInfoPopup == null ||
+            levelInfoPopup.scenarioDropdownRoot == null ||
+            levelInfoPopup.scenarioDropdownCanvasGroup == null)
+        {
+            return;
+        }
+
+        levelInfoPopup.scenarioDropdownRoot.gameObject.SetActive(true);
+        if (visible)
+        {
+            levelInfoPopup.scenarioDropdownRoot.SetAsLastSibling();
+        }
+
+        levelInfoPopup.scenarioDropdownCanvasGroup.alpha = visible ? 1f : 0f;
+        levelInfoPopup.scenarioDropdownCanvasGroup.interactable = visible;
+        levelInfoPopup.scenarioDropdownCanvasGroup.blocksRaycasts = visible;
+        SetScenarioDropdownToggleProxyVisible(visible);
+    }
+
+    private void SetScenarioDropdownToggleProxyVisible(bool visible)
+    {
+        if (levelInfoPopup == null ||
+            levelInfoPopup.scenarioDropdownToggleProxyRoot == null ||
+            levelInfoPopup.scenarioDropdownToggleButton == null)
+        {
+            return;
+        }
+
+        if (!visible)
+        {
+            levelInfoPopup.scenarioDropdownToggleProxyRoot.gameObject.SetActive(false);
+            return;
+        }
+
+        RectTransform toggleRect = levelInfoPopup.scenarioDropdownToggleButton.transform as RectTransform;
+        if (toggleRect == null)
+        {
+            return;
+        }
+
+        RectTransform proxyRect = levelInfoPopup.scenarioDropdownToggleProxyRoot;
+        RectTransform toggleParent = toggleRect.parent as RectTransform;
+        if (toggleParent == null)
+        {
+            return;
+        }
+
+        if (proxyRect.parent != toggleParent)
+        {
+            proxyRect.SetParent(toggleParent, false);
+        }
+
+        proxyRect.anchorMin = toggleRect.anchorMin;
+        proxyRect.anchorMax = toggleRect.anchorMax;
+        proxyRect.pivot = toggleRect.pivot;
+        proxyRect.anchoredPosition = toggleRect.anchoredPosition;
+        proxyRect.sizeDelta = new Vector2(30f, 30f);
+        proxyRect.localRotation = toggleRect.localRotation;
+        proxyRect.localScale = Vector3.one;
+        proxyRect.SetAsLastSibling();
+        proxyRect.gameObject.SetActive(true);
+    }
+
+    private void CloseScenarioDropdownFromProxy()
+    {
+        if (!IsScenarioDropdownOpen())
+        {
+            return;
+        }
+
+        ResetScenarioDropdownClickState();
+        SetScenarioDropdownVisible(false);
+    }
+
+    private void BuildScenarioDropdown(LevelDefinition definition)
+    {
+        ScenarioDefinition[] scenarios = GetConfiguredScenarios(definition);
+        bool hasManualChoices = scenarios.Length > 1;
+
+        if (levelInfoPopup.scenarioDropdownToggleButton != null)
+        {
+            levelInfoPopup.scenarioDropdownToggleButton.interactable = hasManualChoices;
+        }
+
+        RefreshScenarioDropdownToggleVisualState();
+
+        if (levelInfoPopup.scenarioDropdownContentRoot == null || levelInfoPopup.scenarioDropdownTemplateButton == null)
+        {
+            SetScenarioDropdownVisible(false);
+            return;
+        }
+
+        for (int i = 0; i < scenarios.Length; i++)
+        {
+            Button itemButton = GetOrCreateScenarioDropdownItem(i);
+            if (itemButton == null)
+            {
+                continue;
+            }
+
+            TMP_Text label = itemButton.GetComponentInChildren<TMP_Text>(true);
+            if (label != null)
+            {
+                label.text = ResolveScenarioDisplayName(scenarios[i], definition);
+            }
+
+            ScenarioDefinition capturedScenario = scenarios[i];
+            itemButton.onClick.RemoveAllListeners();
+            itemButton.onClick.AddListener(() => OnScenarioDropdownItemClicked(definition, capturedScenario));
+            itemButton.gameObject.SetActive(true);
+            ApplyScenarioDropdownItemVisual(itemButton, capturedScenario);
+        }
+
+        for (int i = scenarios.Length; i < levelInfoPopup.scenarioDropdownContentRoot.childCount; i++)
+        {
+            Transform extra = levelInfoPopup.scenarioDropdownContentRoot.GetChild(i);
+            if (extra != null)
+            {
+                extra.gameObject.SetActive(false);
+            }
+        }
+
+        SetScenarioDropdownVisible(false);
+    }
+
+    private Button GetOrCreateScenarioDropdownItem(int index)
+    {
+        if (levelInfoPopup.scenarioDropdownContentRoot == null || levelInfoPopup.scenarioDropdownTemplateButton == null)
+        {
+            return null;
+        }
+
+        Transform existing = index < levelInfoPopup.scenarioDropdownContentRoot.childCount
+            ? levelInfoPopup.scenarioDropdownContentRoot.GetChild(index)
+            : null;
+
+        GameObject itemObject;
+        if (existing == null)
+        {
+            itemObject = Instantiate(levelInfoPopup.scenarioDropdownTemplateButton.gameObject, levelInfoPopup.scenarioDropdownContentRoot);
+            itemObject.name = $"{levelInfoPopup.scenarioDropdownTemplateButton.gameObject.name}_{index + 1:00}";
+        }
+        else
+        {
+            itemObject = existing.gameObject;
+        }
+
+        itemObject.SetActive(true);
+        return GetOrAddComponent<Button>(itemObject);
+    }
+
+    private void OnScenarioDropdownItemClicked(LevelDefinition definition, ScenarioDefinition scenario)
+    {
+        if (definition == null || scenario == null || definition != selectedLevelDefinition)
+        {
+            return;
+        }
+
+        string clickKey = GetScenarioClickKey(definition, scenario);
+        float now = Time.unscaledTime;
+        bool isDoubleClick = string.Equals(lastScenarioDropdownClickKey, clickKey, StringComparison.Ordinal) &&
+                             now - lastScenarioDropdownClickTime <= ScenarioDropdownDoubleClickWindow;
+
+        lastScenarioDropdownClickKey = clickKey;
+        lastScenarioDropdownClickTime = now;
+
+        if (!isDoubleClick)
+        {
+            return;
+        }
+
+        bool clearManualSelection = IsSameScenarioSelection(selectedScenarioOverride, scenario);
+        selectedScenarioOverride = clearManualSelection ? null : scenario;
+        ResetScenarioDropdownClickState();
+        SetScenarioDropdownVisible(false);
+        ApplyLevelInfoTexts(selectedLevelCard, selectedLevelDefinition, selectedLevelSourceButton);
+        RefreshLevelInfoLayout();
+        RefreshPlayButtonState(selectedLevelDefinition);
+        RefreshScenarioDropdownToggleVisualState();
+        PositionLevelInfoPopupNearSource(selectedLevelSourceButton);
+    }
+
+    private void RefreshScenarioDropdownToggleVisualState()
+    {
+        if (levelInfoPopup == null || levelInfoPopup.scenarioDropdownToggleLabel == null)
+        {
+            return;
+        }
+
+        bool hasManualSelection = selectedLevelDefinition != null && selectedScenarioOverride != null;
+        levelInfoPopup.scenarioDropdownToggleLabel.color = hasManualSelection
+            ? ScenarioToggleSelectedTextColor
+            : levelInfoPopup.scenarioDropdownToggleDefaultTextColor;
+    }
+
+    private void ResetScenarioDropdownClickState()
+    {
+        lastScenarioDropdownClickKey = string.Empty;
+        lastScenarioDropdownClickTime = -10f;
+    }
+
+    private static string GetScenarioClickKey(LevelDefinition definition, ScenarioDefinition scenario)
+    {
+        string levelId = definition != null ? definition.levelId : string.Empty;
+        string scenarioId = scenario != null && !string.IsNullOrWhiteSpace(scenario.scenarioId)
+            ? scenario.scenarioId
+            : ResolveScenarioResourcePath(definition, scenario);
+        return $"{levelId}::{scenarioId}";
+    }
+
+    private ScenarioDefinition[] GetConfiguredScenarios(LevelDefinition definition)
+    {
+        if (definition == null || definition.scenarioDefinitions == null || definition.scenarioDefinitions.Length == 0)
+        {
+            return Array.Empty<ScenarioDefinition>();
+        }
+
+        List<ScenarioDefinition> scenarios = new List<ScenarioDefinition>(definition.scenarioDefinitions.Length);
+        for (int i = 0; i < definition.scenarioDefinitions.Length; i++)
+        {
+            ScenarioDefinition scenario = definition.scenarioDefinitions[i];
+            if (scenario == null)
+            {
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(scenario.targetSceneName) &&
+                string.IsNullOrWhiteSpace(scenario.scenarioResourcePath) &&
+                string.IsNullOrWhiteSpace(scenario.caseId) &&
+                string.IsNullOrWhiteSpace(scenario.displayName))
+            {
+                continue;
+            }
+
+            scenarios.Add(scenario);
+        }
+
+        return scenarios.Count > 0 ? scenarios.ToArray() : Array.Empty<ScenarioDefinition>();
+    }
+
+    private void ApplyScenarioDropdownItemVisual(Button itemButton, ScenarioDefinition scenario)
+    {
+        if (itemButton == null)
+        {
+            return;
+        }
+
+        Image targetGraphic = itemButton.targetGraphic as Image;
+        if (targetGraphic == null)
+        {
+            return;
+        }
+
+        targetGraphic.color = IsSameScenarioSelection(selectedScenarioOverride, scenario)
+            ? ScenarioDropdownSelectedItemColor
+            : ScenarioDropdownItemColor;
+    }
+
+    private static bool IsSameScenarioSelection(ScenarioDefinition left, ScenarioDefinition right)
+    {
+        if (left == null || right == null)
+        {
+            return false;
+        }
+
+        return string.Equals(left.scenarioId, right.scenarioId, StringComparison.Ordinal) &&
+               string.Equals(left.scenarioResourcePath, right.scenarioResourcePath, StringComparison.Ordinal) &&
+               string.Equals(left.targetSceneName, right.targetSceneName, StringComparison.Ordinal);
+    }
+
+    private void RefreshPlayButtonState(LevelDefinition definition)
+    {
+        if (levelInfoPopup.playButton == null)
+        {
+            return;
+        }
+
+        bool canPlay = selectedScenarioOverride != null
+            ? IsPlayableScenario(definition, selectedScenarioOverride)
+            : HasPlayableRoute(definition);
+        levelInfoPopup.playButton.interactable = canPlay;
     }
 
     private RectTransform FindPopupRect(string objectName)
@@ -1469,11 +2244,12 @@ public class LevelSelectSceneController : MonoBehaviour
             return;
         }
 
-        SetText(levelInfoPopup.levelNameText, ResolveLevelName(definition, sourceButton));
-        SetText(levelInfoPopup.areaText, ResolveRegionTitle(card));
-        SetText(levelInfoPopup.descriptionText, ResolveDescription(definition));
-        SetText(levelInfoPopup.objectiveText, ResolveObjective(definition));
-        SetText(levelInfoPopup.difficultyText, ResolveDifficulty(definition));
+        ScenarioDefinition scenario = GetDisplayedScenario(definition);
+        SetText(levelInfoPopup.levelNameText, ResolveDisplayedLevelName(definition, scenario, sourceButton));
+        SetText(levelInfoPopup.areaText, ResolveDisplayedAreaSummary(card, definition, scenario));
+        SetText(levelInfoPopup.descriptionText, ResolveDisplayedDescription(definition, scenario));
+        SetText(levelInfoPopup.objectiveText, ResolveDisplayedObjective(definition, scenario));
+        SetText(levelInfoPopup.difficultyText, ResolveDisplayedDifficultySummary(definition, scenario));
         RefreshPlayButtonText();
     }
 
@@ -1962,6 +2738,225 @@ public class LevelSelectSceneController : MonoBehaviour
         return ResolveLocalizedText(localizationKey, fallback);
     }
 
+    private ScenarioDefinition GetDisplayedScenario(LevelDefinition definition)
+    {
+        return definition != null && definition == selectedLevelDefinition ? selectedScenarioOverride : null;
+    }
+
+    private string ResolveDisplayedLevelName(LevelDefinition definition, ScenarioDefinition scenario, Button sourceButton)
+    {
+        return scenario != null
+            ? ResolveScenarioDisplayName(scenario, definition)
+            : ResolveLevelName(definition, sourceButton);
+    }
+
+    private string ResolveDisplayedAreaSummary(RegionCard card, LevelDefinition definition, ScenarioDefinition scenario)
+    {
+        return scenario != null
+            ? ResolveSelectedScenarioAreaSummary(card)
+            : ResolveAreaSummary(card, definition);
+    }
+
+    private string ResolveDisplayedDescription(LevelDefinition definition, ScenarioDefinition scenario)
+    {
+        return scenario != null
+            ? ResolveSelectedScenarioDescription(definition, scenario)
+            : ResolveDescription(definition);
+    }
+
+    private string ResolveDisplayedObjective(LevelDefinition definition, ScenarioDefinition scenario)
+    {
+        return scenario != null
+            ? ResolveSelectedScenarioObjective(definition, scenario)
+            : ResolveObjective(definition);
+    }
+
+    private string ResolveDisplayedDifficultySummary(LevelDefinition definition, ScenarioDefinition scenario)
+    {
+        return scenario != null
+            ? ResolveSelectedScenarioDifficultySummary(definition, scenario)
+            : ResolveDifficultySummary(definition);
+    }
+
+    private string ResolveAreaSummary(RegionCard card, LevelDefinition definition)
+    {
+        string regionTitle = ResolveRegionTitle(card);
+        string incidentMode = ResolveRandomIncidentLabel(definition);
+        if (string.IsNullOrWhiteSpace(regionTitle))
+        {
+            return incidentMode;
+        }
+
+        if (string.IsNullOrWhiteSpace(incidentMode))
+        {
+            return regionTitle;
+        }
+
+        return $"{regionTitle} • {incidentMode}";
+    }
+
+    private string ResolveDifficultySummary(LevelDefinition definition)
+    {
+        string difficulty = ResolveDifficulty(definition);
+        string possibleIncidents = ResolvePossibleIncidentsLabel(definition);
+        if (string.IsNullOrWhiteSpace(difficulty))
+        {
+            return possibleIncidents;
+        }
+
+        if (string.IsNullOrWhiteSpace(possibleIncidents))
+        {
+            return difficulty;
+        }
+
+        return $"{difficulty} • {possibleIncidents}";
+    }
+
+    private string ResolveSelectedScenarioAreaSummary(RegionCard card)
+    {
+        string regionTitle = ResolveRegionTitle(card);
+        string scenarioLabel = LanguageManager.Tr(SelectedScenarioLocalizationKey, "Selected Scenario");
+        return CombineSummaryParts(regionTitle, scenarioLabel);
+    }
+
+    private string ResolveSelectedScenarioDescription(LevelDefinition definition, ScenarioDefinition scenario)
+    {
+        CallPhaseScenarioData scenarioData = LoadScenarioData(scenario);
+        if (scenarioData != null && !string.IsNullOrWhiteSpace(scenarioData.description))
+        {
+            return scenarioData.description.Trim();
+        }
+
+        return ResolveDescription(definition);
+    }
+
+    private string ResolveSelectedScenarioObjective(LevelDefinition definition, ScenarioDefinition scenario)
+    {
+        string fallback = LanguageManager.Tr(
+            SelectedScenarioObjectiveLocalizationKey,
+            "Deploy the selected scenario on the next run.");
+        return !string.IsNullOrWhiteSpace(definition?.objective)
+            ? definition.objective
+            : fallback;
+    }
+
+    private string ResolveSelectedScenarioDifficultySummary(LevelDefinition definition, ScenarioDefinition scenario)
+    {
+        string difficulty = ResolveDifficulty(definition);
+        CallPhaseScenarioData scenarioData = LoadScenarioData(scenario);
+        string category = scenarioData != null && !string.IsNullOrWhiteSpace(scenarioData.category)
+            ? scenarioData.category.Trim()
+            : LanguageManager.Tr(SelectedScenarioLocalizationKey, "Selected Scenario");
+        return CombineSummaryParts(difficulty, category);
+    }
+
+    private string ResolveScenarioDisplayName(ScenarioDefinition scenario, LevelDefinition definition)
+    {
+        if (scenario == null)
+        {
+            return ResolveLevelName(definition, null);
+        }
+
+        if (!string.IsNullOrWhiteSpace(scenario.displayName))
+        {
+            return scenario.displayName.Trim();
+        }
+
+        CallPhaseScenarioData scenarioData = LoadScenarioData(scenario);
+        if (scenarioData != null && !string.IsNullOrWhiteSpace(scenarioData.displayName))
+        {
+            return scenarioData.displayName.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(scenario.scenarioId))
+        {
+            return scenario.scenarioId.Trim();
+        }
+
+        return ResolveLevelName(definition, null);
+    }
+
+    private static string CombineSummaryParts(string left, string right)
+    {
+        if (string.IsNullOrWhiteSpace(left))
+        {
+            return right;
+        }
+
+        if (string.IsNullOrWhiteSpace(right))
+        {
+            return left;
+        }
+
+        return $"{left} • {right}";
+    }
+
+    private static CallPhaseScenarioData LoadScenarioData(ScenarioDefinition scenario)
+    {
+        if (scenario == null || string.IsNullOrWhiteSpace(scenario.scenarioResourcePath))
+        {
+            return null;
+        }
+
+        return Resources.Load<CallPhaseScenarioData>(scenario.scenarioResourcePath.Trim());
+    }
+
+    private string ResolveRandomIncidentLabel(LevelDefinition definition)
+    {
+        if (definition == null)
+        {
+            return string.Empty;
+        }
+
+        if (GetConfiguredScenarioCount(definition) <= 0 && string.IsNullOrWhiteSpace(definition.scenarioResourcePath))
+        {
+            return string.Empty;
+        }
+
+        return LanguageManager.Tr(RandomIncidentLocalizationKey, "Random Incident");
+    }
+
+    private string ResolvePossibleIncidentsLabel(LevelDefinition definition)
+    {
+        int scenarioCount = GetConfiguredScenarioCount(definition);
+        if (scenarioCount <= 0 && !string.IsNullOrWhiteSpace(definition?.scenarioResourcePath))
+        {
+            scenarioCount = 1;
+        }
+
+        string format = LanguageManager.Tr(PossibleIncidentsLocalizationKey, "Possible incidents: {0}");
+        return string.Format(format, scenarioCount);
+    }
+
+    private static int GetConfiguredScenarioCount(LevelDefinition definition)
+    {
+        if (definition == null || definition.scenarioDefinitions == null)
+        {
+            return 0;
+        }
+
+        int count = 0;
+        for (int i = 0; i < definition.scenarioDefinitions.Length; i++)
+        {
+            ScenarioDefinition scenario = definition.scenarioDefinitions[i];
+            if (scenario == null)
+            {
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(scenario.targetSceneName) &&
+                string.IsNullOrWhiteSpace(scenario.scenarioResourcePath) &&
+                string.IsNullOrWhiteSpace(scenario.caseId))
+            {
+                continue;
+            }
+
+            count++;
+        }
+
+        return count;
+    }
+
     private string ResolveLevelListBaseName(RegionCard card, LevelDefinition definition, int index)
     {
         if (definition != null)
@@ -2390,6 +3385,35 @@ public class LevelSelectSceneController : MonoBehaviour
         Color color = dividerImage.color;
         color.a = Mathf.Lerp(dividerAlphaIdle, dividerAlphaSelected, focus);
         dividerImage.color = color;
+    }
+
+    private static CanvasGroup GetCanvasGroup(Component target)
+    {
+        return target != null ? GetOrAddComponent<CanvasGroup>(target.gameObject) : null;
+    }
+
+    private static void SetCanvasGroupAlpha(CanvasGroup group, float alpha)
+    {
+        if (group == null)
+        {
+            return;
+        }
+
+        group.alpha = Mathf.Clamp01(alpha);
+    }
+
+    private static float EaseOutCubic(float value)
+    {
+        float t = Mathf.Clamp01(value);
+        float inverse = 1f - t;
+        return 1f - inverse * inverse * inverse;
+    }
+
+    private static float EaseOutQuart(float value)
+    {
+        float t = Mathf.Clamp01(value);
+        float inverse = 1f - t;
+        return 1f - inverse * inverse * inverse * inverse;
     }
 
     private static T GetOrAddComponent<T>(GameObject target) where T : Component

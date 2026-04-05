@@ -24,6 +24,11 @@ public class SliderPercentText : MonoBehaviour
     [Header("Behavior")]
     [SerializeField] private PercentMode percentMode = PercentMode.NormalizeToRange;
     [SerializeField] private bool applyOnStart = true;
+    [SerializeField] private string valuePrefix = string.Empty;
+    [SerializeField] private string valueSuffix = "%";
+    [SerializeField] private bool clampDisplayValue = true;
+    [SerializeField] private int minDisplayValue = 0;
+    [SerializeField] private int maxDisplayValue = 100;
 
     [Header("Center Mode (100% at Center)")]
     [SerializeField] private bool useSliderMidpointAsCenter = true;
@@ -93,6 +98,11 @@ public class SliderPercentText : MonoBehaviour
 
     public int GetCurrentPercent()
     {
+        return GetCurrentDisplayValue();
+    }
+
+    public int GetCurrentDisplayValue()
+    {
         if (slider == null)
         {
             return 0;
@@ -136,16 +146,44 @@ public class SliderPercentText : MonoBehaviour
             rawPercent = slider.value;
         }
 
-        return Mathf.Clamp(Mathf.RoundToInt(rawPercent), 0, 100);
+        int roundedValue = Mathf.RoundToInt(rawPercent);
+        if (!clampDisplayValue)
+        {
+            return roundedValue;
+        }
+
+        int safeMin = Mathf.Min(minDisplayValue, maxDisplayValue);
+        int safeMax = Mathf.Max(minDisplayValue, maxDisplayValue);
+        return Mathf.Clamp(roundedValue, safeMin, safeMax);
+    }
+
+    public void ConfigureDisplay(PercentMode mode, string prefix, string suffix, bool clampValue, int minValue = 0, int maxValue = 100, bool refreshNow = true)
+    {
+        percentMode = mode;
+        valuePrefix = prefix ?? string.Empty;
+        valueSuffix = suffix ?? string.Empty;
+        clampDisplayValue = clampValue;
+        minDisplayValue = minValue;
+        maxDisplayValue = maxValue;
+
+        if (refreshNow)
+        {
+            RefreshDisplay();
+        }
+    }
+
+    public void RefreshDisplay()
+    {
+        UpdatePercentUI(false);
     }
 
     private void UpdatePercentUI(bool invokeEvent)
     {
-        int percent = GetCurrentPercent();
+        int percent = GetCurrentDisplayValue();
 
         if (percentText != null)
         {
-            percentText.text = percent + "%";
+            percentText.text = $"{valuePrefix}{percent}{valueSuffix}";
         }
 
         if (!invokeEvent || percent == lastPercent)

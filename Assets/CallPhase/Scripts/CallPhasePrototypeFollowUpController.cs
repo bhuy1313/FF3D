@@ -24,7 +24,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
     [SerializeField] private Button askFollowUpButton;
 
     [Header("Prototype Follow-Up Fallback")]
-    [SerializeField] private float followUpLineDelaySeconds = 2f;
+    [SerializeField] private float followUpLineDelaySeconds = 1f;
     [SerializeField] private string fireLocationFieldId = "fire_location";
     [SerializeField] private string fireLocationValue = "Kitchen";
     [SerializeField] private string addressFieldId = "Address";
@@ -78,6 +78,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
     private int acceptableFollowUpCount;
     private int poorFollowUpCount;
     private const int MaxRecentShownQuestions = 8;
+    private bool lastCanAskFollowUp;
 
     public CallPhaseFollowUpMode FollowUpMode => followUpMode;
     public bool IsWaitingForManualFollowUp => waitingForManualFollowUp && pendingManualStep != null;
@@ -94,6 +95,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
     public int AcceptableFollowUpCount => acceptableFollowUpCount;
     public int PoorFollowUpCount => poorFollowUpCount;
     public bool HasResolvedFollowUpStep(string stepId) => !string.IsNullOrWhiteSpace(stepId) && resolvedFollowUpStepIds.Contains(stepId);
+    public event System.Action ManualFollowUpAvailable;
 
     private void Awake()
     {
@@ -191,7 +193,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
             logsController.AddOperatorLog(operatorLine);
         }
 
-        yield return new WaitForSecondsRealtime(Mathf.Max(0f, followUpLineDelaySeconds));
+        yield return new WaitForSecondsRealtime(CallPhaseResponseSpeedSettings.ApplyDelayPreference(followUpLineDelaySeconds));
 
         CallPhaseScenarioLineData callerLine = step != null ? step.callerLine : null;
         string callerText = callerLine != null ? callerLine.text : string.Empty;
@@ -347,6 +349,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
         optimalFollowUpCount = 0;
         acceptableFollowUpCount = 0;
         poorFollowUpCount = 0;
+        lastCanAskFollowUp = false;
     }
 
     public void ResetForScenarioRun()
@@ -997,7 +1000,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
             logsController.AddOperatorLog(operatorQuestion);
         }
 
-        yield return new WaitForSecondsRealtime(Mathf.Max(0f, followUpLineDelaySeconds));
+        yield return new WaitForSecondsRealtime(CallPhaseResponseSpeedSettings.ApplyDelayPreference(followUpLineDelaySeconds));
 
         string callerReply = BuildDistractorCallerReply(questionOption);
         if (!string.IsNullOrWhiteSpace(callerReply) && logsController != null)
@@ -1455,10 +1458,20 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
 
     private void RefreshAskFollowUpAvailability()
     {
+        bool canAskFollowUp = CanAskFollowUp;
+
         if (askFollowUpButton != null)
         {
-            askFollowUpButton.interactable = CanAskFollowUp;
+            askFollowUpButton.interactable = canAskFollowUp;
+            CallPhaseFunctionButtonVisuals.Apply(askFollowUpButton, canAskFollowUp);
         }
+
+        if (canAskFollowUp && !lastCanAskFollowUp)
+        {
+            ManualFollowUpAvailable?.Invoke();
+        }
+
+        lastCanAskFollowUp = canAskFollowUp;
     }
 
     private void ScheduleDeferredProgressionSweep()

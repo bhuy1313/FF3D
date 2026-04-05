@@ -31,6 +31,7 @@ public class TranscriptExtractionController : MonoBehaviour
 
     [Header("State")]
     [SerializeField] private TranscriptStateController stateController;
+    [SerializeField] private IncidentReportController incidentReportController;
 
     [Header("Behavior")]
     [SerializeField] private bool clearSelectionOnConfirm = true;
@@ -41,6 +42,8 @@ public class TranscriptExtractionController : MonoBehaviour
 
     private void Awake()
     {
+        ResolveReferences();
+
         if (confirmExtractionButton != null)
         {
             confirmExtractionButton.onClick.AddListener(ConfirmExtraction);
@@ -71,9 +74,16 @@ public class TranscriptExtractionController : MonoBehaviour
 
     private void OnEnable()
     {
+        ResolveReferences();
         currentSpan = null;
         ResetUiToDefault();
         SetSelectionButtons(confirmInteractable: false, clearInteractable: false);
+    }
+
+    private void Update()
+    {
+        HandleConfirmShortcut();
+        TryAutoConfirmActiveConfirmationSpan();
     }
 
     private void OnDestroy()
@@ -202,6 +212,68 @@ public class TranscriptExtractionController : MonoBehaviour
         ClearSelection();
     }
 
+    private void HandleConfirmShortcut()
+    {
+        if (!WasConfirmShortcutPressed())
+        {
+            return;
+        }
+
+        if (FollowUpPopupController.AnyPopupOpen)
+        {
+            return;
+        }
+
+        if (stateController != null && stateController.CurrentState != TranscriptPanelState.ExtractMode)
+        {
+            return;
+        }
+
+        if (confirmExtractionButton != null && !confirmExtractionButton.interactable)
+        {
+            return;
+        }
+
+        ConfirmExtraction();
+    }
+
+    private void TryAutoConfirmActiveConfirmationSpan()
+    {
+        if (!CallPhaseAutoValidateSettings.GetSavedOrDefaultEnabled())
+        {
+            return;
+        }
+
+        if (incidentReportController == null || !incidentReportController.HasActiveConfirmationContext)
+        {
+            return;
+        }
+
+        if (stateController != null && stateController.CurrentState != TranscriptPanelState.ExtractMode)
+        {
+            return;
+        }
+
+        if (currentSpan != null)
+        {
+            return;
+        }
+
+        SelectableSpan[] spans = GetComponentsInChildren<SelectableSpan>(true);
+        for (int i = 0; i < spans.Length; i++)
+        {
+            SelectableSpan span = spans[i];
+            if (!IsAutoValidationCandidate(span))
+            {
+                continue;
+            }
+
+            OnSelectableSpanClicked(span);
+            ConfirmExtraction();
+            return;
+        }
+    }
+
     private void ResetUiToDefault()
     {
         SetText(selectionValueText, DefaultEmptyValue);
@@ -257,5 +329,51 @@ public class TranscriptExtractionController : MonoBehaviour
         }
 
         return false;
+    }
+
+    private bool IsAutoValidationCandidate(SelectableSpan span)
+    {
+        if (span == null || !span.gameObject.activeInHierarchy || incidentReportController == null)
+        {
+            return false;
+        }
+
+        if (!string.Equals(span.TargetFieldId, incidentReportController.CurrentConfirmationFieldId, System.StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (!string.Equals(span.NormalizedValue, incidentReportController.ExpectedConfirmedValue, System.StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return EvaluateSelection(span, out _, out _);
+    }
+
+    private static bool WasConfirmShortcutPressed()
+    {
+        return Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter);
+    }
+
+    private void ResolveReferences()
+    {
+        if (stateController == null)
+        {
+            stateController = GetComponentInParent<TranscriptStateController>();
+            if (stateController == null)
+            {
+                stateController = FindFirstObjectByType<TranscriptStateController>();
+            }
+        }
+
+        if (incidentReportController == null)
+        {
+            incidentReportController = GetComponentInParent<IncidentReportController>();
+            if (incidentReportController == null)
+            {
+                incidentReportController = FindFirstObjectByType<IncidentReportController>();
+            }
+        }
     }
 }

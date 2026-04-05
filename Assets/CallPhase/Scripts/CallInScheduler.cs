@@ -28,7 +28,7 @@ public class CallInScheduler : MonoBehaviour
 
     [Header("Behavior")]
     [SerializeField] private bool hideCallInPanelOnAwake = true;
-    [SerializeField] private bool hideCanvasOnAwake = false;
+    [SerializeField] private bool hideCanvasOnAwake = true;
     [SerializeField] private bool autoShowSkipButtonWhenWaiting = true;
     [SerializeField] private bool hideSkipButtonAfterCallInShown = true;
     [SerializeField] private bool enableDebugLogs = false;
@@ -218,7 +218,7 @@ public class CallInScheduler : MonoBehaviour
 
         if (callInText != null)
         {
-            callInText.text = "Connecting call...";
+            callInText.text = "CONNECTING CALL...";
         }
 
         if (skipButtonRoot != null)

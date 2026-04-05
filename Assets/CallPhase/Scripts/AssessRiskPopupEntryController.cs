@@ -12,8 +12,8 @@ using UnityEngine.UI;
 /// </summary>
 public class AssessRiskPopupEntryController : MonoBehaviour
 {
-    private static readonly Color DisabledBorderColor = new Color(0.55f, 0.55f, 0.55f, 1f);
-    private static readonly Color EnabledBorderColor = Color.white;
+    private static readonly Color DisabledBorderColor = CallPhaseFunctionButtonVisuals.InactiveColor;
+    private static readonly Color EnabledBorderColor = CallPhaseFunctionButtonVisuals.ActiveColor;
     private static readonly Color PopupButtonNormalColor = Color.white;
     private static readonly Color PopupButtonSelectedColor = new Color(0.95f, 0.72f, 0.38f, 1f);
     private static readonly Color PopupButtonEnabledTextColor = new Color(0.19607843f, 0.19607843f, 0.19607843f, 1f);
@@ -22,8 +22,6 @@ public class AssessRiskPopupEntryController : MonoBehaviour
     private const string NoConfirmedFactsText = "No confirmed facts yet.";
     private const string SeverityFieldId = "Severity";
     private const string FireLocationFieldId = "fire_location";
-    private const string SubmitButtonReadyLabel = "Submit Incident Report";
-    private const string SubmitButtonSubmittedLabel = "Incident Report Submitted";
     private const string ResultFallbackValue = "Not provided";
     private const string ExpectedSeverityValue = "High";
     private const string SeverityLow = "Low";
@@ -132,6 +130,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
     private Button assessRiskButton;
     private Button submitReportButton;
+    private Button askFollowUpButton;
     private GameObject assessRiskPopup;
     private GameObject submitReportPopup;
     private GameObject resultPopup;
@@ -195,6 +194,31 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         HideResultPopupImmediate();
         RefreshAssessRiskButtonState();
         RefreshSubmitReportButtonState();
+    }
+
+    private void Update()
+    {
+        if (isPopupOpen || isSubmitPopupOpen || isResultPopupOpen || FollowUpPopupController.AnyPopupOpen)
+        {
+            return;
+        }
+
+        if (WasFunctionShortcutPressed(KeyCode.Alpha1, KeyCode.Keypad1))
+        {
+            TriggerFunctionButton(askFollowUpButton);
+            return;
+        }
+
+        if (WasFunctionShortcutPressed(KeyCode.Alpha2, KeyCode.Keypad2))
+        {
+            TriggerFunctionButton(assessRiskButton);
+            return;
+        }
+
+        if (WasFunctionShortcutPressed(KeyCode.Alpha3, KeyCode.Keypad3))
+        {
+            TriggerFunctionButton(submitReportButton);
+        }
     }
 
     private void OnDisable()
@@ -461,6 +485,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         if (assessRiskButton != null)
         {
             assessRiskButton.interactable = interactable;
+            CallPhaseFunctionButtonVisuals.Apply(assessRiskButton, interactable);
         }
 
         UpdateAssessRiskBorderVisuals(interactable);
@@ -471,6 +496,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         if (submitReportButton != null)
         {
             submitReportButton.interactable = interactable;
+            CallPhaseFunctionButtonVisuals.Apply(submitReportButton, interactable);
         }
 
         UpdateSubmitReportBorderVisuals(interactable);
@@ -483,14 +509,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
     private void UpdateSubmitReportButtonLabel()
     {
-        if (submitReportButtonLabel == null)
-        {
-            return;
-        }
-
-        submitReportButtonLabel.text = IsReportSubmitted()
-            ? SubmitButtonSubmittedLabel
-            : SubmitButtonReadyLabel;
+        // Preserve the scene-authored label text for this button.
     }
 
     private void HidePopupImmediate()
@@ -722,6 +741,11 @@ public class AssessRiskPopupEntryController : MonoBehaviour
             assessRiskButton = GetButtonFromObject(assessRiskButtonObject);
         }
 
+        if (askFollowUpButton == null)
+        {
+            askFollowUpButton = FindButtonInChildren(transform, "btnAskFollowUp", null);
+        }
+
         if (assessRiskButton == null)
         {
             assessRiskButton = FindButtonInChildren(transform, "btnAssessRisk", "Assess Risk");
@@ -737,10 +761,6 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         if (submitReportButton == null)
         {
             submitReportButton = FindButtonInChildren(transform, "btnSubmitReport", "Submit Report");
-            if (submitReportButton == null)
-            {
-                submitReportButton = FindButtonInChildren(transform, "btnSubmitReport", SubmitButtonReadyLabel);
-            }
         }
 
         if (submitReportButtonLabel == null)
@@ -960,6 +980,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
         WarnIfMissingReference("Assess Risk button", assessRiskButton, this);
         WarnIfMissingReference("Submit Report button", submitReportButton, this);
+        WarnIfMissingReference("Ask Follow-Up button", askFollowUpButton, this);
         WarnIfMissingReference("Assess Risk popup", assessRiskPopup, this);
         WarnIfMissingReference("Assess Risk back button", popupBackButton, assessRiskPopup);
         WarnIfMissingReference("Assess Risk confirm button", popupConfirmAssessmentButton, assessRiskPopup);
@@ -2651,6 +2672,21 @@ public class AssessRiskPopupEntryController : MonoBehaviour
     private Button GetButtonFromObject(GameObject targetObject)
     {
         return targetObject != null ? targetObject.GetComponent<Button>() : null;
+    }
+
+    private static bool WasFunctionShortcutPressed(KeyCode primary, KeyCode secondary)
+    {
+        return Input.GetKeyDown(primary) || Input.GetKeyDown(secondary);
+    }
+
+    private static void TriggerFunctionButton(Button button)
+    {
+        if (button == null || !button.gameObject.activeInHierarchy || !button.interactable)
+        {
+            return;
+        }
+
+        button.onClick.Invoke();
     }
 
     private TMP_Text GetTextFromObject(GameObject targetObject)

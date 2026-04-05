@@ -16,7 +16,7 @@ public class TranscriptLogsController : MonoBehaviour
     [SerializeField] private ScrollRect transcriptScrollRect;
 
     [Header("Settings")]
-    [SerializeField] private float prototypeLineDelaySeconds = 2f;
+    [SerializeField] private float prototypeLineDelaySeconds = 1f;
     [SerializeField] private bool enableDebugLogs = false;
 
     [Header("Scenario")]
@@ -280,7 +280,7 @@ public class TranscriptLogsController : MonoBehaviour
 
     private CustomYieldInstruction WaitForPrototypeLineDelay()
     {
-        return new WaitForSecondsRealtime(Mathf.Max(0f, prototypeLineDelaySeconds));
+        return new WaitForSecondsRealtime(CallPhaseResponseSpeedSettings.ApplyDelayPreference(prototypeLineDelaySeconds));
     }
 
     private void ResolveScenarioData()
