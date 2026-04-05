@@ -1,0 +1,304 @@
+using System.Collections;
+using System.Collections.Generic;
+using StarterAssets;
+using UnityEngine;
+
+[DefaultExecutionOrder(-200)]
+[DisallowMultipleComponent]
+public class SceneStartupFlow : MonoBehaviour
+{
+    public enum StartupState
+    {
+        Idle,
+        Running,
+        Completed,
+        Failed
+    }
+
+    [Header("Flow")]
+    [SerializeField] private bool runOnStart = true;
+    [SerializeField] private bool collectTasksFromChildren = true;
+    [SerializeField] private bool includeInactiveTasks = true;
+    [SerializeField] private bool lockPlayerUntilReady = true;
+    [SerializeField] private bool clearInputsWhileLocked = true;
+
+    [Header("Tasks")]
+    [SerializeField] private List<SceneStartupTask> explicitTasks = new List<SceneStartupTask>();
+
+    [Header("Player")]
+    [Tooltip("Optional override. If left empty, the flow will find the active FirstPersonController in the scene.")]
+    [SerializeField] private FirstPersonController playerControllerOverride;
+    [Tooltip("Optional override. If left empty, the flow will use or create PlayerActionLock on the resolved player when locking is enabled.")]
+    [SerializeField] private PlayerActionLock playerActionLock;
+    [Tooltip("Optional override. If left empty, the flow will read StarterAssetsInputs from the resolved player.")]
+    [SerializeField] private StarterAssetsInputs playerInputs;
+
+    private Coroutine startupRoutine;
+    private SceneStartupTask activeTask;
+    private StartupState state = StartupState.Idle;
+    private PlayerActionLock runtimeActionLock;
+    private StarterAssetsInputs runtimeInputs;
+    private bool runtimeLockAcquired;
+
+    public StartupState State => state;
+    public bool IsRunning => state == StartupState.Running;
+    public bool IsGameplayReady => state == StartupState.Completed;
+    public SceneStartupTask ActiveTask => activeTask;
+
+    private void Start()
+    {
+        if (!Application.isPlaying || !runOnStart)
+        {
+            return;
+        }
+
+        StartStartup();
+    }
+
+    public void StartStartup()
+    {
+        if (startupRoutine != null || state == StartupState.Completed)
+        {
+            return;
+        }
+
+        startupRoutine = StartCoroutine(RunStartupRoutine());
+    }
+
+    private IEnumerator RunStartupRoutine()
+    {
+        state = StartupState.Running;
+        bool completed = false;
+
+        runtimeActionLock = ResolvePlayerActionLock(lockPlayerUntilReady);
+        runtimeInputs = ResolvePlayerInputs();
+        runtimeLockAcquired = false;
+
+        try
+        {
+            if (lockPlayerUntilReady && runtimeActionLock != null)
+            {
+                runtimeActionLock.AcquireFullLock();
+                runtimeLockAcquired = true;
+            }
+
+            if (clearInputsWhileLocked)
+            {
+                ClearPlayerInputs(runtimeInputs);
+            }
+
+            List<SceneStartupTask> tasks = BuildTaskList();
+            for (int i = 0; i < tasks.Count; i++)
+            {
+                SceneStartupTask task = tasks[i];
+                if (task == null || !task.RunTask)
+                {
+                    continue;
+                }
+
+                activeTask = task;
+                if (clearInputsWhileLocked)
+                {
+                    ClearPlayerInputs(runtimeInputs);
+                }
+
+                yield return task.Run(this);
+            }
+
+            state = StartupState.Completed;
+            completed = true;
+        }
+        finally
+        {
+            if (!completed && state == StartupState.Running)
+            {
+                state = StartupState.Failed;
+            }
+
+            activeTask = null;
+
+            if (clearInputsWhileLocked)
+            {
+                ClearPlayerInputs(runtimeInputs);
+            }
+
+            if (runtimeLockAcquired && runtimeActionLock != null)
+            {
+                runtimeActionLock.ReleaseFullLock();
+            }
+
+            startupRoutine = null;
+            runtimeLockAcquired = false;
+            runtimeActionLock = null;
+            runtimeInputs = null;
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (clearInputsWhileLocked)
+        {
+            ClearPlayerInputs(runtimeInputs);
+        }
+
+        if (runtimeLockAcquired && runtimeActionLock != null)
+        {
+            runtimeActionLock.ReleaseFullLock();
+        }
+
+        runtimeLockAcquired = false;
+        runtimeActionLock = null;
+        runtimeInputs = null;
+        activeTask = null;
+        startupRoutine = null;
+
+        if (state == StartupState.Running)
+        {
+            state = StartupState.Idle;
+        }
+    }
+
+    private List<SceneStartupTask> BuildTaskList()
+    {
+        List<SceneStartupTask> results = new List<SceneStartupTask>();
+        HashSet<SceneStartupTask> seen = new HashSet<SceneStartupTask>();
+
+        for (int i = 0; i < explicitTasks.Count; i++)
+        {
+            SceneStartupTask task = explicitTasks[i];
+            if (task == null || !seen.Add(task))
+            {
+                continue;
+            }
+
+            results.Add(task);
+        }
+
+        if (collectTasksFromChildren)
+        {
+            SceneStartupTask[] childTasks = GetComponentsInChildren<SceneStartupTask>(includeInactiveTasks);
+            for (int i = 0; i < childTasks.Length; i++)
+            {
+                SceneStartupTask task = childTasks[i];
+                if (task == null || !seen.Add(task))
+                {
+                    continue;
+                }
+
+                results.Add(task);
+            }
+        }
+
+        results.Sort(CompareTasks);
+        return results;
+    }
+
+    private static int CompareTasks(SceneStartupTask left, SceneStartupTask right)
+    {
+        if (ReferenceEquals(left, right))
+        {
+            return 0;
+        }
+
+        if (left == null)
+        {
+            return 1;
+        }
+
+        if (right == null)
+        {
+            return -1;
+        }
+
+        int orderComparison = left.Order.CompareTo(right.Order);
+        if (orderComparison != 0)
+        {
+            return orderComparison;
+        }
+
+        return string.CompareOrdinal(left.TaskName, right.TaskName);
+    }
+
+    public PlayerActionLock ResolvePlayerActionLock(bool createIfMissing = true)
+    {
+        if (playerActionLock != null)
+        {
+            return playerActionLock;
+        }
+
+        FirstPersonController controller = ResolvePlayerController();
+        if (controller == null)
+        {
+            return null;
+        }
+
+        if (controller.TryGetComponent(out PlayerActionLock existingActionLock))
+        {
+            playerActionLock = existingActionLock;
+            return playerActionLock;
+        }
+
+        if (!createIfMissing)
+        {
+            return null;
+        }
+
+        playerActionLock = PlayerActionLock.GetOrCreate(controller.gameObject);
+        return playerActionLock;
+    }
+
+    public StarterAssetsInputs ResolvePlayerInputs()
+    {
+        if (playerInputs != null)
+        {
+            return playerInputs;
+        }
+
+        FirstPersonController controller = ResolvePlayerController();
+        playerInputs = controller != null
+            ? controller.GetComponent<StarterAssetsInputs>()
+            : null;
+        return playerInputs;
+    }
+
+    public FirstPersonController ResolvePlayerController()
+    {
+        if (playerControllerOverride != null)
+        {
+            return playerControllerOverride;
+        }
+
+        playerControllerOverride = FindAnyObjectByType<FirstPersonController>();
+        return playerControllerOverride;
+    }
+
+    public T FindSceneObject<T>() where T : UnityEngine.Object
+    {
+        return FindAnyObjectByType<T>();
+    }
+
+    public void ClearResolvedPlayerInputs()
+    {
+        ClearPlayerInputs(ResolvePlayerInputs());
+    }
+
+    private static void ClearPlayerInputs(StarterAssetsInputs inputs)
+    {
+        if (inputs == null)
+        {
+            return;
+        }
+
+        inputs.MoveInput(Vector2.zero);
+        inputs.LookInput(Vector2.zero);
+        inputs.JumpInput(false);
+        inputs.SprintInput(false);
+        inputs.CrouchInput(false);
+        inputs.InteractInput(false);
+        inputs.PickupInput(false);
+        inputs.UseInput(false);
+        inputs.DropInput(false);
+        inputs.GrabInput(false);
+        inputs.ClearGameplayActionInputs();
+    }
+}

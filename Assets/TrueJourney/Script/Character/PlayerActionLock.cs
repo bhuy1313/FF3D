@@ -1,3 +1,4 @@
+using System.Collections;
 using StarterAssets;
 using UnityEngine;
 
@@ -8,12 +9,18 @@ public class PlayerActionLock : MonoBehaviour
     [SerializeField] private CharacterController characterController;
     [SerializeField] private FPSInteractionSystem interactionSystem;
     [SerializeField] private FPSInventorySystem inventorySystem;
+    [Header("Pose Snap")]
+    [SerializeField] private bool smoothPoseSnap = true;
+    [SerializeField] private float poseSnapDuration = 0.12f;
+    [SerializeField] private float poseSnapArcHeight = 0.03f;
 
     private int fullLockCount;
     private int carryRestrictionCount;
     private bool restoreFirstPersonController;
     private bool restoreInteractionSystem;
     private bool restoreInventorySystem;
+    private Coroutine poseSnapRoutine;
+    private bool poseSnapRestoreCharacterController;
 
     public bool IsFullyLocked => fullLockCount > 0;
     public bool HasCarryRestriction => carryRestrictionCount > 0;
@@ -140,19 +147,21 @@ public class PlayerActionLock : MonoBehaviour
     public void SnapToPose(Vector3 position, Quaternion rotation)
     {
         ResolveReferences();
+        CancelPoseSnap();
 
-        bool restoreCharacterController = characterController != null && characterController.enabled;
-        if (restoreCharacterController)
+        bool shouldSmooth =
+            smoothPoseSnap &&
+            poseSnapDuration > 0.001f &&
+            isActiveAndEnabled &&
+            (transform.position - position).sqrMagnitude > 0.0001f;
+
+        if (!shouldSmooth)
         {
-            characterController.enabled = false;
+            SetPoseImmediately(position, rotation);
+            return;
         }
 
-        transform.SetPositionAndRotation(position, rotation);
-
-        if (restoreCharacterController && characterController != null)
-        {
-            characterController.enabled = true;
-        }
+        poseSnapRoutine = StartCoroutine(SmoothSnapToPoseRoutine(position, rotation));
     }
 
     protected virtual void ResolveReferences()
@@ -175,6 +184,78 @@ public class PlayerActionLock : MonoBehaviour
         if (inventorySystem == null)
         {
             inventorySystem = GetComponent<FPSInventorySystem>();
+        }
+    }
+
+    private void SetPoseImmediately(Vector3 position, Quaternion rotation)
+    {
+        bool restoreCharacterController = characterController != null && characterController.enabled;
+        if (restoreCharacterController)
+        {
+            characterController.enabled = false;
+        }
+
+        transform.SetPositionAndRotation(position, rotation);
+
+        if (restoreCharacterController && characterController != null)
+        {
+            characterController.enabled = true;
+        }
+    }
+
+    private IEnumerator SmoothSnapToPoseRoutine(Vector3 targetPosition, Quaternion targetRotation)
+    {
+        poseSnapRestoreCharacterController = characterController != null && characterController.enabled;
+        if (poseSnapRestoreCharacterController)
+        {
+            characterController.enabled = false;
+        }
+
+        Vector3 startPosition = transform.position;
+        Quaternion startRotation = transform.rotation;
+        float duration = Mathf.Max(0.01f, poseSnapDuration);
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float easedT = Mathf.SmoothStep(0f, 1f, t);
+
+            Vector3 position = Vector3.Lerp(startPosition, targetPosition, easedT);
+            if (poseSnapArcHeight > 0f)
+            {
+                position += Vector3.up * (Mathf.Sin(easedT * Mathf.PI) * poseSnapArcHeight);
+            }
+
+            Quaternion rotation = Quaternion.Slerp(startRotation, targetRotation, easedT);
+            transform.SetPositionAndRotation(position, rotation);
+            yield return null;
+        }
+
+        transform.SetPositionAndRotation(targetPosition, targetRotation);
+
+        if (poseSnapRestoreCharacterController && characterController != null)
+        {
+            characterController.enabled = true;
+        }
+
+        poseSnapRestoreCharacterController = false;
+        poseSnapRoutine = null;
+    }
+
+    private void CancelPoseSnap()
+    {
+        if (poseSnapRoutine != null)
+        {
+            StopCoroutine(poseSnapRoutine);
+            poseSnapRoutine = null;
+        }
+
+        if (poseSnapRestoreCharacterController && characterController != null)
+        {
+            characterController.enabled = true;
+            poseSnapRestoreCharacterController = false;
         }
     }
 }

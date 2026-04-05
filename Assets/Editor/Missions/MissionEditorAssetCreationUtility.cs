@@ -61,6 +61,12 @@ public static class MissionEditorAssetCreationUtility
     {
         List<Type> results = new List<Type>();
         Type baseType = typeof(TBase);
+
+        if (!baseType.IsAbstract)
+        {
+            results.Add(baseType);
+        }
+
         foreach (Type type in TypeCache.GetTypesDerivedFrom(baseType))
         {
             if (type == null || type.IsAbstract || !baseType.IsAssignableFrom(type))

@@ -3,10 +3,11 @@ using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Rigidbody))]
-public class Tool : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotBreakTool
+public class Tool : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotBreakTool, IMovementWeightSource
 {
     [Header("Tool")]
     [SerializeField] private BreakToolKind toolKind = BreakToolKind.None;
+    [SerializeField] private float movementWeightKg = 5f;
 
     [Header("Use")]
     [SerializeField] private float useRange = 2f;
@@ -27,6 +28,7 @@ public class Tool : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotBrea
 
     public BreakToolKind ToolKind => toolKind;
     public Rigidbody Rigidbody => cachedRigidbody;
+    public float MovementWeightKg => Mathf.Max(0f, movementWeightKg);
     public float PreferredBreakDistance => Mathf.Max(0.5f, botUseRange * 0.8f);
     public float MaxBreakDistance => Mathf.Max(0.5f, botUseRange);
     public float UseCooldown => Mathf.Max(0.05f, botUseCooldown);
@@ -41,6 +43,7 @@ public class Tool : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotBrea
 
     protected virtual void OnValidate()
     {
+        movementWeightKg = Mathf.Max(0f, movementWeightKg);
         ApplyDefaultToolKind();
     }
 

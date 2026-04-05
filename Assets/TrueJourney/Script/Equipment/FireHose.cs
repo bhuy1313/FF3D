@@ -5,7 +5,7 @@ using UnityEngine.Serialization;
 using UnityEngine.InputSystem;
 #endif
 
-public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotExtinguisherItem
+public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotExtinguisherItem, IMovementWeightSource
 {
     private enum SprayPattern
     {
@@ -29,6 +29,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
     [SerializeField] private bool toggleUse = true;
     [SerializeField] private bool requiresConnectionToSpray;
     [SerializeField] private bool keepConnectionOnDrop;
+    [SerializeField] private float movementWeightKg = 18f;
 
     [Header("Suppression")]
     [SerializeField] private Transform sprayOrigin;
@@ -130,6 +131,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
     private float baseParticleShapeAngle = 25f;
 
     public Rigidbody Rigidbody => cachedRigidbody;
+    public float MovementWeightKg => Mathf.Max(0f, movementWeightKg);
 
     private void Awake()
     {
@@ -363,6 +365,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
 
     private void OnValidate()
     {
+        movementWeightKg = Mathf.Max(0f, movementWeightKg);
         ClampSpraySettings();
         RecalculateSprayRuntimeValues();
 

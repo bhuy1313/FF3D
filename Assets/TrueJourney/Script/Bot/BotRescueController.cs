@@ -69,7 +69,7 @@ public sealed class BotRescueController
             if (!hasReachedSafeZone)
             {
                 owner.LogRescueActivityMessage("rescue-carry", "Carrying casualty to safe zone.");
-                owner.MoveToCommand(safeZonePosition);
+                owner.MoveToRescueCarrySafeZoneCommand(safeZonePosition);
                 return;
             }
 

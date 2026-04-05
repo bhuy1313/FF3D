@@ -1,10 +1,11 @@
 using TrueJourney.BotBehavior;
 using UnityEngine;
 using UnityEngine.Serialization;
-public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotExtinguisherItem
+public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotExtinguisherItem, IMovementWeightSource
 {
     [Header("Extinguisher")]
     [SerializeField] private FireExtinguisherType extinguisherType = FireExtinguisherType.DryChemical;
+    [SerializeField] private float movementWeightKg = 12f;
 
     [Header("Charge")]
     [SerializeField] private float maxCharge = 10f;
@@ -48,6 +49,7 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
 
     private Rigidbody cachedRigidbody;
     public Rigidbody Rigidbody => cachedRigidbody;
+    public float MovementWeightKg => Mathf.Max(0f, movementWeightKg);
     public float ApplyWaterPerSecond => botDischargePerSecond;
     public FireSuppressionAgent SuppressionAgent => ResolveSuppressionAgent();
     public float PreferredSprayDistance => Mathf.Clamp(maxSprayDistance * Mathf.Clamp01(botStandDistanceFactor), 0f, maxSprayDistance);
@@ -409,6 +411,7 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
 
     private void OnValidate()
     {
+        movementWeightKg = Mathf.Max(0f, movementWeightKg);
         maxCharge = Mathf.Max(0f, maxCharge);
         rechargePerSecond = Mathf.Max(0f, rechargePerSecond);
         minChargeToUse = Mathf.Clamp(minChargeToUse, 0f, maxCharge);

@@ -83,6 +83,9 @@ MonoBehaviour:
   rechargePerSecond: 0
   minWaterToUse: 0.05
   toggleUse: 1
+  requiresConnectionToSpray: 0
+  keepConnectionOnDrop: 1
+  movementWeightKg: 18
   sprayOrigin: {fileID: 1512506647122416683}
   sprayRange: 14
   sprayRadius: 3
@@ -115,6 +118,7 @@ MonoBehaviour:
   particleGravityModifier: 0.25
   waterTag: Water
   setWaterTag: 1
+  ignoreBotLayerInParticleCollision: 1
   removeParticleBounce: 1
   currentWater: 0
   isSpraying: 0
@@ -125,9 +129,7 @@ MonoBehaviour:
   currentUser: {fileID: 0}
   currentUserIsBot: 0
   claimOwner: {fileID: 0}
-  hasExternalAimDirection: 0
-  externalAimDirection: {x: 0, y: 0, z: 0}
-  externalAimUser: {fileID: 0}
+  currentConnectionPoint: {fileID: 0}
   arcVelocity: 19
   arcGravityMultiplier: 0.65
   arcLifetime: 1.15
@@ -204,15 +206,41 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TrueJourney.BotCommands::TrueJourney.BotBehavior.BotEquippedItemPoseProfile
   overrideBotEquippedPose: 1
-  equippedLocalPosition: {x: -0.0041, y: 0.0899, z: 0.023}
-  equippedLocalEulerAngles: {x: -90, y: -180, z: -90}
-  useRightHandIkTarget: 1
-  rightHandIkWeight: 1
-  rightHandIkLocalPosition: {x: 0.19104004, y: 0.7560898, z: 0.15951538}
-  rightHandIkLocalEulerAngles: {x: -8.368, y: -96.715, z: -77.031}
-  useRightHandIkHint: 1
-  rightHandIkHintLocalPosition: {x: 0.49626923, y: 0.873, z: -0.47478485}
-  rightHandIkHintLocalEulerAngles: {x: 0, y: 0, z: 0}
+  poseEntries:
+  - key: 4
+    pose:
+      equippedLocalPosition: {x: 0, y: 0.1, z: 0.036}
+      equippedLocalEulerAngles: {x: -90, y: 90, z: 0}
+      useRightHandIkTarget: 1
+      rightHandIkWeight: 1
+      rightHandIkLocalPosition: {x: 0.023, y: 0.153, z: 0.481}
+      rightHandIkLocalEulerAngles: {x: 0, y: 0, z: 0}
+      useRightHandIkHint: 1
+      rightHandIkHintLocalPosition: {x: 0.4978981, y: 0.638, z: -0.27404785}
+      useLeftHandIkTarget: 0
+      leftHandIkWeight: 0
+      leftHandIkLocalPosition: {x: 0, y: 0, z: 0}
+      useLeftHandIkHint: 0
+      leftHandIkHintLocalPosition: {x: 0, y: 0, z: 0}
+      overrideSpineAimMaxWeight: 1
+      spineAimMaxWeight: 0.4
+  - key: 1
+    pose:
+      equippedLocalPosition: {x: 0, y: 0.1, z: 0.036}
+      equippedLocalEulerAngles: {x: -90, y: 90, z: 0}
+      useRightHandIkTarget: 0
+      rightHandIkWeight: 1
+      rightHandIkLocalPosition: {x: 0, y: 0, z: 0}
+      rightHandIkLocalEulerAngles: {x: 0, y: 0, z: 0}
+      useRightHandIkHint: 0
+      rightHandIkHintLocalPosition: {x: 0, y: 0, z: 0}
+      useLeftHandIkTarget: 0
+      leftHandIkWeight: 0
+      leftHandIkLocalPosition: {x: 0, y: 0, z: 0}
+      useLeftHandIkHint: 0
+      leftHandIkHintLocalPosition: {x: 0, y: 0, z: 0}
+      overrideSpineAimMaxWeight: 0
+      spineAimMaxWeight: 0
 --- !u!1 &2569217665633013294
 GameObject:
   m_ObjectHideFlags: 0

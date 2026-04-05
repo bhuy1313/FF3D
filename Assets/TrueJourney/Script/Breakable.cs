@@ -54,6 +54,10 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
     [SerializeField] private Transform[] breakStandPoints;
     [SerializeField] private Transform breakLookTarget;
 
+    [Header("Marker")]
+    [SerializeField] private bool showMarkerWhileIntact = true;
+    [SerializeField] private GameObject[] markerObjects;
+
     [Header("Break Behavior")]
     [SerializeField] private bool destroyOnBreak = false;
     [SerializeField] private float destroyDelay = 0f;
@@ -94,12 +98,19 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
         activeToolKind = BreakToolKind.None;
         breakRoutine = null;
         activePlayerLock = null;
+        RefreshMarkerVisibility();
     }
 
     private void OnDisable()
     {
         CancelActiveBreak();
         BotRuntimeRegistry.UnregisterBreakableTarget(this);
+    }
+
+    private void OnValidate()
+    {
+        destroyDelay = Mathf.Max(0f, destroyDelay);
+        RefreshMarkerVisibility();
     }
 
     public Vector3 GetWorldPosition()
@@ -241,6 +252,7 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
             }
         }
 
+        RefreshMarkerVisibility();
         onBroken?.Invoke();
         BreakCompleted?.Invoke();
 
@@ -333,6 +345,55 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
         }
 
         return false;
+    }
+
+    private void RefreshMarkerVisibility()
+    {
+        ResolveMarkerObjects();
+        SetMarkerVisibility(showMarkerWhileIntact && !isBroken);
+    }
+
+    private void ResolveMarkerObjects()
+    {
+        if (markerObjects != null && markerObjects.Length > 0)
+        {
+            return;
+        }
+
+        Transform[] childTransforms = GetComponentsInChildren<Transform>(true);
+        for (int i = 0; i < childTransforms.Length; i++)
+        {
+            Transform candidate = childTransforms[i];
+            if (candidate == null || candidate == transform)
+            {
+                continue;
+            }
+
+            if (candidate.name == "BreakableMarker" ||
+                candidate.name == "BreakMarker" ||
+                candidate.name == "CrackMarker")
+            {
+                markerObjects = new[] { candidate.gameObject };
+                return;
+            }
+        }
+    }
+
+    private void SetMarkerVisibility(bool visible)
+    {
+        if (markerObjects == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < markerObjects.Length; i++)
+        {
+            GameObject markerObject = markerObjects[i];
+            if (markerObject != null && markerObject.activeSelf != visible)
+            {
+                markerObject.SetActive(visible);
+            }
+        }
     }
 
     private bool HasAnyBreakRequirement()

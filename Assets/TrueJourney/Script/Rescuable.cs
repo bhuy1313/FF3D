@@ -6,15 +6,23 @@ using UnityEngine.Events;
 using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
-public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
+public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMovementWeightSource
 {
     [Header("Pickup")]
     [FormerlySerializedAs("rescueDuration")]
     [SerializeField] private float pickupDuration = 0.5f;
-    [SerializeField] private Vector3 carriedLocalPosition = new Vector3(0f, 1.1f, 0.6f);
-    [SerializeField] private Vector3 carriedLocalEulerAngles = Vector3.zero;
+    [SerializeField] private float movementWeightKg = 75f;
+    [FormerlySerializedAs("carriedLocalPosition")]
+    [SerializeField] private Vector3 botCarriedLocalPosition = new Vector3(0f, 1.1f, 0.6f);
+    [FormerlySerializedAs("carriedLocalEulerAngles")]
+    [SerializeField] private Vector3 botCarriedLocalEulerAngles = Vector3.zero;
+    [SerializeField] private Vector3 playerCarriedLocalPosition = new Vector3(0f, 1.1f, 0.6f);
+    [SerializeField] private Vector3 playerCarriedLocalEulerAngles = Vector3.zero;
     [FormerlySerializedAs("disableCollidersOnRescue")]
     [SerializeField] private bool disableCollidersWhileCarried = true;
+    [FormerlySerializedAs("carryRightHandTargetRoot")]
+    [SerializeField] private Transform carryRightHandHoldPoint;
+    [SerializeField] private Transform carryLeftHandHoldPoint;
 
     [Header("Medical")]
     [SerializeField] private float stabilizeDuration = 1.25f;
@@ -44,6 +52,7 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
     public GameObject ActiveRescuer => activeRescuer;
     public bool IsCarried => isCarried;
     public bool IsRescued => isRescued;
+    public float MovementWeightKg => Mathf.Max(0f, movementWeightKg);
     public bool RequiresStabilization
     {
         get
@@ -82,6 +91,7 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
     private void OnEnable()
     {
         CacheVictimCondition();
+        ResolveCarryHoldPoints();
         BotRuntimeRegistry.RegisterRescuableTarget(this);
         isRescueInProgress = false;
         isCarried = false;
@@ -128,6 +138,12 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
         BotRuntimeRegistry.UnregisterRescuableTarget(this);
     }
 
+    private void OnValidate()
+    {
+        movementWeightKg = Mathf.Max(0f, movementWeightKg);
+        ResolveCarryHoldPoints();
+    }
+
     public void Interact(GameObject interactor)
     {
         if (TryStabilize(interactor))
@@ -141,6 +157,18 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
     public Vector3 GetWorldPosition()
     {
         return transform.position;
+    }
+
+    public Transform GetCarryRightHandHoldPoint()
+    {
+        ResolveCarryHoldPoints();
+        return carryRightHandHoldPoint;
+    }
+
+    public Transform GetCarryLeftHandHoldPoint()
+    {
+        ResolveCarryHoldPoints();
+        return carryLeftHandHoldPoint;
     }
 
     public bool TryBeginCarry(GameObject rescuer, Transform carryAnchor)
@@ -271,8 +299,8 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
         isCarried = true;
         PrepareRigidbodyForCarry();
         transform.SetParent(activeCarryAnchor, false);
-        transform.localPosition = carriedLocalPosition;
-        transform.localRotation = Quaternion.Euler(carriedLocalEulerAngles);
+        transform.localPosition = ResolveCarryLocalPosition();
+        transform.localRotation = Quaternion.Euler(ResolveCarryLocalEulerAngles());
         AcquirePlayerCarryRestriction();
         if (disableCollidersWhileCarried)
         {
@@ -362,8 +390,8 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
         }
 
         transform.SetPositionAndRotation(
-            activeCarryAnchor.TransformPoint(carriedLocalPosition),
-            activeCarryAnchor.rotation * Quaternion.Euler(carriedLocalEulerAngles));
+            activeCarryAnchor.TransformPoint(ResolveCarryLocalPosition()),
+            activeCarryAnchor.rotation * Quaternion.Euler(ResolveCarryLocalEulerAngles()));
     }
 
     private void CacheColliderStates()
@@ -413,6 +441,40 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
         if (victimCondition == null)
         {
             victimCondition = GetComponent<VictimCondition>();
+        }
+    }
+
+    private void ResolveCarryHoldPoints()
+    {
+        if (carryRightHandHoldPoint != null && carryLeftHandHoldPoint != null)
+        {
+            return;
+        }
+
+        Transform[] childTransforms = GetComponentsInChildren<Transform>(true);
+        for (int i = 0; i < childTransforms.Length; i++)
+        {
+            Transform candidate = childTransforms[i];
+            if (candidate == null)
+            {
+                continue;
+            }
+
+            if (candidate.name == "CarryRightHandHoldPoint" ||
+                candidate.name == "CarryRightHandTargetRoot")
+            {
+                carryRightHandHoldPoint = candidate;
+            }
+            else if (candidate.name == "CarryLeftHandHoldPoint" ||
+                     candidate.name == "CarryLeftHandTargetRoot")
+            {
+                carryLeftHandHoldPoint = candidate;
+            }
+
+            if (carryRightHandHoldPoint != null && carryLeftHandHoldPoint != null)
+            {
+                return;
+            }
         }
     }
 
@@ -472,6 +534,20 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget
         {
             activePlayerActionLock = null;
         }
+    }
+
+    private Vector3 ResolveCarryLocalPosition()
+    {
+        return IsPlayerRescuer(activeRescuer)
+            ? playerCarriedLocalPosition
+            : botCarriedLocalPosition;
+    }
+
+    private Vector3 ResolveCarryLocalEulerAngles()
+    {
+        return IsPlayerRescuer(activeRescuer)
+            ? playerCarriedLocalEulerAngles
+            : botCarriedLocalEulerAngles;
     }
 
     private static bool IsPlayerRescuer(GameObject rescuer)

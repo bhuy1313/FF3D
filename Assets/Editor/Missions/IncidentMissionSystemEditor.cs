@@ -6,11 +6,18 @@ using UnityEngine;
 public class IncidentMissionSystemEditor : Editor
 {
     private readonly List<MissionAssetValidation.Entry> cachedEntries = new List<MissionAssetValidation.Entry>();
+    private bool showLegacyConfig;
 
     public override void OnInspectorGUI()
     {
         serializedObject.Update();
-        DrawDefaultInspector();
+        DrawMissionConfiguration();
+        EditorGUILayout.Space();
+        DrawOverlayConfiguration();
+        EditorGUILayout.Space();
+        DrawEventConfiguration();
+        EditorGUILayout.Space();
+        DrawLegacyConfiguration();
         serializedObject.ApplyModifiedProperties();
 
         EditorGUILayout.Space();
@@ -21,6 +28,97 @@ public class IncidentMissionSystemEditor : Editor
         DrawMissionPreview();
         EditorGUILayout.Space();
         DrawRuntimePreview();
+    }
+
+    private void DrawMissionConfiguration()
+    {
+        EditorGUILayout.LabelField("Mission Configuration", EditorStyles.boldLabel);
+        DrawProperty("missionDefinition");
+        DrawProperty("sceneObjectRegistry");
+
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            if (GUILayout.Button("Open Mission Authoring"))
+            {
+                MissionAuthoringWindow.OpenWindow(GetMissionDefinition());
+            }
+
+            using (new EditorGUI.DisabledScope(GetMissionDefinition() == null))
+            {
+                if (GUILayout.Button("Ping Mission Asset"))
+                {
+                    MissionDefinition missionDefinition = GetMissionDefinition();
+                    if (missionDefinition != null)
+                    {
+                        EditorGUIUtility.PingObject(missionDefinition);
+                        Selection.activeObject = missionDefinition;
+                    }
+                }
+            }
+        }
+    }
+
+    private void DrawOverlayConfiguration()
+    {
+        EditorGUILayout.LabelField("Overlay", EditorStyles.boldLabel);
+        DrawProperty("showMissionOverlay");
+        DrawProperty("overlayOffset");
+    }
+
+    private void DrawEventConfiguration()
+    {
+        EditorGUILayout.LabelField("Events", EditorStyles.boldLabel);
+        DrawProperty("onMissionStarted");
+        DrawProperty("onMissionCompleted");
+        DrawProperty("onMissionFailed");
+        DrawProperty("onStageStarted");
+        DrawProperty("onStageCompleted");
+        DrawProperty("stageActionBindings");
+    }
+
+    private void DrawLegacyConfiguration()
+    {
+        bool usingMissionDefinition = GetMissionDefinition() != null;
+        showLegacyConfig = EditorGUILayout.Foldout(
+            showLegacyConfig || !usingMissionDefinition,
+            usingMissionDefinition ? "Legacy Runtime Configuration" : "Legacy Runtime Configuration (Active)",
+            true);
+        if (!showLegacyConfig)
+        {
+            return;
+        }
+
+        if (usingMissionDefinition)
+        {
+            EditorGUILayout.HelpBox("MissionDefinition is assigned. These fields are kept for backward compatibility and should usually stay folded away.", MessageType.Info);
+        }
+
+        DrawProperty("missionId");
+        DrawProperty("missionTitle");
+        DrawProperty("missionDescription");
+        DrawProperty("autoStartOnEnable");
+        DrawProperty("timeLimitSeconds");
+        DrawProperty("autoDiscoverFires");
+        DrawProperty("autoDiscoverRescuables");
+        DrawProperty("autoDiscoverVictimConditions");
+        DrawProperty("requireAllFiresExtinguished");
+        DrawProperty("requireAllRescuablesRescued");
+        DrawProperty("failOnAnyVictimDeath");
+        DrawProperty("maxAllowedVictimDeaths");
+        DrawProperty("requireNoCriticalVictimsAtCompletion");
+        DrawProperty("requireAllLivingVictimsStabilized");
+        DrawProperty("trackedFires");
+        DrawProperty("trackedRescuables");
+        DrawProperty("trackedVictimConditions");
+    }
+
+    private void DrawProperty(string propertyName)
+    {
+        SerializedProperty property = serializedObject.FindProperty(propertyName);
+        if (property != null)
+        {
+            EditorGUILayout.PropertyField(property, true);
+        }
     }
 
     private void DrawSceneTools()
@@ -46,16 +144,6 @@ public class IncidentMissionSystemEditor : Editor
             if (GUILayout.Button("Find Registry In Scene"))
             {
                 AssignRegistry(missionSystem, addIfMissing: false, includeSceneSearch: true);
-            }
-
-            if (GUILayout.Button("Ping Mission Asset"))
-            {
-                MissionDefinition missionDefinition = GetMissionDefinition();
-                if (missionDefinition != null)
-                {
-                    EditorGUIUtility.PingObject(missionDefinition);
-                    Selection.activeObject = missionDefinition;
-                }
             }
         }
 

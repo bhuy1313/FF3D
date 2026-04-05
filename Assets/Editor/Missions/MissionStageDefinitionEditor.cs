@@ -14,6 +14,13 @@ public class MissionStageDefinitionEditor : Editor
         serializedObject.ApplyModifiedProperties();
 
         EditorGUILayout.Space();
+        if (GUILayout.Button("Open Mission Authoring"))
+        {
+            MissionDefinition ownerMission = AssetDatabase.LoadMainAssetAtPath(AssetDatabase.GetAssetPath(target)) as MissionDefinition;
+            MissionAuthoringWindow.OpenWindow(ownerMission);
+        }
+
+        EditorGUILayout.Space();
         DrawCreationTools();
         EditorGUILayout.Space();
         DrawValidationTools();

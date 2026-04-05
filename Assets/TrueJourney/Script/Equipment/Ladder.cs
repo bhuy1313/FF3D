@@ -37,6 +37,31 @@ public class Ladder : MonoBehaviour, IInteractable
         return Mathf.Max(0f, Vector3.Dot(top - bottom, climbDirection));
     }
 
+    public Vector3 GetClosestPointOnClimbLine(Vector3 worldPoint)
+    {
+        Vector3 climbDirection = GetClimbDirection();
+        Vector3 bottom = GetClimbBottomWorld();
+        float climbDistance = Mathf.Clamp(
+            Vector3.Dot(worldPoint - bottom, climbDirection),
+            0f,
+            GetClimbExtent());
+        return bottom + climbDirection * climbDistance;
+    }
+
+    public Vector3 GetClimbAttachPoint(Vector3 worldPoint, float clearance)
+    {
+        Vector3 linePoint = GetClosestPointOnClimbLine(worldPoint);
+        Vector3 depthDirection = GetClimbDepthDirection();
+        float sideSign = Mathf.Sign(Vector3.Dot(worldPoint - linePoint, depthDirection));
+        if (Mathf.Abs(sideSign) <= 0.001f)
+        {
+            sideSign = 1f;
+        }
+
+        float offset = GetClimbHalfDepth() + Mathf.Max(0f, clearance);
+        return linePoint + depthDirection * (sideSign * offset);
+    }
+
     public bool IsValidClimber(GameObject other)
     {
         if (string.IsNullOrWhiteSpace(requiredTag))
@@ -80,6 +105,27 @@ public class Ladder : MonoBehaviour, IInteractable
 
         float direction = isTop ? 0.5f : -0.5f;
         return transform.position + GetClimbDirection() * direction;
+    }
+
+    private Vector3 GetClimbDepthDirection()
+    {
+        Vector3 depthDirection = transform.forward;
+        if (depthDirection.sqrMagnitude <= 0.0001f)
+        {
+            return Vector3.forward;
+        }
+
+        return depthDirection.normalized;
+    }
+
+    private float GetClimbHalfDepth()
+    {
+        if (!TryGetComponent(out BoxCollider boxCollider))
+        {
+            return 0f;
+        }
+
+        return transform.TransformVector(Vector3.forward * (boxCollider.size.z * 0.5f)).magnitude;
     }
 
     private bool TryGetBoxColliderEndpoint(bool isTop, out Vector3 endpoint)

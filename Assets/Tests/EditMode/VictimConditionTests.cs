@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.IO;
 using System.Reflection;
 using NUnit.Framework;
 using TrueJourney.BotBehavior;
@@ -55,11 +56,37 @@ public class VictimConditionTests
             Assert.That(GetFieldValue<string>(victim, "urgentAnimatorParameter"), Is.EqualTo("IsUrgent"));
             Assert.That(GetFieldValue<string>(victim, "criticalAnimatorParameter"), Is.EqualTo("IsCritical"));
             Assert.That(GetFieldValue<string>(victim, "deceasedAnimatorParameter"), Is.EqualTo("IsDeceased"));
+            Assert.That(GetFieldValue<string>(victim, "carriedAnimatorParameter"), Is.EqualTo("IsCarried"));
         }
         finally
         {
             UnityEngine.Object.DestroyImmediate(victimObject);
         }
+    }
+
+    [Test]
+    public void VictimPrefab_UsesIsCarriedAnimatorParameter()
+    {
+        string prefabPath = Path.Combine("Assets", "TrueJourney", "Prefab", "Bot", "Victim.prefab");
+        string prefabContents = File.ReadAllText(prefabPath);
+
+        Assert.That(
+            prefabContents,
+            Does.Contain("carriedAnimatorParameter: IsCarried"));
+    }
+
+    [Test]
+    public void VictimController_DefinesCarryParameterAndDynamicPoseTransition()
+    {
+        string controllerPath = Path.Combine("Assets", "TrueJourney", "Imports", "character", "npc", "animation", "Victim.controller");
+        string controllerContents = File.ReadAllText(controllerPath);
+
+        Assert.That(
+            controllerContents,
+            Does.Contain("- m_Name: IsCarried"));
+        Assert.That(
+            controllerContents,
+            Does.Contain("m_DstState: {fileID: 7346835221965220051}"));
     }
 
     [Test]

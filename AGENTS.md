@@ -33,6 +33,7 @@
 
 ## Testing Guidelines
 - Unity Test Framework (`com.unity.test-framework`) is installed, but repository-owned tests are not yet present under `Assets/`.
+- Do not create or modify test files unless the user explicitly requests it.
 - Add new tests in `Assets/Tests/EditMode` or `Assets/Tests/PlayMode`.
 - Use test file names like `FeatureNameTests.cs` and keep tests deterministic (avoid scene-only/manual setup when possible).
 - For gameplay changes, include at least one automated test or document why automation is not feasible.

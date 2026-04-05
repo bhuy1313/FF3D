@@ -236,7 +236,7 @@ public class DoorTests
 
             SetPrivateField(smokeHazard, "autoCollectMode", Enum.Parse(FindType("SmokeHazard+AutoCollectMode"), "TriggerVolume"));
             SetPrivateField(smokeHazard, "linkedFires", Array.CreateInstance(FireType, 0));
-            InvokeInstanceMethod(smokeHazard, "ResolveLinkedObjects");
+            InvokeInstanceMethod(smokeHazard, "Start");
 
             Array linkedFires = GetPrivateField<Array>(smokeHazard, "linkedFires");
             Assert.That(linkedFires.Length, Is.EqualTo(1));
@@ -272,7 +272,7 @@ public class DoorTests
             SetPrivateField(smokeHazard, "autoCollectMode", Enum.Parse(FindType("SmokeHazard+AutoCollectMode"), "TriggerVolume"));
             SetPrivateField(smokeHazard, "linkedVentPoints", Array.CreateInstance(typeof(MonoBehaviour), 0));
             SetPrivateField(smokeHazard, "autoCollectChildVentPoints", true);
-            InvokeInstanceMethod(smokeHazard, "ResolveLinkedObjects");
+            InvokeInstanceMethod(smokeHazard, "Start");
 
             Array linkedVentPoints = GetPrivateField<Array>(smokeHazard, "linkedVentPoints");
             Assert.That(linkedVentPoints.Length, Is.EqualTo(1));
@@ -283,6 +283,36 @@ public class DoorTests
             UnityEngine.Object.DestroyImmediate(zone);
             UnityEngine.Object.DestroyImmediate(doorInsideObject);
             UnityEngine.Object.DestroyImmediate(doorOutsideObject);
+        }
+    }
+
+    [Test]
+    public void SmokeHazard_TriggerVolumeModeDoesNotCollectDuringOnValidate()
+    {
+        GameObject zone = new GameObject("SmokeZone");
+        GameObject fireInsideObject = new GameObject("FireInside");
+
+        try
+        {
+            BoxCollider trigger = zone.AddComponent<BoxCollider>();
+            trigger.size = new Vector3(4f, 4f, 4f);
+
+            Component smokeHazard = zone.AddComponent(SmokeHazardType);
+            fireInsideObject.AddComponent(FireType);
+            fireInsideObject.transform.position = new Vector3(0.5f, 0f, 0f);
+
+            SetPrivateField(smokeHazard, "autoCollectMode", Enum.Parse(FindType("SmokeHazard+AutoCollectMode"), "TriggerVolume"));
+            SetPrivateField(smokeHazard, "linkedFires", Array.CreateInstance(FireType, 0));
+
+            InvokeInstanceMethod(smokeHazard, "OnValidate");
+
+            Array linkedFires = GetPrivateField<Array>(smokeHazard, "linkedFires");
+            Assert.That(linkedFires.Length, Is.EqualTo(0));
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(zone);
+            UnityEngine.Object.DestroyImmediate(fireInsideObject);
         }
     }
 

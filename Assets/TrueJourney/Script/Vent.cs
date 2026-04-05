@@ -1,10 +1,11 @@
 using UnityEngine;
 
-public class Vent : MonoBehaviour, IInteractable, IGrabbable, IOpenable, ISmokeVentPoint
+public class Vent : MonoBehaviour, IInteractable, IGrabbable, IOpenable, ISmokeVentPoint, IMovementWeightSource
 {
     [SerializeField] private bool startsOpen;
     [SerializeField] private float smokeVentilationReliefWhenOpen = 0.35f;
     [SerializeField] private float fireDraftRiskWhenOpen;
+    [SerializeField] private float movementWeightKg = 12f;
 
     private Rigidbody rb;
     private bool isOpen;
@@ -12,6 +13,7 @@ public class Vent : MonoBehaviour, IInteractable, IGrabbable, IOpenable, ISmokeV
     public bool IsOpen => isOpen;
     public float SmokeVentilationRelief => isOpen ? smokeVentilationReliefWhenOpen : 0f;
     public float FireDraftRisk => isOpen ? fireDraftRiskWhenOpen : 0f;
+    public float MovementWeightKg => Mathf.Max(0f, movementWeightKg);
 
     private void Awake()
     {
@@ -37,6 +39,7 @@ public class Vent : MonoBehaviour, IInteractable, IGrabbable, IOpenable, ISmokeV
     {
         smokeVentilationReliefWhenOpen = Mathf.Max(0f, smokeVentilationReliefWhenOpen);
         fireDraftRiskWhenOpen = Mathf.Max(0f, fireDraftRiskWhenOpen);
+        movementWeightKg = Mathf.Max(0f, movementWeightKg);
 
         if (Application.isPlaying)
             return;

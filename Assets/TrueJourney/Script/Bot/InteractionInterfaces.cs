@@ -22,6 +22,11 @@ public interface IGrabbable
     //None
 }
 
+public interface IMovementWeightSource
+{
+    float MovementWeightKg { get; }
+}
+
 public interface ICustomGrabPlacement
 {
     bool TryGetGrabPlacementPose(Transform aimTransform, LayerMask placementMask, float maxDistance, out Vector3 position, out Quaternion rotation);

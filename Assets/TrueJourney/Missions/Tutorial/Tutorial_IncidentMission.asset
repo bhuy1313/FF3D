@@ -1,5 +1,165 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-8957857897406397094
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: df29dad6b75c49d0a70f217a838fc7f7, type: 3}
+  m_Name: rescue-victim_ToggleMissionObjectAction
+  m_EditorClassIdentifier: Assembly-CSharp::ToggleMissionObjectAction
+  actionTitle: 
+  actionDescription: 
+  targetKey: 
+--- !u!114 &-8098691778419735755
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f78a1e5c57cb4c79a2e55ffca71af14d, type: 3}
+  m_Name: Tutorial_RescueVictimObjective_DeliverTargetToZoneObjectiveDefinition
+  m_EditorClassIdentifier: Assembly-CSharp::DeliverTargetToZoneObjectiveDefinition
+  objectiveTitle: Rescue Victim Objective
+  objectiveDescription: Bring Victim To Safe Zone
+  targetSignalKey: tutorial-rescue-victim
+  pendingSummary: Deliver target to safe zone
+  completedSummary: Target delivered to safe zone
+--- !u!114 &-6961200827763521532
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71d070a933174ca0883d92d5166ea502, type: 3}
+  m_Name: Tutorial_ContainFireStage_MissionStageDefinition
+  m_EditorClassIdentifier: Assembly-CSharp::MissionStageDefinition
+  stageId: contain-fire
+  stageTitle: Contain the Fire
+  stageDescription: Pick up the hose and extinguish the fires inside the yard.
+  nextStageDelaySeconds: 1
+  objectives:
+  - {fileID: 1803299867243040891}
+  onStageStartedActions: []
+  onStageCompletedActions: []
+--- !u!114 &-6886783996694480774
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 542889afdf114d6f935ed24f4e7a736f, type: 3}
+  m_Name: Tutorial_ActivateExitTriggerAction_ActivateMissionObjectAction
+  m_EditorClassIdentifier: Assembly-CSharp::ActivateMissionObjectAction
+  actionTitle: Activate Exit Trigger
+  actionDescription: Reveal the extraction trigger after the fire is contained.
+  targetKey: event-1
+--- !u!114 &-6214757763015457672
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71d070a933174ca0883d92d5166ea502, type: 3}
+  m_Name: Tutorial_BreakBarricadeStage_MissionStageDefinition
+  m_EditorClassIdentifier: Assembly-CSharp::MissionStageDefinition
+  stageId: break-barricade
+  stageTitle: Break the Barricade
+  stageDescription: Clear the blocked path by breaking the barricade.
+  nextStageDelaySeconds: 0
+  objectives:
+  - {fileID: 6914176494378091833}
+  onStageStartedActions: []
+  onStageCompletedActions: []
+--- !u!114 &-3849525741119110217
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 18f5bf78b5364d6ead303ebdb616e58f, type: 3}
+  m_Name: Tutorial_OpenGateObjective_InteractTargetObjectiveDefinition
+  m_EditorClassIdentifier: Assembly-CSharp::InteractTargetObjectiveDefinition
+  objectiveTitle: Open the Gate
+  objectiveDescription: Interact with the chainlink gate to access the incident area.
+  targetSignalKey: tutorial-open-gate
+  pendingSummary: Interact with the gate to open the route
+  completedSummary: Gate opened
+--- !u!114 &-3614503000730669455
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71d070a933174ca0883d92d5166ea502, type: 3}
+  m_Name: Tutorial_ReachExitStage_MissionStageDefinition
+  m_EditorClassIdentifier: Assembly-CSharp::MissionStageDefinition
+  stageId: reach-exit
+  stageTitle: Reach the Exit
+  stageDescription: Move through the cleared route and step into the extraction area.
+  nextStageDelaySeconds: 0
+  objectives:
+  - {fileID: 4534189158508311404}
+  onStageStartedActions: []
+  onStageCompletedActions: []
+--- !u!114 &-934915021428583584
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71d070a933174ca0883d92d5166ea502, type: 3}
+  m_Name: Tutorial_OpenGateStage_MissionStageDefinition
+  m_EditorClassIdentifier: Assembly-CSharp::MissionStageDefinition
+  stageId: open-gate
+  stageTitle: Open the Gate
+  stageDescription: Use the gate to enter the training yard.
+  nextStageDelaySeconds: 1
+  objectives:
+  - {fileID: -3849525741119110217}
+  onStageStartedActions: []
+  onStageCompletedActions:
+  - {fileID: -823933927968422881}
+--- !u!114 &-823933927968422881
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 59cd9925b9c842b1a609d560291d5847, type: 3}
+  m_Name: Tutorial_ActivateExplosiveAction_ActivateExplosiveMissionAction
+  m_EditorClassIdentifier: Assembly-CSharp::ActivateExplosiveMissionAction
+  actionTitle: Activate Explosive
+  actionDescription: Trigger the explosive to wake nearby fire points.
+  targetKey: explosive-1
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -19,10 +179,96 @@ MonoBehaviour:
   timeLimitSeconds: 0
   objectives: []
   failConditions:
-  - {fileID: 11400000, guid: cc81451aeb8247738c372a03e9d79a14, type: 2}
+  - {fileID: 8481906818168850071}
   stages:
-  - {fileID: 11400000, guid: e74597aa0e3c42b7807706399347970d, type: 2}
-  - {fileID: 11400000, guid: 393657834c9e4c5a8bc821eef856349e, type: 2}
-  - {fileID: 11400000, guid: 915545b40b779334a8cecacc115e30f0, type: 2}
-  - {fileID: 11400000, guid: bd95d2625fa4b9e43a35c0f15679ace8, type: 2}
-  - {fileID: 11400000, guid: 72238e4e72c3494a9005a83a653386a9, type: 2}
+  - {fileID: -934915021428583584}
+  - {fileID: -6961200827763521532}
+  - {fileID: -6214757763015457672}
+  - {fileID: 7531105325497548688}
+  - {fileID: -3614503000730669455}
+--- !u!114 &1803299867243040891
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5d22fafc10ff4fcdbef9c5d66f63d16f, type: 3}
+  m_Name: Tutorial_ContainFireObjective_ExtinguishFiresObjectiveDefinition
+  m_EditorClassIdentifier: Assembly-CSharp::ExtinguishFiresObjectiveDefinition
+  objectiveTitle: Contain the Fire
+  objectiveDescription: Extinguish all visible fires inside the yard.
+  autoDiscoverFires: 1
+--- !u!114 &4534189158508311404
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 935577cc867e4d6ab534bb1ec0efb605, type: 3}
+  m_Name: Tutorial_ReachExitObjective_ReachAreaObjectiveDefinition
+  m_EditorClassIdentifier: Assembly-CSharp::ReachAreaObjectiveDefinition
+  objectiveTitle: Reach the Exit
+  objectiveDescription: Move into the highlighted extraction area after the fire
+    is out.
+  targetSignalKey: tutorial-reach-exit
+  pendingSummary: Move to the extraction point
+  completedSummary: Extraction point reached
+--- !u!114 &6914176494378091833
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 98e6762d87534aceb27f6dd73f366f36, type: 3}
+  m_Name: Tutorial_BreakBarricadeObjective_BreakTargetObjectiveDefinition
+  m_EditorClassIdentifier: Assembly-CSharp::BreakTargetObjectiveDefinition
+  objectiveTitle: Break target
+  objectiveDescription: 
+  targetSignalKey: tutorial-break-barricade
+  pendingSummary: Break target
+  completedSummary: Target broken
+--- !u!114 &7531105325497548688
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71d070a933174ca0883d92d5166ea502, type: 3}
+  m_Name: Tutorial_RescueVictimStage_MissionStageDefinition
+  m_EditorClassIdentifier: Assembly-CSharp::MissionStageDefinition
+  stageId: rescue-victim
+  stageTitle: Rescue the Victim
+  stageDescription: Carry the victim to the safe zone.
+  nextStageDelaySeconds: 0
+  objectives:
+  - {fileID: -8098691778419735755}
+  onStageStartedActions: []
+  onStageCompletedActions:
+  - {fileID: -8957857897406397094}
+--- !u!114 &8481906818168850071
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c2ba32152f3f4b92a46c7421b3319a2a, type: 3}
+  m_Name: Tutorial_TimeLimitFailCondition_TimeLimitFailConditionDefinition
+  m_EditorClassIdentifier: Assembly-CSharp::TimeLimitFailConditionDefinition
+  failConditionTitle: Tutorial Time Limit
+  failConditionDescription: Finish the tutorial before time runs out.
+  timeLimitSeconds: 240

@@ -8,6 +8,7 @@ public class BotBehaviorContext : MonoBehaviour
     [Header("References")]
     [SerializeField] private NavMeshAgent navMeshAgent;
     [SerializeField] private Animator animator;
+    [SerializeField] private BotCommandAgent commandAgent;
 
     [Header("Orders")]
     [SerializeField] private bool useMoveOrdersAsBehaviorInput;
@@ -35,6 +36,12 @@ public class BotBehaviorContext : MonoBehaviour
     [SerializeField] private string crouchAnimationState = "Idle Crouching";
     [SerializeField] private string uncrouchAnimationState = "Breathing Idle";
     [SerializeField] private bool crouchAnimationActive;
+    [SerializeField] private bool driveLoadedLowerBodyLayer = true;
+    [SerializeField] private string loadedLowerBodyLayer = "Lower Body Layer";
+    [SerializeField] private float loadedLowerBodyLayerWeightLerpSpeed = 10f;
+    [SerializeField] private bool loadedLowerBodyOnlyWhileMoving = true;
+    [SerializeField] private float loadedLowerBodyMinCarryWeight = 1f;
+    [SerializeField] private bool loadedLowerBodyLayerActive;
 
     private readonly BotMoveOrderState moveOrderState = new BotMoveOrderState();
     private readonly BotExtinguishOrderState extinguishOrderState = new BotExtinguishOrderState();
@@ -45,6 +52,7 @@ public class BotBehaviorContext : MonoBehaviour
     private int crouchAnimationLayerIndex = -1;
     private int crouchAnimationStateHash;
     private int uncrouchAnimationStateHash;
+    private int loadedLowerBodyLayerIndex = -1;
 
     public NavMeshAgent NavMeshAgent => navMeshAgent;
     public bool UseMoveOrdersAsBehaviorInput => useMoveOrdersAsBehaviorInput;
@@ -75,6 +83,7 @@ public class BotBehaviorContext : MonoBehaviour
     private void LateUpdate()
     {
         UpdateMovementAnimation();
+        UpdateLoadedLowerBodyLayer();
     }
 
     private void OnValidate()
@@ -267,6 +276,11 @@ public class BotBehaviorContext : MonoBehaviour
             navMeshAgent = GetComponent<NavMeshAgent>();
         }
 
+        if (commandAgent == null)
+        {
+            commandAgent = GetComponent<BotCommandAgent>();
+        }
+
         if (HasAnimatorController())
         {
             return;
@@ -301,6 +315,7 @@ public class BotBehaviorContext : MonoBehaviour
         crouchAnimationStateHash = ToHash(crouchAnimationState);
         uncrouchAnimationStateHash = ToHash(uncrouchAnimationState);
         RefreshCrouchAnimationLayerIndex();
+        RefreshLoadedLowerBodyLayerIndex();
     }
 
     private void UpdateMovementAnimation()
@@ -401,6 +416,65 @@ public class BotBehaviorContext : MonoBehaviour
         return string.IsNullOrWhiteSpace(stateName) ? 0 : Animator.StringToHash(stateName);
     }
 
+    private void UpdateLoadedLowerBodyLayer()
+    {
+        if (!driveLoadedLowerBodyLayer || !HasAnimatorController())
+        {
+            loadedLowerBodyLayerActive = false;
+            ApplyLoadedLowerBodyLayerWeight(0f);
+            return;
+        }
+
+        if (loadedLowerBodyLayerIndex < 0)
+        {
+            RefreshLoadedLowerBodyLayerIndex();
+        }
+
+        if (loadedLowerBodyLayerIndex < 0)
+        {
+            loadedLowerBodyLayerActive = false;
+            return;
+        }
+
+        bool shouldActivate = ShouldUseLoadedLowerBodyLayer();
+        loadedLowerBodyLayerActive = shouldActivate;
+        ApplyLoadedLowerBodyLayerWeight(shouldActivate ? 1f : 0f);
+    }
+
+    private bool ShouldUseLoadedLowerBodyLayer()
+    {
+        if (commandAgent == null || !commandAgent.IsCarryingRescueTarget)
+        {
+            return false;
+        }
+
+        if (commandAgent.CurrentCarryWeightKg < Mathf.Max(0f, loadedLowerBodyMinCarryWeight))
+        {
+            return false;
+        }
+
+        return !loadedLowerBodyOnlyWhileMoving || movementAnimationActive;
+    }
+
+    private void ApplyLoadedLowerBodyLayerWeight(float targetWeight)
+    {
+        if (loadedLowerBodyLayerIndex < 0 || !HasAnimatorController())
+        {
+            return;
+        }
+
+        targetWeight = Mathf.Clamp01(targetWeight);
+        if (!Application.isPlaying || loadedLowerBodyLayerWeightLerpSpeed <= 0f)
+        {
+            animator.SetLayerWeight(loadedLowerBodyLayerIndex, targetWeight);
+            return;
+        }
+
+        float currentWeight = animator.GetLayerWeight(loadedLowerBodyLayerIndex);
+        float blend = 1f - Mathf.Exp(-loadedLowerBodyLayerWeightLerpSpeed * Time.deltaTime);
+        animator.SetLayerWeight(loadedLowerBodyLayerIndex, Mathf.Lerp(currentWeight, targetWeight, blend));
+    }
+
     private void RefreshCrouchAnimationLayerIndex()
     {
         crouchAnimationLayerIndex = -1;
@@ -410,6 +484,17 @@ public class BotBehaviorContext : MonoBehaviour
         }
 
         crouchAnimationLayerIndex = animator.GetLayerIndex(crouchAnimationLayer);
+    }
+
+    private void RefreshLoadedLowerBodyLayerIndex()
+    {
+        loadedLowerBodyLayerIndex = -1;
+        if (!CanQueryAnimatorLayers() || string.IsNullOrWhiteSpace(loadedLowerBodyLayer))
+        {
+            return;
+        }
+
+        loadedLowerBodyLayerIndex = animator.GetLayerIndex(loadedLowerBodyLayer);
     }
 
     private bool CanQueryAnimatorLayers()

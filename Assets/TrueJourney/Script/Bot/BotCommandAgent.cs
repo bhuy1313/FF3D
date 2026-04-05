@@ -74,6 +74,10 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
     [SerializeField] private bool enableManualOffMeshTraversal = true;
     [SerializeField] private float offMeshTraverseSpeed = 2.25f;
     [SerializeField] private float offMeshArrivalDistance = 0.05f;
+    [SerializeField] private bool applyCarryWeightSpeedPenalty = true;
+    [SerializeField] private float carryWeightForMinimumSpeed = 80f;
+    [SerializeField, Range(0.05f, 1f)] private float minimumCarrySpeedMultiplier = 0.45f;
+    [SerializeField, Range(0f, 1f)] private float carryOffMeshPenaltyScale = 0.85f;
 
     [Header("Aim")]
     [SerializeField] private float handAimDefaultDistance = 4f;
@@ -199,6 +203,9 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
     private bool handAimFocusActive;
     private Vector3 handAimFocusWorldPosition;
     private bool headAimFocusActive;
+    private float baseNavMeshAgentSpeed;
+    private float baseOffMeshTraverseSpeed;
+    private bool movementSpeedDefaultsCached;
 
     public Vector3 LastIssuedDestination => lastIssuedDestination;
     public bool HasIssuedDestination => hasIssuedDestination;
@@ -216,6 +223,8 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
     public bool HasMovePickupTarget => movePickupController != null && movePickupController.HasTarget;
     public bool IsAimingEquippedItemPose => IsExtinguisherAimPoseActive() || IsBreakToolAimPoseActive();
     public bool IsUsingEquippedItemPose => IsExtinguisherUsePoseActive();
+    public float CurrentCarryWeightKg => ResolveCurrentCarryWeightKg();
+    public bool IsCarryingRescueTarget => ResolveCarriedRescueTarget() != null;
 
     private void Awake()
     {
@@ -244,6 +253,7 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
         ResolveSpineAimReferences();
         EnsureHeadAimConstraintConfigured(true);
         EnsureSpineAimConstraintConfigured(true);
+        CacheMovementSpeedDefaults();
     }
 
     private void OnEnable()
@@ -254,6 +264,7 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
 
     private void OnDisable()
     {
+        RestoreMovementSpeedDefaults();
         BotRuntimeRegistry.UnregisterCommandAgent(this);
     }
 
@@ -272,6 +283,7 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
     {
         ResolveViewPointReference();
         ResolveHandAimReference();
+        UpdateCarryMovementSpeed();
         if (TryTraverseOffMeshLink())
         {
             return;
@@ -295,7 +307,8 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
             return;
         }
 
-        if (currentRescueTarget != null || (activityDebug != null && activityDebug.HasRescueActivity))
+        if ((currentRescueTarget != null || (activityDebug != null && activityDebug.HasRescueActivity)) &&
+            !ShouldPreserveRescueRuntimeState())
         {
             ClearRescueRuntimeState();
         }
@@ -557,7 +570,7 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
             ClearExtinguishRuntimeState();
         }
 
-        if (commandType != BotCommandType.Rescue)
+        if (commandType != BotCommandType.Rescue && !ShouldPreserveRescueRuntimeState())
         {
             ClearRescueRuntimeState();
         }
@@ -605,6 +618,8 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
         set => currentRescueTarget = value;
     }
 
+    internal IRescuableTarget CurrentCarriedRescueTarget => ResolveCarriedRescueTarget();
+
     internal bool TryGetFollowOrderSnapshot(out BotFollowOrder followOrder)
     {
         if (behaviorContext == null)
@@ -625,6 +640,13 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
     internal bool MoveToCommand(Vector3 destination)
     {
         return MoveTo(destination);
+    }
+
+    internal bool MoveToRescueCarrySafeZoneCommand(Vector3 destination)
+    {
+        ClearBlockedPathRuntime();
+        ClearRouteFireRuntime();
+        return TrySetDestinationDirect(destination);
     }
 
     internal bool ShouldRefreshPathClearingCheckCommand()
@@ -874,6 +896,130 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
         transform.position = endPosition;
         navMeshAgent.CompleteOffMeshLink();
         return true;
+    }
+
+    private void CacheMovementSpeedDefaults()
+    {
+        if (movementSpeedDefaultsCached)
+        {
+            return;
+        }
+
+        baseOffMeshTraverseSpeed = offMeshTraverseSpeed;
+        if (navMeshAgent != null)
+        {
+            baseNavMeshAgentSpeed = navMeshAgent.speed;
+        }
+
+        movementSpeedDefaultsCached = true;
+    }
+
+    private void RestoreMovementSpeedDefaults()
+    {
+        if (!movementSpeedDefaultsCached)
+        {
+            return;
+        }
+
+        offMeshTraverseSpeed = baseOffMeshTraverseSpeed;
+        if (navMeshAgent != null)
+        {
+            navMeshAgent.speed = baseNavMeshAgentSpeed;
+        }
+    }
+
+    private void UpdateCarryMovementSpeed()
+    {
+        CacheMovementSpeedDefaults();
+
+        float speedMultiplier = EvaluateCarryMovementSpeedMultiplier();
+        offMeshTraverseSpeed = baseOffMeshTraverseSpeed * Mathf.Lerp(1f, speedMultiplier, Mathf.Clamp01(carryOffMeshPenaltyScale));
+
+        if (navMeshAgent != null)
+        {
+            navMeshAgent.speed = baseNavMeshAgentSpeed * speedMultiplier;
+        }
+    }
+
+    private float EvaluateCarryMovementSpeedMultiplier()
+    {
+        if (!applyCarryWeightSpeedPenalty)
+        {
+            return 1f;
+        }
+
+        float carriedWeightKg = ResolveCurrentCarryWeightKg();
+        if (carriedWeightKg <= 0f)
+        {
+            return 1f;
+        }
+
+        float targetMinimumMultiplier = Mathf.Clamp(minimumCarrySpeedMultiplier, 0.05f, 1f);
+        if (carryWeightForMinimumSpeed <= 0f)
+        {
+            return targetMinimumMultiplier;
+        }
+
+        float burdenT = Mathf.Clamp01(carriedWeightKg / carryWeightForMinimumSpeed);
+        return Mathf.Lerp(1f, targetMinimumMultiplier, burdenT);
+    }
+
+    private float ResolveCurrentCarryWeightKg()
+    {
+        IRescuableTarget carriedTarget = ResolveCarriedRescueTarget();
+        if (carriedTarget == null)
+        {
+            return 0f;
+        }
+
+        if (!(carriedTarget is Component component))
+        {
+            return 0f;
+        }
+
+        IMovementWeightSource weightSource = component.GetComponent<IMovementWeightSource>();
+        if (weightSource != null)
+        {
+            return Mathf.Max(0f, weightSource.MovementWeightKg);
+        }
+
+        Rigidbody fallbackBody = component.GetComponent<Rigidbody>();
+        return fallbackBody != null
+            ? Mathf.Max(0f, fallbackBody.mass)
+            : 0f;
+    }
+
+    private bool ShouldPreserveRescueRuntimeState()
+    {
+        return ResolveCarriedRescueTarget() != null;
+    }
+
+    private IRescuableTarget ResolveCarriedRescueTarget()
+    {
+        if (IsOwnedCarriedRescueTarget(currentRescueTarget))
+        {
+            return currentRescueTarget;
+        }
+
+        foreach (IRescuableTarget candidate in BotRuntimeRegistry.ActiveRescuableTargets)
+        {
+            if (!IsOwnedCarriedRescueTarget(candidate))
+            {
+                continue;
+            }
+
+            currentRescueTarget = candidate;
+            return candidate;
+        }
+
+        return null;
+    }
+
+    private bool IsOwnedCarriedRescueTarget(IRescuableTarget candidate)
+    {
+        return candidate != null &&
+               candidate.IsCarried &&
+               candidate.ActiveRescuer == gameObject;
     }
 
     private bool IsWithinArrivalDistance(Vector3 destination)

@@ -35,6 +35,7 @@ public class VictimCondition : MonoBehaviour
     [SerializeField] private string urgentAnimatorParameter = "IsUrgent";
     [SerializeField] private string criticalAnimatorParameter = "IsCritical";
     [SerializeField] private string deceasedAnimatorParameter = "IsDeceased";
+    [SerializeField] private string carriedAnimatorParameter = "IsCarried";
 
     [Header("Events")]
     [SerializeField] private UnityEvent onConditionChanged;
@@ -103,6 +104,8 @@ public class VictimCondition : MonoBehaviour
 
     private void Update()
     {
+        SyncTriageAnimation();
+
         if (!IsAlive || passiveDeteriorationPerSecond <= 0f)
             return;
 
@@ -263,6 +266,7 @@ public class VictimCondition : MonoBehaviour
     private void HandleRescueCompleted()
     {
         SetExtractedState(true, raiseEvents: true);
+        SyncTriageAnimation();
     }
 
     private void SyncRuntimeFlags()
@@ -313,6 +317,12 @@ public class VictimCondition : MonoBehaviour
         if (victimAnimator == null || victimAnimator.runtimeAnimatorController == null)
             return;
 
+        ApplyTriageAnimatorParameters();
+    }
+
+    private void ApplyTriageAnimatorParameters()
+    {
+        SetAnimatorBoolParameter(carriedAnimatorParameter, rescuable != null && rescuable.IsCarried);
         SetAnimatorBoolParameter(urgentAnimatorParameter, triageState == TriageState.Urgent);
         SetAnimatorBoolParameter(criticalAnimatorParameter, triageState == TriageState.Critical);
         SetAnimatorBoolParameter(deceasedAnimatorParameter, triageState == TriageState.Deceased);

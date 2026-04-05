@@ -11,6 +11,8 @@ namespace TrueJourney.BotBehavior
         bool RequiresStabilization { get; }
         float RescuePriority { get; }
         Vector3 GetWorldPosition();
+        Transform GetCarryRightHandHoldPoint();
+        Transform GetCarryLeftHandHoldPoint();
         bool TryStabilize(GameObject rescuer);
         bool TryBeginCarry(GameObject rescuer, Transform carryAnchor);
         void CompleteRescueAt(Vector3 dropPosition);

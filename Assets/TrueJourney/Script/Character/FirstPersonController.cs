@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
@@ -35,6 +36,23 @@ namespace StarterAssets
 		[Tooltip("How fast to transition between stand and crouch")]
 		public float CrouchTransitionSpeed = 20.0f;
 
+		[Header("Encumbrance")]
+		[Tooltip("Reduce player movement speed while grabbing or carrying heavy objects.")]
+		public bool EnableMovementWeightPenalty = true;
+		[Tooltip("Total carried weight at which movement reaches the minimum speed multiplier.")]
+		public float WeightForMinimumSpeed = 80.0f;
+		[Tooltip("Minimum movement multiplier at or above Weight For Minimum Speed.")]
+		[Range(0.05f, 1.0f)]
+		public float MinimumWeightSpeedMultiplier = 0.35f;
+		[Tooltip("Disables sprinting when current carried weight meets or exceeds this value. Set to 0 to never disable sprint.")]
+		public float SprintDisabledWeight = 45.0f;
+		[Tooltip("How strongly carried weight affects crouch speed.")]
+		[Range(0.0f, 1.0f)]
+		public float CrouchWeightPenaltyScale = 0.6f;
+		[Tooltip("How strongly carried weight affects climb speed.")]
+		[Range(0.0f, 1.0f)]
+		public float ClimbWeightPenaltyScale = 0.85f;
+
 		[Header("Climb")]
 		[Tooltip("Climb speed in m/s while on ladders")]
 		public float ClimbSpeed = 3.0f;
@@ -44,6 +62,14 @@ namespace StarterAssets
 		public float ClimbStartStep = 0.1f;
 		[Tooltip("Max steps to raise the player when starting to climb")]
 		public int ClimbStartMaxSteps = 5;
+		[Tooltip("Extra gap kept between the player capsule and the ladder face when snapping into climb")]
+		public float ClimbStartFacePadding = 0.05f;
+		[Tooltip("Duration used to ease the player into the ladder attach position when starting a climb")]
+		public float ClimbStartSnapDuration = 0.12f;
+		[Tooltip("Small upward arc applied while easing into the ladder attach position")]
+		public float ClimbStartSnapArcHeight = 0.03f;
+		[Tooltip("Short grace period after entering a ladder before grounded state can cancel climbing")]
+		public float ClimbStartGroundedGraceDuration = 0.15f;
 
 		[Space(10)]
 		[Tooltip("The height the player can jump")]
@@ -106,6 +132,16 @@ namespace StarterAssets
 		public float JumpCameraMaxRiseSpeed = 5.0f;
 		[Tooltip("Downward speed that reaches full fall camera offset.")]
 		public float FallCameraMaxSpeed = 10.0f;
+		[Tooltip("Lets carried weight affect the feel of camera motion while moving.")]
+		public bool EnableWeightCameraMotionImpact = true;
+		[Tooltip("Bob frequency multiplier when reaching maximum configured movement burden.")]
+		public float WeightBobFrequencyMultiplierAtMax = 0.82f;
+		[Tooltip("Bob amplitude multiplier when reaching maximum configured movement burden.")]
+		public float WeightBobAmplitudeMultiplierAtMax = 1.2f;
+		[Tooltip("Strafe tilt multiplier when reaching maximum configured movement burden.")]
+		public float WeightStrafeTiltMultiplierAtMax = 0.8f;
+		[Tooltip("Additional downward camera offset applied at full movement burden while grounded.")]
+		public float WeightCameraDownOffsetAtMax = 0.02f;
 
 		// cinemachine
 		private float _cinemachineTargetPitch;
@@ -135,6 +171,10 @@ namespace StarterAssets
 		private bool _isCrouching;
 		private bool _isClimbing;
 		private Ladder _currentLadder;
+		private bool _isClimbStartTransitioning;
+		private Coroutine _climbStartRoutine;
+		private bool _climbStartRestoreController;
+		private float _climbGroundedGraceTimer;
 		private float _standHeight;
 		private Vector3 _standCenter;
 		private Vector3 _cameraTargetInitialLocalPos;
@@ -193,9 +233,17 @@ namespace StarterAssets
 		private void Update()
 		{
 			UpdateSprintState();
+			if (_isClimbStartTransitioning)
+			{
+				_verticalVelocity = 0f;
+				GroundedCheck();
+				UpdateCrouch();
+				return;
+			}
+
 			JumpAndGravity();
 			GroundedCheck();
-			if (_isClimbing && Grounded)
+			if (_isClimbing && Grounded && _climbGroundedGraceTimer <= 0f)
 			{
 				StopClimb();
 			}
@@ -205,6 +253,11 @@ namespace StarterAssets
 			}
 			UpdateCrouch();
 			Move();
+
+			if (_climbGroundedGraceTimer > 0f)
+			{
+				_climbGroundedGraceTimer -= Time.deltaTime;
+			}
 		}
 
 		private void LateUpdate()
@@ -265,7 +318,7 @@ namespace StarterAssets
 			}
 
 			// set target speed based on move speed, sprint speed and if sprint is pressed
-			float targetSpeed = _isCrouching ? CrouchSpeed : (_wantsSprint ? SprintSpeed : MoveSpeed);
+			float targetSpeed = GetTargetGroundSpeed(GetCurrentMovementBurdenKg());
 
 			// a simplistic acceleration and deceleration designed to be easy to remove, replace, or iterate upon
 
@@ -318,6 +371,13 @@ namespace StarterAssets
 			}
 
 			if (_input.crouch || _isCrouching)
+			{
+				_wantsSprint = false;
+				return;
+			}
+
+			float currentBurdenKg = GetCurrentMovementBurdenKg();
+			if (IsSprintBlockedByWeight(currentBurdenKg))
 			{
 				_wantsSprint = false;
 				return;
@@ -379,6 +439,12 @@ namespace StarterAssets
 				float motionScale = GetGroundMotionScale();
 				if (motionScale > 0f)
 				{
+					float burdenT = GetMovementBurdenNormalized();
+					float weightBobFrequencyMultiplier = Mathf.Lerp(1f, WeightBobFrequencyMultiplierAtMax, burdenT);
+					float weightBobAmplitudeMultiplier = Mathf.Lerp(1f, WeightBobAmplitudeMultiplierAtMax, burdenT);
+					float weightStrafeTiltMultiplier = Mathf.Lerp(1f, WeightStrafeTiltMultiplierAtMax, burdenT);
+					float weightDownOffset = Mathf.Lerp(0f, WeightCameraDownOffsetAtMax, burdenT);
+
 					float bobFrequency = WalkBobFrequency;
 					if (_wantsSprint)
 					{
@@ -389,6 +455,7 @@ namespace StarterAssets
 					{
 						bobFrequency *= CrouchBobFrequencyMultiplier;
 					}
+					bobFrequency *= weightBobFrequencyMultiplier;
 
 					float bobAmplitudeScale = motionScale;
 					if (_wantsSprint)
@@ -400,6 +467,7 @@ namespace StarterAssets
 					{
 						bobAmplitudeScale *= CrouchBobAmplitudeMultiplier;
 					}
+					bobAmplitudeScale *= weightBobAmplitudeMultiplier;
 
 					_cameraBobTimer += Time.deltaTime * bobFrequency;
 					targetMotionOffset = FirstPersonCameraMotion.EvaluateBob(
@@ -407,7 +475,11 @@ namespace StarterAssets
 						WalkBobHorizontalAmplitude * bobAmplitudeScale,
 						WalkBobVerticalAmplitude * bobAmplitudeScale
 					);
-					targetRoll = FirstPersonCameraMotion.EvaluateStrafeTilt(_input.move.x, StrafeTilt, motionScale);
+					targetRoll = FirstPersonCameraMotion.EvaluateStrafeTilt(
+						_input.move.x,
+						StrafeTilt * weightStrafeTiltMultiplier,
+						motionScale);
+					targetMotionOffset.y -= weightDownOffset * motionScale;
 				}
 				else
 				{
@@ -445,7 +517,7 @@ namespace StarterAssets
 				return 0f;
 			}
 
-			float maxMoveSpeed = _isCrouching ? CrouchSpeed : (_wantsSprint ? SprintSpeed : MoveSpeed);
+			float maxMoveSpeed = GetTargetGroundSpeed(GetCurrentMovementBurdenKg());
 			if (maxMoveSpeed <= 0f)
 			{
 				return 0f;
@@ -536,8 +608,64 @@ namespace StarterAssets
 			Vector3 climbDirection = _currentLadder != null
 				? _currentLadder.GetClimbDirection()
 				: Vector3.up;
-			Vector3 climbVelocity = climbDirection * (verticalInput * ClimbSpeed);
+			float climbSpeed = ClimbSpeed * EvaluateMovementWeightMultiplier(GetCurrentMovementBurdenKg(), ClimbWeightPenaltyScale);
+			Vector3 climbVelocity = climbDirection * (verticalInput * climbSpeed);
 			_controller.Move(climbVelocity * Time.deltaTime);
+		}
+
+		private float GetCurrentMovementBurdenKg()
+		{
+			return _interactionSystem != null
+				? Mathf.Max(0f, _interactionSystem.CurrentMovementBurdenKg)
+				: 0f;
+		}
+
+		private float GetTargetGroundSpeed(float burdenWeightKg)
+		{
+			float baseSpeed = _isCrouching ? CrouchSpeed : (_wantsSprint ? SprintSpeed : MoveSpeed);
+			float penaltyScale = _isCrouching ? CrouchWeightPenaltyScale : 1f;
+			return baseSpeed * EvaluateMovementWeightMultiplier(burdenWeightKg, penaltyScale);
+		}
+
+		private float EvaluateMovementWeightMultiplier(float burdenWeightKg, float penaltyScale = 1f)
+		{
+			if (!EnableMovementWeightPenalty || burdenWeightKg <= 0f)
+			{
+				return 1f;
+			}
+
+			float clampedPenaltyScale = Mathf.Clamp01(penaltyScale);
+			float clampedMinimumMultiplier = Mathf.Clamp(MinimumWeightSpeedMultiplier, 0.05f, 1f);
+			float targetMinimumMultiplier = Mathf.Lerp(1f, clampedMinimumMultiplier, clampedPenaltyScale);
+			if (WeightForMinimumSpeed <= 0f)
+			{
+				return targetMinimumMultiplier;
+			}
+
+			float burdenT = Mathf.Clamp01(burdenWeightKg / WeightForMinimumSpeed);
+			return Mathf.Lerp(1f, targetMinimumMultiplier, burdenT);
+		}
+
+		private bool IsSprintBlockedByWeight(float burdenWeightKg)
+		{
+			return EnableMovementWeightPenalty &&
+				SprintDisabledWeight > 0f &&
+				burdenWeightKg >= SprintDisabledWeight;
+		}
+
+		private float GetMovementBurdenNormalized()
+		{
+			if (!EnableWeightCameraMotionImpact)
+			{
+				return 0f;
+			}
+
+			if (WeightForMinimumSpeed <= 0f)
+			{
+				return GetCurrentMovementBurdenKg() > 0f ? 1f : 0f;
+			}
+
+			return Mathf.Clamp01(GetCurrentMovementBurdenKg() / WeightForMinimumSpeed);
 		}
 
 		public void StartClimb(Ladder ladder)
@@ -550,6 +678,7 @@ namespace StarterAssets
 			_currentLadder = ladder;
 			_isClimbing = true;
 			_verticalVelocity = 0f;
+			_climbGroundedGraceTimer = Mathf.Max(0f, ClimbStartGroundedGraceDuration);
 		}
 
 		public void TryStartClimbFromInteract(Ladder ladder)
@@ -559,17 +688,24 @@ namespace StarterAssets
 				return;
 			}
 
-			StartClimb(ladder);
-
-			if (Grounded)
+			if (_isClimbStartTransitioning && _currentLadder == ladder)
 			{
-				RaiseUntilNotGrounded();
+				return;
 			}
+
+			if (_climbStartRoutine != null)
+			{
+				CancelClimbStartTransition(clearCurrentLadder: false);
+			}
+
+			_climbStartRoutine = StartCoroutine(BeginClimbFromInteractRoutine(ladder));
 		}
 
 		public void StopClimb()
 		{
 			_isClimbing = false;
+			_climbGroundedGraceTimer = 0f;
+			CancelClimbStartTransition(clearCurrentLadder: false);
 			_currentLadder = null;
 		}
 
@@ -597,6 +733,109 @@ namespace StarterAssets
 					break;
 				}
 			}
+		}
+
+		private IEnumerator BeginClimbFromInteractRoutine(Ladder ladder)
+		{
+			_currentLadder = ladder;
+			_isClimbStartTransitioning = true;
+			_isClimbing = false;
+			_verticalVelocity = 0f;
+
+			yield return SmoothMoveToPosition(
+				ResolveLadderStartPosition(ladder),
+				Mathf.Max(0f, ClimbStartSnapDuration),
+				Mathf.Max(0f, ClimbStartSnapArcHeight));
+
+			_isClimbStartTransitioning = false;
+			_climbStartRoutine = null;
+			StartClimb(ladder);
+			GroundedCheck();
+
+			if (Grounded)
+			{
+				RaiseUntilNotGrounded();
+				GroundedCheck();
+			}
+		}
+
+		private void CancelClimbStartTransition(bool clearCurrentLadder)
+		{
+			if (_climbStartRoutine != null)
+			{
+				StopCoroutine(_climbStartRoutine);
+				_climbStartRoutine = null;
+			}
+
+			if (_climbStartRestoreController && _controller != null)
+			{
+				_controller.enabled = true;
+				_climbStartRestoreController = false;
+			}
+
+			_isClimbStartTransitioning = false;
+			if (clearCurrentLadder)
+			{
+				_currentLadder = null;
+			}
+		}
+
+		private Vector3 ResolveLadderStartPosition(Ladder ladder)
+		{
+			if (ladder == null)
+			{
+				return transform.position;
+			}
+
+			float controllerRadius = _controller != null ? _controller.radius : 0.3f;
+			float skinWidth = _controller != null ? Mathf.Max(0f, _controller.skinWidth) : 0f;
+			float clearance = controllerRadius + skinWidth + Mathf.Max(0f, ClimbStartFacePadding);
+			return ladder.GetClimbAttachPoint(transform.position, clearance);
+		}
+
+		private IEnumerator SmoothMoveToPosition(Vector3 targetPosition, float duration, float arcHeight)
+		{
+			if (_controller == null ||
+				duration <= 0.001f ||
+				(transform.position - targetPosition).sqrMagnitude <= 0.0001f)
+			{
+				transform.position = targetPosition;
+				yield break;
+			}
+
+			_climbStartRestoreController = _controller.enabled;
+			if (_climbStartRestoreController)
+			{
+				_controller.enabled = false;
+			}
+
+			Vector3 startPosition = transform.position;
+			float elapsed = 0f;
+
+			while (elapsed < duration)
+			{
+				elapsed += Time.deltaTime;
+				float t = Mathf.Clamp01(elapsed / duration);
+				float easedT = Mathf.SmoothStep(0f, 1f, t);
+				Vector3 position = Vector3.Lerp(startPosition, targetPosition, easedT);
+
+				if (arcHeight > 0f)
+				{
+					position += Vector3.up * (Mathf.Sin(easedT * Mathf.PI) * arcHeight);
+				}
+
+				transform.position = position;
+				yield return null;
+			}
+
+			transform.position = targetPosition;
+
+			if (_climbStartRestoreController && _controller != null)
+			{
+				_controller.enabled = true;
+			}
+
+			_climbStartRestoreController = false;
 		}
 
 		private bool HasReachedLadderTop()

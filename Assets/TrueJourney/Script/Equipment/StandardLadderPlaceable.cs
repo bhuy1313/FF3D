@@ -2,57 +2,36 @@ using System.Collections.Generic;
 using Unity.AI.Navigation;
 using UnityEngine;
 using UnityEngine.AI;
-using UnityEngine.Rendering;
-
-[System.Serializable]
-public enum StandardLadderHeightMode
-{
-    StretchToFit = 0,
-    UseModelHeight = 1
-}
 
 [DisallowMultipleComponent]
+[RequireComponent(typeof(BoxCollider))]
 [RequireComponent(typeof(Rigidbody))]
-public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement
+public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement, IMovementWeightSource
 {
     [Header("Placement")]
     [SerializeField] private LayerMask placementMask = ~0;
     [SerializeField] private bool useAimBasedCardinalDirection = true;
     [SerializeField] private Vector3 fallbackPlacementDirection = Vector3.forward;
     [SerializeField] private float wallSearchDistance = 2.5f;
-    [SerializeField, Range(0f, 1f)] private float minimumWallNormalDot = 0.7f;
-    [SerializeField, Range(0f, 1f)] private float maximumWallUpDot = 0.35f;
+    [SerializeField, Range(0f, 1f)] private float minimumPlatformLookUpDot = 0.2f;
     [SerializeField] private float bottomGroundProbeHeight = 1.5f;
     [SerializeField] private float bottomGroundSearchDistance = 4f;
     [SerializeField] private float bottomOffsetFromWall = 0.35f;
+    [SerializeField] private float bottomGroundClearance = 0.03f;
     [SerializeField] private float topSearchDepth = 2f;
     [SerializeField] private float topSearchStep = 0.1f;
     [SerializeField] private float topAnchorOutwardOffset = 0.35f;
-    [SerializeField] private float maxLadderHeight = 4f;
-    [SerializeField] private float minLadderHeight = 1.5f;
+    [SerializeField] private float platformTopSurfaceInset = 0.1f;
     [SerializeField, Range(0f, 1f)] private float minimumSurfaceUpDot = 0.65f;
 
     [Header("Grid Snap")]
     [SerializeField] private bool enableEdgeGridSnap = true;
     [SerializeField] private float edgeGridStep = 0.5f;
 
-    [Header("Height Mode")]
-    [SerializeField] private StandardLadderHeightMode heightMode = StandardLadderHeightMode.StretchToFit;
-    [SerializeField] private float modelHeightPlacementTolerance = 0.25f;
-
     [Header("Shape")]
-    [SerializeField] private float ladderWidth = 0.55f;
-    [SerializeField] private float colliderDepth = 0.3f;
     [SerializeField] private float topExitOffset = 0.15f;
     [SerializeField] private float placementPitchOffsetDegrees = 8f;
-
-    [Header("Visual")]
-    [SerializeField] private float visualReferenceWidth = 0.55f;
-    [SerializeField] private float visualReferenceHeight = 3f;
-    [SerializeField] private float visualReferenceDepth = 0.25f;
-    [SerializeField] private float proceduralRailThickness = 0.05f;
-    [SerializeField] private float proceduralRungThickness = 0.04f;
-    [SerializeField] private float proceduralRungSpacing = 0.35f;
+    [SerializeField] private float movementWeightKg = 18f;
 
     [Header("Navigation")]
     [SerializeField] private bool enableNavMeshLink = true;
@@ -70,14 +49,12 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement
     [SerializeField] private Vector3 bottomAnchorWorld;
     [SerializeField] private Vector3 topAnchorWorld;
     [SerializeField] private float ladderHeight;
-    [SerializeField] private float detectedModelHeight;
 
     private Rigidbody cachedRigidbody;
     private BoxCollider climbCollider;
     private Ladder ladder;
     private NavMeshLink navMeshLink;
     private Transform visualsRoot;
-    private bool generatedProceduralVisuals;
     private bool capturedVisualBaseTransform;
     private Vector3 baseVisualLocalPosition;
     private Quaternion baseVisualLocalRotation = Quaternion.identity;
@@ -87,10 +64,12 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement
     private bool hasPendingPlacement;
     private Vector3 pendingBottomPoint;
     private Vector3 pendingTopAnchor;
+    private Vector3 pendingTopSurfacePoint;
     private Vector3 pendingOutward;
 
     public Rigidbody Rigidbody => cachedRigidbody;
     public float LadderHeight => ladderHeight;
+    public float MovementWeightKg => Mathf.Max(0f, movementWeightKg);
 
     private void Awake()
     {
@@ -100,19 +79,12 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement
 
     private void OnValidate()
     {
-        ladderWidth = Mathf.Max(0.1f, ladderWidth);
-        colliderDepth = Mathf.Max(0.05f, colliderDepth);
         topExitOffset = Mathf.Max(0f, topExitOffset);
-        visualReferenceWidth = Mathf.Max(0.05f, visualReferenceWidth);
-        visualReferenceHeight = Mathf.Max(0.25f, visualReferenceHeight);
-        visualReferenceDepth = Mathf.Max(0.05f, visualReferenceDepth);
-        proceduralRailThickness = Mathf.Max(0.01f, proceduralRailThickness);
-        proceduralRungThickness = Mathf.Max(0.01f, proceduralRungThickness);
-        proceduralRungSpacing = Mathf.Max(0.1f, proceduralRungSpacing);
-        maxLadderHeight = Mathf.Max(0.5f, maxLadderHeight);
-        minLadderHeight = Mathf.Clamp(minLadderHeight, 0.5f, maxLadderHeight);
+        movementWeightKg = Mathf.Max(0f, movementWeightKg);
+        minimumPlatformLookUpDot = Mathf.Clamp01(minimumPlatformLookUpDot);
+        platformTopSurfaceInset = Mathf.Max(0.01f, platformTopSurfaceInset);
         edgeGridStep = Mathf.Max(0.05f, edgeGridStep);
-        modelHeightPlacementTolerance = Mathf.Max(0.01f, modelHeightPlacementTolerance);
+        bottomGroundClearance = Mathf.Max(0f, bottomGroundClearance);
     }
 
     public bool TryGetGrabPlacementPose(Transform aimTransform, LayerMask ignoredPlacementMask, float ignoredMaxDistance, out Vector3 position, out Quaternion rotation)
@@ -120,7 +92,12 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement
         position = default;
         rotation = Quaternion.identity;
 
-        if (!TryResolvePlacement(aimTransform, out Vector3 bottomPoint, out Vector3 topAnchor, out Vector3 outward))
+        if (!TryResolvePlacement(
+                aimTransform,
+                out Vector3 bottomPoint,
+                out Vector3 topAnchor,
+                out Vector3 topSurfacePoint,
+                out Vector3 outward))
         {
             hasPendingPlacement = false;
             return false;
@@ -128,6 +105,7 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement
 
         pendingBottomPoint = bottomPoint;
         pendingTopAnchor = topAnchor;
+        pendingTopSurfacePoint = topSurfacePoint;
         pendingOutward = outward;
         hasPendingPlacement = true;
 
@@ -141,6 +119,7 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement
         EnsureReferences();
         isGrabbed = true;
         hasPendingPlacement = false;
+        pendingTopSurfacePoint = default;
         ApplyPlacedState(hasPlacedConfiguration);
     }
 
@@ -148,6 +127,7 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement
     {
         isGrabbed = false;
         hasPendingPlacement = false;
+        pendingTopSurfacePoint = default;
         ApplyPlacedState(hasPlacedConfiguration);
     }
 
@@ -156,7 +136,7 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement
         isGrabbed = false;
         if (hasPendingPlacement)
         {
-            ApplyPlacement(pendingBottomPoint, pendingTopAnchor, pendingOutward);
+            ApplyResolvedPlacement(pendingBottomPoint, pendingTopAnchor, pendingTopSurfacePoint, pendingOutward);
         }
         else
         {
@@ -165,23 +145,15 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement
         }
 
         hasPendingPlacement = false;
-    }
-
-    public void ConfigureDimensions(float width, float depth, float exitOffset)
-    {
-        ladderWidth = Mathf.Max(0.1f, width);
-        colliderDepth = Mathf.Max(0.05f, depth);
-        topExitOffset = Mathf.Max(0f, exitOffset);
-    }
-
-    public void ConfigureVisualReference(float width, float height, float depth)
-    {
-        visualReferenceWidth = Mathf.Max(0.05f, width);
-        visualReferenceHeight = Mathf.Max(0.25f, height);
-        visualReferenceDepth = Mathf.Max(0.05f, depth);
+        pendingTopSurfacePoint = default;
     }
 
     public void ApplyPlacement(Vector3 bottomPoint, Vector3 topAnchor, Vector3 outward)
+    {
+        ApplyResolvedPlacement(bottomPoint, topAnchor, topAnchor, outward);
+    }
+
+    private void ApplyResolvedPlacement(Vector3 bottomPoint, Vector3 topAnchor, Vector3 topSurfacePoint, Vector3 outward)
     {
         EnsureReferences();
 
@@ -192,21 +164,28 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement
         }
 
         flatOutward.Normalize();
-        bottomAnchorWorld = bottomPoint;
-        topAnchorWorld = topAnchor;
-        ladderHeight = Mathf.Max(0.5f, topAnchor.y - bottomPoint.y);
+        Quaternion placementRotation = BuildPlacementRotation(flatOutward);
 
-        transform.position = Vector3.Lerp(topAnchor, bottomPoint, 0.5f);
-        transform.rotation = BuildPlacementRotation(flatOutward);
+        AlignColliderToPlacement(bottomPoint, placementRotation);
+        LiftPlacedColliderAboveGround(bottomPoint.y);
 
-        climbCollider.center = Vector3.zero;
-        climbCollider.size = new Vector3(ladderWidth, ladderHeight, colliderDepth);
+        bottomAnchorWorld = GetColliderEndpointWorld(isTop: false);
+        topAnchorWorld = GetColliderEndpointWorld(isTop: true);
+        ladderHeight = GetTargetPlacementHeight();
 
         ladder.SetTopHeightOffset(topExitOffset);
-        ConfigureNavMeshLink(topAnchor, bottomPoint, flatOutward);
+        Vector3 resolvedTopSurfacePoint = ResolveTopSurfacePoint(topAnchorWorld, topSurfacePoint);
+        ConfigureNavMeshLink(resolvedTopSurfacePoint, bottomAnchorWorld, flatOutward);
         ApplyVisualLayout();
         hasPlacedConfiguration = true;
         ApplyPlacedState(true);
+
+        if (cachedRigidbody != null)
+        {
+            cachedRigidbody.linearVelocity = Vector3.zero;
+            cachedRigidbody.angularVelocity = Vector3.zero;
+            cachedRigidbody.Sleep();
+        }
     }
 
     private void EnsureReferences()
@@ -216,10 +195,6 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement
         if (climbCollider == null)
         {
             climbCollider = GetComponent<BoxCollider>();
-            if (climbCollider == null)
-            {
-                climbCollider = gameObject.AddComponent<BoxCollider>();
-            }
         }
 
         if (ladder == null)
@@ -241,7 +216,6 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement
         }
 
         PrepareVisualsRoot();
-        CacheDetectedModelHeight();
     }
 
     private void PrepareVisualsRoot()
@@ -282,12 +256,6 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement
             capturedVisualBaseTransform = true;
         }
 
-        if (visualsRoot != null && visualsRoot.childCount == 0 && !generatedProceduralVisuals)
-        {
-            BuildProceduralVisuals();
-            generatedProceduralVisuals = true;
-        }
-
         SanitizeVisualChildren();
     }
 
@@ -311,54 +279,6 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement
         }
     }
 
-    private void BuildProceduralVisuals()
-    {
-        if (visualsRoot == null)
-        {
-            return;
-        }
-
-        float referenceHeight = Mathf.Max(0.5f, visualReferenceHeight);
-        float referenceWidth = Mathf.Max(0.1f, visualReferenceWidth);
-        float halfHeight = referenceHeight * 0.5f;
-        float railInset = Mathf.Max(
-            proceduralRailThickness * 0.5f,
-            referenceWidth * 0.5f - proceduralRailThickness * 0.5f);
-
-        CreateVisualBlock(
-            "RailLeft",
-            new Vector3(-railInset, 0f, 0f),
-            new Vector3(proceduralRailThickness, referenceHeight, proceduralRailThickness));
-        CreateVisualBlock(
-            "RailRight",
-            new Vector3(railInset, 0f, 0f),
-            new Vector3(proceduralRailThickness, referenceHeight, proceduralRailThickness));
-
-        int rungCount = Mathf.Max(2, Mathf.FloorToInt(referenceHeight / proceduralRungSpacing) + 1);
-        float usableHeight = Mathf.Max(0f, referenceHeight - proceduralRungThickness);
-        float step = rungCount > 1 ? usableHeight / (rungCount - 1) : 0f;
-        float startY = halfHeight - proceduralRungThickness * 0.5f;
-
-        for (int i = 0; i < rungCount; i++)
-        {
-            float y = startY - step * i;
-            CreateVisualBlock(
-                $"Rung_{i}",
-                new Vector3(0f, y, 0f),
-                new Vector3(referenceWidth - proceduralRailThickness, proceduralRungThickness, proceduralRungThickness));
-        }
-    }
-
-    private void CreateVisualBlock(string objectName, Vector3 localPosition, Vector3 localScale)
-    {
-        GameObject block = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        block.name = objectName;
-        block.transform.SetParent(visualsRoot, false);
-        block.transform.localPosition = localPosition;
-        block.transform.localRotation = Quaternion.identity;
-        block.transform.localScale = localScale;
-    }
-
     private void ApplyVisualLayout()
     {
         PrepareVisualsRoot();
@@ -367,18 +287,9 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement
             return;
         }
 
-        float widthScale = ladderWidth / Mathf.Max(0.05f, visualReferenceWidth);
-        float heightScale = heightMode == StandardLadderHeightMode.UseModelHeight
-            ? 1f
-            : ladderHeight / Mathf.Max(0.25f, visualReferenceHeight);
-        float depthScale = colliderDepth / Mathf.Max(0.05f, visualReferenceDepth);
-
         visualsRoot.localPosition = baseVisualLocalPosition;
         visualsRoot.localRotation = baseVisualLocalRotation;
-        visualsRoot.localScale = new Vector3(
-            baseVisualLocalScale.x * widthScale,
-            baseVisualLocalScale.y * heightScale,
-            baseVisualLocalScale.z * depthScale);
+        visualsRoot.localScale = baseVisualLocalScale;
     }
 
     private void ApplyPlacedState(bool enabled)
@@ -411,20 +322,57 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement
         return baseRotation * Quaternion.Euler(placementPitchOffsetDegrees, 0f, 0f);
     }
 
-    private bool TryResolvePlacement(Transform aimTransform, out Vector3 bottomPoint, out Vector3 topAnchor, out Vector3 outward)
+    private void AlignColliderToPlacement(Vector3 bottomPoint, Quaternion placementRotation)
+    {
+        Vector3 localBottomPoint = GetColliderLocalEndpoint(isTop: false);
+        Vector3 worldPosition = bottomPoint - (placementRotation * localBottomPoint);
+        transform.SetPositionAndRotation(worldPosition, placementRotation);
+    }
+
+    private void LiftPlacedColliderAboveGround(float minimumBottomY)
+    {
+        if (climbCollider == null)
+        {
+            return;
+        }
+
+        float lift = minimumBottomY - climbCollider.bounds.min.y;
+        if (lift > 0f)
+        {
+            transform.position += Vector3.up * lift;
+        }
+    }
+
+    private Vector3 GetColliderEndpointWorld(bool isTop)
+    {
+        return transform.TransformPoint(GetColliderLocalEndpoint(isTop));
+    }
+
+    private Vector3 GetColliderLocalEndpoint(bool isTop)
+    {
+        if (climbCollider == null)
+        {
+            float fallbackHalfHeight = Mathf.Max(0.25f, GetTargetPlacementHeight() * 0.5f);
+            return Vector3.up * (isTop ? fallbackHalfHeight : -fallbackHalfHeight);
+        }
+
+        float verticalSign = isTop ? 0.5f : -0.5f;
+        return climbCollider.center + Vector3.up * (climbCollider.size.y * verticalSign);
+    }
+
+    private bool TryResolvePlacement(
+        Transform aimTransform,
+        out Vector3 bottomPoint,
+        out Vector3 topAnchor,
+        out Vector3 topSurfacePoint,
+        out Vector3 outward)
     {
         bottomPoint = default;
         topAnchor = default;
+        topSurfacePoint = default;
         outward = Vector3.zero;
 
         if (aimTransform == null)
-        {
-            return false;
-        }
-
-        float targetHeight = GetTargetPlacementHeight();
-        if (heightMode == StandardLadderHeightMode.UseModelHeight &&
-            targetHeight > maxLadderHeight)
         {
             return false;
         }
@@ -435,18 +383,30 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement
             return false;
         }
 
-        if (!TryFindWall(aimTransform, towardWall, out RaycastHit wallHit, out outward))
+        if (!TryFindPlacementReference(
+                aimTransform,
+                towardWall,
+                out Vector3 wallReference,
+                out float probeBaseY,
+                out float preferredTopSurfaceY,
+                out outward))
         {
             return false;
         }
 
-        Vector3 wallReference = SnapAlongEdge(wallHit.point, outward);
-        if (!TryFindBottomPoint(wallHit.point.y, wallReference, outward, out bottomPoint))
+        wallReference = SnapAlongEdge(wallReference, outward);
+        if (!TryFindBottomPoint(probeBaseY, wallReference, outward, out bottomPoint))
         {
             return false;
         }
 
-        if (!TryFindTopAnchor(wallReference, outward, bottomPoint.y, out topAnchor))
+        if (!TryResolveTopAnchorPlacement(
+                wallReference,
+                outward,
+                bottomPoint.y,
+                preferredTopSurfaceY,
+                out topAnchor,
+                out topSurfacePoint))
         {
             return false;
         }
@@ -485,9 +445,114 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement
         return forward.x >= 0f ? Vector3.right : Vector3.left;
     }
 
-    private bool TryFindWall(Transform aimTransform, Vector3 towardWall, out RaycastHit wallHit, out Vector3 outward)
+    private bool TryFindPlacementReference(
+        Transform aimTransform,
+        Vector3 towardWall,
+        out Vector3 wallReference,
+        out float probeBaseY,
+        out float preferredTopSurfaceY,
+        out Vector3 outward)
     {
-        wallHit = default;
+        if (TryFindPlatformPlacementReference(
+                aimTransform,
+                out wallReference,
+                out probeBaseY,
+                out preferredTopSurfaceY,
+                out outward))
+        {
+            return true;
+        }
+
+        return TryFindWallPlacementReference(
+            aimTransform,
+            towardWall,
+            out wallReference,
+            out probeBaseY,
+            out preferredTopSurfaceY,
+            out outward);
+    }
+
+    private bool TryFindPlatformPlacementReference(
+        Transform aimTransform,
+        out Vector3 wallReference,
+        out float probeBaseY,
+        out float preferredTopSurfaceY,
+        out Vector3 outward)
+    {
+        wallReference = default;
+        probeBaseY = 0f;
+        preferredTopSurfaceY = 0f;
+        outward = Vector3.zero;
+
+        if (aimTransform == null)
+        {
+            return false;
+        }
+
+        Vector3 aimForward = aimTransform.forward;
+        if (aimForward.sqrMagnitude <= 0.0001f || aimForward.normalized.y < minimumPlatformLookUpDot)
+        {
+            return false;
+        }
+
+        RaycastHit[] hits = Physics.RaycastAll(
+            aimTransform.position,
+            aimForward.normalized,
+            GetPlatformSearchDistance(),
+            placementMask,
+            QueryTriggerInteraction.Ignore);
+
+        if (hits == null || hits.Length == 0)
+        {
+            return false;
+        }
+
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+        for (int i = 0; i < hits.Length; i++)
+        {
+            RaycastHit hit = hits[i];
+            if (hit.collider == null)
+            {
+                continue;
+            }
+
+            outward = ResolvePlatformOutward(aimTransform, hit.point);
+            if (outward.sqrMagnitude <= 0.0001f)
+            {
+                continue;
+            }
+
+            preferredTopSurfaceY = hit.collider.bounds.max.y;
+            Vector3 topHitPoint = new Vector3(hit.point.x, preferredTopSurfaceY, hit.point.z);
+            wallReference = ResolvePlacementReferencePoint(hit.collider.bounds, outward, topHitPoint);
+            if (!TryResolvePlatformTopSurfaceY(hit.collider, wallReference, outward, out preferredTopSurfaceY))
+            {
+                continue;
+            }
+
+            if (preferredTopSurfaceY <= aimTransform.position.y + 0.05f)
+            {
+                continue;
+            }
+
+            probeBaseY = preferredTopSurfaceY;
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryFindWallPlacementReference(
+        Transform aimTransform,
+        Vector3 towardWall,
+        out Vector3 wallReference,
+        out float probeBaseY,
+        out float preferredTopSurfaceY,
+        out Vector3 outward)
+    {
+        wallReference = default;
+        probeBaseY = 0f;
+        preferredTopSurfaceY = 0f;
         outward = Vector3.zero;
 
         Vector3 origin = aimTransform.position;
@@ -507,23 +572,152 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement
         for (int i = 0; i < hits.Length; i++)
         {
             RaycastHit hit = hits[i];
-            if (!IsWallValid(hit, towardWall))
+            if (hit.collider == null)
             {
                 continue;
             }
 
-            wallHit = hit;
-            outward = Vector3.ProjectOnPlane(hit.normal, Vector3.up);
-            if (outward.sqrMagnitude <= 0.0001f)
-            {
-                outward = -towardWall;
-            }
-
-            outward.Normalize();
+            outward = ResolvePlacementOutward(hit.normal, towardWall);
+            wallReference = ResolvePlacementReferencePoint(hit, outward);
+            probeBaseY = hit.point.y;
+            preferredTopSurfaceY = hit.collider.bounds.max.y;
             return true;
         }
 
         return false;
+    }
+
+    private Vector3 ResolvePlatformOutward(Transform aimTransform, Vector3 platformPoint)
+    {
+        Vector3 outward = aimTransform != null
+            ? Vector3.ProjectOnPlane(aimTransform.position - platformPoint, Vector3.up)
+            : Vector3.zero;
+
+        if (outward.sqrMagnitude <= 0.0001f)
+        {
+            outward = aimTransform != null
+                ? -ResolvePlacementForward(aimTransform)
+                : Vector3.back;
+        }
+
+        outward = Vector3.ProjectOnPlane(outward, Vector3.up);
+        if (outward.sqrMagnitude <= 0.0001f)
+        {
+            return Vector3.zero;
+        }
+
+        return QuantizeToCardinalDirection(outward.normalized);
+    }
+
+    private float GetPlatformSearchDistance()
+    {
+        return Mathf.Max(wallSearchDistance, GetTargetPlacementHeight() + 1f);
+    }
+
+    private bool TryResolvePlatformTopSurfaceY(Collider collider, Vector3 wallReference, Vector3 outward, out float topSurfaceY)
+    {
+        topSurfaceY = 0f;
+        if (collider == null)
+        {
+            return false;
+        }
+
+        Vector3 flatOutward = Vector3.ProjectOnPlane(outward, Vector3.up);
+        if (flatOutward.sqrMagnitude <= 0.0001f)
+        {
+            flatOutward = Vector3.back;
+        }
+
+        flatOutward.Normalize();
+        float inset = Mathf.Max(0.01f, platformTopSurfaceInset);
+        Vector3 probePoint = wallReference - flatOutward * inset;
+        float probeLift = Mathf.Max(0.25f, bottomGroundClearance + 0.15f);
+        Vector3 probeOrigin = new Vector3(probePoint.x, collider.bounds.max.y + probeLift, probePoint.z);
+        float probeDistance = collider.bounds.size.y + probeLift * 2f + 0.5f;
+
+        if (!collider.Raycast(new Ray(probeOrigin, Vector3.down), out RaycastHit topHit, probeDistance))
+        {
+            return false;
+        }
+
+        if (!IsSurfaceValid(topHit))
+        {
+            return false;
+        }
+
+        topSurfaceY = topHit.point.y;
+        return true;
+    }
+
+    private static Vector3 ResolvePlacementOutward(Vector3 surfaceNormal, Vector3 towardWall)
+    {
+        Vector3 outward = Vector3.ProjectOnPlane(surfaceNormal, Vector3.up);
+        if (outward.sqrMagnitude > 0.0001f)
+        {
+            outward.Normalize();
+            if (Vector3.Dot(outward, -towardWall) >= 0.1f)
+            {
+                return outward;
+            }
+        }
+
+        return -towardWall;
+    }
+
+    private static Vector3 ResolvePlacementReferencePoint(RaycastHit hit, Vector3 outward)
+    {
+        if (hit.collider == null)
+        {
+            return hit.point;
+        }
+
+        Vector3 flatOutward = Vector3.ProjectOnPlane(outward, Vector3.up);
+        if (flatOutward.sqrMagnitude <= 0.0001f)
+        {
+            return hit.point;
+        }
+
+        return ResolvePlacementReferencePoint(hit.collider.bounds, flatOutward.normalized, hit.point);
+    }
+
+    private static Vector3 ResolvePlacementReferencePoint(Bounds bounds, Vector3 outward, Vector3 hitPoint)
+    {
+        Vector3 flatOutward = Vector3.ProjectOnPlane(outward, Vector3.up);
+        if (flatOutward.sqrMagnitude <= 0.0001f)
+        {
+            return new Vector3(hitPoint.x, hitPoint.y, hitPoint.z);
+        }
+
+        flatOutward.Normalize();
+        Vector3 edgeTangent = Vector3.Cross(Vector3.up, flatOutward);
+        if (edgeTangent.sqrMagnitude <= 0.0001f)
+        {
+            return new Vector3(hitPoint.x, hitPoint.y, hitPoint.z);
+        }
+
+        edgeTangent.Normalize();
+
+        Vector3 centerFlat = Vector3.ProjectOnPlane(bounds.center, Vector3.up);
+        Vector3 hitFlat = Vector3.ProjectOnPlane(hitPoint, Vector3.up);
+        Vector3 hitOffset = hitFlat - centerFlat;
+
+        float outwardExtent =
+            Mathf.Abs(flatOutward.x) * bounds.extents.x +
+            Mathf.Abs(flatOutward.z) * bounds.extents.z;
+        float tangentExtent =
+            Mathf.Abs(edgeTangent.x) * bounds.extents.x +
+            Mathf.Abs(edgeTangent.z) * bounds.extents.z;
+        float tangentCoordinate = Mathf.Clamp(
+            Vector3.Dot(hitOffset, edgeTangent),
+            -tangentExtent,
+            tangentExtent);
+
+        Vector3 edgeFlatPoint =
+            centerFlat +
+            edgeTangent * tangentCoordinate +
+            flatOutward * outwardExtent;
+
+        return new Vector3(edgeFlatPoint.x, hitPoint.y, edgeFlatPoint.z);
     }
 
     private bool TryFindBottomPoint(float probeBaseY, Vector3 wallReference, Vector3 outward, out Vector3 bottomPoint)
@@ -531,11 +725,13 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement
         bottomPoint = default;
 
         Vector3 probeBase = wallReference + outward * bottomOffsetFromWall;
+        float targetHeight = GetTargetPlacementHeight();
+        float verticalSearchDistance = Mathf.Max(bottomGroundSearchDistance, targetHeight + bottomGroundClearance + 0.25f);
         Vector3 probeOrigin = new Vector3(
             probeBase.x,
             probeBaseY + Mathf.Max(0.1f, bottomGroundProbeHeight),
             probeBase.z);
-        float probeDistance = Mathf.Max(0.1f, bottomGroundProbeHeight + bottomGroundSearchDistance);
+        float probeDistance = Mathf.Max(0.1f, bottomGroundProbeHeight + verticalSearchDistance);
 
         if (!Physics.Raycast(
                 probeOrigin,
@@ -549,23 +745,50 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement
             return false;
         }
 
-        bottomPoint = hit.point;
+        bottomPoint = hit.point + hit.normal.normalized * bottomGroundClearance;
         return true;
     }
 
-    private bool TryFindTopAnchor(Vector3 wallReference, Vector3 outward, float bottomY, out Vector3 topAnchor)
+    private bool TryFindTopAnchor(
+        Vector3 wallReference,
+        Vector3 outward,
+        float bottomY,
+        float preferredTopSurfaceY,
+        out Vector3 topAnchor)
+    {
+        return TryResolveTopAnchorPlacement(
+            wallReference,
+            outward,
+            bottomY,
+            preferredTopSurfaceY,
+            out topAnchor,
+            out _);
+    }
+
+    private bool TryResolveTopAnchorPlacement(
+        Vector3 wallReference,
+        Vector3 outward,
+        float bottomY,
+        float preferredTopSurfaceY,
+        out Vector3 topAnchor,
+        out Vector3 topSurfacePoint)
     {
         topAnchor = default;
+        topSurfacePoint = default;
 
         float targetHeight = GetTargetPlacementHeight();
-        float searchHeight = heightMode == StandardLadderHeightMode.UseModelHeight
-            ? bottomY + targetHeight + modelHeightPlacementTolerance
-            : bottomY + maxLadderHeight;
-        float downwardDistance = heightMode == StandardLadderHeightMode.UseModelHeight
-            ? Mathf.Max(0.5f, targetHeight + modelHeightPlacementTolerance + 1f)
-            : Mathf.Max(0.5f, maxLadderHeight + 1f);
-        float step = Mathf.Max(0.05f, topSearchStep);
         Vector3 snappedWallReference = SnapAlongEdge(wallReference, outward);
+        if (IsResolvedHeightValid(preferredTopSurfaceY - bottomY, targetHeight))
+        {
+            topAnchor = BuildTopPlacementPoint(snappedWallReference, outward, bottomY + targetHeight);
+            topSurfacePoint = BuildTopPlacementPoint(snappedWallReference, outward, preferredTopSurfaceY);
+            return true;
+        }
+
+        float topProbeLift = Mathf.Max(0.15f, bottomGroundClearance + 0.05f);
+        float searchHeight = bottomY + targetHeight + topProbeLift;
+        float downwardDistance = Mathf.Max(0.5f, targetHeight + topProbeLift + 1f);
+        float step = Mathf.Max(0.05f, topSearchStep);
 
         for (float depth = 0f; depth <= topSearchDepth + 0.001f; depth += step)
         {
@@ -591,90 +814,42 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement
                 continue;
             }
 
-            float anchoredTopY = heightMode == StandardLadderHeightMode.UseModelHeight
-                ? bottomY + targetHeight
-                : hit.point.y;
-
-            topAnchor = new Vector3(snappedWallReference.x, anchoredTopY, snappedWallReference.z) +
-                        outward * topAnchorOutwardOffset;
+            topAnchor = BuildTopPlacementPoint(snappedWallReference, outward, bottomY + targetHeight);
+            topSurfacePoint = BuildTopPlacementPoint(snappedWallReference, outward, hit.point.y);
             return true;
         }
 
         return false;
     }
 
+    private Vector3 BuildTopPlacementPoint(Vector3 wallReference, Vector3 outward, float surfaceY)
+    {
+        return new Vector3(wallReference.x, surfaceY, wallReference.z) + outward * topAnchorOutwardOffset;
+    }
+
     private bool IsResolvedHeightValid(float resolvedHeight, float targetHeight)
     {
-        if (!IsPlacementHeightWithinLimits(resolvedHeight))
-        {
-            return false;
-        }
-
-        if (heightMode != StandardLadderHeightMode.UseModelHeight)
-        {
-            return true;
-        }
-
-        return Mathf.Abs(resolvedHeight - targetHeight) <= modelHeightPlacementTolerance;
+        return resolvedHeight >= 0.1f &&
+               resolvedHeight <= targetHeight + 0.001f;
     }
 
     private float GetTargetPlacementHeight()
     {
-        if (heightMode != StandardLadderHeightMode.UseModelHeight)
-        {
-            return maxLadderHeight;
-        }
-
-        CacheDetectedModelHeight();
-        return Mathf.Max(0.1f, detectedModelHeight > 0.05f ? detectedModelHeight : visualReferenceHeight);
+        return GetClimbColliderSize().y;
     }
 
     private bool IsPlacementHeightWithinLimits(float height)
     {
-        if (heightMode == StandardLadderHeightMode.UseModelHeight)
-        {
-            return height >= 0.1f && height <= maxLadderHeight;
-        }
-
-        return height >= minLadderHeight && height <= maxLadderHeight;
+        return height >= 0.1f && height <= GetTargetPlacementHeight() + 0.001f;
     }
 
-    private void CacheDetectedModelHeight()
+    private Vector3 GetClimbColliderSize()
     {
-        if (visualsRoot == null)
-        {
-            return;
-        }
-
-        float maxHeight = 0f;
-        bool foundSource = false;
-
-        Renderer[] renderers = visualsRoot.GetComponentsInChildren<Renderer>(true);
-        for (int i = 0; i < renderers.Length; i++)
-        {
-            Renderer renderer = renderers[i];
-            if (renderer == null)
-            {
-                continue;
-            }
-
-            float scaleY = Mathf.Max(0.0001f, visualsRoot.lossyScale.y);
-            float candidateHeight = renderer.bounds.size.y / scaleY;
-            if (candidateHeight <= 0.01f)
-            {
-                continue;
-            }
-
-            maxHeight = Mathf.Max(maxHeight, candidateHeight);
-            foundSource = true;
-        }
-
-        if (!foundSource)
-        {
-            maxHeight = Mathf.Max(maxHeight, visualReferenceHeight);
-        }
-
-        detectedModelHeight = Mathf.Max(0.05f, maxHeight);
+        Vector3 size = climbCollider != null ? climbCollider.size : Vector3.one;
+        return new Vector3(
+            Mathf.Max(0.1f, size.x),
+            Mathf.Max(0.5f, size.y),
+            Mathf.Max(0.05f, size.z));
     }
 
     private Vector3 SnapAlongEdge(Vector3 point, Vector3 outward)
@@ -710,30 +885,12 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement
         return new Vector3(snappedFlatPoint.x, point.y, snappedFlatPoint.z);
     }
 
-    private bool IsWallValid(RaycastHit hit, Vector3 towardWall)
-    {
-        if (hit.collider == null)
-        {
-            return false;
-        }
-
-        Vector3 flatNormal = Vector3.ProjectOnPlane(hit.normal, Vector3.up);
-        if (flatNormal.sqrMagnitude <= 0.0001f)
-        {
-            return false;
-        }
-
-        flatNormal.Normalize();
-        return Mathf.Abs(hit.normal.y) <= maximumWallUpDot &&
-               Vector3.Dot(flatNormal, -towardWall) >= minimumWallNormalDot;
-    }
-
     private bool IsSurfaceValid(RaycastHit hit)
     {
         return hit.collider != null && hit.normal.y >= minimumSurfaceUpDot;
     }
 
-    private void ConfigureNavMeshLink(Vector3 topAnchor, Vector3 bottomPoint, Vector3 outward)
+    private void ConfigureNavMeshLink(Vector3 topSurfacePoint, Vector3 bottomPoint, Vector3 outward)
     {
         if (navMeshLink == null)
         {
@@ -748,17 +905,18 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement
 
         horizontalOutward.Normalize();
 
-        float topPlatformOffset = Mathf.Max(colliderDepth * 0.5f, navMeshLinkTopPlatformOffset);
+        Vector3 colliderSize = GetClimbColliderSize();
+        float topPlatformOffset = Mathf.Max(colliderSize.z * 0.5f, navMeshLinkTopPlatformOffset);
         float bottomOffset = Mathf.Max(0f, navMeshLinkBottomOffset);
 
         Vector3 bottomWorld = bottomPoint + horizontalOutward * bottomOffset;
-        Vector3 topWorld = topAnchor - horizontalOutward * topPlatformOffset;
+        Vector3 topWorld = topSurfacePoint - horizontalOutward * topPlatformOffset;
         bottomWorld = ResolveClosestNavMeshEndpoint(bottomWorld, bottomPoint.y);
-        topWorld = ResolveClosestNavMeshEndpoint(topWorld, topAnchor.y);
+        topWorld = ResolveClosestNavMeshEndpoint(topWorld, topSurfacePoint.y);
 
         navMeshLink.agentTypeID = 0;
         navMeshLink.bidirectional = true;
-        navMeshLink.width = ladderWidth + Mathf.Max(0f, navMeshLinkWidthPadding);
+        navMeshLink.width = colliderSize.x + Mathf.Max(0f, navMeshLinkWidthPadding);
         navMeshLink.autoUpdate = true;
         navMeshLink.startTransform = null;
         navMeshLink.endTransform = null;
@@ -766,6 +924,13 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement
         navMeshLink.endPoint = transform.InverseTransformPoint(topWorld);
         navMeshLink.activated = enableNavMeshLink && !isGrabbed;
         navMeshLink.UpdateLink();
+    }
+
+    private static Vector3 ResolveTopSurfacePoint(Vector3 ladderTopPoint, Vector3 requestedTopSurfacePoint)
+    {
+        Vector3 resolvedTopSurfacePoint = requestedTopSurfacePoint;
+        resolvedTopSurfacePoint.y = Mathf.Min(ladderTopPoint.y, requestedTopSurfacePoint.y);
+        return resolvedTopSurfacePoint;
     }
 
     private Vector3 ResolveClosestNavMeshEndpoint(Vector3 fallbackWorldPoint, float expectedSurfaceY)

@@ -14,6 +14,12 @@ public class MissionDefinitionEditor : Editor
         serializedObject.ApplyModifiedProperties();
 
         EditorGUILayout.Space();
+        if (GUILayout.Button("Open Mission Authoring"))
+        {
+            MissionAuthoringWindow.OpenWindow((MissionDefinition)target);
+        }
+
+        EditorGUILayout.Space();
         DrawCreationTools();
         EditorGUILayout.Space();
         DrawValidationTools();

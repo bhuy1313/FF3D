@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 5295850612818044677}
   - component: {fileID: 2617111599598714772}
   - component: {fileID: 234418378922178788}
-  - component: {fileID: 2758710410570677698}
   m_Layer: 0
   m_Name: Black Sea Tactical Axe
   m_TagString: Untagged
@@ -29,7 +28,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0.92387956, z: -0.38268343, w: 0}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 100, y: 100, z: 100}
+  m_LocalScale: {x: 70, y: 70, z: 70}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 8716025876020840090}
@@ -91,28 +90,6 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &2758710410570677698
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 488739571219905206}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 3341590269825601168, guid: 920cfbb165cd50140aa74927e17133ad, type: 3}
 --- !u!1 &603957390130167158
 GameObject:
   m_ObjectHideFlags: 0
@@ -124,7 +101,6 @@ GameObject:
   - component: {fileID: 2568129685704921935}
   - component: {fileID: 3492484465859597035}
   - component: {fileID: 2170167346868476563}
-  - component: {fileID: 4262225034073803859}
   m_Layer: 0
   m_Name: Handler
   m_TagString: Untagged
@@ -204,28 +180,6 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &4262225034073803859
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 603957390130167158}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 60025280493248578, guid: f3dcd1f5b2307d546a73fcbb9cb3191e, type: 3}
 --- !u!1 &979707955808453874
 GameObject:
   m_ObjectHideFlags: 0
@@ -239,6 +193,7 @@ GameObject:
   - component: {fileID: 5039271393193485205}
   - component: {fileID: 8037682574301293432}
   - component: {fileID: 4747125290758802551}
+  - component: {fileID: 1903276542891532427}
   m_Layer: 0
   m_Name: FireAxe
   m_TagString: Untagged
@@ -337,14 +292,47 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Tool
   toolKind: 1
+  movementWeightKg: 5
   useRange: 2
   hitMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  damagePerUse: 1
   botUseRange: 1.75
   botUseCooldown: 0.6
   currentHolder: {fileID: 0}
   claimOwner: {fileID: 0}
+--- !u!114 &1903276542891532427
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 979707955808453874}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f585d5ab3b74e20a45f38bc7b169630, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TrueJourney.BotCommands::TrueJourney.BotBehavior.BotEquippedItemPoseProfile
+  overrideBotEquippedPose: 1
+  poseEntries:
+  - key: 0
+    pose:
+      equippedLocalPosition: {x: -0.015, y: 0.118, z: 0.034}
+      equippedLocalEulerAngles: {x: 277.517, y: 347.93582, z: 89.12852}
+      useRightHandIkTarget: 0
+      rightHandIkWeight: 0
+      rightHandIkLocalPosition: {x: 0, y: 0, z: 0}
+      rightHandIkLocalEulerAngles: {x: 0, y: 0, z: 0}
+      useRightHandIkHint: 0
+      rightHandIkHintLocalPosition: {x: 0, y: 0, z: 0}
+      useLeftHandIkTarget: 0
+      leftHandIkWeight: 0
+      leftHandIkLocalPosition: {x: 0, y: 0, z: 0}
+      useLeftHandIkHint: 0
+      leftHandIkHintLocalPosition: {x: 0, y: 0, z: 0}
+      overrideSpineAimMaxWeight: 0
+      spineAimMaxWeight: 0
 --- !u!1 &1362478858261855568
 GameObject:
   m_ObjectHideFlags: 0
@@ -388,7 +376,6 @@ GameObject:
   - component: {fileID: 7077348999153155161}
   - component: {fileID: 7360018660242407106}
   - component: {fileID: 3156556925033769304}
-  - component: {fileID: 6035476463779114441}
   m_Layer: 0
   m_Name: AxeHead
   m_TagString: Untagged
@@ -468,28 +455,6 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &6035476463779114441
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2720971435971151887}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 2167626781963276912, guid: f3dcd1f5b2307d546a73fcbb9cb3191e, type: 3}
 --- !u!1 &2887579331143589708
 GameObject:
   m_ObjectHideFlags: 0
@@ -499,6 +464,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8716025876020840090}
+  - component: {fileID: 4721091449692790217}
   m_Layer: 0
   m_Name: model
   m_TagString: Untagged
@@ -524,6 +490,27 @@ Transform:
   - {fileID: 5295850612818044677}
   m_Father: {fileID: 553468921299418875}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!65 &4721091449692790217
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2887579331143589708}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.05, y: 0.8, z: 0.2}
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &4990459243102346162
 GameObject:
   m_ObjectHideFlags: 0
@@ -570,7 +557,6 @@ GameObject:
   - component: {fileID: 7731107440717202340}
   - component: {fileID: 3091278705007339210}
   - component: {fileID: 2380527182271494778}
-  - component: {fileID: 929729384903933907}
   m_Layer: 0
   m_Name: AxeBack
   m_TagString: Untagged
@@ -650,28 +636,6 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &929729384903933907
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7821152506686315174}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: -4094357662130463974, guid: f3dcd1f5b2307d546a73fcbb9cb3191e, type: 3}
 --- !u!1 &8625773404423169107
 GameObject:
   m_ObjectHideFlags: 0
@@ -683,7 +647,6 @@ GameObject:
   - component: {fileID: 8578147017415345174}
   - component: {fileID: 4342468325439710472}
   - component: {fileID: 7494860212892057669}
-  - component: {fileID: 6205715702449196579}
   m_Layer: 0
   m_Name: AxeBlade
   m_TagString: Untagged
@@ -763,28 +726,6 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &6205715702449196579
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8625773404423169107}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: -5472965118421888187, guid: f3dcd1f5b2307d546a73fcbb9cb3191e, type: 3}
 --- !u!1001 &8625215469165775002
 PrefabInstance:
   m_ObjectHideFlags: 0

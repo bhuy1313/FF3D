@@ -119,6 +119,7 @@ GameObject:
   - component: {fileID: 4512242375624333451}
   - component: {fileID: 6767709991349982837}
   - component: {fileID: 1348497278694869052}
+  - component: {fileID: 9021445500191133776}
   - component: {fileID: 6753428359166668339}
   - component: {fileID: 1740163296038258652}
   m_Layer: 5
@@ -247,6 +248,31 @@ MonoBehaviour:
   hpFill: {fileID: 8613779883783256222}
   oxygenFill: {fileID: 4161459167207647125}
   staminaFill: {fileID: 6610825867476562462}
+--- !u!114 &9021445500191133776
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1076706018474258110}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f2f4c7a4b4d94174b6cb9b7f3f8e1a22, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerHazardOverlayUI
+  exposure: {fileID: 0}
+  overlayRoot: {fileID: 0}
+  smokeOverlay: {fileID: 0}
+  fireOverlay: {fileID: 0}
+  smokeColor: {r: 0.36, g: 0.37, b: 0.38, a: 1}
+  smokeAlphaMultiplier: 0.72
+  smokeUvScale: {x: 2.75, y: 2.25}
+  smokeUvScrollSpeed: {x: 0.009, y: -0.005}
+  fireColor: {r: 1, g: 0.72, b: 0.28, a: 1}
+  fireAlphaMultiplier: 0.9
+  fireOverlayBaseSize: {x: 720, y: 720}
+  fireOverlayMinScale: 0.75
+  fireOverlayMaxScale: 1.45
 --- !u!114 &6753428359166668339
 MonoBehaviour:
   m_ObjectHideFlags: 0

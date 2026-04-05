@@ -2,10 +2,11 @@ using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Rigidbody))]
-public abstract class PlaceableItem : MonoBehaviour, IInteractable, IPickupable, IUsable
+public abstract class PlaceableItem : MonoBehaviour, IInteractable, IPickupable, IUsable, IMovementWeightSource
 {
     [Header("Placeable")]
     [SerializeField] private bool consumeOnPlace = true;
+    [SerializeField] private float movementWeightKg = 8f;
 
     [Header("Runtime")]
     [SerializeField] private GameObject currentHolder;
@@ -14,12 +15,18 @@ public abstract class PlaceableItem : MonoBehaviour, IInteractable, IPickupable,
     private Rigidbody cachedRigidbody;
 
     public Rigidbody Rigidbody => cachedRigidbody;
+    public float MovementWeightKg => Mathf.Max(0f, movementWeightKg);
     public bool IsHeld => currentHolder != null;
     protected GameObject CurrentHolder => currentHolder;
 
     protected virtual void Awake()
     {
         cachedRigidbody = GetComponent<Rigidbody>();
+    }
+
+    protected virtual void OnValidate()
+    {
+        movementWeightKg = Mathf.Max(0f, movementWeightKg);
     }
 
     public virtual void Interact(GameObject interactor)

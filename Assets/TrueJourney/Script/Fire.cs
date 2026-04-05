@@ -104,6 +104,20 @@ public class Fire : MonoBehaviour, IFireTarget
     public FireHazardType FireType => fireType;
     public bool IsHazardSourceIsolated => hazardSourceIsolated;
 
+    public float CurrentContactDamagePerSecond
+    {
+        get
+        {
+            if (damagePerSecond <= 0f || currentHp <= 0f)
+            {
+                return 0f;
+            }
+
+            float scale = damageScalesWithIntensity ? GetNormalizedHp() : 1f;
+            return scale > 0f ? damagePerSecond * scale : 0f;
+        }
+    }
+
     public event System.Action<bool> BurningStateChanged;
     public event System.Action Ignited;
     public event System.Action Extinguished;
@@ -322,17 +336,13 @@ public class Fire : MonoBehaviour, IFireTarget
 
     private void OnTriggerStay(Collider other)
     {
-        if (damagePerSecond <= 0f || currentHp <= 0f) return;
+        if (CurrentContactDamagePerSecond <= 0f) return;
         if (!string.IsNullOrEmpty(playerTag) && !other.CompareTag(playerTag)) return;
 
         PlayerVitals vitals = other.GetComponentInParent<PlayerVitals>();
         if (vitals == null || !vitals.IsAlive) return;
 
-        float t01 = GetNormalizedHp();
-        float scale = damageScalesWithIntensity ? t01 : 1f;
-        if (scale <= 0f) return;
-
-        vitals.TakeDamage(damagePerSecond * scale * Time.deltaTime);
+        vitals.TakeDamage(CurrentContactDamagePerSecond * Time.deltaTime);
     }
 
     private void OnParticleCollision(GameObject other)

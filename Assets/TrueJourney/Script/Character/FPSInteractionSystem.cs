@@ -5,6 +5,7 @@ using UnityEngine.InputSystem;
 #endif
 
 using TrueJourney.BotBehavior;
+using System.Collections.Generic;
 
 namespace StarterAssets
 {
@@ -46,6 +47,9 @@ namespace StarterAssets
         public GameObject CurrentTarget => currentTarget;
         public float InteractDistance => interactDistance;
         public bool IsGrabActive => grabbedBody != null;
+        public float CurrentGrabWeightKg => ResolveGrabbedBodyWeightKg(grabbedBody);
+        public float CurrentCarryWeightKg => ResolveRescuableCarryWeightKg(FindPlayerCarriedRescuable());
+        public float CurrentMovementBurdenKg => CurrentGrabWeightKg + CurrentCarryWeightKg;
 
         private Rigidbody grabbedBody;
         private Transform grabbedOriginalParent;
@@ -60,9 +64,11 @@ namespace StarterAssets
         private Renderer[] outlinedRenderers;
         private bool[] outlinedRendererHadBit;
         private PlayerActionLock playerActionLock;
+        private PlayerVitals playerVitals;
         private GameObject grabbedPreviewRoot;
         private Material grabbedPreviewMaterial;
         private ICustomGrabPlacement grabbedPlacementOverride;
+        private readonly List<Fire> grabbedFireSources = new List<Fire>();
 
         private void Awake()
         {
@@ -82,6 +88,7 @@ namespace StarterAssets
             }
 
             playerActionLock = GetComponent<PlayerActionLock>();
+            playerVitals = GetComponent<PlayerVitals>();
 
             grabDistance = interactDistance;
             ResolveGrabPoint();
@@ -118,6 +125,7 @@ namespace StarterAssets
                 WasPressed(input != null && input.pickup, ref previousPickup);
                 WasPressed(input != null && input.drop, ref previousDrop);
 
+                ApplyHeldBurnDamage();
                 UpdateGrabPlacementPreview();
 
                 if (usePressedWhileGrabbed)
@@ -389,6 +397,7 @@ namespace StarterAssets
             grabbedTransform.localPosition = Vector3.zero;
             grabbedTransform.localRotation = Quaternion.identity;
             grabbedPlacementOverride = FindCustomGrabPlacement(grabbedTransform);
+            CacheGrabbedFireSources(grabbedTransform);
             grabbedPlacementOverride?.OnGrabStarted();
             RebuildGrabPreview();
         }
@@ -420,6 +429,7 @@ namespace StarterAssets
             grabbedPlacementOverride?.OnGrabCancelled();
 
             DestroyGrabPreview();
+            grabbedFireSources.Clear();
             grabbedBody = null;
             grabbedOriginalParent = null;
             grabbedPlacementOverride = null;
@@ -622,6 +632,7 @@ namespace StarterAssets
             grabbedPlacementOverride?.OnGrabPlaced(worldPosition, worldRotation);
 
             DestroyGrabPreview();
+            grabbedFireSources.Clear();
             grabbedBody = null;
             grabbedOriginalParent = null;
             grabbedPlacementOverride = null;
@@ -681,6 +692,26 @@ namespace StarterAssets
             previewObject.tag = "Untagged";
             previewObject.transform.SetParent(null, true);
             Component[] components = previewObject.GetComponentsInChildren<Component>(true);
+
+            // Remove behaviours before physics components so RequireComponent dependencies
+            // on preview clones do not spam errors while being stripped down.
+            for (int i = 0; i < components.Length; i++)
+            {
+                Component component = components[i];
+                if (component == null ||
+                    component is Transform ||
+                    component is Renderer ||
+                    component is MeshFilter)
+                {
+                    continue;
+                }
+
+                if (component is MonoBehaviour)
+                {
+                    DestroyRuntimeSafe(component);
+                }
+            }
+
             for (int i = 0; i < components.Length; i++)
             {
                 Component component = components[i];
@@ -713,6 +744,11 @@ namespace StarterAssets
                 }
 
                 if (component is MeshFilter)
+                {
+                    continue;
+                }
+
+                if (component is MonoBehaviour)
                 {
                     continue;
                 }
@@ -916,6 +952,57 @@ namespace StarterAssets
             relay?.NotifyInteracted(interactor);
         }
 
+        private void ApplyHeldBurnDamage()
+        {
+            if (playerVitals == null || !playerVitals.IsAlive || grabbedBody == null)
+            {
+                return;
+            }
+
+            if (grabbedFireSources.Count == 0)
+            {
+                CacheGrabbedFireSources(grabbedBody.transform);
+                if (grabbedFireSources.Count == 0)
+                {
+                    return;
+                }
+            }
+
+            float maxDamagePerSecond = 0f;
+            for (int i = grabbedFireSources.Count - 1; i >= 0; i--)
+            {
+                Fire fire = grabbedFireSources[i];
+                if (fire == null)
+                {
+                    grabbedFireSources.RemoveAt(i);
+                    continue;
+                }
+
+                maxDamagePerSecond = Mathf.Max(maxDamagePerSecond, fire.CurrentContactDamagePerSecond);
+            }
+
+            if (maxDamagePerSecond > 0f)
+            {
+                playerVitals.TakeDamage(maxDamagePerSecond * Time.deltaTime);
+            }
+        }
+
+        private void CacheGrabbedFireSources(Transform grabbedTransform)
+        {
+            grabbedFireSources.Clear();
+            if (grabbedTransform == null)
+            {
+                return;
+            }
+
+            if (grabbedTransform.TryGetComponent(out IBurnable burnable) && burnable.FireSource != null)
+            {
+                grabbedFireSources.Add(burnable.FireSource);
+            }
+
+            grabbedTransform.GetComponentsInChildren(true, grabbedFireSources);
+        }
+
         private static ICustomGrabPlacement FindCustomGrabPlacement(Transform grabbedTransform)
         {
             if (grabbedTransform == null)
@@ -937,6 +1024,62 @@ namespace StarterAssets
                 }
 
                 parent = parent.parent;
+            }
+
+            return null;
+        }
+
+        private static float ResolveGrabbedBodyWeightKg(Rigidbody body)
+        {
+            if (body == null)
+            {
+                return 0f;
+            }
+
+            return ResolveMovementWeightKg(body.transform, body);
+        }
+
+        private static float ResolveRescuableCarryWeightKg(IRescuableTarget rescuable)
+        {
+            if (!(rescuable is Component component))
+            {
+                return 0f;
+            }
+
+            Rigidbody fallbackBody = component.GetComponent<Rigidbody>();
+            return ResolveMovementWeightKg(component.transform, fallbackBody);
+        }
+
+        private static float ResolveMovementWeightKg(Transform origin, Rigidbody fallbackBody)
+        {
+            IMovementWeightSource weightSource = FindMovementWeightSource(origin);
+            if (weightSource != null)
+            {
+                return Mathf.Max(0f, weightSource.MovementWeightKg);
+            }
+
+            if (fallbackBody == null && origin != null)
+            {
+                fallbackBody = origin.GetComponent<Rigidbody>();
+            }
+
+            return fallbackBody != null
+                ? Mathf.Max(0f, fallbackBody.mass)
+                : 0f;
+        }
+
+        private static IMovementWeightSource FindMovementWeightSource(Transform origin)
+        {
+            Transform current = origin;
+            while (current != null)
+            {
+                IMovementWeightSource weightSource = current.GetComponent<IMovementWeightSource>();
+                if (weightSource != null)
+                {
+                    return weightSource;
+                }
+
+                current = current.parent;
             }
 
             return null;

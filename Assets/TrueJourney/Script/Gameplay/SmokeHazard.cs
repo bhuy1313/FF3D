@@ -61,14 +61,17 @@ public class SmokeHazard : MonoBehaviour
     {
         ResolveSupportComponents();
         ResolveTriggerZone();
-        ResolveLinkedObjects();
+    }
+
+    private void Start()
+    {
+        ResolveLinkedObjects(forceRefresh: true);
     }
 
     private void Reset()
     {
         ResolveSupportComponents();
         ResolveTriggerZone();
-        ResolveLinkedObjects();
         currentSmokeDensity = startSmokeDensity;
     }
 
@@ -76,7 +79,6 @@ public class SmokeHazard : MonoBehaviour
     {
         ResolveSupportComponents();
         ResolveTriggerZone();
-        ResolveLinkedObjects();
         startSmokeDensity = Mathf.Clamp01(startSmokeDensity);
         smokePerBurningFire = Mathf.Max(0f, smokePerBurningFire);
         smokePerFireIntensity = Mathf.Max(0f, smokePerFireIntensity);
@@ -144,11 +146,17 @@ public class SmokeHazard : MonoBehaviour
 
     private void ApplySmokeEffects(Collider other, float deltaTime)
     {
-        if (currentSmokeDensity < minimumDangerousDensity)
-            return;
-
         float scaledDeltaTime = Mathf.Max(0f, deltaTime);
         float effectScale = currentSmokeDensity;
+
+        PlayerHazardExposure exposure = other.GetComponentInParent<PlayerHazardExposure>();
+        if (exposure != null && processedTargets.Add(exposure))
+        {
+            exposure.ReportSmokeExposure(effectScale);
+        }
+
+        if (currentSmokeDensity < minimumDangerousDensity)
+            return;
 
         if (affectPlayers)
         {
@@ -199,12 +207,25 @@ public class SmokeHazard : MonoBehaviour
         triggerBody.useGravity = false;
     }
 
+    [ContextMenu("Refresh Linked Smoke Objects")]
+    private void RefreshLinkedObjects()
+    {
+        ResolveSupportComponents();
+        ResolveTriggerZone();
+        ResolveLinkedObjects(forceRefresh: true);
+    }
+
     private void ResolveLinkedObjects()
     {
-        if (autoCollectChildFires && (linkedFires == null || linkedFires.Length == 0))
+        ResolveLinkedObjects(forceRefresh: false);
+    }
+
+    private void ResolveLinkedObjects(bool forceRefresh)
+    {
+        if (autoCollectChildFires && (forceRefresh || linkedFires == null || linkedFires.Length == 0))
             linkedFires = CollectAutoFires();
 
-        if (autoCollectChildVentPoints && (linkedVentPoints == null || linkedVentPoints.Length == 0))
+        if (autoCollectChildVentPoints && (forceRefresh || linkedVentPoints == null || linkedVentPoints.Length == 0))
             linkedVentPoints = CollectAutoVentPoints();
     }
 
