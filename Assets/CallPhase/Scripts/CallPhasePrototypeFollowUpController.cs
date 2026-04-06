@@ -13,6 +13,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
     [Header("References")]
     [SerializeField] private TranscriptLogsController logsController;
     [SerializeField] private TranscriptAutoExtractEntry autoExtractEntry;
+    [SerializeField] private TranscriptExtractionController extractionController;
     [SerializeField] private TranscriptStateController stateController;
     [SerializeField] private IncidentReportController incidentReportController;
 
@@ -157,6 +158,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
 
         if (activeStepRoutine != null)
         {
+            ScheduleDeferredProgressionSweep();
             return;
         }
 
@@ -209,7 +211,11 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
                     callerText,
                     callerLine != null && callerLine.isExtractable,
                     callerLine != null && callerLine.startsAsActiveChunk);
-                stateController.EnterExtractMode();
+
+                if (extractionController == null || !extractionController.TryAutoConfirmPendingConfirmationSpan())
+                {
+                    stateController.EnterExtractMode();
+                }
             }
         }
 
@@ -283,6 +289,11 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
         if (stateController == null)
         {
             stateController = GetComponentInChildren<TranscriptStateController>(true);
+        }
+
+        if (extractionController == null)
+        {
+            extractionController = GetComponentInChildren<TranscriptExtractionController>(true);
         }
 
         if (incidentReportController == null)
@@ -1487,9 +1498,15 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
     private IEnumerator DeferredProgressionSweepRoutine()
     {
         yield return null;
+
+        while (activeStepRoutine != null)
+        {
+            yield return null;
+        }
+
         deferredProgressionCoroutine = null;
 
-        if (progressionCompleted || activeStepRoutine != null || isExecutingOutOfOrderRealStep)
+        if (progressionCompleted || isExecutingOutOfOrderRealStep)
         {
             yield break;
         }

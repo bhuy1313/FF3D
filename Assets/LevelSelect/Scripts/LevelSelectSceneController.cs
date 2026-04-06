@@ -2821,23 +2821,24 @@ public class LevelSelectSceneController : MonoBehaviour
 
     private string ResolveSelectedScenarioDescription(LevelDefinition definition, ScenarioDefinition scenario)
     {
+        string fallback = ResolveDescription(definition);
         CallPhaseScenarioData scenarioData = LoadScenarioData(scenario);
         if (scenarioData != null && !string.IsNullOrWhiteSpace(scenarioData.description))
         {
-            return scenarioData.description.Trim();
+            fallback = scenarioData.description.Trim();
         }
 
-        return ResolveDescription(definition);
+        return ResolveLocalizedText(GetScenarioFieldLocalizationKey(scenario, "description"), fallback);
     }
 
     private string ResolveSelectedScenarioObjective(LevelDefinition definition, ScenarioDefinition scenario)
     {
-        string fallback = LanguageManager.Tr(
-            SelectedScenarioObjectiveLocalizationKey,
-            "Deploy the selected scenario on the next run.");
-        return !string.IsNullOrWhiteSpace(definition?.objective)
-            ? definition.objective
-            : fallback;
+        string fallback = !string.IsNullOrWhiteSpace(definition?.objective)
+            ? ResolveObjective(definition)
+            : LanguageManager.Tr(
+                SelectedScenarioObjectiveLocalizationKey,
+                "Deploy the selected scenario on the next run.");
+        return ResolveLocalizedText(GetScenarioFieldLocalizationKey(scenario, "objective"), fallback);
     }
 
     private string ResolveSelectedScenarioDifficultySummary(LevelDefinition definition, ScenarioDefinition scenario)
@@ -2857,23 +2858,31 @@ public class LevelSelectSceneController : MonoBehaviour
             return ResolveLevelName(definition, null);
         }
 
+        string fallback;
         if (!string.IsNullOrWhiteSpace(scenario.displayName))
         {
-            return scenario.displayName.Trim();
+            fallback = scenario.displayName.Trim();
         }
-
-        CallPhaseScenarioData scenarioData = LoadScenarioData(scenario);
-        if (scenarioData != null && !string.IsNullOrWhiteSpace(scenarioData.displayName))
+        else
         {
-            return scenarioData.displayName.Trim();
+            CallPhaseScenarioData scenarioData = LoadScenarioData(scenario);
+            if (scenarioData != null && !string.IsNullOrWhiteSpace(scenarioData.displayName))
+            {
+                fallback = scenarioData.displayName.Trim();
+            }
+            else if (!string.IsNullOrWhiteSpace(scenario.scenarioId))
+            {
+                fallback = scenario.scenarioId.Trim();
+            }
+            else
+            {
+                fallback = ResolveLevelName(definition, null);
+            }
+
+            return ResolveLocalizedText(GetScenarioFieldLocalizationKey(scenario, "name"), fallback);
         }
 
-        if (!string.IsNullOrWhiteSpace(scenario.scenarioId))
-        {
-            return scenario.scenarioId.Trim();
-        }
-
-        return ResolveLevelName(definition, null);
+        return ResolveLocalizedText(GetScenarioFieldLocalizationKey(scenario, "name"), fallback);
     }
 
     private static string CombineSummaryParts(string left, string right)
@@ -3005,6 +3014,16 @@ public class LevelSelectSceneController : MonoBehaviour
         }
 
         return $"levelselect.level.{NormalizeLocalizationToken(definition.levelId)}.{suffix}";
+    }
+
+    private static string GetScenarioFieldLocalizationKey(ScenarioDefinition scenario, string suffix)
+    {
+        if (scenario == null || string.IsNullOrWhiteSpace(scenario.scenarioId) || string.IsNullOrWhiteSpace(suffix))
+        {
+            return string.Empty;
+        }
+
+        return $"levelselect.scenario.{NormalizeLocalizationToken(scenario.scenarioId)}.{suffix}";
     }
 
     private static string GetDefaultDifficultyLocalizationKey(string difficulty)

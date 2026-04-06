@@ -75,6 +75,8 @@ public class TranscriptExtractionController : MonoBehaviour
     private void OnEnable()
     {
         ResolveReferences();
+        LanguageManager.LanguageChanged -= HandleLanguageChanged;
+        LanguageManager.LanguageChanged += HandleLanguageChanged;
         currentSpan = null;
         ResetUiToDefault();
         SetSelectionButtons(confirmInteractable: false, clearInteractable: false);
@@ -86,8 +88,15 @@ public class TranscriptExtractionController : MonoBehaviour
         TryAutoConfirmActiveConfirmationSpan();
     }
 
+    private void OnDisable()
+    {
+        LanguageManager.LanguageChanged -= HandleLanguageChanged;
+    }
+
     private void OnDestroy()
     {
+        LanguageManager.LanguageChanged -= HandleLanguageChanged;
+
         if (confirmExtractionButton != null)
         {
             confirmExtractionButton.onClick.RemoveListener(ConfirmExtraction);
@@ -125,7 +134,7 @@ public class TranscriptExtractionController : MonoBehaviour
 
         SetText(selectionValueText, currentSpan.RawText);
         SetText(infoTypeValueText, currentSpan.InfoType);
-        SetText(targetFieldValueText, currentSpan.TargetFieldId);
+        SetText(targetFieldValueText, CallPhaseUiChromeText.GetFieldDisplayName(currentSpan.TargetFieldId));
 
         bool isValidSelection = EvaluateSelection(currentSpan, out string matchType, out string penalty);
         SetText(matchTypeValueText, matchType);
@@ -239,39 +248,42 @@ public class TranscriptExtractionController : MonoBehaviour
 
     private void TryAutoConfirmActiveConfirmationSpan()
     {
+        TryAutoConfirmPendingConfirmationSpan(requireExtractMode: true);
+    }
+
+    public bool TryAutoConfirmPendingConfirmationSpan(bool requireExtractMode = false)
+    {
+        ResolveReferences();
+
         if (!CallPhaseAutoValidateSettings.GetSavedOrDefaultEnabled())
         {
-            return;
+            return false;
         }
 
         if (incidentReportController == null || !incidentReportController.HasActiveConfirmationContext)
         {
-            return;
+            return false;
         }
 
-        if (stateController != null && stateController.CurrentState != TranscriptPanelState.ExtractMode)
+        if (requireExtractMode && stateController != null && stateController.CurrentState != TranscriptPanelState.ExtractMode)
         {
-            return;
+            return false;
         }
 
         if (currentSpan != null)
         {
-            return;
+            return false;
         }
 
-        SelectableSpan[] spans = GetComponentsInChildren<SelectableSpan>(true);
-        for (int i = 0; i < spans.Length; i++)
+        SelectableSpan autoValidationCandidate = FindAutoValidationCandidate();
+        if (autoValidationCandidate == null)
         {
-            SelectableSpan span = spans[i];
-            if (!IsAutoValidationCandidate(span))
-            {
-                continue;
-            }
-
-            OnSelectableSpanClicked(span);
-            ConfirmExtraction();
-            return;
+            return false;
         }
+
+        OnSelectableSpanClicked(autoValidationCandidate);
+        ConfirmExtraction();
+        return true;
     }
 
     private void ResetUiToDefault()
@@ -300,14 +312,15 @@ public class TranscriptExtractionController : MonoBehaviour
     {
         if (target != null)
         {
+            CallPhaseUiChromeText.ApplyCurrentFont(target);
             target.text = string.IsNullOrEmpty(value) ? DefaultEmptyValue : value;
         }
     }
 
     private bool EvaluateSelection(SelectableSpan span, out string matchType, out string penalty)
     {
-        matchType = MatchTypeInvalid;
-        penalty = PenaltyMajor;
+        matchType = CallPhaseUiChromeText.GetMatchTypeDisplayName(MatchTypeInvalid);
+        penalty = CallPhaseUiChromeText.GetPenaltyDisplayName(PenaltyMajor);
 
         if (span == null)
         {
@@ -316,24 +329,26 @@ public class TranscriptExtractionController : MonoBehaviour
 
         if (span.IsExactSelection && !span.HasExtraContext)
         {
-            matchType = MatchTypeExact;
-            penalty = PenaltyNone;
+            matchType = CallPhaseUiChromeText.GetMatchTypeDisplayName(MatchTypeExact);
+            penalty = CallPhaseUiChromeText.GetPenaltyDisplayName(PenaltyNone);
             return true;
         }
 
         if (span.HasExtraContext)
         {
-            matchType = MatchTypeExtra;
-            penalty = PenaltyMinor;
+            matchType = CallPhaseUiChromeText.GetMatchTypeDisplayName(MatchTypeExtra);
+            penalty = CallPhaseUiChromeText.GetPenaltyDisplayName(PenaltyMinor);
             return true;
         }
 
+        matchType = CallPhaseUiChromeText.GetMatchTypeDisplayName(MatchTypeInvalid);
+        penalty = CallPhaseUiChromeText.GetPenaltyDisplayName(PenaltyMajor);
         return false;
     }
 
     private bool IsAutoValidationCandidate(SelectableSpan span)
     {
-        if (span == null || !span.gameObject.activeInHierarchy || incidentReportController == null)
+        if (span == null || !span.gameObject.activeSelf || incidentReportController == null)
         {
             return false;
         }
@@ -351,9 +366,34 @@ public class TranscriptExtractionController : MonoBehaviour
         return EvaluateSelection(span, out _, out _);
     }
 
+    private SelectableSpan FindAutoValidationCandidate()
+    {
+        SelectableSpan[] spans = GetComponentsInChildren<SelectableSpan>(true);
+        for (int i = 0; i < spans.Length; i++)
+        {
+            if (IsAutoValidationCandidate(spans[i]))
+            {
+                return spans[i];
+            }
+        }
+
+        return null;
+    }
+
     private static bool WasConfirmShortcutPressed()
     {
         return Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter);
+    }
+
+    private void HandleLanguageChanged(AppLanguage _)
+    {
+        if (currentSpan != null)
+        {
+            OnSelectableSpanClicked(currentSpan);
+            return;
+        }
+
+        ResetUiToDefault();
     }
 
     private void ResolveReferences()

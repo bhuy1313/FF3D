@@ -218,7 +218,8 @@ public class CallInScheduler : MonoBehaviour
 
         if (callInText != null)
         {
-            callInText.text = "CONNECTING CALL...";
+            CallPhaseUiChromeText.ApplyCurrentFont(callInText);
+            callInText.text = CallPhaseUiChromeText.Tr("callphase.value.connecting_call", "CONNECTING CALL...");
         }
 
         if (skipButtonRoot != null)

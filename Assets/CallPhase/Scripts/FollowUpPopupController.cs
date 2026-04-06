@@ -486,7 +486,7 @@ public class FollowUpPopupController : MonoBehaviour
 
         return questionOption != null && !string.IsNullOrWhiteSpace(questionOption.questionId)
             ? questionOption.questionId
-            : "Follow-up Question";
+            : CallPhaseUiChromeText.Tr("callphase.followup.question_fallback", "Follow-up Question");
     }
 
     private void LogMissingReference(string key, Object context)

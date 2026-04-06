@@ -97,6 +97,93 @@ MonoBehaviour:
   - key: levelselect.difficulty.tbd
     vietnamese: "S\u1EBD C\u1EADp Nh\u1EADt"
     english: TBD
+  - key: levelselect.info.random_incident
+    vietnamese: "S\u1EF1 C\u1ED1 Ng\u1EABu Nhi\xEAn"
+    english: Random Incident
+  - key: levelselect.info.possible_incidents
+    vietnamese: "S\u1ED1 t\xECnh hu\u1ED1ng: {0}"
+    english: "Possible incidents: {0}"
+  - key: levelselect.info.selected_scenario
+    vietnamese: "K\u1ECBch B\u1EA3n \u0110\xE3 Ch\u1ECDn"
+    english: Selected Scenario
+  - key: levelselect.info.selected_scenario_objective
+    vietnamese: "Tri\u1EC3n khai k\u1ECBch b\u1EA3n \u0111\u00E3 ch\u1ECDn trong l\u1EA7n ch\u01A1i ti\u1EBFp theo."
+    english: Deploy the selected scenario on the next run.
+  - key: levelselect.level.training_map.name
+    vietnamese: "B\u1EA3n \u0110\u1ED3 Hu\u1EA5n Luy\u1EC7n"
+    english: Training Map
+  - key: levelselect.level.training_map.description
+    vietnamese: "B\u1EA3n \u0111\u1ED3 hu\u1EA5n luy\u1EC7n c\xF3 h\u01B0\u1EDBng d\u1EABn, d\xF9ng \u0111\u1EC3 l\xE0m quen v\u1EDBi \u0111i\u1EC1u khi\u1EC3n v\xE0 lu\u1ED3ng ch\u01A1i."
+    english: A guided training map used for onboarding and control familiarization.
+  - key: levelselect.level.training_map.objective
+    vietnamese: "Tri\u1EC3n khai v\xE0o b\u1EA3n \u0111\u1ED3 hu\u1EA5n luy\u1EC7n v\xE0 ho\xE0n th\xE0nh k\u1ECBch b\u1EA3n h\u01B0\u1EDBng d\u1EABn."
+    english: Deploy into the training map and complete the tutorial scenario.
+  - key: levelselect.level.suburban_map_01.name
+    vietnamese: "B\u1EA3n \u0110\u1ED3 1"
+    english: Map 1
+  - key: levelselect.level.suburban_map_01.description
+    vietnamese: "B\u1EA3n \u0111\u1ED3 khu d\xE2n c\u01B0 c\xF3 nhi\u1EC1u t\xECnh hu\u1ED1ng s\u1EF1 c\u1ED1 c\xF3 th\u1EC3 x\u1EA3y ra. Ch\u1EC9 khi tri\u1EC3n khai m\u1EDBi bi\u1EBFt ch\xEDnh x\xE1c k\u1ECBch b\u1EA3n."
+    english: A suburban residential map with multiple possible incidents. The exact scenario will only be revealed after deployment.
+  - key: levelselect.level.suburban_map_01.objective
+    vietnamese: "Tri\u1EC3n khai \u0111\u1EBFn b\u1EA3n \u0111\u1ED3 v\xE0 x\u1EED l\xFD k\u1ECBch b\u1EA3n \u0111\u01B0\u1EE3c g\xE1n ng\u1EABu nhi\xEAn."
+    english: Deploy to the map and respond to the randomly assigned scenario.
+  - key: levelselect.level.suburban_map_02.name
+    vietnamese: "B\u1EA3n \u0110\u1ED3 2"
+    english: Map 2
+  - key: levelselect.level.suburban_map_02.description
+    vietnamese: "B\u1EA3n \u0111\u1ED3 d\xE2n c\u01B0 hi\u1EC7n \u0111ang tri\u1EC3n khai k\u1ECBch b\u1EA3n ch\xE1y garage."
+    english: A residential map that currently deploys a garage fire scenario.
+  - key: levelselect.level.suburban_map_02.objective
+    vietnamese: "Tri\u1EC3n khai \u0111\u1EBFn b\u1EA3n \u0111\u1ED3 v\xE0 x\u1EED l\xFD k\u1ECBch b\u1EA3n \u0111\u01B0\u1EE3c g\xE1n ng\u1EABu nhi\xEAn."
+    english: Deploy to the map and respond to the randomly assigned scenario.
+  - key: levelselect.level.city_map_01.name
+    vietnamese: "B\u1EA3n \u0110\u1ED3 3"
+    english: Map 3
+  - key: levelselect.level.city_map_01.description
+    vietnamese: "B\u1EA3n \u0111\u1ED3 th\xE0nh ph\u1ED1 n\xE0y \u0111ang \u0111\u1EC3 tr\u1ED1ng cho c\u1EA5u h\xECnh k\u1ECBch b\u1EA3n sau n\xE0y."
+    english: This city map is reserved for future scenario setup.
+  - key: levelselect.level.city_map_01.objective
+    vietnamese: "G\xE1n k\u1ECBch b\u1EA3n \u0111\u1EC3 m\u1EDF kho\xE1 b\u1EA3n \u0111\u1ED3 n\xE0y."
+    english: Assign scenarios to enable this map.
+  - key: levelselect.level.city_map_02.name
+    vietnamese: "B\u1EA3n \u0110\u1ED3 4"
+    english: Map 4
+  - key: levelselect.level.city_map_02.description
+    vietnamese: "B\u1EA3n \u0111\u1ED3 th\xE0nh ph\u1ED1 n\xE0y \u0111ang \u0111\u1EC3 tr\u1ED1ng cho c\u1EA5u h\xECnh k\u1ECBch b\u1EA3n sau n\xE0y."
+    english: This city map is reserved for future scenario setup.
+  - key: levelselect.level.city_map_02.objective
+    vietnamese: "G\xE1n k\u1ECBch b\u1EA3n \u0111\u1EC3 m\u1EDF kho\xE1 b\u1EA3n \u0111\u1ED3 n\xE0y."
+    english: Assign scenarios to enable this map.
+  - key: levelselect.level.city_map_03.name
+    vietnamese: "B\u1EA3n \u0110\u1ED3 5"
+    english: Map 5
+  - key: levelselect.level.city_map_03.description
+    vietnamese: "B\u1EA3n \u0111\u1ED3 th\xE0nh ph\u1ED1 n\xE0y \u0111ang \u0111\u1EC3 tr\u1ED1ng cho c\u1EA5u h\xECnh k\u1ECBch b\u1EA3n sau n\xE0y."
+    english: This city map is reserved for future scenario setup.
+  - key: levelselect.level.city_map_03.objective
+    vietnamese: "G\xE1n k\u1ECBch b\u1EA3n \u0111\u1EC3 m\u1EDF kho\xE1 b\u1EA3n \u0111\u1ED3 n\xE0y."
+    english: Assign scenarios to enable this map.
+  - key: levelselect.scenario.training_map_tutorial.name
+    vietnamese: "H\u01B0\u1EDBng D\u1EABn"
+    english: Tutorial
+  - key: levelselect.scenario.suburban_map_01_kitchen_fire.name
+    vietnamese: "Ch\xE1y B\u1EBFp"
+    english: Kitchen Fire
+  - key: levelselect.scenario.suburban_map_01_kitchen_fire.description
+    vietnamese: "Ng\u01B0\u1EDDi g\u1ECDi b\xE1o c\xF3 ch\xE1y b\u1EBFp trong m\u1ED9t c\u0103n nh\xE0 khu d\xE2n c\u01B0. H\xE3y thu th\u1EADp th\xF4ng tin \u0111i\u1EC1u ph\u1ED1i v\xE0 \u1ED5n \u0111\u1ECBnh cu\u1ED9c g\u1ECDi."
+    english: Caller reports a kitchen fire in a suburban house. Collect the dispatch details and stabilize the call.
+  - key: levelselect.scenario.suburban_map_01_laundry_room_fire.name
+    vietnamese: "Ch\xE1y Ph\xF2ng Gi\u1EB7t"
+    english: Laundry Room Fire
+  - key: levelselect.scenario.suburban_map_01_laundry_room_fire.description
+    vietnamese: "Ch\xE1y ph\xF2ng gi\u1EB7t c\xF3 c\u1EA3 nguy c\u01A1 gas l\u1EABn \u0111i\u1EC7n. H\xE3y thu th\u1EADp \u0111\u1EA7y \u0111\u1EE7 b\xE1o c\xE1o v\xE0 \u0111\xE1nh gi\xE1 m\u1EE9c \u0111\u1ED9 nghi\xEAm tr\u1ECDng."
+    english: Laundry room fire with both gas and electrical hazards present. Collect the full report and assess the incident severity.
+  - key: levelselect.scenario.suburban_map_02_garage_fire.name
+    vietnamese: "Ch\xE1y Garage"
+    english: Garage Fire
+  - key: levelselect.scenario.suburban_map_02_garage_fire.description
+    vietnamese: "Ch\xE1y garage khi v\u1EABn c\xF2n ng\u01B0\u1EDDi gi\xE0 b\xEAn trong, l\u1EA1i c\xF3 nhi\xEAn li\u1EC7u v\xE0 v\u1EADt d\u1EE5ng d\u1EC5 ch\xE1y \u1EDF g\u1EA7n."
+    english: Garage fire with an elderly parent still inside, fuel containers nearby, and a fast-moving interior risk.
   - key: levelselect.level.tutorial.name
     vietnamese: "H\u01B0\u1EDBng D\u1EABn"
     english: Tutorial
@@ -334,3 +421,282 @@ MonoBehaviour:
   - key: loading.status.complete
     vietnamese: "S\u1EB5n s\xE0ng"
     english: Ready
+  - key: common.btn.back
+    vietnamese: "Tr\u1EDF v\u1EC1"
+    english: Back
+  - key: common.btn.confirm
+    vietnamese: "X\xE1c nh\u1EADn"
+    english: Confirm
+  - key: common.btn.clear
+    vietnamese: "Xo\xE1"
+    english: Clear
+  - key: common.btn.next
+    vietnamese: "Ti\u1EBFp theo"
+    english: Next
+  - key: common.btn.retry
+    vietnamese: "Th\u1EED l\u1EA1i"
+    english: Retry
+  - key: common.btn.skip
+    vietnamese: "B\u1ECF qua"
+    english: Skip
+  - key: common.placeholder.enter_text
+    vietnamese: "Nh\u1EADp n\u1ED9i dung..."
+    english: Enter text...
+  - key: callphase.header.call_in
+    vietnamese: "CU\u1ED8C G\u1ECCI"
+    english: CALL IN
+  - key: callphase.header.incoming_emergency_call
+    vietnamese: "CU\u1ED8C G\u1ECCI KH\u1EA8N"
+    english: INCOMING EMERGENCY CALL
+  - key: callphase.callin.waiting_operator
+    vietnamese: "\u0110ang ch\u1EDD ph\u1EA3n h\u1ED3i..."
+    english: Waiting for operator response...
+  - key: callphase.value.connecting_call
+    vietnamese: "\u0110ANG K\u1EBET N\u1ED0I CU\u1ED8C G\u1ECCI..."
+    english: CONNECTING CALL...
+  - key: callphase.btn.accept_call
+    vietnamese: "NH\u1EACN CU\u1ED8C G\u1ECCI"
+    english: ACCEPT CALL
+  - key: callphase.btn.start_duty
+    vietnamese: "B\u1EAFt \u0111\u1EA7u ca tr\u1EF1c"
+    english: Start Duty
+  - key: callphase.header.fire_report_intake_system
+    vietnamese: "TI\u1EBEP NH\u1EACN B\xC1O CH\xC1Y"
+    english: FIRE REPORT INTAKE SYSTEM
+  - key: callphase.header.incident_report
+    vietnamese: "B\xC1O C\xC1O S\u1EF0 C\u1ED0"
+    english: INCIDENT REPORT
+  - key: callphase.btn.ask_followup
+    vietnamese: "[1] \u0110\u1EB7t c\xE2u h\u1ECFi"
+    english: "[1] Ask Follow-up"
+  - key: callphase.btn.assess_risk
+    vietnamese: "[2] \u0110\xE1nh gi\xE1 r\u1EE7i ro"
+    english: "[2] Assess Risk"
+  - key: callphase.btn.submit_report
+    vietnamese: "[3] N\u1ED9p b\xE1o c\xE1o"
+    english: "[3] Submit Report"
+  - key: callphase.header.ask_followup_question
+    vietnamese: "H\u1ECEI TH\xCAM"
+    english: ASK FOLLOW-UP QUESTION
+  - key: callphase.followup.hint.choose_question
+    vietnamese: "Ch\u1ECDn c\xE2u h\u1ECFi ti\u1EBFp theo."
+    english: Choose the next question to ask the caller.
+  - key: callphase.followup.question_fallback
+    vietnamese: "C\xE2u h\u1ECFi b\u1ED5 sung"
+    english: Follow-up Question
+  - key: callphase.header.assess_incident_risk
+    vietnamese: "\u0110\xC1NH GI\xC1 R\u1EE6I RO"
+    english: ASSESS INCIDENT RISK
+  - key: callphase.assess.hint.review_severity
+    vietnamese: "Xem l\u1EA1i th\xF4ng tin v\xE0 ch\u1ECDn m\u1EE9c \u0111\u1ED9"
+    english: Review gathered information and select severity
+  - key: callphase.header.submit_incident_report
+    vietnamese: "N\u1ED8P B\xC1O C\xC1O"
+    english: SUBMIT INCIDENT REPORT
+  - key: callphase.submit.hint.review_final_report
+    vietnamese: "Xem l\u1EA1i b\xE1o c\xE1o tr\u01B0\u1EDBc khi n\u1ED9p"
+    english: Review the final report before submission
+  - key: callphase.header.submission_summary
+    vietnamese: "T\xD3M T\u1EAET N\u1ED8P B\xC1O C\xC1O"
+    english: SUBMISSION SUMMARY
+  - key: callphase.header.final_report_summary
+    vietnamese: "T\xD3M T\u1EAET B\xC1O C\xC1O CU\u1ED0I"
+    english: FINAL REPORT SUMMARY
+  - key: callphase.header.performance_review
+    vietnamese: "\u0110\xC1NH GI\xC1 HI\u1EC6U SU\u1EA4T"
+    english: PERFORMANCE REVIEW
+  - key: callphase.header.call_phase_result
+    vietnamese: "K\u1EBET QU\u1EA2 CU\u1ED8C G\u1ECCI"
+    english: CALL PHASE RESULT
+  - key: callphase.header.incident_summary
+    vietnamese: "T\xD3M T\u1EAET S\u1EF0 C\u1ED0"
+    english: INCIDENT SUMMARY
+  - key: callphase.header.confirmed_facts
+    vietnamese: "TH\xD4NG TIN X\xC1C NH\u1EACN"
+    english: CONFIRMED FACTS
+  - key: callphase.header.submission_readiness
+    vietnamese: "S\u1EB4N S\xC0NG N\u1ED8P"
+    english: SUBMISSION READINESS
+  - key: callphase.header.severity_indicators
+    vietnamese: "CH\u1EC8 B\xC1O M\u1EE8C \u0110\u1ED8"
+    english: SEVERITY INDICATORS
+  - key: callphase.header.selection
+    vietnamese: "M\u1EE4C \u0110\xC3 CH\u1ECCN"
+    english: SELECTION
+  - key: callphase.header.transcript_logs
+    vietnamese: "NH\u1EACT K\xDD CU\u1ED8C G\u1ECCI"
+    english: TRANSCRIPT LOGS
+  - key: callphase.header.info_type
+    vietnamese: "LO\u1EA0I TH\xD4NG TIN"
+    english: INFO TYPE
+  - key: callphase.header.match_type
+    vietnamese: "KI\u1EC2U KH\u1EDAP"
+    english: MATCH TYPE
+  - key: callphase.header.penalty
+    vietnamese: "M\u1EE8C PH\u1EA0T"
+    english: PENALTY
+  - key: callphase.header.target_field
+    vietnamese: "TR\u01AF\u1EDCNG M\u1EE4C TI\xCAU"
+    english: TARGET FIELD
+  - key: callphase.field.address
+    vietnamese: "\u0110\u1ECBa ch\u1EC9"
+    english: Address
+  - key: callphase.field.fire_location
+    vietnamese: "V\u1ECB tr\xED ch\xE1y"
+    english: Fire Location
+  - key: callphase.field.occupant_risk
+    vietnamese: "Nguy c\u01A1 b\xEAn trong"
+    english: Occupant Risk
+  - key: callphase.field.hazard
+    vietnamese: "M\u1ED1i nguy"
+    english: Hazard
+  - key: callphase.field.spread_status
+    vietnamese: "T\xECnh tr\u1EA1ng lan"
+    english: Spread Status
+  - key: callphase.field.caller_safety
+    vietnamese: "An to\xE0n ng\u01B0\u1EDDi g\u1ECDi"
+    english: Caller Safety
+  - key: callphase.field.severity
+    vietnamese: "M\u1EE9c \u0111\u1ED9"
+    english: Severity
+  - key: callphase.field.category
+    vietnamese: "Danh m\u1EE5c"
+    english: Category
+  - key: callphase.field.source
+    vietnamese: "Ngu\u1ED3n"
+    english: Source
+  - key: callphase.field.priority
+    vietnamese: "\u01AFu ti\xEAn"
+    english: Priority
+  - key: callphase.field.call_id
+    vietnamese: "M\xE3 cu\u1ED9c g\u1ECDi"
+    english: Call Id
+  - key: callphase.value.unassessed
+    vietnamese: "Ch\u01B0a \u0111\xE1nh gi\xE1"
+    english: Unassessed
+  - key: callphase.status.ready_to_submit
+    vietnamese: "Tr\u1EA1ng th\xE1i: S\u1EB5n s\xE0ng n\u1ED9p"
+    english: "Status: Ready to submit"
+  - key: callphase.status.ready_to_submit_short
+    vietnamese: "S\u1EB5n s\xE0ng n\u1ED9p"
+    english: Ready to submit
+  - key: callphase.status.active
+    vietnamese: "Tr\u1EA1ng th\xE1i: \u0110ang ho\u1EA1t \u0111\u1ED9ng"
+    english: "Status: Active"
+  - key: callphase.status.active_short
+    vietnamese: "\u0110ang ho\u1EA1t \u0111\u1ED9ng"
+    english: Active
+  - key: callphase.label.optional_note
+    vietnamese: "Ghi ch\xFA / nh\u1EAFc nh\u1EDF t\xF9y ch\u1ECDn:"
+    english: "Optional note / reminder:"
+  - key: callphase.header.case_id
+    vietnamese: "M\xE3 h\u1ED3 s\u01A1: {0}"
+    english: "Case ID: {0}"
+  - key: callphase.header.case_id_na
+    vietnamese: "M\xE3 h\u1ED3 s\u01A1: N/A"
+    english: "Case ID: N/A"
+  - key: callphase.header.call_time
+    vietnamese: "Th\u1EDDi gian g\u1ECDi: {0:00}:{1:00}"
+    english: "Call Time: {0:00}:{1:00}"
+  - key: callphase.value.not_provided
+    vietnamese: "Ch\u01B0a cung c\u1EA5p"
+    english: Not provided
+  - key: callphase.value.no_confirmed_facts
+    vietnamese: "Ch\u01B0a c\xF3 th\xF4ng tin n\xE0o \u0111\u01B0\u1EE3c x\xE1c th\u1EF1c."
+    english: No confirmed facts yet.
+  - key: callphase.match.exact
+    vietnamese: "Kh\u1EDBp ch\xEDnh x\xE1c"
+    english: Exact
+  - key: callphase.match.extra
+    vietnamese: "Kh\u1EDBp nh\u01B0ng d\u01B0 ng\u1EEF c\u1EA3nh"
+    english: Extra
+  - key: callphase.match.invalid
+    vietnamese: "Kh\xF4ng h\u1EE3p l\u1EC7"
+    english: Invalid
+  - key: callphase.penalty.none
+    vietnamese: "Kh\xF4ng"
+    english: None
+  - key: callphase.penalty.minor
+    vietnamese: "Nh\u1EB9"
+    english: Minor
+  - key: callphase.penalty.major
+    vietnamese: "N\u1EB7ng"
+    english: Major
+  - key: callphase.severity.low
+    vietnamese: "TH\u1EA4P"
+    english: LOW
+  - key: callphase.severity.medium
+    vietnamese: "TRUNG B\xCCNH"
+    english: MEDIUM
+  - key: callphase.severity.high
+    vietnamese: "CAO"
+    english: HIGH
+  - key: callphase.btn.confirm_submit
+    vietnamese: "X\xE1c nh\u1EADn n\u1ED9p"
+    english: Confirm Submit
+  - key: callphase.btn.confirm_assessment
+    vietnamese: "X\xE1c nh\u1EADn \u0111\xE1nh gi\xE1"
+    english: Confirm Assessment
+  - key: callphase.btn.exit_extraction
+    vietnamese: "Tho\xE1t"
+    english: Exit
+  - key: callphase.result.final_score
+    vietnamese: "\u0110i\u1EC3m cu\u1ED1i"
+    english: Final Score
+  - key: callphase.result.severity_chosen
+    vietnamese: "M\u1EE9c \u0111\xE3 ch\u1ECDn"
+    english: Severity Chosen
+  - key: callphase.result.expected_severity
+    vietnamese: "M\u1EE9c k\u1EF3 v\u1ECDng"
+    english: Expected Severity
+  - key: callphase.result.confirmed_facts
+    vietnamese: "Th\xF4ng tin x\xE1c nh\u1EADn"
+    english: Confirmed Facts
+  - key: callphase.result.followup_quality
+    vietnamese: "Ch\u1EA5t l\u01B0\u1EE3ng h\u1ECFi th\xEAm"
+    english: Follow-up Quality
+  - key: callphase.result.optimal_questions
+    vietnamese: "C\xE2u h\u1ECFi t\u1ED1i \u01B0u"
+    english: Optimal Questions Chosen
+  - key: callphase.result.acceptable_questions
+    vietnamese: "C\xE2u h\u1ECFi ch\u1EA5p nh\u1EADn"
+    english: Acceptable Questions Chosen
+  - key: callphase.result.poor_questions
+    vietnamese: "C\xE2u h\u1ECFi \u01B0u ti\xEAn th\u1EA5p"
+    english: Poor Questions Chosen
+  - key: callphase.result.call_time
+    vietnamese: "Th\u1EDDi gian g\u1ECDi"
+    english: Call Time
+  - key: callphase.result.target_time
+    vietnamese: "M\u1ED1c m\u1EE5c ti\xEAu"
+    english: Target Time
+  - key: callphase.result.efficiency
+    vietnamese: "Hi\u1EC7u qu\u1EA3"
+    english: Efficiency
+  - key: callphase.result.feedback
+    vietnamese: "Nh\u1EADn x\xE9t"
+    english: Feedback
+  - key: callphase.result.followup_quality.not_used
+    vietnamese: "Kh\xF4ng s\u1EED d\u1EE5ng"
+    english: Not used
+  - key: callphase.result.followup_quality.good
+    vietnamese: "T\u1ED1t"
+    english: Good
+  - key: callphase.result.followup_quality.mixed
+    vietnamese: "L\u1EABn l\u1ED9n"
+    english: Mixed
+  - key: callphase.result.followup_quality.poor
+    vietnamese: "K\xE9m"
+    english: Poor
+  - key: callphase.result.call_time_efficiency.not_counted
+    vietnamese: "Kh\xF4ng t\xEDnh"
+    english: Not counted
+  - key: callphase.result.call_time_efficiency.good
+    vietnamese: "T\u1ED1t"
+    english: Good
+  - key: callphase.result.call_time_efficiency.acceptable
+    vietnamese: "\u0110\u1EA1t"
+    english: Acceptable
+  - key: callphase.result.call_time_efficiency.slow
+    vietnamese: "Ch\u1EADm"
+    english: Slow
