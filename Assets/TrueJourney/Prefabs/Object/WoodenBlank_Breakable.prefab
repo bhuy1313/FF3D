@@ -1,145 +1,5 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &386660003779459026
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1527422086245369808}
-  - component: {fileID: 1153314612747198194}
-  - component: {fileID: 1861864049588010192}
-  - component: {fileID: 111538465771111678}
-  - component: {fileID: 4118338593966918488}
-  m_Layer: 8
-  m_Name: WoodenBlank
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1527422086245369808
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 386660003779459026}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 2715364151695193302}
-  - {fileID: 6603783735554972683}
-  - {fileID: 330100002}
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1153314612747198194
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 386660003779459026}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e76cc4bcf68befe4a8d8dabefa3be250, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Breakable
-  breakableType: 0
-  breakRequirements:
-  - toolKind: 1
-    timeToBreak: 6
-  lockPlayerWhileBreaking: 1
-  breakStandPoints:
-  - {fileID: 1117321305337618929}
-  - {fileID: 1291678928719776897}
-  breakLookTarget: {fileID: 773799152766960872}
-  destroyOnBreak: 1
-  destroyDelay: 0
-  deactivateOnBreak: 1
-  disableCollidersOnBreak: 1
-  disableRenderersOnBreak: 1
-  brokenPrefab: {fileID: 0}
-  brokenSpawnPoint: {fileID: 0}
-  onBreakStarted:
-    m_PersistentCalls:
-      m_Calls: []
-  onBroken:
-    m_PersistentCalls:
-      m_Calls: []
-  isBroken: 0
-  isBreakInProgress: 0
-  activeBreaker: {fileID: 0}
-  activeToolKind: 0
---- !u!54 &1861864049588010192
-Rigidbody:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 386660003779459026}
-  serializedVersion: 5
-  m_Mass: 1
-  m_LinearDamping: 0
-  m_AngularDamping: 0.05
-  m_CenterOfMass: {x: 0, y: 0, z: 0}
-  m_InertiaTensor: {x: 1, y: 1, z: 1}
-  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ImplicitCom: 1
-  m_ImplicitTensor: 1
-  m_UseGravity: 1
-  m_IsKinematic: 1
-  m_Interpolate: 0
-  m_Constraints: 0
-  m_CollisionDetection: 0
---- !u!114 &111538465771111678
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 386660003779459026}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 85d8e00b4ded4ac3a19f5e8c7fc8ec98, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MissionBreakableSignalRelay
-  breakable: {fileID: 1153314612747198194}
-  missionSystem: {fileID: 0}
-  signalKey: tutorial-break-barricade
-  triggerOnce: 1
-  hasRaised: 0
---- !u!114 &4118338593966918488
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 386660003779459026}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshModifier
-  m_SerializedVersion: 0
-  m_OverrideArea: 0
-  m_Area: 0
-  m_OverrideGenerateLinks: 0
-  m_GenerateLinks: 0
-  m_IgnoreFromBuild: 1
-  m_ApplyToChildren: 1
-  m_AffectedAgents: ffffffff
 --- !u!1 &330100001
 GameObject:
   m_ObjectHideFlags: 0
@@ -165,9 +25,9 @@ Transform:
   m_GameObject: {fileID: 330100001}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.2, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 330100011}
   - {fileID: 330100021}
@@ -199,13 +59,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330100010}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: 0, y: 0.7071068, z: 0.7071068, w: 0}
   m_LocalPosition: {x: 0, y: 0, z: 0.055}
-  m_LocalScale: {x: 0.9, y: 0.55, z: 1}
+  m_LocalScale: {x: 0.1, y: 0.09, z: 0.045}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 330100002}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: -90, y: 180, z: 0}
 --- !u!33 &330100012
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -289,13 +149,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330100020}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
+  m_LocalRotation: {x: 0, y: 0.7071068, z: -0.7071068, w: 0}
   m_LocalPosition: {x: 0, y: 0, z: -0.055}
-  m_LocalScale: {x: 0.9, y: 0.55, z: 1}
+  m_LocalScale: {x: 0.1, y: 0.09, z: 0.045}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 330100002}
-  m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
+  m_LocalEulerAnglesHint: {x: 90, y: 180, z: 0}
 --- !u!33 &330100022
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -353,6 +213,150 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!1 &386660003779459026
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1527422086245369808}
+  - component: {fileID: 1153314612747198194}
+  - component: {fileID: 1861864049588010192}
+  - component: {fileID: 111538465771111678}
+  - component: {fileID: 4118338593966918488}
+  m_Layer: 8
+  m_Name: WoodenBlank_Breakable
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1527422086245369808
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 386660003779459026}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 2715364151695193302}
+  - {fileID: 6603783735554972683}
+  - {fileID: 330100002}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1153314612747198194
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 386660003779459026}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e76cc4bcf68befe4a8d8dabefa3be250, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Breakable
+  breakableType: 0
+  breakRequirements:
+  - toolKind: 1
+    timeToBreak: 6
+  lockPlayerWhileBreaking: 1
+  useBreakStandPoints: 1
+  breakStandPoints:
+  - {fileID: 1117321305337618929}
+  - {fileID: 1291678928719776897}
+  breakLookTarget: {fileID: 773799152766960872}
+  showMarkerWhileIntact: 1
+  markerObjects:
+  - {fileID: 330100001}
+  destroyOnBreak: 1
+  destroyDelay: 0
+  deactivateOnBreak: 1
+  disableCollidersOnBreak: 1
+  disableRenderersOnBreak: 1
+  brokenPrefab: {fileID: 0}
+  brokenSpawnPoint: {fileID: 0}
+  onBreakStarted:
+    m_PersistentCalls:
+      m_Calls: []
+  onBroken:
+    m_PersistentCalls:
+      m_Calls: []
+  isBroken: 0
+  isBreakInProgress: 0
+  activeBreaker: {fileID: 0}
+  activeToolKind: 0
+--- !u!54 &1861864049588010192
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 386660003779459026}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 1
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
+--- !u!114 &111538465771111678
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 386660003779459026}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 85d8e00b4ded4ac3a19f5e8c7fc8ec98, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MissionBreakableSignalRelay
+  breakable: {fileID: 1153314612747198194}
+  missionSystem: {fileID: 0}
+  signalKey: tutorial-break-barricade
+  triggerOnce: 1
+  hasRaised: 0
+--- !u!114 &4118338593966918488
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 386660003779459026}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshModifier
+  m_SerializedVersion: 0
+  m_OverrideArea: 0
+  m_Area: 0
+  m_OverrideGenerateLinks: 0
+  m_GenerateLinks: 0
+  m_IgnoreFromBuild: 1
+  m_ApplyToChildren: 1
+  m_AffectedAgents: ffffffff
 --- !u!1 &1510128583237903952
 GameObject:
   m_ObjectHideFlags: 0
@@ -365,6 +369,7 @@ GameObject:
   - component: {fileID: 988880464266969035}
   - component: {fileID: 3405519200401456401}
   - component: {fileID: 2585630272010643544}
+  - component: {fileID: 7421312902546343418}
   m_Layer: 8
   m_Name: model
   m_TagString: Untagged
@@ -466,6 +471,45 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -5495902117074765545, guid: 83d5b098874646341b095432582f0f69, type: 3}
+--- !u!114 &7421312902546343418
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1510128583237903952}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7cc1c81ff97741608f0e91ce8223b441, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MeshShatter
+  shatterMode: 1
+  preset: 4
+  usePresetValues: 1
+  targetMeshFilter: {fileID: 988880464266969035}
+  targetRenderer: {fileID: 3405519200401456401}
+  collidersToDisable:
+  - {fileID: 0}
+  shardContainer: {fileID: 0}
+  overrideMaterial: {fileID: 0}
+  targetSubmesh: -1
+  keepNonShatteredSubmeshes: 0
+  subdivisionDepth: 1
+  splitJitter: 0.26
+  randomizeShardPattern: 1
+  shardPatternSeed: 12345
+  shardThickness: 0.14
+  shardMass: 0.28
+  shardThicknessVariation: 0.5
+  shardScaleVariation: 0.25
+  shardSizeMultiplier: 1
+  maxSpawnedShards: 14
+  autoTuneFromSourceMass: 1
+  sourceMassOverrideKg: 15
+  destroyAfterSeconds: 3
+  disableOriginalRenderer: 1
+  disableConfiguredColliders: 1
+  isShattered: 0
 --- !u!1 &6159826024461807447
 GameObject:
   m_ObjectHideFlags: 0
@@ -491,7 +535,7 @@ Transform:
   m_GameObject: {fileID: 6159826024461807447}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -1}
+  m_LocalPosition: {x: 0, y: 0, z: -1.5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -587,7 +631,7 @@ Transform:
   m_GameObject: {fileID: 8990073987443146637}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 1.5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

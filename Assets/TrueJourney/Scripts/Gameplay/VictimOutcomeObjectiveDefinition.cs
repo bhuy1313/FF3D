@@ -47,4 +47,38 @@ public class VictimOutcomeObjectiveDefinition : MissionObjectiveDefinition
 
         return new MissionObjectiveEvaluation(title, summaryBuilder.ToString(), isComplete, hasFailed, isRelevant);
     }
+
+    public override MissionObjectiveScoreEvaluation EvaluateScore(MissionObjectiveContext context, MissionObjectiveEvaluation evaluation)
+    {
+        if (!evaluation.IsRelevant)
+        {
+            return new MissionObjectiveScoreEvaluation(0, 0, string.Empty);
+        }
+
+        MissionProgressSnapshot snapshot = context.Snapshot;
+        float progress = 1f;
+
+        if (snapshot.TotalTrackedVictims > 0)
+        {
+            progress -= Mathf.Clamp01((float)snapshot.DeceasedVictimCount / snapshot.TotalTrackedVictims);
+        }
+
+        if (requireNoCriticalVictimsAtCompletion && snapshot.TotalTrackedVictims > 0)
+        {
+            progress -= Mathf.Clamp01((float)snapshot.CriticalVictimCount / snapshot.TotalTrackedVictims) * 0.5f;
+        }
+
+        if (requireAllLivingVictimsStabilized && snapshot.AliveVictimCount > 0)
+        {
+            int unstabilizedCount = Mathf.Max(0, snapshot.AliveVictimCount - snapshot.StabilizedVictimCount);
+            progress -= Mathf.Clamp01((float)unstabilizedCount / snapshot.AliveVictimCount) * 0.5f;
+        }
+
+        if (evaluation.HasFailed)
+        {
+            progress = Mathf.Min(progress, 0f);
+        }
+
+        return CreateProgressiveScoreEvaluation(progress);
+    }
 }

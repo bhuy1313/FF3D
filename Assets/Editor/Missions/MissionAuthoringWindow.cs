@@ -192,6 +192,7 @@ public class MissionAuthoringWindow : EditorWindow
             DrawPropertyIfExists(serializedMission, "missionTitle");
             DrawPropertyIfExists(serializedMission, "missionDescription");
             DrawPropertyIfExists(serializedMission, "timeLimitSeconds");
+            DrawPropertyIfExists(serializedMission, "scoreConfig");
             serializedMission.ApplyModifiedProperties();
 
             using (new EditorGUILayout.HorizontalScope())

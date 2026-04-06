@@ -290,10 +290,7 @@ namespace TrueJourney.BotBehavior
             };
 
             // Disable physics so it doesn't collide while inside the "inventory"
-            rb.linearVelocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
-            rb.isKinematic = true;
-            rb.detectCollisions = false;
+            DisablePhysicsForInventory(rb);
 
             // Trigger the item's pickup logic
             pickupable.OnPickup(gameObject);
@@ -435,6 +432,125 @@ namespace TrueJourney.BotBehavior
             SetEquippedPoseKey(BotEquippedItemPoseKey.Default);
         }
 
+        public bool StowActiveItem()
+        {
+            if (!HasItem)
+            {
+                ResetHandIkPose();
+                return false;
+            }
+
+            InventorySlot activeSlot = slots[activeIndex];
+            if (activeSlot?.Item?.Rigidbody == null)
+            {
+                activeIndex = -1;
+                ResetHandIkPose();
+                return false;
+            }
+
+            StowSlot(activeSlot);
+            activeIndex = -1;
+            return true;
+        }
+
+        public bool StowAllItems()
+        {
+            bool changed = false;
+            for (int i = 0; i < slots.Count; i++)
+            {
+                InventorySlot slot = slots[i];
+                if (slot?.Item?.Rigidbody == null)
+                {
+                    continue;
+                }
+
+                StowSlot(slot);
+                changed = true;
+            }
+
+            if (StowLooseEquippedPickupables())
+            {
+                changed = true;
+            }
+
+            activeIndex = -1;
+            if (!changed)
+            {
+                ResetHandIkPose();
+            }
+
+            return changed;
+        }
+
+        public void ClearEquippedSelection()
+        {
+            activeIndex = -1;
+            ResetHandIkPose();
+        }
+
+        public bool ForceUnequipItem(IPickupable pickupable)
+        {
+            if (pickupable == null || pickupable.Rigidbody == null || inventoryRoot == null)
+            {
+                return false;
+            }
+
+            Rigidbody body = pickupable.Rigidbody;
+            Transform itemTransform = body.transform;
+            DisablePhysicsForInventory(body);
+            itemTransform.SetParent(inventoryRoot, false);
+            itemTransform.localPosition = Vector3.zero;
+            itemTransform.localRotation = Quaternion.identity;
+            itemTransform.gameObject.SetActive(false);
+            activeIndex = -1;
+            ResetHandIkPose();
+            return true;
+        }
+
+        private bool StowLooseEquippedPickupables()
+        {
+            if (equippedRoot == null || inventoryRoot == null)
+            {
+                return false;
+            }
+
+            bool changed = false;
+            Rigidbody[] equippedBodies = equippedRoot.GetComponentsInChildren<Rigidbody>(true);
+            for (int i = 0; i < equippedBodies.Length; i++)
+            {
+                Rigidbody body = equippedBodies[i];
+                if (body == null)
+                {
+                    continue;
+                }
+
+                if (!TryResolvePickupable(body, out IPickupable pickupable) || pickupable == null)
+                {
+                    continue;
+                }
+
+                if (ContainsItem(pickupable))
+                {
+                    continue;
+                }
+
+                Transform itemTransform = body.transform;
+                DisablePhysicsForInventory(body);
+                itemTransform.SetParent(inventoryRoot, false);
+                itemTransform.localPosition = Vector3.zero;
+                itemTransform.localRotation = Quaternion.identity;
+                itemTransform.gameObject.SetActive(false);
+                changed = true;
+            }
+
+            if (changed)
+            {
+                ResetHandIkPose();
+            }
+
+            return changed;
+        }
+
         public bool TryGetCurrentSpineAimMaxWeight(out float maxWeight)
         {
             if (hasCurrentSpineAimMaxWeightOverride)
@@ -457,6 +573,44 @@ namespace TrueJourney.BotBehavior
                 }
             }
             return false;
+        }
+
+        private static bool TryResolvePickupable(Rigidbody body, out IPickupable pickupable)
+        {
+            pickupable = null;
+            if (body == null)
+            {
+                return false;
+            }
+
+            MonoBehaviour[] components = body.GetComponents<MonoBehaviour>();
+            for (int i = 0; i < components.Length; i++)
+            {
+                if (components[i] is IPickupable resolved)
+                {
+                    pickupable = resolved;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static void DisablePhysicsForInventory(Rigidbody body)
+        {
+            if (body == null)
+            {
+                return;
+            }
+
+            if (!body.isKinematic)
+            {
+                body.linearVelocity = Vector3.zero;
+                body.angularVelocity = Vector3.zero;
+            }
+
+            body.isKinematic = true;
+            body.detectCollisions = false;
         }
 
         private int FindFirstSlotIndex<T>() where T : class

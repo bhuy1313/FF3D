@@ -676,6 +676,11 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
         LogRescueActivity(key, detail);
     }
 
+    internal void PrepareCarryRescueCommand()
+    {
+        UnequipCurrentToolsForCarry();
+    }
+
     public void SetMovePickupTarget(IPickupable target)
     {
         movePickupController?.SetTarget(target);

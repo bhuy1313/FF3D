@@ -11,6 +11,7 @@ public class MissionDefinition : ScriptableObject
     [SerializeField] private string missionTitle = "Resolve Incident";
     [SerializeField, TextArea] private string missionDescription = "Extinguish fires and rescue civilians.";
     [SerializeField] private float timeLimitSeconds = 0f;
+    [SerializeField] private MissionScoreConfig scoreConfig = new MissionScoreConfig();
 
     [Header("Objectives")]
     [SerializeField] private List<MissionObjectiveDefinition> objectives = new List<MissionObjectiveDefinition>();
@@ -25,6 +26,18 @@ public class MissionDefinition : ScriptableObject
     public string MissionTitle => missionTitle;
     public string MissionDescription => missionDescription;
     public float TimeLimitSeconds => timeLimitSeconds;
+    public MissionScoreConfig ScoreConfig
+    {
+        get
+        {
+            if (scoreConfig == null)
+            {
+                scoreConfig = new MissionScoreConfig();
+            }
+
+            return scoreConfig;
+        }
+    }
     public bool HasStages
     {
         get

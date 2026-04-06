@@ -23,4 +23,18 @@ public class ExtinguishFiresObjectiveDefinition : MissionObjectiveDefinition
         string summary = $"{title}: {snapshot.ExtinguishedFireCount}/{snapshot.TotalTrackedFires} extinguished";
         return new MissionObjectiveEvaluation(title, summary, isComplete, false, isRelevant);
     }
+
+    public override MissionObjectiveScoreEvaluation EvaluateScore(MissionObjectiveContext context, MissionObjectiveEvaluation evaluation)
+    {
+        if (!evaluation.IsRelevant)
+        {
+            return new MissionObjectiveScoreEvaluation(0, 0, string.Empty);
+        }
+
+        MissionProgressSnapshot snapshot = context.Snapshot;
+        float progress = snapshot.TotalTrackedFires > 0
+            ? (float)snapshot.ExtinguishedFireCount / snapshot.TotalTrackedFires
+            : 0f;
+        return CreateProgressiveScoreEvaluation(progress);
+    }
 }

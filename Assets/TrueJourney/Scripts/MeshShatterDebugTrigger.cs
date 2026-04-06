@@ -7,8 +7,6 @@ public class MeshShatterDebugTrigger : MonoBehaviour
     [SerializeField] private KeyCode triggerKey = KeyCode.K;
     [SerializeField] private bool triggerOnStart;
     [SerializeField] private float triggerDelay = 0.25f;
-    [SerializeField] private float forceMultiplier = 1f;
-    [SerializeField] private Vector3 localImpactDirection = Vector3.forward;
 
     private bool hasTriggered;
     private float remainingDelay;
@@ -21,8 +19,6 @@ public class MeshShatterDebugTrigger : MonoBehaviour
 
     private void OnValidate()
     {
-        forceMultiplier = Mathf.Max(0f, forceMultiplier);
-
         if (!Application.isPlaying)
         {
             ResolveTarget();
@@ -63,13 +59,7 @@ public class MeshShatterDebugTrigger : MonoBehaviour
             return;
         }
 
-        Vector3 impactDirection = transform.TransformDirection(localImpactDirection);
-        if (impactDirection.sqrMagnitude <= 0.001f)
-        {
-            impactDirection = transform.forward;
-        }
-
-        target.Shatter(transform.position, impactDirection.normalized, forceMultiplier);
+        target.Shatter();
         hasTriggered = true;
     }
 

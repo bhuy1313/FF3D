@@ -188,6 +188,7 @@ GameObject:
   - component: {fileID: 3447858380073853657}
   - component: {fileID: 6783775267924060584}
   - component: {fileID: 7857196384671778857}
+  - component: {fileID: 6149454474236452101}
   m_Layer: 0
   m_Name: GameMaster
   m_TagString: Untagged
@@ -310,6 +311,31 @@ MonoBehaviour:
   entries:
   - key: event-1
     targetObject: {fileID: 0}
+--- !u!114 &6149454474236452101
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1056660501349176053}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd11e58e23e54eec9432591e2e6ef1fc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MissionEndOverlayController
+  missionSystem: {fileID: 6783775267924060584}
+  targetCanvas: {fileID: 0}
+  pauseGameplayOnMissionEnd: 1
+  unlockCursorOnMissionEnd: 1
+  showRetryButton: 1
+  showMainMenuButton: 1
+  mainMenuSceneName: MainMenu
+  completedTitle: Mission Complete
+  failedTitle: Mission Failed
+  retryButtonLabel: Retry
+  mainMenuButtonLabel: Main Menu
+  statsHeader: Summary
+  objectivesHeader: Objectives
 --- !u!1 &2935035556544931113
 GameObject:
   m_ObjectHideFlags: 0

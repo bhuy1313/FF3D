@@ -18,8 +18,10 @@ public class VictimCondition : MonoBehaviour
     [SerializeField] private float maxCondition = 100f;
     [SerializeField] private float passiveDeteriorationPerSecond = 0f;
     [SerializeField] private float smokeDamageMultiplier = 1f;
-    [SerializeField] private float urgentThreshold = 65f;
-    [SerializeField] private float criticalThreshold = 30f;
+    [SerializeField, Range(0f, 100f), Tooltip("Condition percentage at or below this value becomes Urgent.")]
+    private float urgentThreshold = 65f;
+    [SerializeField, Range(0f, 100f), Tooltip("Condition percentage at or below this value becomes Critical.")]
+    private float criticalThreshold = 30f;
     [SerializeField] private bool stopPassiveDeteriorationWhenStabilized = true;
     [SerializeField] private bool stopConditionLossWhenExtracted = true;
     [SerializeField] private bool requireStabilizationBeforeCarryWhenCritical = false;
@@ -44,6 +46,9 @@ public class VictimCondition : MonoBehaviour
     public float CurrentCondition => currentCondition;
     public float MaxCondition => maxCondition;
     public float NormalizedCondition => maxCondition <= 0f ? 0f : currentCondition / maxCondition;
+    public float CurrentConditionPercent => NormalizedCondition * 100f;
+    public float UrgentThresholdPercent => urgentThreshold;
+    public float CriticalThresholdPercent => criticalThreshold;
     public TriageState CurrentTriageState => triageState;
     public bool IsAlive => triageState != TriageState.Deceased;
     public bool IsStabilized => isStabilized;
@@ -222,10 +227,11 @@ public class VictimCondition : MonoBehaviour
         if (currentCondition <= 0f)
             return TriageState.Deceased;
 
-        if (currentCondition <= criticalThreshold)
+        float currentConditionPercent = CurrentConditionPercent;
+        if (currentConditionPercent <= criticalThreshold)
             return TriageState.Critical;
 
-        if (currentCondition <= urgentThreshold)
+        if (currentConditionPercent <= urgentThreshold)
             return TriageState.Urgent;
 
         return TriageState.Stable;
@@ -236,8 +242,8 @@ public class VictimCondition : MonoBehaviour
         maxCondition = Mathf.Max(1f, maxCondition);
         passiveDeteriorationPerSecond = Mathf.Max(0f, passiveDeteriorationPerSecond);
         smokeDamageMultiplier = Mathf.Max(0f, smokeDamageMultiplier);
-        criticalThreshold = Mathf.Clamp(criticalThreshold, 0f, maxCondition);
-        urgentThreshold = Mathf.Clamp(urgentThreshold, criticalThreshold, maxCondition);
+        criticalThreshold = Mathf.Clamp(criticalThreshold, 0f, 100f);
+        urgentThreshold = Mathf.Clamp(urgentThreshold, criticalThreshold, 100f);
     }
 
     private bool CanLoseCondition()

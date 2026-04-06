@@ -29,6 +29,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DeliverTargetToZoneObjectiveDefinition
   objectiveTitle: Rescue Victim Objective
   objectiveDescription: Bring Victim To Safe Zone
+  scoreWeight: 10
+  scoreMode: 0
   targetSignalKey: tutorial-rescue-victim
   pendingSummary: Deliver target to safe zone
   completedSummary: Target delivered to safe zone
@@ -101,6 +103,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::InteractTargetObjectiveDefinition
   objectiveTitle: Open the Gate
   objectiveDescription: Interact with the chainlink gate to access the incident area.
+  scoreWeight: 10
+  scoreMode: 0
   targetSignalKey: tutorial-open-gate
   pendingSummary: Interact with the gate to open the route
   completedSummary: Gate opened
@@ -177,6 +181,22 @@ MonoBehaviour:
   missionDescription: Open the gate, contain the fire, then move to the extraction
     point.
   timeLimitSeconds: 0
+  scoreConfig:
+    enableScoring: 1
+    completionBonus: 10
+    failurePenalty: 0
+    noVictimDeathsBonus: 5
+    perVictimDeathPenalty: 5
+    timeBonusMaxScore: 10
+    targetTimeSeconds: 120
+    acceptableTimeSeconds: 240
+    sRankThreshold: 0.9
+    aRankThreshold: 0.75
+    bRankThreshold: 0.5
+    sRankLabel: S
+    aRankLabel: A
+    bRankLabel: B
+    cRankLabel: C
   objectives: []
   failConditions:
   - {fileID: 8481906818168850071}
@@ -200,6 +220,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ExtinguishFiresObjectiveDefinition
   objectiveTitle: Contain the Fire
   objectiveDescription: Extinguish all visible fires inside the yard.
+  scoreWeight: 10
+  scoreMode: 0
   autoDiscoverFires: 1
 --- !u!114 &4534189158508311404
 MonoBehaviour:
@@ -216,6 +238,8 @@ MonoBehaviour:
   objectiveTitle: Reach the Exit
   objectiveDescription: Move into the highlighted extraction area after the fire
     is out.
+  scoreWeight: 10
+  scoreMode: 0
   targetSignalKey: tutorial-reach-exit
   pendingSummary: Move to the extraction point
   completedSummary: Extraction point reached
@@ -233,6 +257,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BreakTargetObjectiveDefinition
   objectiveTitle: Break target
   objectiveDescription: 
+  scoreWeight: 10
+  scoreMode: 0
   targetSignalKey: tutorial-break-barricade
   pendingSummary: Break target
   completedSummary: Target broken
@@ -257,6 +283,7 @@ MonoBehaviour:
   onStageStartedActions: []
   onStageCompletedActions:
   - {fileID: -8957857897406397094}
+  - {fileID: -6886783996694480774}
 --- !u!114 &8481906818168850071
 MonoBehaviour:
   m_ObjectHideFlags: 0

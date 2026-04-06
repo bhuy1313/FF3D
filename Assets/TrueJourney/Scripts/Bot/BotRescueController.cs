@@ -60,6 +60,8 @@ public sealed class BotRescueController
 
         if (rescueTarget.IsCarried && rescueTarget.ActiveRescuer == owner.gameObject)
         {
+            owner.PrepareCarryRescueCommand();
+
             Vector3 safeZonePosition = owner.CurrentSafeZoneTarget.GetWorldPosition();
             float distanceToSafeZone = GetHorizontalDistance(owner.transform.position, safeZonePosition);
             bool hasReachedSafeZone =
@@ -120,8 +122,11 @@ public sealed class BotRescueController
             return;
         }
 
+        owner.PrepareCarryRescueCommand();
+
         if (rescueTarget.TryBeginCarry(owner.gameObject, owner.EnsureRescueCarryAnchor()))
         {
+            owner.PrepareCarryRescueCommand();
             owner.LogRescueActivityMessage("rescue-pickup", "Picked up casualty.");
             return;
         }

@@ -51,6 +51,7 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
     [SerializeField] private bool lockPlayerWhileBreaking = true;
 
     [Header("Stand Points")]
+    [SerializeField] private bool useBreakStandPoints = true;
     [SerializeField] private Transform[] breakStandPoints;
     [SerializeField] private Transform breakLookTarget;
 
@@ -122,6 +123,11 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
     {
         standPosition = default;
         standRotation = Quaternion.identity;
+
+        if (!useBreakStandPoints)
+        {
+            return false;
+        }
 
         Transform selectedStandPoint = GetNearestStandPoint(breakerPosition);
         if (selectedStandPoint == null)

@@ -17,18 +17,49 @@ public class IncidentMissionSystem : MonoBehaviour
         [SerializeField] private string summary;
         [SerializeField] private bool isComplete;
         [SerializeField] private bool hasFailed;
+        [SerializeField] private int score;
+        [SerializeField] private int maxScore;
 
         public string Title => title;
         public string Summary => summary;
         public bool IsComplete => isComplete;
         public bool HasFailed => hasFailed;
+        public int Score => score;
+        public int MaxScore => maxScore;
 
-        public void Set(MissionObjectiveEvaluation evaluation)
+        public void Set(MissionObjectiveEvaluation evaluation, MissionObjectiveScoreEvaluation scoreEvaluation)
         {
             title = evaluation.Title;
             summary = evaluation.Summary;
             isComplete = evaluation.IsComplete;
             hasFailed = evaluation.HasFailed;
+            score = scoreEvaluation.Score;
+            maxScore = scoreEvaluation.MaxScore;
+        }
+    }
+
+    [System.Serializable]
+    private class MissionStageScoreRecord
+    {
+        [SerializeField] private int stageIndex;
+        [SerializeField] private string stageId;
+        [SerializeField] private string stageTitle;
+        [SerializeField] private int score;
+        [SerializeField] private int maxScore;
+
+        public int StageIndex => stageIndex;
+        public string StageId => stageId;
+        public string StageTitle => stageTitle;
+        public int Score => score;
+        public int MaxScore => maxScore;
+
+        public void Set(int resolvedStageIndex, string resolvedStageId, string resolvedStageTitle, int resolvedScore, int resolvedMaxScore)
+        {
+            stageIndex = resolvedStageIndex;
+            stageId = resolvedStageId;
+            stageTitle = resolvedStageTitle;
+            score = Mathf.Max(0, resolvedScore);
+            maxScore = Mathf.Max(0, resolvedMaxScore);
         }
     }
 
@@ -67,6 +98,8 @@ public class IncidentMissionSystem : MonoBehaviour
         Completed = 2,
         Failed = 3
     }
+
+    private const int LegacyObjectiveScoreWeight = 10;
 
     [Header("Mission")]
     [SerializeField] private MissionDefinition missionDefinition;
@@ -127,12 +160,20 @@ public class IncidentMissionSystem : MonoBehaviour
     [SerializeField] private int lastStartedStageEventIndex = -1;
     [SerializeField] private int lastCompletedStageEventIndex = -1;
     [SerializeField] private List<MissionObjectiveStatus> objectiveStatuses = new List<MissionObjectiveStatus>();
+    [SerializeField] private List<MissionStageScoreRecord> completedStageScoreRecords = new List<MissionStageScoreRecord>();
+    [SerializeField] private int currentScore;
+    [SerializeField] private int maximumScore;
+    [SerializeField] private string currentScoreRank;
+    [SerializeField] private int finalScore;
+    [SerializeField] private int finalMaximumScore;
+    [SerializeField] private string finalScoreRank;
     [SerializeField] private bool progressDirty = true;
     [SerializeField] private List<string> activatedSignalKeys = new List<string>();
 
     private readonly List<MissionObjectiveDefinition> activeObjectiveDefinitions = new List<MissionObjectiveDefinition>();
     private readonly List<MissionFailConditionDefinition> activeFailConditionDefinitions = new List<MissionFailConditionDefinition>();
     private readonly List<MissionStageDefinition> activeStageDefinitions = new List<MissionStageDefinition>();
+    private readonly List<MissionObjectiveDefinition> scoreScratchObjectives = new List<MissionObjectiveDefinition>();
 
     public string MissionId => ResolveMissionId();
     public string MissionTitle => ResolveMissionTitle();
@@ -163,6 +204,15 @@ public class IncidentMissionSystem : MonoBehaviour
         ? Mathf.Max(0f, pendingStageStartTime - elapsedTime)
         : 0f;
     public int ObjectiveStatusCount => objectiveStatuses != null ? objectiveStatuses.Count : 0;
+    public int CurrentScore => currentScore;
+    public int MaximumScore => maximumScore;
+    public string CurrentScoreRank => currentScoreRank;
+    public int FinalScore => finalScore;
+    public int FinalMaximumScore => finalMaximumScore;
+    public string FinalScoreRank => finalScoreRank;
+    public int DisplayedScore => missionState == MissionState.Completed || missionState == MissionState.Failed ? finalScore : currentScore;
+    public int DisplayedMaximumScore => missionState == MissionState.Completed || missionState == MissionState.Failed ? finalMaximumScore : maximumScore;
+    public string DisplayedScoreRank => missionState == MissionState.Completed || missionState == MissionState.Failed ? finalScoreRank : currentScoreRank;
     public float RemainingTimeSeconds => Mathf.Max(0f, ResolveTimeLimitSeconds() - elapsedTime);
     public string CurrentStageId => ResolveCurrentStageId();
 
@@ -233,6 +283,7 @@ public class IncidentMissionSystem : MonoBehaviour
     public void StartMission()
     {
         ResetMissionStageRuntime();
+        ResetScoreRuntime();
         ResetSignalEmitters();
         RefreshObjectives();
         elapsedTime = 0f;
@@ -247,7 +298,11 @@ public class IncidentMissionSystem : MonoBehaviour
         if (missionState == MissionState.Failed)
             return;
 
+        RefreshProgress();
+        RefreshObjectiveStatuses();
         missionState = MissionState.Failed;
+        RefreshScoreState();
+        CacheFinalScore();
         onMissionFailed?.Invoke();
     }
 
@@ -261,6 +316,8 @@ public class IncidentMissionSystem : MonoBehaviour
         RefreshObjectiveStatuses();
         InvokeCurrentStageCompleted();
         missionState = MissionState.Completed;
+        RefreshScoreState();
+        CacheFinalScore();
         onMissionCompleted?.Invoke();
     }
 
@@ -288,7 +345,9 @@ public class IncidentMissionSystem : MonoBehaviour
             objectiveStatus.Title,
             objectiveStatus.Summary,
             objectiveStatus.IsComplete,
-            objectiveStatus.HasFailed);
+            objectiveStatus.HasFailed,
+            objectiveStatus.Score,
+            objectiveStatus.MaxScore);
         return true;
     }
 
@@ -359,6 +418,7 @@ public class IncidentMissionSystem : MonoBehaviour
             $"State: {missionState}\n" +
             BuildStageOverlayLine() +
             BuildObjectiveOverlayLines() +
+            BuildScoreOverlayLine() +
             $"Time: {timerText}";
 
         Vector2 size = overlayGuiStyle.CalcSize(new GUIContent(overlayText));
@@ -404,12 +464,83 @@ public class IncidentMissionSystem : MonoBehaviour
 
         RefreshProgress();
         RefreshObjectiveStatuses();
+        RefreshScoreState();
         progressDirty = false;
     }
 
     private void MarkProgressDirty()
     {
         progressDirty = true;
+    }
+
+    private void ResetScoreRuntime()
+    {
+        if (completedStageScoreRecords != null)
+        {
+            completedStageScoreRecords.Clear();
+        }
+
+        currentScore = 0;
+        maximumScore = 0;
+        currentScoreRank = string.Empty;
+        finalScore = 0;
+        finalMaximumScore = 0;
+        finalScoreRank = string.Empty;
+    }
+
+    private void CacheFinalScore()
+    {
+        finalScore = currentScore;
+        finalMaximumScore = maximumScore;
+        finalScoreRank = currentScoreRank;
+    }
+
+    private void RefreshScoreState()
+    {
+        int objectiveScore = CalculateCompletedStageObjectiveScore();
+        if (!HasActiveStageSequence() || !HasCapturedStageScore(currentStageIndex))
+        {
+            objectiveScore += SumObjectiveStatusScore();
+        }
+
+        int objectiveMaxScore = CalculateMissionObjectiveMaximumScore();
+        MissionScoreConfig scoreConfig = missionDefinition != null ? missionDefinition.ScoreConfig : null;
+
+        int bonusScore = 0;
+        int bonusMaxScore = 0;
+        if (scoreConfig != null && scoreConfig.EnableScoring)
+        {
+            if (missionState == MissionState.Completed)
+            {
+                bonusScore += scoreConfig.CompletionBonus;
+                bonusScore += scoreConfig.EvaluateTimeBonus(elapsedTime);
+            }
+
+            if (totalTrackedVictims > 0)
+            {
+                bonusMaxScore += scoreConfig.NoVictimDeathsBonus;
+                if (deceasedVictimCount <= 0)
+                {
+                    bonusScore += scoreConfig.NoVictimDeathsBonus;
+                }
+                else
+                {
+                    bonusScore -= deceasedVictimCount * scoreConfig.PerVictimDeathPenalty;
+                }
+            }
+
+            bonusMaxScore += scoreConfig.CompletionBonus + scoreConfig.TimeBonusMaxScore;
+            if (missionState == MissionState.Failed)
+            {
+                bonusScore -= scoreConfig.FailurePenalty;
+            }
+        }
+
+        maximumScore = Mathf.Max(0, objectiveMaxScore + bonusMaxScore);
+        currentScore = Mathf.Clamp(objectiveScore + bonusScore, 0, maximumScore);
+        currentScoreRank = scoreConfig != null && scoreConfig.EnableScoring
+            ? scoreConfig.EvaluateRank(currentScore, maximumScore)
+            : string.Empty;
     }
 
     private bool AreCompletionConditionsMet()
@@ -938,8 +1069,9 @@ public class IncidentMissionSystem : MonoBehaviour
                     continue;
                 }
 
+                MissionObjectiveScoreEvaluation scoreEvaluation = objective.EvaluateScore(context, evaluation);
                 MissionObjectiveStatus status = new MissionObjectiveStatus();
-                status.Set(evaluation);
+                status.Set(evaluation, scoreEvaluation);
                 objectiveStatuses.Add(status);
             }
 
@@ -953,22 +1085,30 @@ public class IncidentMissionSystem : MonoBehaviour
     {
         if (requireAllFiresExtinguished && snapshot.TotalTrackedFires > 0)
         {
+            float fireProgress = snapshot.TotalTrackedFires > 0
+                ? (float)snapshot.ExtinguishedFireCount / snapshot.TotalTrackedFires
+                : 0f;
             AddObjectiveStatus(new MissionObjectiveEvaluation(
                 "Extinguish Fires",
                 $"Extinguish Fires: {snapshot.ExtinguishedFireCount}/{snapshot.TotalTrackedFires}",
                 snapshot.ExtinguishedFireCount >= snapshot.TotalTrackedFires,
                 false,
-                true));
+                true),
+                CreateLegacyProgressiveScore(fireProgress));
         }
 
         if (requireAllRescuablesRescued && snapshot.TotalTrackedRescuables > 0)
         {
+            float rescueProgress = snapshot.TotalTrackedRescuables > 0
+                ? (float)snapshot.RescuedCount / snapshot.TotalTrackedRescuables
+                : 0f;
             AddObjectiveStatus(new MissionObjectiveEvaluation(
                 "Rescue Targets",
                 $"Rescue Targets: {snapshot.RescuedCount}/{snapshot.TotalTrackedRescuables}",
                 snapshot.RescuedCount >= snapshot.TotalTrackedRescuables,
                 false,
-                true));
+                true),
+                CreateLegacyProgressiveScore(rescueProgress));
         }
 
         bool usesVictimObjective =
@@ -987,15 +1127,180 @@ public class IncidentMissionSystem : MonoBehaviour
                 $"Victim Outcome: U {snapshot.UrgentVictimCount} | C {snapshot.CriticalVictimCount} | S {snapshot.StabilizedVictimCount} | X {snapshot.ExtractedVictimCount} | D {snapshot.DeceasedVictimCount}",
                 !failedByAnyDeath && !failedByDeathLimit && criticalResolved && livingVictimsStabilized,
                 failedByAnyDeath || failedByDeathLimit,
-                true));
+                true),
+                CreateLegacyBinaryScore(!failedByAnyDeath && !failedByDeathLimit && criticalResolved && livingVictimsStabilized));
         }
     }
 
-    private void AddObjectiveStatus(MissionObjectiveEvaluation evaluation)
+    private void AddObjectiveStatus(MissionObjectiveEvaluation evaluation, MissionObjectiveScoreEvaluation scoreEvaluation)
     {
         MissionObjectiveStatus status = new MissionObjectiveStatus();
-        status.Set(evaluation);
+        status.Set(evaluation, scoreEvaluation);
         objectiveStatuses.Add(status);
+    }
+
+    private static MissionObjectiveScoreEvaluation CreateLegacyBinaryScore(bool isComplete)
+    {
+        int score = isComplete ? LegacyObjectiveScoreWeight : 0;
+        return new MissionObjectiveScoreEvaluation(score, LegacyObjectiveScoreWeight, string.Empty);
+    }
+
+    private static MissionObjectiveScoreEvaluation CreateLegacyProgressiveScore(float normalizedProgress)
+    {
+        int score = Mathf.Clamp(Mathf.RoundToInt(LegacyObjectiveScoreWeight * Mathf.Clamp01(normalizedProgress)), 0, LegacyObjectiveScoreWeight);
+        return new MissionObjectiveScoreEvaluation(score, LegacyObjectiveScoreWeight, string.Empty);
+    }
+
+    private int SumObjectiveStatusScore()
+    {
+        if (objectiveStatuses == null)
+        {
+            return 0;
+        }
+
+        int score = 0;
+        for (int i = 0; i < objectiveStatuses.Count; i++)
+        {
+            MissionObjectiveStatus status = objectiveStatuses[i];
+            if (status != null)
+            {
+                score += Mathf.Max(0, status.Score);
+            }
+        }
+
+        return score;
+    }
+
+    private int CalculateCompletedStageObjectiveScore()
+    {
+        if (completedStageScoreRecords == null)
+        {
+            return 0;
+        }
+
+        int score = 0;
+        for (int i = 0; i < completedStageScoreRecords.Count; i++)
+        {
+            MissionStageScoreRecord record = completedStageScoreRecords[i];
+            if (record != null)
+            {
+                score += Mathf.Max(0, record.Score);
+            }
+        }
+
+        return score;
+    }
+
+    private bool HasCapturedStageScore(int stageIndex)
+    {
+        if (stageIndex < 0 || completedStageScoreRecords == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < completedStageScoreRecords.Count; i++)
+        {
+            MissionStageScoreRecord record = completedStageScoreRecords[i];
+            if (record != null && record.StageIndex == stageIndex)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private int CalculateMissionObjectiveMaximumScore()
+    {
+        if (HasActiveStageSequence())
+        {
+            int score = 0;
+            for (int i = 0; i < activeStageDefinitions.Count; i++)
+            {
+                MissionStageDefinition stage = activeStageDefinitions[i];
+                if (stage == null)
+                {
+                    continue;
+                }
+
+                scoreScratchObjectives.Clear();
+                stage.CollectObjectives(scoreScratchObjectives);
+                for (int objectiveIndex = 0; objectiveIndex < scoreScratchObjectives.Count; objectiveIndex++)
+                {
+                    MissionObjectiveDefinition objective = scoreScratchObjectives[objectiveIndex];
+                    if (objective != null)
+                    {
+                        score += objective.ScoreWeight;
+                    }
+                }
+            }
+
+            scoreScratchObjectives.Clear();
+            return score;
+        }
+
+        if (activeObjectiveDefinitions.Count > 0)
+        {
+            int score = 0;
+            for (int i = 0; i < activeObjectiveDefinitions.Count; i++)
+            {
+                MissionObjectiveDefinition objective = activeObjectiveDefinitions[i];
+                if (objective != null)
+                {
+                    score += objective.ScoreWeight;
+                }
+            }
+
+            return score;
+        }
+
+        int legacyScore = 0;
+        if (requireAllFiresExtinguished && totalTrackedFires > 0)
+        {
+            legacyScore += LegacyObjectiveScoreWeight;
+        }
+
+        if (requireAllRescuablesRescued && totalTrackedRescuables > 0)
+        {
+            legacyScore += LegacyObjectiveScoreWeight;
+        }
+
+        bool usesVictimObjective =
+            totalTrackedVictims > 0 &&
+            (failOnAnyVictimDeath || maxAllowedVictimDeaths >= 0 || requireNoCriticalVictimsAtCompletion || requireAllLivingVictimsStabilized);
+        if (usesVictimObjective)
+        {
+            legacyScore += LegacyObjectiveScoreWeight;
+        }
+
+        return legacyScore;
+    }
+
+    private void CaptureCurrentStageScoreIfNeeded(string stageId)
+    {
+        if (!HasActiveStageSequence() || currentStageIndex < 0 || HasCapturedStageScore(currentStageIndex))
+        {
+            return;
+        }
+
+        int stageScore = SumObjectiveStatusScore();
+        int stageMaxScore = 0;
+        if (objectiveStatuses != null)
+        {
+            for (int i = 0; i < objectiveStatuses.Count; i++)
+            {
+                MissionObjectiveStatus status = objectiveStatuses[i];
+                if (status != null)
+                {
+                    stageMaxScore += Mathf.Max(0, status.MaxScore);
+                }
+            }
+        }
+
+        string stageTitle = currentStageTitle;
+        MissionStageScoreRecord record = new MissionStageScoreRecord();
+        record.Set(currentStageIndex, stageId, stageTitle, stageScore, stageMaxScore);
+        completedStageScoreRecords.Add(record);
     }
 
     private string BuildObjectiveOverlayLines()
@@ -1025,6 +1330,19 @@ public class IncidentMissionSystem : MonoBehaviour
         }
 
         return builder.ToString();
+    }
+
+    private string BuildScoreOverlayLine()
+    {
+        if (DisplayedMaximumScore <= 0)
+        {
+            return string.Empty;
+        }
+
+        string rankSuffix = string.IsNullOrWhiteSpace(DisplayedScoreRank)
+            ? string.Empty
+            : $" ({DisplayedScoreRank})";
+        return $"Score: {DisplayedScore}/{DisplayedMaximumScore}{rankSuffix}\n";
     }
 
     private string BuildStageOverlayLine()
@@ -1185,6 +1503,7 @@ public class IncidentMissionSystem : MonoBehaviour
         }
 
         string stageId = ResolveCurrentStageId();
+        CaptureCurrentStageScoreIfNeeded(stageId);
         lastCompletedStageEventIndex = currentStageIndex;
         onStageCompleted?.Invoke(currentStageIndex, stageId);
         ExecuteCurrentStageActions(MissionActionTrigger.StageCompleted, stageId);

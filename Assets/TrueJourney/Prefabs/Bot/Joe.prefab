@@ -2369,7 +2369,6 @@ GameObject:
   m_Component:
   - component: {fileID: 8335738139760327761}
   - component: {fileID: 5704070014995168424}
-  - component: {fileID: 719770199545848372}
   - component: {fileID: 6889591528725791385}
   m_Layer: 0
   m_Name: model
@@ -2393,7 +2392,6 @@ Transform:
   m_Children:
   - {fileID: 1568551813612219579}
   - {fileID: 7058039770978857956}
-  - {fileID: 2062021177660555209}
   m_Father: {fileID: 6760553134421898100}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!95 &5704070014995168424
@@ -2418,22 +2416,6 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
---- !u!114 &719770199545848372
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7401687990039464048}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fff0960ef4ea6e04eac66b4a7fd2189d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.Animation.Rigging::UnityEngine.Animations.Rigging.RigBuilder
-  m_RigLayers:
-  - m_Rig: {fileID: 2877964087411582812}
-    m_Active: 1
-  m_Effectors: []
 --- !u!114 &6889591528725791385
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2810,52 +2792,6 @@ Transform:
   - {fileID: 1768949214375111090}
   m_Father: {fileID: 779761187603615478}
   m_LocalEulerAnglesHint: {x: 11.156078, y: 0.85174817, z: 1.2046939}
---- !u!1 &8505771735795641432
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2062021177660555209}
-  - component: {fileID: 2877964087411582812}
-  m_Layer: 0
-  m_Name: Rig 1
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2062021177660555209
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8505771735795641432}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: 0.38268343, z: -0, w: 0.92387956}
-  m_LocalPosition: {x: -63.356766, y: -0.79298615, z: 3.8183746}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 8335738139760327761}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2877964087411582812
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8505771735795641432}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 70b342d8ce5c2fd48b8fa3147d48d1d1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.Animation.Rigging::UnityEngine.Animations.Rigging.Rig
-  m_Weight: 1
-  m_Effectors: []
 --- !u!1 &8576171278431518697
 GameObject:
   m_ObjectHideFlags: 0
@@ -2937,7 +2873,7 @@ GameObject:
   - component: {fileID: 1135309908745278832}
   - component: {fileID: 2869225029408589221}
   m_Layer: 0
-  m_Name: Victim
+  m_Name: Joe
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2973,8 +2909,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Rescuable
   pickupDuration: 3
   movementWeightKg: 75
-  carriedLocalPosition: {x: -0.12, y: -0.879, z: 0.606}
-  carriedLocalEulerAngles: {x: 349.52753, y: 80.97423, z: 324.94092}
+  botCarriedLocalPosition: {x: -0.12, y: -0.879, z: 0.606}
+  botCarriedLocalEulerAngles: {x: 349.52753, y: 80.97423, z: 324.94092}
+  playerCarriedLocalPosition: {x: -0.25, y: 0.6, z: -0.2}
+  playerCarriedLocalEulerAngles: {x: 0, y: 90, z: 0}
   disableCollidersWhileCarried: 1
   carryRightHandHoldPoint: {fileID: 4993292278408118059}
   carryLeftHandHoldPoint: {fileID: 7638269928132271146}

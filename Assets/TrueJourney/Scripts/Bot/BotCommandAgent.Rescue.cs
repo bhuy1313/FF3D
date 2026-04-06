@@ -1,5 +1,6 @@
 using UnityEngine;
 using TrueJourney.BotBehavior;
+using System.Collections.Generic;
 
 public partial class BotCommandAgent
 {
@@ -84,6 +85,12 @@ public partial class BotCommandAgent
             return;
         }
 
+        if (rescueTarget.ActiveRescuer == gameObject &&
+            (rescueTarget.IsRescueInProgress || rescueTarget.IsCarried))
+        {
+            UnequipCurrentToolsForCarry();
+        }
+
         if (rescueTarget.IsCarried && rescueTarget.ActiveRescuer == gameObject)
         {
             Vector3 safeZonePosition = currentSafeZoneTarget.GetWorldPosition();
@@ -132,6 +139,7 @@ public partial class BotCommandAgent
 
         if (rescueTarget.TryBeginCarry(gameObject, GetRescueCarryAnchor()))
         {
+            UnequipCurrentToolsForCarry();
             LogRescueActivity("rescue-pickup", "Picked up victim.");
             return;
         }
@@ -197,5 +205,68 @@ public partial class BotCommandAgent
         currentRescueTarget = null;
         currentSafeZoneTarget = null;
         activityDebug?.ResetRescue();
+    }
+
+    private void UnequipCurrentToolsForCarry()
+    {
+        List<IPickupable> toolsToUnequip = new List<IPickupable>(8);
+
+        if (inventorySystem != null)
+        {
+            inventorySystem.ClearEquippedSelection();
+        }
+
+        CollectToolForUnequip(toolsToUnequip, activeExtinguisher as IPickupable);
+        CollectToolForUnequip(toolsToUnequip, activeBreakTool as IPickupable);
+
+        foreach (IBotExtinguisherItem extinguisher in BotRuntimeRegistry.ActiveExtinguisherItems)
+        {
+            if (extinguisher == null || !extinguisher.IsHeld || extinguisher.ClaimOwner != gameObject)
+            {
+                continue;
+            }
+
+            CollectToolForUnequip(toolsToUnequip, extinguisher as IPickupable);
+        }
+
+        foreach (IBotBreakTool breakTool in BotRuntimeRegistry.ActiveBreakTools)
+        {
+            if (breakTool == null || !breakTool.IsHeldBy(gameObject))
+            {
+                continue;
+            }
+
+            CollectToolForUnequip(toolsToUnequip, breakTool as IPickupable);
+        }
+
+        for (int i = 0; i < toolsToUnequip.Count; i++)
+        {
+            ForceUnequipTool(toolsToUnequip[i]);
+        }
+
+        ClearExtinguishRuntimeState();
+        ClearBlockedPathRuntime();
+        activeExtinguisher = null;
+        activeBreakTool = null;
+    }
+
+    private static void CollectToolForUnequip(List<IPickupable> toolsToUnequip, IPickupable pickupable)
+    {
+        if (toolsToUnequip == null || pickupable == null || toolsToUnequip.Contains(pickupable))
+        {
+            return;
+        }
+
+        toolsToUnequip.Add(pickupable);
+    }
+
+    private void ForceUnequipTool(IPickupable pickupable)
+    {
+        if (pickupable == null || inventorySystem == null)
+        {
+            return;
+        }
+
+        inventorySystem.ForceUnequipItem(pickupable);
     }
 }

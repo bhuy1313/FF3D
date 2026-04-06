@@ -262,6 +262,17 @@ public class IncidentMissionSystemEditor : Editor
             EditorGUILayout.LabelField("Remaining", missionSystem.RemainingTimeSeconds.ToString("F1"));
         }
 
+        if (missionSystem.DisplayedMaximumScore > 0)
+        {
+            string scoreLabel = $"{missionSystem.DisplayedScore}/{missionSystem.DisplayedMaximumScore}";
+            if (!string.IsNullOrWhiteSpace(missionSystem.DisplayedScoreRank))
+            {
+                scoreLabel += $" [{missionSystem.DisplayedScoreRank}]";
+            }
+
+            EditorGUILayout.LabelField("Score", scoreLabel);
+        }
+
         if (missionSystem.HasActiveStage)
         {
             EditorGUILayout.LabelField("Current Stage", $"{missionSystem.CurrentStageIndex + 1}/{missionSystem.TotalStageCount}: {missionSystem.CurrentStageTitle}");
@@ -285,7 +296,10 @@ public class IncidentMissionSystemEditor : Editor
                 : status.IsComplete
                     ? MessageType.Info
                     : MessageType.None;
-            EditorGUILayout.HelpBox(status.Summary, messageType);
+            string summary = status.MaxScore > 0
+                ? $"{status.Summary} ({status.Score}/{status.MaxScore})"
+                : status.Summary;
+            EditorGUILayout.HelpBox(summary, messageType);
         }
     }
 
