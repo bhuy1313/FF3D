@@ -16,7 +16,7 @@ public class TranscriptLogsController : MonoBehaviour
     [SerializeField] private ScrollRect transcriptScrollRect;
 
     [Header("Settings")]
-    [SerializeField] private float prototypeLineDelaySeconds = 2f;
+    [SerializeField] private float prototypeLineDelaySeconds = 1f;
     [SerializeField] private bool enableDebugLogs = false;
 
     [Header("Scenario")]
@@ -265,22 +265,33 @@ public class TranscriptLogsController : MonoBehaviour
             yield break;
         }
 
-        AddOperatorLog("911, where is your emergency?");
+        AddOperatorLog(LanguageManager.Tr(
+            "callphase.scenario.kitchen_fire_house_call.line.intro_operator_open",
+            "911, where is your emergency?"));
         yield return WaitForPrototypeLineDelay();
 
-        AddCallerLog("My house is on fire! Please help!");
+        AddCallerLog(LanguageManager.Tr(
+            "callphase.scenario.kitchen_fire_house_call.line.intro_caller_open",
+            "My house is on fire! Please help!"));
         yield return WaitForPrototypeLineDelay();
 
-        AddOperatorLog("Where is the fire right now?");
+        AddOperatorLog(LanguageManager.Tr(
+            "callphase.scenario.kitchen_fire_house_call.line.intro_operator_fire_location",
+            "Where is the fire right now?"));
         yield return WaitForPrototypeLineDelay();
 
-        AddCallerLog("It's in the kitchen, there's smoke everywhere!", isExtractable: true, setAsActiveChunk: true);
+        AddCallerLog(
+            LanguageManager.Tr(
+                "callphase.scenario.kitchen_fire_house_call.line.intro_caller_fire_location",
+                "It's in the kitchen, there's smoke everywhere!"),
+            isExtractable: true,
+            setAsActiveChunk: true);
         openingTranscriptCoroutine = null;
     }
 
     private CustomYieldInstruction WaitForPrototypeLineDelay()
     {
-        return new WaitForSecondsRealtime(Mathf.Max(0f, prototypeLineDelaySeconds));
+        return new WaitForSecondsRealtime(CallPhaseResponseSpeedSettings.ApplyDelayPreference(prototypeLineDelaySeconds));
     }
 
     private void ResolveScenarioData()
@@ -298,19 +309,27 @@ public class TranscriptLogsController : MonoBehaviour
 
     private void AddScenarioLine(CallPhaseScenarioLineData lineData)
     {
-        if (lineData == null || string.IsNullOrWhiteSpace(lineData.text))
+        if (lineData == null)
+        {
+            return;
+        }
+
+        string localizedText = scenarioData != null
+            ? scenarioData.GetLocalizedLineText(lineData)
+            : lineData.text;
+        if (string.IsNullOrWhiteSpace(localizedText))
         {
             return;
         }
 
         if (lineData.speaker == TranscriptSpeakerType.Operator)
         {
-            AddOperatorLog(lineData.text);
+            AddOperatorLog(localizedText);
             return;
         }
 
         AddCallerLog(
-            lineData.text,
+            localizedText,
             lineData.isExtractable,
             lineData.startsAsActiveChunk);
     }

@@ -14,8 +14,11 @@ public class CallPhaseScenarioData : ScriptableObject
     [Header("Metadata")]
     public string scenarioId = "scenario_id";
     public string displayName = "Call Phase Scenario";
+    public string displayNameLocalizationKey;
     public string category = "Prototype";
+    public string categoryLocalizationKey;
     [TextArea(2, 5)] public string description;
+    public string descriptionLocalizationKey;
 
     [Header("Transcript")]
     public List<CallPhaseScenarioLineData> initialTranscriptLines = new List<CallPhaseScenarioLineData>();
@@ -44,7 +47,7 @@ public class CallPhaseScenarioData : ScriptableObject
                 continue;
             }
 
-            if (TextMatches(step.callerLine.text, lineText))
+            if (TextMatches(step.callerLine.text, lineText) || TextMatches(GetLocalizedLineText(step.callerLine), lineText))
             {
                 lineData = step.callerLine;
                 return true;
@@ -85,6 +88,93 @@ public class CallPhaseScenarioData : ScriptableObject
         }
     }
 
+    public string GetLocalizedDisplayName()
+    {
+        return ResolveLocalizedMetadata(displayNameLocalizationKey, "name", displayName);
+    }
+
+    public string GetLocalizedCategory()
+    {
+        return ResolveLocalizedMetadata(categoryLocalizationKey, "category", category);
+    }
+
+    public string GetLocalizedDescription()
+    {
+        return ResolveLocalizedMetadata(descriptionLocalizationKey, "description", description);
+    }
+
+    public string GetLocalizedLineText(CallPhaseScenarioLineData lineData)
+    {
+        if (lineData == null)
+        {
+            return string.Empty;
+        }
+
+        string fallback = !string.IsNullOrWhiteSpace(lineData.text)
+            ? lineData.text
+            : string.Empty;
+        string key = !string.IsNullOrWhiteSpace(lineData.textLocalizationKey)
+            ? lineData.textLocalizationKey.Trim()
+            : GetDefaultLineLocalizationKey(lineData.lineId);
+        return !string.IsNullOrWhiteSpace(key)
+            ? LanguageManager.Tr(key, fallback)
+            : fallback;
+    }
+
+    public string GetLocalizedQuestionText(CallPhaseFollowUpQuestionOptionData questionOption)
+    {
+        if (questionOption == null)
+        {
+            return string.Empty;
+        }
+
+        string fallback = !string.IsNullOrWhiteSpace(questionOption.questionText)
+            ? questionOption.questionText
+            : string.Empty;
+        string key = !string.IsNullOrWhiteSpace(questionOption.questionLocalizationKey)
+            ? questionOption.questionLocalizationKey.Trim()
+            : GetDefaultQuestionLocalizationKey(questionOption.questionId);
+        return !string.IsNullOrWhiteSpace(key)
+            ? LanguageManager.Tr(key, fallback)
+            : fallback;
+    }
+
+    public string GetLocalizedDistractorCallerReply(CallPhaseFollowUpQuestionOptionData questionOption)
+    {
+        if (questionOption == null)
+        {
+            return string.Empty;
+        }
+
+        string fallback = !string.IsNullOrWhiteSpace(questionOption.distractorCallerReplyText)
+            ? questionOption.distractorCallerReplyText
+            : string.Empty;
+        string key = !string.IsNullOrWhiteSpace(questionOption.distractorCallerReplyLocalizationKey)
+            ? questionOption.distractorCallerReplyLocalizationKey.Trim()
+            : GetDefaultQuestionReplyLocalizationKey(questionOption.questionId);
+        return !string.IsNullOrWhiteSpace(key)
+            ? LanguageManager.Tr(key, fallback)
+            : fallback;
+    }
+
+    public string GetLocalizedSpanDisplayText(CallPhaseScenarioLineData lineData, CallPhaseExtractableSpanData spanData, int spanIndex)
+    {
+        if (spanData == null)
+        {
+            return string.Empty;
+        }
+
+        string fallback = !string.IsNullOrWhiteSpace(spanData.displayText)
+            ? spanData.displayText
+            : string.Empty;
+        string key = !string.IsNullOrWhiteSpace(spanData.displayTextLocalizationKey)
+            ? spanData.displayTextLocalizationKey.Trim()
+            : GetDefaultSpanLocalizationKey(lineData != null ? lineData.lineId : string.Empty, spanIndex);
+        return !string.IsNullOrWhiteSpace(key)
+            ? LanguageManager.Tr(key, fallback)
+            : fallback;
+    }
+
     private bool TryGetMatchingLine(List<CallPhaseScenarioLineData> source, string lineText, out CallPhaseScenarioLineData lineData)
     {
         if (source != null)
@@ -97,7 +187,7 @@ public class CallPhaseScenarioData : ScriptableObject
                     continue;
                 }
 
-                if (TextMatches(candidate.text, lineText))
+                if (TextMatches(candidate.text, lineText) || TextMatches(GetLocalizedLineText(candidate), lineText))
                 {
                     lineData = candidate;
                     return true;
@@ -116,6 +206,88 @@ public class CallPhaseScenarioData : ScriptableObject
             right != null ? right.Trim() : string.Empty,
             StringComparison.OrdinalIgnoreCase);
     }
+
+    private string ResolveLocalizedMetadata(string explicitKey, string suffix, string fallback)
+    {
+        string key = !string.IsNullOrWhiteSpace(explicitKey)
+            ? explicitKey.Trim()
+            : GetDefaultMetadataLocalizationKey(suffix);
+        return !string.IsNullOrWhiteSpace(key)
+            ? LanguageManager.Tr(key, fallback)
+            : fallback;
+    }
+
+    private string GetDefaultMetadataLocalizationKey(string suffix)
+    {
+        if (string.IsNullOrWhiteSpace(scenarioId) || string.IsNullOrWhiteSpace(suffix))
+        {
+            return string.Empty;
+        }
+
+        return $"callphase.scenario.{NormalizeLocalizationToken(scenarioId)}.{suffix}";
+    }
+
+    private string GetDefaultLineLocalizationKey(string lineId)
+    {
+        if (string.IsNullOrWhiteSpace(scenarioId) || string.IsNullOrWhiteSpace(lineId))
+        {
+            return string.Empty;
+        }
+
+        return $"callphase.scenario.{NormalizeLocalizationToken(scenarioId)}.line.{NormalizeLocalizationToken(lineId)}";
+    }
+
+    private string GetDefaultQuestionLocalizationKey(string questionId)
+    {
+        if (string.IsNullOrWhiteSpace(scenarioId) || string.IsNullOrWhiteSpace(questionId))
+        {
+            return string.Empty;
+        }
+
+        return $"callphase.scenario.{NormalizeLocalizationToken(scenarioId)}.question.{NormalizeLocalizationToken(questionId)}";
+    }
+
+    private string GetDefaultQuestionReplyLocalizationKey(string questionId)
+    {
+        if (string.IsNullOrWhiteSpace(scenarioId) || string.IsNullOrWhiteSpace(questionId))
+        {
+            return string.Empty;
+        }
+
+        return $"callphase.scenario.{NormalizeLocalizationToken(scenarioId)}.question_reply.{NormalizeLocalizationToken(questionId)}";
+    }
+
+    private string GetDefaultSpanLocalizationKey(string lineId, int spanIndex)
+    {
+        if (string.IsNullOrWhiteSpace(scenarioId) || string.IsNullOrWhiteSpace(lineId) || spanIndex < 0)
+        {
+            return string.Empty;
+        }
+
+        return $"callphase.scenario.{NormalizeLocalizationToken(scenarioId)}.span.{NormalizeLocalizationToken(lineId)}_{spanIndex}";
+    }
+
+    private static string NormalizeLocalizationToken(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        char[] buffer = value.Trim().ToLowerInvariant().ToCharArray();
+        for (int i = 0; i < buffer.Length; i++)
+        {
+            char character = buffer[i];
+            if ((character >= 'a' && character <= 'z') || (character >= '0' && character <= '9'))
+            {
+                continue;
+            }
+
+            buffer[i] = '_';
+        }
+
+        return new string(buffer);
+    }
 }
 
 [Serializable]
@@ -124,6 +296,7 @@ public class CallPhaseScenarioLineData
     public string lineId;
     public TranscriptSpeakerType speaker = TranscriptSpeakerType.Caller;
     [TextArea(2, 5)] public string text;
+    public string textLocalizationKey;
     public bool isExtractable;
     public bool startsAsActiveChunk;
     public bool isConfirmationLine;
@@ -134,6 +307,7 @@ public class CallPhaseScenarioLineData
 public class CallPhaseExtractableSpanData
 {
     public string displayText;
+    public string displayTextLocalizationKey;
     public string normalizedValue;
     public string targetFieldId;
     public string infoType;
@@ -173,12 +347,14 @@ public class CallPhaseFollowUpQuestionOptionData
 {
     public string questionId;
     [TextArea(1, 4)] public string questionText;
+    public string questionLocalizationKey;
     public CallPhaseFollowUpQuestionQuality quality;
     public string relatedFieldId;
     public bool suggestedWhenFieldMissing = true;
     public bool hideIfFieldAlreadyKnown = true;
     public string linkedStepId;
     [TextArea(1, 3)] public string distractorCallerReplyText;
+    public string distractorCallerReplyLocalizationKey;
     public bool isDistractorQuestion;
     [TextArea(1, 3)] public string authorNote;
 }

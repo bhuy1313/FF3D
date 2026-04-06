@@ -8,9 +8,6 @@ using TMPro;
 [DisallowMultipleComponent]
 public class CallPhaseScenarioContext : MonoBehaviour
 {
-    private const string DefaultCaseIdText = "Case ID: N/A";
-    private const string CallTimePrefix = "Call Time: ";
-
     [Tooltip("Assign the scenario asset that this reusable Call Phase scene should run.")]
     [SerializeField] private CallPhaseScenarioData scenarioData;
     [Header("Session Header")]
@@ -43,6 +40,12 @@ public class CallPhaseScenarioContext : MonoBehaviour
         RefreshSessionHeaderTexts();
     }
 
+    private void OnEnable()
+    {
+        LanguageManager.LanguageChanged -= HandleLanguageChanged;
+        LanguageManager.LanguageChanged += HandleLanguageChanged;
+    }
+
     private void Start()
     {
         PrepareScenarioRun();
@@ -65,6 +68,7 @@ public class CallPhaseScenarioContext : MonoBehaviour
 
     private void OnDisable()
     {
+        LanguageManager.LanguageChanged -= HandleLanguageChanged;
         callSessionActive = false;
     }
 
@@ -272,9 +276,18 @@ public class CallPhaseScenarioContext : MonoBehaviour
             return;
         }
 
+        CallPhaseUiChromeText.ApplyCurrentFont(caseIdText);
+        if (CallPhaseUiChromeText.IsCurrentLanguageVietnamese())
+        {
+            caseIdText.text = !string.IsNullOrWhiteSpace(currentCaseId)
+                ? currentCaseId
+                : "N/A";
+            return;
+        }
+
         caseIdText.text = !string.IsNullOrWhiteSpace(currentCaseId)
-            ? $"Case ID: {currentCaseId}"
-            : DefaultCaseIdText;
+            ? CallPhaseUiChromeText.Format("callphase.header.case_id", "Case ID: {0}", currentCaseId)
+            : CallPhaseUiChromeText.Tr("callphase.header.case_id_na", "Case ID: N/A");
     }
 
     private void RefreshCallTimeText()
@@ -284,10 +297,22 @@ public class CallPhaseScenarioContext : MonoBehaviour
             return;
         }
 
+        CallPhaseUiChromeText.ApplyCurrentFont(callTimeText);
         int totalSeconds = CurrentCallDurationSeconds;
         int minutes = totalSeconds / 60;
         int seconds = totalSeconds % 60;
-        callTimeText.text = $"{CallTimePrefix}{minutes:00}:{seconds:00}";
+        if (CallPhaseUiChromeText.IsCurrentLanguageVietnamese())
+        {
+            callTimeText.text = $"{minutes:00}:{seconds:00}";
+            return;
+        }
+
+        callTimeText.text = CallPhaseUiChromeText.Format("callphase.header.call_time", "Call Time: {0:00}:{1:00}", minutes, seconds);
+    }
+
+    private void HandleLanguageChanged(AppLanguage _)
+    {
+        RefreshSessionHeaderTexts();
     }
 
     private int GetCurrentElapsedCallSeconds()

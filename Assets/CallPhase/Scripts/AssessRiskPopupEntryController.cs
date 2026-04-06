@@ -12,19 +12,15 @@ using UnityEngine.UI;
 /// </summary>
 public class AssessRiskPopupEntryController : MonoBehaviour
 {
-    private static readonly Color DisabledBorderColor = new Color(0.55f, 0.55f, 0.55f, 1f);
-    private static readonly Color EnabledBorderColor = Color.white;
+    private static readonly Color DisabledBorderColor = CallPhaseFunctionButtonVisuals.InactiveColor;
+    private static readonly Color EnabledBorderColor = CallPhaseFunctionButtonVisuals.ActiveColor;
     private static readonly Color PopupButtonNormalColor = Color.white;
     private static readonly Color PopupButtonSelectedColor = new Color(0.95f, 0.72f, 0.38f, 1f);
     private static readonly Color PopupButtonEnabledTextColor = new Color(0.19607843f, 0.19607843f, 0.19607843f, 1f);
     private static readonly Color PopupButtonDisabledTextColor = new Color(0.45f, 0.45f, 0.45f, 1f);
-    private const string MissingSummaryValue = "Not provided";
-    private const string NoConfirmedFactsText = "No confirmed facts yet.";
+    private const string MissingValueToken = "__CALLPHASE_MISSING__";
     private const string SeverityFieldId = "Severity";
     private const string FireLocationFieldId = "fire_location";
-    private const string SubmitButtonReadyLabel = "Submit Incident Report";
-    private const string SubmitButtonSubmittedLabel = "Incident Report Submitted";
-    private const string ResultFallbackValue = "Not provided";
     private const string ExpectedSeverityValue = "High";
     private const string SeverityLow = "Low";
     private const string SeverityMedium = "Medium";
@@ -40,16 +36,6 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         "CallerSafety"
     };
 
-    private static readonly string[] SummaryLabelKeys =
-    {
-        "address",
-        "fire location",
-        "occupant risk",
-        "hazard",
-        "spread status",
-        "caller safety"
-    };
-
     private static readonly string[] ConfirmedFactsFieldIds =
     {
         "Address",
@@ -58,16 +44,6 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         "hazard",
         "SpreadStatus",
         "CallerSafety"
-    };
-
-    private static readonly string[] ConfirmedFactsDisplayNames =
-    {
-        "Address",
-        "Fire Location",
-        "Occupant Risk",
-        "Hazard",
-        "Spread Status",
-        "Caller Safety"
     };
 
     private static readonly string[] SubmitSummaryFieldIds =
@@ -81,16 +57,6 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         SeverityFieldId
     };
 
-    private static readonly string[] SubmitSummaryDisplayNames =
-    {
-        "Address",
-        "Fire Location",
-        "Occupant Risk",
-        "Hazard",
-        "Spread Status",
-        "Caller Safety",
-        "Severity"
-    };
 
     [Header("Assess Risk Requirements")]
     [SerializeField] private List<string> requiredForAssessRisk = new List<string>
@@ -132,6 +98,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
     private Button assessRiskButton;
     private Button submitReportButton;
+    private Button askFollowUpButton;
     private GameObject assessRiskPopup;
     private GameObject submitReportPopup;
     private GameObject resultPopup;
@@ -195,6 +162,31 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         HideResultPopupImmediate();
         RefreshAssessRiskButtonState();
         RefreshSubmitReportButtonState();
+    }
+
+    private void Update()
+    {
+        if (isPopupOpen || isSubmitPopupOpen || isResultPopupOpen || FollowUpPopupController.AnyPopupOpen)
+        {
+            return;
+        }
+
+        if (WasFunctionShortcutPressed(KeyCode.Alpha1, KeyCode.Keypad1))
+        {
+            TriggerFunctionButton(askFollowUpButton);
+            return;
+        }
+
+        if (WasFunctionShortcutPressed(KeyCode.Alpha2, KeyCode.Keypad2))
+        {
+            TriggerFunctionButton(assessRiskButton);
+            return;
+        }
+
+        if (WasFunctionShortcutPressed(KeyCode.Alpha3, KeyCode.Keypad3))
+        {
+            TriggerFunctionButton(submitReportButton);
+        }
     }
 
     private void OnDisable()
@@ -461,6 +453,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         if (assessRiskButton != null)
         {
             assessRiskButton.interactable = interactable;
+            CallPhaseFunctionButtonVisuals.Apply(assessRiskButton, interactable);
         }
 
         UpdateAssessRiskBorderVisuals(interactable);
@@ -471,6 +464,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         if (submitReportButton != null)
         {
             submitReportButton.interactable = interactable;
+            CallPhaseFunctionButtonVisuals.Apply(submitReportButton, interactable);
         }
 
         UpdateSubmitReportBorderVisuals(interactable);
@@ -483,14 +477,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
     private void UpdateSubmitReportButtonLabel()
     {
-        if (submitReportButtonLabel == null)
-        {
-            return;
-        }
-
-        submitReportButtonLabel.text = IsReportSubmitted()
-            ? SubmitButtonSubmittedLabel
-            : SubmitButtonReadyLabel;
+        // Preserve the scene-authored label text for this button.
     }
 
     private void HidePopupImmediate()
@@ -722,9 +709,14 @@ public class AssessRiskPopupEntryController : MonoBehaviour
             assessRiskButton = GetButtonFromObject(assessRiskButtonObject);
         }
 
+        if (askFollowUpButton == null)
+        {
+            askFollowUpButton = FindButtonInChildren(transform, "btnAskFollowUp", null);
+        }
+
         if (assessRiskButton == null)
         {
-            assessRiskButton = FindButtonInChildren(transform, "btnAssessRisk", "Assess Risk");
+            assessRiskButton = FindButtonInChildren(transform, "btnAssessRisk", null);
         }
 
         CacheAssessRiskBorderImages();
@@ -736,11 +728,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
         if (submitReportButton == null)
         {
-            submitReportButton = FindButtonInChildren(transform, "btnSubmitReport", "Submit Report");
-            if (submitReportButton == null)
-            {
-                submitReportButton = FindButtonInChildren(transform, "btnSubmitReport", SubmitButtonReadyLabel);
-            }
+            submitReportButton = FindButtonInChildren(transform, "btnSubmitReport", null);
         }
 
         if (submitReportButtonLabel == null)
@@ -774,7 +762,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
             if (popupBackButton == null)
             {
-                popupBackButton = FindButtonInChildren(assessRiskPopup.transform, null, "Back");
+                popupBackButton = FindButtonInChildren(assessRiskPopup.transform, "btnBack", CallPhaseUiChromeText.Tr("common.btn.back", "Back"));
             }
 
             if (popupConfirmAssessmentButton == null)
@@ -784,7 +772,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
             if (popupConfirmAssessmentButton == null)
             {
-                popupConfirmAssessmentButton = FindButtonInChildren(assessRiskPopup.transform, null, "Confirm Assessment");
+                popupConfirmAssessmentButton = FindButtonInChildren(assessRiskPopup.transform, "btnConfirm", CallPhaseUiChromeText.Tr("callphase.btn.confirm_assessment", "Confirm Assessment"));
             }
 
             if (lowSeverityButton == null)
@@ -794,7 +782,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
             if (lowSeverityButton == null)
             {
-                lowSeverityButton = FindButtonInChildren(assessRiskPopup.transform, null, "LOW");
+                lowSeverityButton = FindButtonInChildren(assessRiskPopup.transform, "btnLow", CallPhaseUiChromeText.Tr("callphase.severity.low", "LOW"));
             }
 
             if (mediumSeverityButton == null)
@@ -804,7 +792,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
             if (mediumSeverityButton == null)
             {
-                mediumSeverityButton = FindButtonInChildren(assessRiskPopup.transform, null, "MEDIUM");
+                mediumSeverityButton = FindButtonInChildren(assessRiskPopup.transform, "btnMedium", CallPhaseUiChromeText.Tr("callphase.severity.medium", "MEDIUM"));
             }
 
             if (highSeverityButton == null)
@@ -814,7 +802,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
             if (highSeverityButton == null)
             {
-                highSeverityButton = FindButtonInChildren(assessRiskPopup.transform, null, "HIGH");
+                highSeverityButton = FindButtonInChildren(assessRiskPopup.transform, "btnHigh", CallPhaseUiChromeText.Tr("callphase.severity.high", "HIGH"));
             }
 
             if (popupConfirmAssessmentLabel == null)
@@ -857,7 +845,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
             if (submitPopupBackButton == null)
             {
-                submitPopupBackButton = FindButtonInChildren(submitReportPopup.transform, "btnBack", "Back");
+                submitPopupBackButton = FindButtonInChildren(submitReportPopup.transform, "btnBack", CallPhaseUiChromeText.Tr("common.btn.back", "Back"));
             }
 
             if (submitPopupConfirmButton == null)
@@ -867,7 +855,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
             if (submitPopupConfirmButton == null)
             {
-                submitPopupConfirmButton = FindButtonInChildren(submitReportPopup.transform, "btnConfirmSubmit", "Confirm Submit");
+                submitPopupConfirmButton = FindButtonInChildren(submitReportPopup.transform, "btnConfirmSubmit", CallPhaseUiChromeText.Tr("callphase.btn.confirm_submit", "Confirm Submit"));
             }
 
             if (submitPopupConfirmLabel == null)
@@ -924,7 +912,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
             if (resultPopupBackButton == null)
             {
-                resultPopupBackButton = FindButtonInChildren(resultPopup.transform, "btnBack", "Back");
+                resultPopupBackButton = FindButtonInChildren(resultPopup.transform, "btnBack", CallPhaseUiChromeText.Tr("common.btn.back", "Back"));
             }
 
             if (resultPopupNextPhaseButton == null)
@@ -960,6 +948,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
         WarnIfMissingReference("Assess Risk button", assessRiskButton, this);
         WarnIfMissingReference("Submit Report button", submitReportButton, this);
+        WarnIfMissingReference("Ask Follow-Up button", askFollowUpButton, this);
         WarnIfMissingReference("Assess Risk popup", assessRiskPopup, this);
         WarnIfMissingReference("Assess Risk back button", popupBackButton, assessRiskPopup);
         WarnIfMissingReference("Assess Risk confirm button", popupConfirmAssessmentButton, assessRiskPopup);
@@ -1317,6 +1306,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
             return;
         }
 
+        CallPhaseUiChromeText.ApplyCurrentFont(submitPopupSummaryText);
         submitPopupSummaryText.text = BuildSubmittedReportSummaryText();
     }
 
@@ -1332,6 +1322,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
             return;
         }
 
+        CallPhaseUiChromeText.ApplyCurrentFont(resultPopupSummaryText);
         resultPopupSummaryText.text = BuildSubmittedReportSummaryText();
     }
 
@@ -1347,6 +1338,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
             return;
         }
 
+        CallPhaseUiChromeText.ApplyCurrentFont(resultPopupReviewText);
         resultPopupReviewText.text = BuildResultPopupReviewText();
     }
 
@@ -1360,9 +1352,9 @@ public class AssessRiskPopupEntryController : MonoBehaviour
                 builder.Append('\n');
             }
 
-            builder.Append(SubmitSummaryDisplayNames[i]);
+            builder.Append(GetFieldDisplayName(SubmitSummaryFieldIds[i]));
             builder.Append(": ");
-            builder.Append(GetPopupSummaryValue(SubmitSummaryFieldIds[i]));
+            builder.Append(GetDisplayValue(GetPopupSummaryValue(SubmitSummaryFieldIds[i])));
         }
 
         return builder.ToString();
@@ -1374,6 +1366,8 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         int confirmedFactsCount = CountConfirmedFacts();
         int confirmedFactsScore = CalculateConfirmedFactsScore();
         string severityChosen = GetFieldValueOrFallback(SeverityFieldId);
+        string severityChosenDisplay = GetDisplayValue(severityChosen, SeverityFieldId);
+        string expectedSeverityDisplay = GetDisplayValue(GetExpectedSeverityValue(), SeverityFieldId);
         int severityScore = CalculateSeverityScore(severityChosen);
         int readinessScore = CalculateSubmissionReadinessScore();
         int followUpTotalCount = GetTotalSelectedFollowUpQuestions();
@@ -1401,31 +1395,54 @@ public class AssessRiskPopupEntryController : MonoBehaviour
             callTimeScore);
 
         StringBuilder builder = new StringBuilder();
-        builder.Append("Final Score: ");
+        builder.Append(CallPhaseUiChromeText.Tr("callphase.result.final_score", "Final Score"));
+        builder.Append(": ");
         builder.Append(finalScore);
         builder.Append(" / ");
         builder.Append(maximumScore);
-        builder.Append("\n\nSeverity Chosen: ");
-        builder.Append(severityChosen);
-        builder.Append("\nExpected Severity: ");
-        builder.Append(GetExpectedSeverityValue());
-        builder.Append("\n\nConfirmed Facts: ");
+        builder.Append("\n\n");
+        builder.Append(CallPhaseUiChromeText.Tr("callphase.result.severity_chosen", "Severity Chosen"));
+        builder.Append(": ");
+        builder.Append(severityChosenDisplay);
+        builder.Append("\n");
+        builder.Append(CallPhaseUiChromeText.Tr("callphase.result.expected_severity", "Expected Severity"));
+        builder.Append(": ");
+        builder.Append(expectedSeverityDisplay);
+        builder.Append("\n\n");
+        builder.Append(CallPhaseUiChromeText.Tr("callphase.result.confirmed_facts", "Confirmed Facts"));
+        builder.Append(": ");
         builder.Append(confirmedFactsCount);
-        builder.Append("\n\nFollow-up Quality: ");
+        builder.Append("\n\n");
+        builder.Append(CallPhaseUiChromeText.Tr("callphase.result.followup_quality", "Follow-up Quality"));
+        builder.Append(": ");
         builder.Append(followUpQualityLabel);
-        builder.Append("\nOptimal Questions Chosen: ");
+        builder.Append("\n");
+        builder.Append(CallPhaseUiChromeText.Tr("callphase.result.optimal_questions", "Optimal Questions Chosen"));
+        builder.Append(": ");
         builder.Append(GetOptimalFollowUpCount());
-        builder.Append("\nAcceptable Questions Chosen: ");
+        builder.Append("\n");
+        builder.Append(CallPhaseUiChromeText.Tr("callphase.result.acceptable_questions", "Acceptable Questions Chosen"));
+        builder.Append(": ");
         builder.Append(GetAcceptableFollowUpCount());
-        builder.Append("\nPoor Questions Chosen: ");
+        builder.Append("\n");
+        builder.Append(CallPhaseUiChromeText.Tr("callphase.result.poor_questions", "Poor Questions Chosen"));
+        builder.Append(": ");
         builder.Append(GetPoorFollowUpCount());
-        builder.Append("\n\nCall Time: ");
+        builder.Append("\n\n");
+        builder.Append(CallPhaseUiChromeText.Tr("callphase.result.call_time", "Call Time"));
+        builder.Append(": ");
         builder.Append(FormatDuration(callTimeSeconds));
-        builder.Append("\nTarget Time: ");
+        builder.Append("\n");
+        builder.Append(CallPhaseUiChromeText.Tr("callphase.result.target_time", "Target Time"));
+        builder.Append(": ");
         builder.Append(FormatDuration(GetTargetCallTimeSeconds()));
-        builder.Append("\nEfficiency: ");
+        builder.Append("\n");
+        builder.Append(CallPhaseUiChromeText.Tr("callphase.result.efficiency", "Efficiency"));
+        builder.Append(": ");
         builder.Append(callTimeEfficiencyLabel);
-        builder.Append("\n\nFeedback:");
+        builder.Append("\n\n");
+        builder.Append(CallPhaseUiChromeText.Tr("callphase.result.feedback", "Feedback"));
+        builder.Append(":");
 
         for (int i = 0; i < feedbackLines.Count; i++)
         {
@@ -1559,15 +1576,24 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
         if (severityScore >= GetSeverityCorrectScore())
         {
-            feedbackLines.Add(GetConfiguredFeedbackLine(feedbackConfig.positiveSeverity, "Good risk assessment."));
+            feedbackLines.Add(GetConfiguredFeedbackLine(
+                feedbackConfig.positiveSeverity,
+                "callphase.result.feedback.positive_severity",
+                "Good risk assessment."));
         }
-        else if (string.Equals(severityChosen, ResultFallbackValue, StringComparison.OrdinalIgnoreCase))
+        else if (IsMissingValue(severityChosen))
         {
-            feedbackLines.Add(GetConfiguredFeedbackLine(feedbackConfig.missingSeverity, "Severity assessment was missing."));
+            feedbackLines.Add(GetConfiguredFeedbackLine(
+                feedbackConfig.missingSeverity,
+                "callphase.result.feedback.missing_severity",
+                "Severity assessment was missing."));
         }
         else
         {
-            feedbackLines.Add(GetConfiguredFeedbackLine(feedbackConfig.incorrectSeverity, "Severity was lower than expected."));
+            feedbackLines.Add(GetConfiguredFeedbackLine(
+                feedbackConfig.incorrectSeverity,
+                "callphase.result.feedback.incorrect_severity",
+                "Severity was lower than expected."));
         }
 
         int maximumConfirmedFactsScore = GetMaximumScore(GetReviewExpectedConfirmedFields());
@@ -1575,16 +1601,21 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         {
             feedbackLines.Add(GetConfiguredFeedbackLine(
                 feedbackConfig.allConfirmed,
+                "callphase.result.feedback.all_confirmed",
                 BuildAllConfirmedFeedbackFallback()));
         }
         else if (confirmedFactsCount <= 0)
         {
-            feedbackLines.Add(GetConfiguredFeedbackLine(feedbackConfig.noneConfirmed, "No critical facts were confirmed."));
+            feedbackLines.Add(GetConfiguredFeedbackLine(
+                feedbackConfig.noneConfirmed,
+                "callphase.result.feedback.none_confirmed",
+                "No critical facts were confirmed."));
         }
         else
         {
             feedbackLines.Add(GetConfiguredFeedbackLine(
                 feedbackConfig.partialConfirmed,
+                "callphase.result.feedback.partial_confirmed",
                 "More read-back confirmation was needed for critical facts."));
         }
 
@@ -1592,6 +1623,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         {
             feedbackLines.Add(GetConfiguredFeedbackLine(
                 feedbackConfig.strongCorrectness,
+                "callphase.result.feedback.strong_correctness",
                 "Key incident details matched the scenario well."));
         }
         else if (keyValueIssues.Count > 0)
@@ -1603,12 +1635,14 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         {
             feedbackLines.Add(GetConfiguredFeedbackLine(
                 feedbackConfig.readyToSubmit,
+                "callphase.result.feedback.ready_to_submit",
                 "Report was ready to submit."));
         }
         else
         {
             feedbackLines.Add(GetConfiguredFeedbackLine(
                 feedbackConfig.incompleteSubmission,
+                "callphase.result.feedback.incomplete_submission",
                 "Some report details were missing at submission."));
         }
 
@@ -1618,18 +1652,21 @@ public class AssessRiskPopupEntryController : MonoBehaviour
             {
                 feedbackLines.Add(GetConfiguredFeedbackLine(
                     feedbackConfig.strongFollowUp,
+                    "callphase.result.feedback.strong_followup",
                     "You generally prioritized relevant follow-up questions."));
             }
             else if (followUpScore >= GetFollowUpMixedThreshold())
             {
                 feedbackLines.Add(GetConfiguredFeedbackLine(
                     feedbackConfig.mixedFollowUp,
+                    "callphase.result.feedback.mixed_followup",
                     "Some follow-up questions were useful, but prioritization was uneven."));
             }
             else
             {
                 feedbackLines.Add(GetConfiguredFeedbackLine(
                     feedbackConfig.poorFollowUp,
+                    "callphase.result.feedback.poor_followup",
                     "Some follow-up questions were lower priority than the situation required."));
             }
         }
@@ -1638,20 +1675,28 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         {
             if (callTimeScore >= GetMaximumCallTimeScore())
             {
-                feedbackLines.Add("Call handling was efficient for this scenario.");
+                feedbackLines.Add(CallPhaseUiChromeText.Tr(
+                    "callphase.result.feedback.call_time_good",
+                    "Call handling was efficient for this scenario."));
             }
             else if (callTimeScore > 0)
             {
-                feedbackLines.Add("Call handling pace was acceptable, but could be faster.");
+                feedbackLines.Add(CallPhaseUiChromeText.Tr(
+                    "callphase.result.feedback.call_time_acceptable",
+                    "Call handling pace was acceptable, but could be faster."));
             }
             else
             {
-                feedbackLines.Add("Call handling took longer than the scenario target.");
+                feedbackLines.Add(CallPhaseUiChromeText.Tr(
+                    "callphase.result.feedback.call_time_slow",
+                    "Call handling took longer than the scenario target."));
             }
         }
         else
         {
-            feedbackLines.Add("Call Time efficiency was not scored because the submitted report was not complete enough.");
+            feedbackLines.Add(CallPhaseUiChromeText.Tr(
+                "callphase.result.feedback.call_time_not_scored",
+                "Call Time efficiency was not scored because the submitted report was not complete enough."));
         }
 
         return feedbackLines;
@@ -1701,12 +1746,12 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
         return new List<CallPhaseScenarioScoredFieldData>
         {
-            new CallPhaseScenarioScoredFieldData { fieldId = "Address", displayName = "Address", scoreWeight = 8, issueText = "Address was incorrect or missing." },
-            new CallPhaseScenarioScoredFieldData { fieldId = FireLocationFieldId, displayName = "Fire Location", scoreWeight = 6, issueText = "Fire location was incorrect or missing." },
-            new CallPhaseScenarioScoredFieldData { fieldId = "OccupantRisk", displayName = "Occupant Risk", scoreWeight = 8, issueText = "Occupant risk was incomplete." },
-            new CallPhaseScenarioScoredFieldData { fieldId = "hazard", displayName = "Hazard", scoreWeight = 6, issueText = "Hazard information was incomplete." },
-            new CallPhaseScenarioScoredFieldData { fieldId = "SpreadStatus", displayName = "Spread Status", scoreWeight = 6, issueText = "Spread status was incomplete." },
-            new CallPhaseScenarioScoredFieldData { fieldId = "CallerSafety", displayName = "Caller Safety", scoreWeight = 6, issueText = "Caller safety information was incomplete." }
+            new CallPhaseScenarioScoredFieldData { fieldId = "Address", displayName = "Address", scoreWeight = 8 },
+            new CallPhaseScenarioScoredFieldData { fieldId = FireLocationFieldId, displayName = "Fire Location", scoreWeight = 6 },
+            new CallPhaseScenarioScoredFieldData { fieldId = "OccupantRisk", displayName = "Occupant Risk", scoreWeight = 8 },
+            new CallPhaseScenarioScoredFieldData { fieldId = "hazard", displayName = "Hazard", scoreWeight = 6 },
+            new CallPhaseScenarioScoredFieldData { fieldId = "SpreadStatus", displayName = "Spread Status", scoreWeight = 6 },
+            new CallPhaseScenarioScoredFieldData { fieldId = "CallerSafety", displayName = "Caller Safety", scoreWeight = 6 }
         };
     }
 
@@ -1768,20 +1813,20 @@ public class AssessRiskPopupEntryController : MonoBehaviour
     {
         if (totalSelectedQuestions <= 0)
         {
-            return "Not used";
+            return CallPhaseUiChromeText.Tr("callphase.result.followup_quality.not_used", "Not used");
         }
 
         if (followUpScore >= GetFollowUpGoodThreshold())
         {
-            return "Good";
+            return CallPhaseUiChromeText.Tr("callphase.result.followup_quality.good", "Good");
         }
 
         if (followUpScore >= GetFollowUpMixedThreshold())
         {
-            return "Mixed";
+            return CallPhaseUiChromeText.Tr("callphase.result.followup_quality.mixed", "Mixed");
         }
 
-        return "Poor";
+        return CallPhaseUiChromeText.Tr("callphase.result.followup_quality.poor", "Poor");
     }
 
     private int GetOptimalFollowUpCount()
@@ -1909,20 +1954,20 @@ public class AssessRiskPopupEntryController : MonoBehaviour
     {
         if (!isQualified)
         {
-            return "Not counted";
+            return CallPhaseUiChromeText.Tr("callphase.result.call_time_efficiency.not_counted", "Not counted");
         }
 
         if (callTimeScore >= GetMaximumCallTimeScore())
         {
-            return "Good";
+            return CallPhaseUiChromeText.Tr("callphase.result.call_time_efficiency.good", "Good");
         }
 
         if (callTimeScore > 0)
         {
-            return "Acceptable";
+            return CallPhaseUiChromeText.Tr("callphase.result.call_time_efficiency.acceptable", "Acceptable");
         }
 
-        return "Slow";
+        return CallPhaseUiChromeText.Tr("callphase.result.call_time_efficiency.slow", "Slow");
     }
 
     private int GetTargetCallTimeSeconds()
@@ -2053,11 +2098,18 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         return 18;
     }
 
-    private string GetConfiguredFeedbackLine(string configuredValue, string fallbackValue)
+    private string GetConfiguredFeedbackLine(string configuredValue, string localizationKey, string fallbackValue)
     {
-        return !string.IsNullOrWhiteSpace(configuredValue)
-            ? configuredValue.Trim()
-            : fallbackValue;
+        string localizedFallback = CallPhaseUiChromeText.Tr(localizationKey, fallbackValue);
+        if (string.IsNullOrWhiteSpace(configuredValue))
+        {
+            return localizedFallback;
+        }
+
+        string trimmedValue = configuredValue.Trim();
+        return string.Equals(trimmedValue, fallbackValue, StringComparison.Ordinal)
+            ? localizedFallback
+            : trimmedValue;
     }
 
     private string BuildAllConfirmedFeedbackFallback()
@@ -2072,34 +2124,14 @@ public class AssessRiskPopupEntryController : MonoBehaviour
                 continue;
             }
 
-            string displayName = !string.IsNullOrWhiteSpace(fieldConfig.displayName)
-                ? fieldConfig.displayName.Trim()
-                : GetFieldDisplayName(fieldConfig.fieldId);
-
+            string displayName = GetFieldDisplayName(fieldConfig.fieldId);
             if (!string.IsNullOrWhiteSpace(displayName))
             {
-                names.Add(displayName.ToLowerInvariant());
+                names.Add(displayName);
             }
         }
 
-        if (names.Count <= 0)
-        {
-            return "Critical facts were confirmed.";
-        }
-
-        if (names.Count == 1)
-        {
-            return names[0] + " was confirmed.";
-        }
-
-        if (names.Count == 2)
-        {
-            return names[0] + " and " + names[1] + " were confirmed.";
-        }
-
-        string trailingName = names[names.Count - 1];
-        names.RemoveAt(names.Count - 1);
-        return string.Join(", ", names) + ", and " + trailingName + " were confirmed.";
+        return CallPhaseUiChromeText.Tr("callphase.result.feedback.all_confirmed", "Critical facts were confirmed.");
     }
 
     private string BuildDefaultFieldIssueText(string fieldId, string displayName)
@@ -2110,33 +2142,50 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
         if (string.IsNullOrWhiteSpace(resolvedDisplayName))
         {
-            resolvedDisplayName = "Field";
+            resolvedDisplayName = CallPhaseUiChromeText.Tr("callphase.result.issue.field", "Field");
         }
 
-        return resolvedDisplayName + " was incorrect or missing.";
+        string format = CallPhaseUiChromeText.Tr(
+            "callphase.result.issue.incorrect_or_missing",
+            "{0} was incorrect or missing.");
+        return string.Format(format, resolvedDisplayName);
     }
 
     private string GetFieldDisplayName(string fieldId)
     {
-        switch (fieldId)
+        return CallPhaseUiChromeText.GetFieldDisplayName(fieldId);
+    }
+
+    private string GetDisplayValue(string value, string fieldId = null)
+    {
+        if (IsMissingValue(value))
         {
-            case "Address":
-                return "Address";
-            case FireLocationFieldId:
-                return "Fire Location";
-            case "OccupantRisk":
-                return "Occupant Risk";
-            case "hazard":
-                return "Hazard";
-            case "SpreadStatus":
-                return "Spread Status";
-            case "CallerSafety":
-                return "Caller Safety";
-            case SeverityFieldId:
-                return "Severity";
-            default:
-                return fieldId ?? string.Empty;
+            return CallPhaseUiChromeText.Tr("callphase.value.not_provided", "Not provided");
         }
+
+        if (!string.IsNullOrWhiteSpace(fieldId))
+        {
+            return LocalizeFieldValueIfNeeded(fieldId, value);
+        }
+
+        return value ?? string.Empty;
+    }
+
+    private string LocalizeFieldValueIfNeeded(string fieldId, string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return value ?? string.Empty;
+        }
+
+        return string.Equals(fieldId, SeverityFieldId, StringComparison.OrdinalIgnoreCase)
+            ? CallPhaseUiChromeText.GetSeverityDisplayName(value)
+            : value;
+    }
+
+    private bool IsMissingValue(string value)
+    {
+        return string.Equals(value, MissingValueToken, StringComparison.Ordinal);
     }
 
     private void CachePopupSummaryValueTexts()
@@ -2179,7 +2228,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         List<string> confirmedFacts = GetConfirmedFactDisplayNames();
         string confirmedFactsText = confirmedFacts.Count > 0
             ? "- " + string.Join("\n- ", confirmedFacts)
-            : NoConfirmedFactsText;
+            : CallPhaseUiChromeText.Tr("callphase.value.no_confirmed_facts", "No confirmed facts yet.");
 
         if (popupConfirmedFactsText == null)
         {
@@ -2188,6 +2237,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
         if (popupConfirmedFactsText != null)
         {
+            CallPhaseUiChromeText.ApplyCurrentFont(popupConfirmedFactsText);
             popupConfirmedFactsText.text = confirmedFactsText;
         }
 
@@ -2198,6 +2248,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
         if (submitPopupConfirmedText != null)
         {
+            CallPhaseUiChromeText.ApplyCurrentFont(submitPopupConfirmedText);
             submitPopupConfirmedText.text = confirmedFactsText;
         }
     }
@@ -2218,7 +2269,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
                 continue;
             }
 
-            confirmedFacts.Add(ConfirmedFactsDisplayNames[i]);
+            confirmedFacts.Add(GetFieldDisplayName(ConfirmedFactsFieldIds[i]));
         }
 
         return confirmedFacts;
@@ -2231,7 +2282,10 @@ public class AssessRiskPopupEntryController : MonoBehaviour
             return null;
         }
 
-        TMP_Text headerText = FindTextByExactValue(assessRiskPopup.transform, "CONFIRMED FACTS");
+        TMP_Text headerText = FindTextByLocalizationKeyOrValue(
+            assessRiskPopup.transform,
+            "callphase.header.confirmed_facts",
+            "CONFIRMED FACTS");
         if (headerText == null)
         {
             return null;
@@ -2254,6 +2308,39 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         return null;
     }
 
+    private TMP_Text FindTextByLocalizationKeyOrValue(Transform root, string localizationKey, string fallbackValue)
+    {
+        if (root == null)
+        {
+            return null;
+        }
+
+        TMP_Text[] texts = root.GetComponentsInChildren<TMP_Text>(true);
+        for (int i = 0; i < texts.Length; i++)
+        {
+            TMP_Text text = texts[i];
+            if (text == null)
+            {
+                continue;
+            }
+
+            LocalizedText localizedText = text.GetComponent<LocalizedText>();
+            if (localizedText != null && string.Equals(localizedText.LocalizationKey, localizationKey, StringComparison.Ordinal))
+            {
+                return text;
+            }
+        }
+
+        string localizedValue = CallPhaseUiChromeText.Tr(localizationKey, fallbackValue);
+        TMP_Text match = FindTextByExactValue(root, localizedValue);
+        if (match != null)
+        {
+            return match;
+        }
+
+        return FindTextByExactValue(root, fallbackValue);
+    }
+
     private void PopulatePopupSummary()
     {
         if (popupSummaryValueTexts.Count == 0)
@@ -2269,7 +2356,8 @@ public class AssessRiskPopupEntryController : MonoBehaviour
                 continue;
             }
 
-            valueText.text = GetPopupSummaryValue(fieldId);
+            valueText.text = GetDisplayValue(GetPopupSummaryValue(fieldId), fieldId);
+            CallPhaseUiChromeText.ApplyCurrentFont(valueText);
         }
     }
 
@@ -2277,37 +2365,37 @@ public class AssessRiskPopupEntryController : MonoBehaviour
     {
         if (incidentReportController == null)
         {
-            return MissingSummaryValue;
+            return MissingValueToken;
         }
 
         IncidentReportFieldView fieldView = incidentReportController.GetFieldView(fieldId);
         if (fieldView == null || fieldView.CurrentState == ReportFieldState.Empty || string.IsNullOrWhiteSpace(fieldView.CurrentValue))
         {
-            return MissingSummaryValue;
+            return MissingValueToken;
         }
 
-        return fieldView.CurrentValue;
+        return LocalizeFieldValueIfNeeded(fieldId, fieldView.CurrentValue);
     }
 
     private string GetFieldValueOrFallback(string fieldId)
     {
         if (incidentReportController == null)
         {
-            return ResultFallbackValue;
+            return MissingValueToken;
         }
 
         IncidentReportFieldView fieldView = incidentReportController.GetFieldView(fieldId);
         if (fieldView == null || fieldView.CurrentState == ReportFieldState.Empty || string.IsNullOrWhiteSpace(fieldView.CurrentValue))
         {
-            return ResultFallbackValue;
+            return MissingValueToken;
         }
 
-        return fieldView.CurrentValue.Trim();
+        return LocalizeFieldValueIfNeeded(fieldId, fieldView.CurrentValue.Trim());
     }
 
     private bool HasUsableFieldValue(string fieldId)
     {
-        return !string.Equals(GetFieldValueOrFallback(fieldId), ResultFallbackValue, StringComparison.OrdinalIgnoreCase);
+        return !IsMissingValue(GetFieldValueOrFallback(fieldId));
     }
 
     private int CountConfirmedFacts()
@@ -2346,7 +2434,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
     private bool FieldMatchesExpectation(string fieldId, string value)
     {
-        if (string.IsNullOrWhiteSpace(value) || string.Equals(value, ResultFallbackValue, StringComparison.OrdinalIgnoreCase))
+        if (string.IsNullOrWhiteSpace(value) || IsMissingValue(value))
         {
             return false;
         }
@@ -2498,10 +2586,12 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         string expectedHazardValue = GetExpectedFieldValue("hazard");
         if (string.IsNullOrWhiteSpace(expectedHazardValue))
         {
-            return "Hazard information was incomplete.";
+            return CallPhaseUiChromeText.Tr(
+                "callphase.result.issue.hazard_incomplete",
+                "Hazard information was incomplete.");
         }
 
-        string resolvedActualValue = string.Equals(actualHazardValue, ResultFallbackValue, StringComparison.OrdinalIgnoreCase)
+        string resolvedActualValue = IsMissingValue(actualHazardValue)
             ? string.Empty
             : actualHazardValue;
 
@@ -2653,6 +2743,21 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         return targetObject != null ? targetObject.GetComponent<Button>() : null;
     }
 
+    private static bool WasFunctionShortcutPressed(KeyCode primary, KeyCode secondary)
+    {
+        return Input.GetKeyDown(primary) || Input.GetKeyDown(secondary);
+    }
+
+    private static void TriggerFunctionButton(Button button)
+    {
+        if (button == null || !button.gameObject.activeInHierarchy || !button.interactable)
+        {
+            return;
+        }
+
+        button.onClick.Invoke();
+    }
+
     private TMP_Text GetTextFromObject(GameObject targetObject)
     {
         return targetObject != null ? targetObject.GetComponent<TMP_Text>() : null;
@@ -2727,17 +2832,33 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
     private string GetFieldIdForSummaryLabel(TMP_Text text)
     {
-        string normalizedLabel = NormalizeSummaryLabel(text != null ? text.text : string.Empty);
+        if (text == null)
+        {
+            return null;
+        }
+
+        LocalizedText localizedText = text.GetComponent<LocalizedText>();
+        if (localizedText != null
+            && CallPhaseUiChromeText.TryGetFieldIdForLocalizationKey(localizedText.LocalizationKey, out string localizedFieldId))
+        {
+            return localizedFieldId;
+        }
+
+        string normalizedLabel = NormalizeSummaryLabel(text.text);
         if (string.IsNullOrWhiteSpace(normalizedLabel))
         {
             return null;
         }
 
-        for (int i = 0; i < SummaryLabelKeys.Length; i++)
+        for (int i = 0; i < SummaryFieldIds.Length; i++)
         {
-            if (normalizedLabel == SummaryLabelKeys[i])
+            string fieldId = SummaryFieldIds[i];
+            foreach (string candidateLabel in CallPhaseUiChromeText.GetFieldDisplayNameCandidates(fieldId))
             {
-                return SummaryFieldIds[i];
+                if (normalizedLabel == NormalizeSummaryLabel(candidateLabel))
+                {
+                    return fieldId;
+                }
             }
         }
 

@@ -26,6 +26,8 @@ public class FollowUpPopupController : MonoBehaviour
     private CallPhaseFollowUpQuestionOptionData selectedQuestionOption;
     private bool isPopupOpen;
 
+    public static bool AnyPopupOpen { get; private set; }
+
     private void Awake()
     {
         ResolveReferences();
@@ -37,11 +39,49 @@ public class FollowUpPopupController : MonoBehaviour
         ResolveReferences();
         SubscribeToUi();
         RefreshConfirmButtonState();
+        TryAutoOpenPopup();
     }
 
     private void Start()
     {
         HidePopupImmediate();
+    }
+
+    private void Update()
+    {
+        if (!isPopupOpen)
+        {
+            return;
+        }
+
+        if (WasPopupShortcutPressed(KeyCode.Alpha1, KeyCode.Keypad1))
+        {
+            SelectOptionByIndex(0);
+            return;
+        }
+
+        if (WasPopupShortcutPressed(KeyCode.Alpha2, KeyCode.Keypad2))
+        {
+            SelectOptionByIndex(1);
+            return;
+        }
+
+        if (WasPopupShortcutPressed(KeyCode.Alpha3, KeyCode.Keypad3))
+        {
+            SelectOptionByIndex(2);
+            return;
+        }
+
+        if (WasPopupShortcutPressed(KeyCode.Alpha4, KeyCode.Keypad4))
+        {
+            SelectOptionByIndex(3);
+            return;
+        }
+
+        if (WasPopupShortcutPressed(KeyCode.Return, KeyCode.KeypadEnter))
+        {
+            TriggerButton(confirmButton);
+        }
     }
 
     private void OnDisable()
@@ -99,6 +139,7 @@ public class FollowUpPopupController : MonoBehaviour
         followUpPopupRootObject.SetActive(true);
         followUpPopupRootObject.transform.SetAsLastSibling();
         isPopupOpen = true;
+        AnyPopupOpen = true;
 
         if (enableDebugLogs)
         {
@@ -149,6 +190,16 @@ public class FollowUpPopupController : MonoBehaviour
         }
 
         RefreshConfirmButtonState();
+    }
+
+    private void SelectOptionByIndex(int optionIndex)
+    {
+        if (optionIndex < 0 || optionIndex >= spawnedOptionViews.Count)
+        {
+            return;
+        }
+
+        HandleOptionClicked(spawnedOptionViews[optionIndex]);
     }
 
     private void BuildQuestionOptions()
@@ -293,6 +344,7 @@ public class FollowUpPopupController : MonoBehaviour
         ClearSpawnedOptions();
         selectedQuestionOption = null;
         isPopupOpen = false;
+        AnyPopupOpen = false;
 
         if (followUpPopupRootObject != null)
         {
@@ -337,6 +389,16 @@ public class FollowUpPopupController : MonoBehaviour
 
     private void SubscribeToUi()
     {
+        if (followUpController != null)
+        {
+            followUpController.ManualFollowUpAvailable -= HandleManualFollowUpAvailable;
+            followUpController.ManualFollowUpAvailable += HandleManualFollowUpAvailable;
+        }
+        else
+        {
+            LogMissingReference(nameof(followUpController), this);
+        }
+
         if (askFollowUpButton != null)
         {
             askFollowUpButton.onClick.RemoveListener(OpenPopup);
@@ -370,6 +432,11 @@ public class FollowUpPopupController : MonoBehaviour
 
     private void UnsubscribeFromUi()
     {
+        if (followUpController != null)
+        {
+            followUpController.ManualFollowUpAvailable -= HandleManualFollowUpAvailable;
+        }
+
         if (askFollowUpButton != null)
         {
             askFollowUpButton.onClick.RemoveListener(OpenPopup);
@@ -395,16 +462,34 @@ public class FollowUpPopupController : MonoBehaviour
         }
     }
 
+    private void HandleManualFollowUpAvailable()
+    {
+        TryAutoOpenPopup();
+    }
+
+    private void TryAutoOpenPopup()
+    {
+        if (isPopupOpen || !CallPhaseAutoQuestionSettings.GetSavedOrDefaultEnabled())
+        {
+            return;
+        }
+
+        OpenPopup();
+    }
+
     private string GetDisplayText(CallPhaseFollowUpQuestionOptionData questionOption)
     {
-        if (questionOption != null && !string.IsNullOrWhiteSpace(questionOption.questionText))
+        string localizedQuestion = followUpController != null
+            ? followUpController.GetQuestionDisplayText(questionOption)
+            : string.Empty;
+        if (!string.IsNullOrWhiteSpace(localizedQuestion))
         {
-            return questionOption.questionText.Trim();
+            return localizedQuestion;
         }
 
         return questionOption != null && !string.IsNullOrWhiteSpace(questionOption.questionId)
             ? questionOption.questionId
-            : "Follow-up Question";
+            : CallPhaseUiChromeText.Tr("callphase.followup.question_fallback", "Follow-up Question");
     }
 
     private void LogMissingReference(string key, Object context)
@@ -491,5 +576,20 @@ public class FollowUpPopupController : MonoBehaviour
         }
 
         return null;
+    }
+
+    private static bool WasPopupShortcutPressed(KeyCode primary, KeyCode secondary)
+    {
+        return Input.GetKeyDown(primary) || Input.GetKeyDown(secondary);
+    }
+
+    private static void TriggerButton(Button button)
+    {
+        if (button == null || !button.gameObject.activeInHierarchy || !button.interactable)
+        {
+            return;
+        }
+
+        button.onClick.Invoke();
     }
 }

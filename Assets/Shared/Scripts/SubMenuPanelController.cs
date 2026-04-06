@@ -174,6 +174,7 @@ public class SubMenuPanelController : MonoBehaviour
     {
         if (!string.IsNullOrWhiteSpace(mainMenuSceneName))
         {
+            SubMenuGameplayLock.SuppressNextCursorRestore();
             SceneManager.LoadScene(mainMenuSceneName.Trim());
         }
 

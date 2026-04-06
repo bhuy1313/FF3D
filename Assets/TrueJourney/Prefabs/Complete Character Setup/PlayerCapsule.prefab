@@ -21,7 +21,7 @@ GameObject:
   - component: {fileID: 4492952563589190220}
   - component: {fileID: 2491088869697895321}
   - component: {fileID: 113958436394587796}
-  - component: {fileID: 3158684266671311114}
+  - component: {fileID: 1291686791951276430}
   m_Layer: 7
   m_Name: PlayerCapsule
   m_TagString: Player
@@ -37,7 +37,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1119617129175808138}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 356, y: 6.5, z: 361.625}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -421,13 +421,16 @@ MonoBehaviour:
   selectedRenderingLayer: 7
   moveCommandKey: 104
   cancelCommandKey: 27
+  cancelAllFollowKey: 120
+  toggleBotOutlineKey: 122
   destinationRayDistance: 200
   destinationMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  drawDebugRay: 1
-  showDebugOverlay: 1
-  logCommandSelection: 1
+  botOutlineRenderingLayer: 8
+  drawDebugRay: 0
+  showDebugOverlay: 0
+  logCommandSelection: 0
   debugOverlayOffset: {x: 16, y: 16}
   extinguishScanRadius: 5
   extinguishScanMask:
@@ -436,6 +439,9 @@ MonoBehaviour:
   spawnExtinguishScanDebugSphere: 1
   extinguishDebugSphereLifetime: 5
   extinguishDebugSphereColor: {r: 1, g: 0.45, b: 0.1, a: 0.2}
+  spawnRescueDebugSphere: 1
+  fallbackRescueDebugSphereRadius: 2.25
+  rescueDebugSphereColor: {r: 0.2, g: 0.85, b: 1, a: 0.2}
   wheelSelector: {fileID: 113958436394587796}
   selectedCommandTarget: {fileID: 0}
 --- !u!114 &113958436394587796
@@ -464,26 +470,22 @@ MonoBehaviour:
   menuItemPrefab: {fileID: 7600931405032607057, guid: a672729b403704f4293a11ef3e73b500, type: 3}
   menuItemCount: 4
   menuItemRadius: 0
---- !u!114 &3158684266671311114
-MonoBehaviour:
+--- !u!208 &1291686791951276430
+NavMeshObstacle:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1119617129175808138}
   m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshModifier
-  m_SerializedVersion: 0
-  m_OverrideArea: 0
-  m_Area: 0
-  m_OverrideGenerateLinks: 0
-  m_GenerateLinks: 0
-  m_IgnoreFromBuild: 1
-  m_ApplyToChildren: 1
-  m_AffectedAgents: ffffffff
+  serializedVersion: 3
+  m_Shape: 1
+  m_Extents: {x: 0.5, y: 1, z: 0.5}
+  m_MoveThreshold: 0.1
+  m_Carve: 0
+  m_CarveOnlyStationary: 1
+  m_Center: {x: 0, y: 1, z: 0}
+  m_TimeToStationary: 0.5
 --- !u!1 &4869327717737380247
 GameObject:
   m_ObjectHideFlags: 0

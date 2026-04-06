@@ -1,4 +1,6 @@
-﻿using TMPro;
+using System.Collections.Generic;
+using System.Text;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -26,6 +28,12 @@ public class TranscriptLogItem : MonoBehaviour
     private static readonly Color OperatorTextColor = new Color(0.84f, 0.90f, 0.96f, 1f);
     private static readonly Color CallerTextColor = new Color(0.93f, 0.95f, 0.98f, 1f);
     private static readonly Color HighlightColor = new Color(0.85f, 0.67f, 0.20f, 0.20f);
+    private const string InlineCandidateColorHex = "#EDF4FB";
+    private const string InlineHoverColorHex = "#F7E3AA";
+    private const string InlineSelectedColorHex = "#FFFFFF";
+    private const string InlineExactMarkHex = "#D9AA3330";
+    private const string InlineExtraMarkHex = "#C67F1C38";
+    private const string InlineExtraCandidateColorHex = "#F2D6A6";
 
     private RectTransform rootRect;
     private RectTransform messageRect;
@@ -44,6 +52,18 @@ public class TranscriptLogItem : MonoBehaviour
     private TranscriptStateController stateController;
     private IncidentReportController incidentReportController;
     private CallPhaseScenarioData scenarioData;
+    private TranscriptInlineSpanText inlineSpanText;
+    private int hoveredInlineSpanIndex = -1;
+    private string lastInlineRenderState = string.Empty;
+
+    private struct InlineSpanBinding
+    {
+        public int displayOrder;
+        public int startIndex;
+        public int length;
+        public SelectableSpan span;
+    }
+
     private void Awake()
     {
         CacheRefs();
@@ -72,6 +92,11 @@ public class TranscriptLogItem : MonoBehaviour
         UnsubscribeFromStateController();
     }
 
+    private void Update()
+    {
+        RefreshInlineMessageVisualsIfNeeded();
+    }
+
     public void Bind(TranscriptLogEntry entry)
     {
         CacheRefs();
@@ -80,6 +105,8 @@ public class TranscriptLogItem : MonoBehaviour
         CacheScenarioData();
         ApplySharedStyle();
         boundEntry = entry;
+        hoveredInlineSpanIndex = -1;
+        lastInlineRenderState = string.Empty;
 
         if (entry == null)
         {
@@ -98,6 +125,29 @@ public class TranscriptLogItem : MonoBehaviour
         }
     }
 
+    public void HandleInlineSpanClicked(int linkIndex)
+    {
+        SelectableSpan span = GetInlineSpanByLinkIndex(linkIndex);
+        if (span == null)
+        {
+            return;
+        }
+
+        SendMessageUpwards("OnSelectableSpanClicked", span, SendMessageOptions.DontRequireReceiver);
+        RefreshInlineMessageVisualsIfNeeded(force: true);
+    }
+
+    public void HandleInlineSpanHovered(int linkIndex)
+    {
+        if (hoveredInlineSpanIndex == linkIndex)
+        {
+            return;
+        }
+
+        hoveredInlineSpanIndex = linkIndex;
+        RefreshInlineMessageVisualsIfNeeded(force: true);
+    }
+
     private void RefreshBoundEntryVisuals()
     {
         if (boundEntry == null)
@@ -109,9 +159,9 @@ public class TranscriptLogItem : MonoBehaviour
         bool isActiveChunk = isCaller && boundEntry.isActiveExtractableChunk;
         bool showExtractUi = isActiveChunk && IsExtractModeActive();
 
-        if (messageText != null)
+        if (!showExtractUi)
         {
-            messageText.text = boundEntry.text;
+            hoveredInlineSpanIndex = -1;
         }
 
         if (operatorIcon != null) operatorIcon.SetActive(!isCaller);
@@ -131,7 +181,8 @@ public class TranscriptLogItem : MonoBehaviour
 
         if (spanContainer != null)
         {
-            spanContainer.SetActive(showExtractUi);
+            // Hidden runtime span views remain as backing data only.
+            spanContainer.SetActive(false);
         }
 
         if (activeHighlightRoot != null)
@@ -140,6 +191,7 @@ public class TranscriptLogItem : MonoBehaviour
         }
 
         ApplyEntryStyle(isCaller, showExtractUi);
+        ApplyInlineMessageVisuals(isCaller, showExtractUi);
     }
 
     private void CacheStateController()
@@ -327,14 +379,17 @@ public class TranscriptLogItem : MonoBehaviour
         for (int i = 0; i < spanCount; i++)
         {
             CallPhaseExtractableSpanData spanData = lineData.extractableSpans[i];
-            if (string.IsNullOrWhiteSpace(spanData.displayText))
+            string displayText = scenarioData != null
+                ? scenarioData.GetLocalizedSpanDisplayText(lineData, spanData, i)
+                : spanData.displayText;
+            if (string.IsNullOrWhiteSpace(displayText))
             {
                 continue;
             }
 
             BindSpan(
                 i,
-                spanData.displayText,
+                displayText,
                 spanData.normalizedValue,
                 spanData.infoType,
                 spanData.targetFieldId,
@@ -395,6 +450,20 @@ public class TranscriptLogItem : MonoBehaviour
         {
             selectableSpans = spanContainer.GetComponentsInChildren<SelectableSpan>(true);
         }
+
+        if (inlineSpanText == null && messageText != null)
+        {
+            inlineSpanText = messageText.GetComponent<TranscriptInlineSpanText>();
+            if (inlineSpanText == null)
+            {
+                inlineSpanText = messageText.gameObject.AddComponent<TranscriptInlineSpanText>();
+            }
+        }
+
+        if (inlineSpanText != null && messageText != null)
+        {
+            inlineSpanText.Bind(this, messageText);
+        }
     }
 
     private void ApplySharedStyle()
@@ -409,9 +478,9 @@ public class TranscriptLogItem : MonoBehaviour
 
         if (messageText != null)
         {
-            messageText.raycastTarget = false;
             messageText.fontSize = 20f;
             messageText.textWrappingMode = TextWrappingModes.Normal;
+            messageText.richText = true;
         }
 
         ApplyBubbleBase(operatorRect, operatorImage);
@@ -471,5 +540,230 @@ public class TranscriptLogItem : MonoBehaviour
         {
             callerImage.color = CallerBubbleColor;
         }
+    }
+
+    private void ApplyInlineMessageVisuals(bool isCaller, bool showExtractUi)
+    {
+        if (messageText == null)
+        {
+            return;
+        }
+
+        bool useInlineMessage = showExtractUi && isCaller && HasVisibleBoundSpans();
+        messageText.raycastTarget = useInlineMessage;
+        messageText.text = useInlineMessage
+            ? BuildInlineMessageText(boundEntry != null ? boundEntry.text : string.Empty)
+            : (boundEntry != null ? boundEntry.text : string.Empty);
+        lastInlineRenderState = BuildInlineRenderStateSignature(showExtractUi, useInlineMessage);
+    }
+
+    private void RefreshInlineMessageVisualsIfNeeded(bool force = false)
+    {
+        if (boundEntry == null || messageText == null)
+        {
+            return;
+        }
+
+        bool isCaller = boundEntry.speaker == TranscriptSpeakerType.Caller;
+        bool showExtractUi = isCaller && boundEntry.isActiveExtractableChunk && IsExtractModeActive();
+        bool useInlineMessage = showExtractUi && HasVisibleBoundSpans();
+        string stateSignature = BuildInlineRenderStateSignature(showExtractUi, useInlineMessage);
+        if (!force && string.Equals(lastInlineRenderState, stateSignature, System.StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        ApplyInlineMessageVisuals(isCaller, showExtractUi);
+    }
+
+    private string BuildInlineRenderStateSignature(bool showExtractUi, bool useInlineMessage)
+    {
+        StringBuilder builder = new StringBuilder();
+        builder.Append(showExtractUi ? '1' : '0');
+        builder.Append(useInlineMessage ? '1' : '0');
+        builder.Append('|');
+        builder.Append(hoveredInlineSpanIndex);
+
+        if (selectableSpans != null)
+        {
+            for (int i = 0; i < selectableSpans.Length; i++)
+            {
+                SelectableSpan span = selectableSpans[i];
+                if (span == null)
+                {
+                    continue;
+                }
+
+                builder.Append('|');
+                builder.Append(i);
+                builder.Append(':');
+                builder.Append(span.gameObject.activeSelf ? '1' : '0');
+                builder.Append(span.IsSelected ? '1' : '0');
+                builder.Append(span.RawText);
+            }
+        }
+
+        return builder.ToString();
+    }
+
+    private bool HasVisibleBoundSpans()
+    {
+        if (selectableSpans == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < selectableSpans.Length; i++)
+        {
+            if (selectableSpans[i] != null && selectableSpans[i].gameObject.activeSelf)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private string BuildInlineMessageText(string sourceText)
+    {
+        if (string.IsNullOrEmpty(sourceText) || selectableSpans == null)
+        {
+            return sourceText ?? string.Empty;
+        }
+
+        List<InlineSpanBinding> bindings = BuildInlineSpanBindings(sourceText);
+        if (bindings.Count <= 0)
+        {
+            return sourceText;
+        }
+
+        StringBuilder builder = new StringBuilder();
+        int cursor = 0;
+
+        for (int i = 0; i < bindings.Count; i++)
+        {
+            InlineSpanBinding binding = bindings[i];
+            if (binding.startIndex < cursor)
+            {
+                continue;
+            }
+
+            if (binding.startIndex > cursor)
+            {
+                builder.Append(EscapeRichText(sourceText.Substring(cursor, binding.startIndex - cursor)));
+            }
+
+            string displayText = sourceText.Substring(binding.startIndex, binding.length);
+            builder.Append(BuildInlineSpanMarkup(binding.displayOrder, binding.span, displayText));
+            cursor = binding.startIndex + binding.length;
+        }
+
+        if (cursor < sourceText.Length)
+        {
+            builder.Append(EscapeRichText(sourceText.Substring(cursor)));
+        }
+
+        return builder.ToString();
+    }
+
+    private List<InlineSpanBinding> BuildInlineSpanBindings(string sourceText)
+    {
+        List<InlineSpanBinding> bindings = new List<InlineSpanBinding>();
+        if (string.IsNullOrEmpty(sourceText) || selectableSpans == null)
+        {
+            return bindings;
+        }
+
+        int searchStartIndex = 0;
+        for (int i = 0; i < selectableSpans.Length; i++)
+        {
+            SelectableSpan span = selectableSpans[i];
+            if (span == null || !span.gameObject.activeSelf || string.IsNullOrWhiteSpace(span.RawText))
+            {
+                continue;
+            }
+
+            int foundIndex = sourceText.IndexOf(span.RawText, searchStartIndex, System.StringComparison.OrdinalIgnoreCase);
+            if (foundIndex < 0)
+            {
+                foundIndex = sourceText.IndexOf(span.RawText, System.StringComparison.OrdinalIgnoreCase);
+            }
+
+            if (foundIndex < 0)
+            {
+                continue;
+            }
+
+            int textLength = Mathf.Min(span.RawText.Length, Mathf.Max(0, sourceText.Length - foundIndex));
+            if (textLength <= 0)
+            {
+                continue;
+            }
+
+            bindings.Add(new InlineSpanBinding
+            {
+                displayOrder = i,
+                startIndex = foundIndex,
+                length = textLength,
+                span = span
+            });
+
+            searchStartIndex = foundIndex + textLength;
+        }
+
+        bindings.Sort((left, right) => left.startIndex.CompareTo(right.startIndex));
+        return bindings;
+    }
+
+    private string BuildInlineSpanMarkup(int linkIndex, SelectableSpan span, string displayText)
+    {
+        string safeText = EscapeRichText(displayText);
+        string textColor = InlineCandidateColorHex;
+        string markColor = string.Empty;
+
+        if (span != null)
+        {
+            if (span.IsSelected)
+            {
+                textColor = InlineSelectedColorHex;
+                markColor = span.HasExtraContext ? InlineExtraMarkHex : InlineExactMarkHex;
+            }
+            else if (hoveredInlineSpanIndex == linkIndex)
+            {
+                textColor = InlineHoverColorHex;
+            }
+            else if (span.HasExtraContext)
+            {
+                textColor = InlineExtraCandidateColorHex;
+            }
+        }
+
+        if (!string.IsNullOrEmpty(markColor))
+        {
+            return $"<link=\"{linkIndex}\"><mark={markColor}><u><color={textColor}>{safeText}</color></u></mark></link>";
+        }
+
+        return $"<link=\"{linkIndex}\"><u><color={textColor}>{safeText}</color></u></link>";
+    }
+
+    private SelectableSpan GetInlineSpanByLinkIndex(int linkIndex)
+    {
+        if (selectableSpans == null || linkIndex < 0 || linkIndex >= selectableSpans.Length)
+        {
+            return null;
+        }
+
+        SelectableSpan span = selectableSpans[linkIndex];
+        return span != null && span.gameObject.activeSelf ? span : null;
+    }
+
+    private static string EscapeRichText(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        return value.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
     }
 }

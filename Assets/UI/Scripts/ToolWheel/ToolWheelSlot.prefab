@@ -148,6 +148,7 @@ GameObject:
   - component: {fileID: 2267384214328782024}
   - component: {fileID: 2378795823771366508}
   - component: {fileID: 6930645158774766252}
+  - component: {fileID: 9005000000000000001}
   m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -288,3 +289,24 @@ MonoBehaviour:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ContentSizeFitter
   m_HorizontalFit: 2
   m_VerticalFit: 2
+--- !u!114 &9005000000000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7692849153004048319}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 87990c67d58b51d418d730318da0349e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  tmpText: {fileID: 2378795823771366508}
+  legacyText: {fileID: 0}
+  autoFindTextComponent: 1
+  refreshOnEnable: 1
+  fontRole: 0
+  vietnameseTMPFont: {fileID: 0}
+  englishTMPFont: {fileID: 0}
+  vietnameseLegacyFont: {fileID: 0}
+  englishLegacyFont: {fileID: 0}

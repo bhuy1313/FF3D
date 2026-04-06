@@ -13,6 +13,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
     [Header("References")]
     [SerializeField] private TranscriptLogsController logsController;
     [SerializeField] private TranscriptAutoExtractEntry autoExtractEntry;
+    [SerializeField] private TranscriptExtractionController extractionController;
     [SerializeField] private TranscriptStateController stateController;
     [SerializeField] private IncidentReportController incidentReportController;
 
@@ -24,7 +25,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
     [SerializeField] private Button askFollowUpButton;
 
     [Header("Prototype Follow-Up Fallback")]
-    [SerializeField] private float followUpLineDelaySeconds = 2f;
+    [SerializeField] private float followUpLineDelaySeconds = 1f;
     [SerializeField] private string fireLocationFieldId = "fire_location";
     [SerializeField] private string fireLocationValue = "Kitchen";
     [SerializeField] private string addressFieldId = "Address";
@@ -78,6 +79,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
     private int acceptableFollowUpCount;
     private int poorFollowUpCount;
     private const int MaxRecentShownQuestions = 8;
+    private bool lastCanAskFollowUp;
 
     public CallPhaseFollowUpMode FollowUpMode => followUpMode;
     public bool IsWaitingForManualFollowUp => waitingForManualFollowUp && pendingManualStep != null;
@@ -94,6 +96,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
     public int AcceptableFollowUpCount => acceptableFollowUpCount;
     public int PoorFollowUpCount => poorFollowUpCount;
     public bool HasResolvedFollowUpStep(string stepId) => !string.IsNullOrWhiteSpace(stepId) && resolvedFollowUpStepIds.Contains(stepId);
+    public event System.Action ManualFollowUpAvailable;
 
     private void Awake()
     {
@@ -155,6 +158,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
 
         if (activeStepRoutine != null)
         {
+            ScheduleDeferredProgressionSweep();
             return;
         }
 
@@ -185,16 +189,16 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
             }
         }
 
-        string operatorLine = step != null && step.operatorLine != null ? step.operatorLine.text : string.Empty;
+        string operatorLine = GetScenarioLineDisplayText(step != null ? step.operatorLine : null);
         if (logsController != null && !string.IsNullOrWhiteSpace(operatorLine))
         {
             logsController.AddOperatorLog(operatorLine);
         }
 
-        yield return new WaitForSecondsRealtime(Mathf.Max(0f, followUpLineDelaySeconds));
+        yield return new WaitForSecondsRealtime(CallPhaseResponseSpeedSettings.ApplyDelayPreference(followUpLineDelaySeconds));
 
         CallPhaseScenarioLineData callerLine = step != null ? step.callerLine : null;
-        string callerText = callerLine != null ? callerLine.text : string.Empty;
+        string callerText = GetScenarioLineDisplayText(callerLine);
         if (!string.IsNullOrWhiteSpace(callerText))
         {
             if (autoExtractEntry != null)
@@ -207,7 +211,11 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
                     callerText,
                     callerLine != null && callerLine.isExtractable,
                     callerLine != null && callerLine.startsAsActiveChunk);
-                stateController.EnterExtractMode();
+
+                if (extractionController == null || !extractionController.TryAutoConfirmPendingConfirmationSpan())
+                {
+                    stateController.EnterExtractMode();
+                }
             }
         }
 
@@ -283,6 +291,11 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
             stateController = GetComponentInChildren<TranscriptStateController>(true);
         }
 
+        if (extractionController == null)
+        {
+            extractionController = GetComponentInChildren<TranscriptExtractionController>(true);
+        }
+
         if (incidentReportController == null)
         {
             incidentReportController = GetComponentInChildren<IncidentReportController>(true);
@@ -347,6 +360,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
         optimalFollowUpCount = 0;
         acceptableFollowUpCount = 0;
         poorFollowUpCount = 0;
+        lastCanAskFollowUp = false;
     }
 
     public void ResetForScenarioRun()
@@ -991,13 +1005,13 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
             incidentReportController.ClearConfirmationContext();
         }
 
-        string operatorQuestion = questionOption != null ? questionOption.questionText : string.Empty;
+        string operatorQuestion = GetQuestionDisplayText(questionOption);
         if (logsController != null && !string.IsNullOrWhiteSpace(operatorQuestion))
         {
             logsController.AddOperatorLog(operatorQuestion);
         }
 
-        yield return new WaitForSecondsRealtime(Mathf.Max(0f, followUpLineDelaySeconds));
+        yield return new WaitForSecondsRealtime(CallPhaseResponseSpeedSettings.ApplyDelayPreference(followUpLineDelaySeconds));
 
         string callerReply = BuildDistractorCallerReply(questionOption);
         if (!string.IsNullOrWhiteSpace(callerReply) && logsController != null)
@@ -1041,7 +1055,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
 
     private bool IsQuestionOptionEligible(CallPhaseFollowUpQuestionOptionData questionOption)
     {
-        if (questionOption == null || string.IsNullOrWhiteSpace(questionOption.questionText))
+        if (questionOption == null || string.IsNullOrWhiteSpace(GetQuestionDisplayText(questionOption)))
         {
             return false;
         }
@@ -1139,7 +1153,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
         }
 
         string questionId = option.questionId ?? string.Empty;
-        string questionText = option.questionText != null ? option.questionText.Trim() : string.Empty;
+        string questionText = GetQuestionDisplayText(option);
 
         if (string.IsNullOrWhiteSpace(questionText))
         {
@@ -1363,9 +1377,12 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
 
     private string BuildDistractorCallerReply(CallPhaseFollowUpQuestionOptionData questionOption)
     {
-        if (questionOption != null && !string.IsNullOrWhiteSpace(questionOption.distractorCallerReplyText))
+        string localizedReply = scenarioData != null
+            ? scenarioData.GetLocalizedDistractorCallerReply(questionOption)
+            : (questionOption != null ? questionOption.distractorCallerReplyText : string.Empty);
+        if (!string.IsNullOrWhiteSpace(localizedReply))
         {
-            return questionOption.distractorCallerReplyText.Trim();
+            return localizedReply.Trim();
         }
 
         if (questionOption != null && questionOption.quality == CallPhaseFollowUpQuestionQuality.Acceptable)
@@ -1416,8 +1433,8 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
             return questionOption.questionId;
         }
 
-        return !string.IsNullOrWhiteSpace(questionOption.questionText)
-            ? questionOption.questionText
+        return !string.IsNullOrWhiteSpace(GetQuestionDisplayText(questionOption))
+            ? GetQuestionDisplayText(questionOption)
             : "manual_question";
     }
 
@@ -1427,11 +1444,31 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
         {
             questionId = pendingManualStep != null ? pendingManualStep.stepId : "pending_follow_up",
             questionText = pendingManualStep != null && pendingManualStep.operatorLine != null
-                ? pendingManualStep.operatorLine.text
+                ? GetScenarioLineDisplayText(pendingManualStep.operatorLine)
                 : "Follow-up Question",
             quality = CallPhaseFollowUpQuestionQuality.Optimal,
             linkedStepId = pendingManualStep != null ? pendingManualStep.stepId : string.Empty
         };
+    }
+
+    public string GetQuestionDisplayText(CallPhaseFollowUpQuestionOptionData questionOption)
+    {
+        string resolvedText = scenarioData != null
+            ? scenarioData.GetLocalizedQuestionText(questionOption)
+            : (questionOption != null ? questionOption.questionText : string.Empty);
+        return !string.IsNullOrWhiteSpace(resolvedText)
+            ? resolvedText.Trim()
+            : string.Empty;
+    }
+
+    private string GetScenarioLineDisplayText(CallPhaseScenarioLineData lineData)
+    {
+        string resolvedText = scenarioData != null
+            ? scenarioData.GetLocalizedLineText(lineData)
+            : (lineData != null ? lineData.text : string.Empty);
+        return !string.IsNullOrWhiteSpace(resolvedText)
+            ? resolvedText.Trim()
+            : string.Empty;
     }
 
     private int FindRuntimeStepIndex(string stepId)
@@ -1455,10 +1492,20 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
 
     private void RefreshAskFollowUpAvailability()
     {
+        bool canAskFollowUp = CanAskFollowUp;
+
         if (askFollowUpButton != null)
         {
-            askFollowUpButton.interactable = CanAskFollowUp;
+            askFollowUpButton.interactable = canAskFollowUp;
+            CallPhaseFunctionButtonVisuals.Apply(askFollowUpButton, canAskFollowUp);
         }
+
+        if (canAskFollowUp && !lastCanAskFollowUp)
+        {
+            ManualFollowUpAvailable?.Invoke();
+        }
+
+        lastCanAskFollowUp = canAskFollowUp;
     }
 
     private void ScheduleDeferredProgressionSweep()
@@ -1474,9 +1521,15 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
     private IEnumerator DeferredProgressionSweepRoutine()
     {
         yield return null;
+
+        while (activeStepRoutine != null)
+        {
+            yield return null;
+        }
+
         deferredProgressionCoroutine = null;
 
-        if (progressionCompleted || activeStepRoutine != null || isExecutingOutOfOrderRealStep)
+        if (progressionCompleted || isExecutingOutOfOrderRealStep)
         {
             yield break;
         }

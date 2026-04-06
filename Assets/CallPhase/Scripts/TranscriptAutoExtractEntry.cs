@@ -9,6 +9,7 @@ public class TranscriptAutoExtractEntry : MonoBehaviour
     [Header("Controllers")]
     [SerializeField] private TranscriptLogsController logsController;
     [SerializeField] private TranscriptStateController stateController;
+    [SerializeField] private TranscriptExtractionController extractionController;
 
     [Header("Settings")]
     [SerializeField] private bool enableDebugLogs = false;
@@ -20,11 +21,13 @@ public class TranscriptAutoExtractEntry : MonoBehaviour
     /// <param name="message">The text string the caller is saying.</param>
     public void AddCallerLogAndEnterExtractMode(string message)
     {
-        if (logsController == null || stateController == null)
+        ResolveReferences();
+
+        if (logsController == null)
         {
             if (enableDebugLogs)
             {
-                Debug.LogWarning($"{nameof(TranscriptAutoExtractEntry)}: Missing controller references. Cannot proceed.");
+                Debug.LogWarning($"{nameof(TranscriptAutoExtractEntry)}: Missing TranscriptLogsController reference. Cannot proceed.");
             }
             return;
         }
@@ -32,12 +35,65 @@ public class TranscriptAutoExtractEntry : MonoBehaviour
         // Add the log and mark it as active
         logsController.AddCallerLog(message, isExtractable: true, setAsActiveChunk: true);
 
+        if (extractionController != null && extractionController.TryAutoConfirmPendingConfirmationSpan())
+        {
+            if (enableDebugLogs)
+            {
+                Debug.Log($"{nameof(TranscriptAutoExtractEntry)}: Added extractable log and auto-confirmed without entering ExtractMode. Message: '{message}'");
+            }
+            return;
+        }
+
+        if (stateController == null)
+        {
+            if (enableDebugLogs)
+            {
+                Debug.LogWarning($"{nameof(TranscriptAutoExtractEntry)}: Missing TranscriptStateController reference. Cannot enter ExtractMode.");
+            }
+            return;
+        }
+
         // Switch the UI state to extraction mode
         stateController.EnterExtractMode();
 
         if (enableDebugLogs)
         {
             Debug.Log($"{nameof(TranscriptAutoExtractEntry)}: Added extractable log and entered ExtractMode. Message: '{message}'");
+        }
+    }
+
+    private void Awake()
+    {
+        ResolveReferences();
+    }
+
+    private void ResolveReferences()
+    {
+        if (logsController == null)
+        {
+            logsController = GetComponentInParent<TranscriptLogsController>();
+            if (logsController == null)
+            {
+                logsController = FindFirstObjectByType<TranscriptLogsController>();
+            }
+        }
+
+        if (stateController == null)
+        {
+            stateController = GetComponentInParent<TranscriptStateController>();
+            if (stateController == null)
+            {
+                stateController = FindFirstObjectByType<TranscriptStateController>();
+            }
+        }
+
+        if (extractionController == null)
+        {
+            extractionController = GetComponentInParent<TranscriptExtractionController>();
+            if (extractionController == null)
+            {
+                extractionController = FindFirstObjectByType<TranscriptExtractionController>();
+            }
         }
     }
 }

@@ -600,12 +600,16 @@ namespace LineworkLite.Editor.Common.Windows
         private CheckResult CheckRenderGraph()
         {
 #if UNITY_6000_0_OR_NEWER
+#if UNITY_6000_4_OR_NEWER
+            return new CheckResult(ResultEnum.Pass, "Enabled", "Render Graph is enabled.");
+#else
             var renderGraphSettings = GraphicsSettings.GetRenderPipelineSettings<RenderGraphSettings>();
             var usingRenderGraph = !renderGraphSettings.enableRenderCompatibilityMode;
             return usingRenderGraph
                 ? new CheckResult(ResultEnum.Pass, "Enabled", "Render Graph is enabled.")
                 : new CheckResult(ResultEnum.Info, "Compatibility Mode",
                     "Render Graph is available but not in use because Compatibility Mode is enabled. Unity no longer develops or improves the rendering path that does not use Render Graph API. See Edit > Project Settings > Graphics > Render Graph to disable Compatibility Mode.");
+#endif
 #else
             return new CheckResult(ResultEnum.Info, "Not Available", "Unity no longer develops or improves the rendering path that does not use Render Graph API. Upgrade to Unity 6 to make use of the Render Graph API.");
 #endif
