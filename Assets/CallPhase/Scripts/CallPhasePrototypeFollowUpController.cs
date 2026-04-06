@@ -189,7 +189,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
             }
         }
 
-        string operatorLine = step != null && step.operatorLine != null ? step.operatorLine.text : string.Empty;
+        string operatorLine = GetScenarioLineDisplayText(step != null ? step.operatorLine : null);
         if (logsController != null && !string.IsNullOrWhiteSpace(operatorLine))
         {
             logsController.AddOperatorLog(operatorLine);
@@ -198,7 +198,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
         yield return new WaitForSecondsRealtime(CallPhaseResponseSpeedSettings.ApplyDelayPreference(followUpLineDelaySeconds));
 
         CallPhaseScenarioLineData callerLine = step != null ? step.callerLine : null;
-        string callerText = callerLine != null ? callerLine.text : string.Empty;
+        string callerText = GetScenarioLineDisplayText(callerLine);
         if (!string.IsNullOrWhiteSpace(callerText))
         {
             if (autoExtractEntry != null)
@@ -1005,7 +1005,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
             incidentReportController.ClearConfirmationContext();
         }
 
-        string operatorQuestion = questionOption != null ? questionOption.questionText : string.Empty;
+        string operatorQuestion = GetQuestionDisplayText(questionOption);
         if (logsController != null && !string.IsNullOrWhiteSpace(operatorQuestion))
         {
             logsController.AddOperatorLog(operatorQuestion);
@@ -1055,7 +1055,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
 
     private bool IsQuestionOptionEligible(CallPhaseFollowUpQuestionOptionData questionOption)
     {
-        if (questionOption == null || string.IsNullOrWhiteSpace(questionOption.questionText))
+        if (questionOption == null || string.IsNullOrWhiteSpace(GetQuestionDisplayText(questionOption)))
         {
             return false;
         }
@@ -1153,7 +1153,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
         }
 
         string questionId = option.questionId ?? string.Empty;
-        string questionText = option.questionText != null ? option.questionText.Trim() : string.Empty;
+        string questionText = GetQuestionDisplayText(option);
 
         if (string.IsNullOrWhiteSpace(questionText))
         {
@@ -1377,9 +1377,12 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
 
     private string BuildDistractorCallerReply(CallPhaseFollowUpQuestionOptionData questionOption)
     {
-        if (questionOption != null && !string.IsNullOrWhiteSpace(questionOption.distractorCallerReplyText))
+        string localizedReply = scenarioData != null
+            ? scenarioData.GetLocalizedDistractorCallerReply(questionOption)
+            : (questionOption != null ? questionOption.distractorCallerReplyText : string.Empty);
+        if (!string.IsNullOrWhiteSpace(localizedReply))
         {
-            return questionOption.distractorCallerReplyText.Trim();
+            return localizedReply.Trim();
         }
 
         if (questionOption != null && questionOption.quality == CallPhaseFollowUpQuestionQuality.Acceptable)
@@ -1430,8 +1433,8 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
             return questionOption.questionId;
         }
 
-        return !string.IsNullOrWhiteSpace(questionOption.questionText)
-            ? questionOption.questionText
+        return !string.IsNullOrWhiteSpace(GetQuestionDisplayText(questionOption))
+            ? GetQuestionDisplayText(questionOption)
             : "manual_question";
     }
 
@@ -1441,11 +1444,31 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
         {
             questionId = pendingManualStep != null ? pendingManualStep.stepId : "pending_follow_up",
             questionText = pendingManualStep != null && pendingManualStep.operatorLine != null
-                ? pendingManualStep.operatorLine.text
+                ? GetScenarioLineDisplayText(pendingManualStep.operatorLine)
                 : "Follow-up Question",
             quality = CallPhaseFollowUpQuestionQuality.Optimal,
             linkedStepId = pendingManualStep != null ? pendingManualStep.stepId : string.Empty
         };
+    }
+
+    public string GetQuestionDisplayText(CallPhaseFollowUpQuestionOptionData questionOption)
+    {
+        string resolvedText = scenarioData != null
+            ? scenarioData.GetLocalizedQuestionText(questionOption)
+            : (questionOption != null ? questionOption.questionText : string.Empty);
+        return !string.IsNullOrWhiteSpace(resolvedText)
+            ? resolvedText.Trim()
+            : string.Empty;
+    }
+
+    private string GetScenarioLineDisplayText(CallPhaseScenarioLineData lineData)
+    {
+        string resolvedText = scenarioData != null
+            ? scenarioData.GetLocalizedLineText(lineData)
+            : (lineData != null ? lineData.text : string.Empty);
+        return !string.IsNullOrWhiteSpace(resolvedText)
+            ? resolvedText.Trim()
+            : string.Empty;
     }
 
     private int FindRuntimeStepIndex(string stepId)

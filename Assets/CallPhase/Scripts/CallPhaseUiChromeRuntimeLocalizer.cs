@@ -22,6 +22,7 @@ public static class CallPhaseUiChromeRuntimeLocalizer
         { "ASK FOLLOW-UP QUESTION", "callphase.header.ask_followup_question" },
         { "Choose the next question to ask the caller.", "callphase.followup.hint.choose_question" },
         { "ASSESS INCIDENT RISK", "callphase.header.assess_incident_risk" },
+        { "EVERITY ASSESSMENT", "callphase.header.severity_assessment" },
         { "Review gathered information and select severity", "callphase.assess.hint.review_severity" },
         { "SUBMIT INCIDENT REPORT", "callphase.header.submit_incident_report" },
         { "Review the final report before submission", "callphase.submit.hint.review_final_report" },

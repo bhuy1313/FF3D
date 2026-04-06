@@ -2823,9 +2823,13 @@ public class LevelSelectSceneController : MonoBehaviour
     {
         string fallback = ResolveDescription(definition);
         CallPhaseScenarioData scenarioData = LoadScenarioData(scenario);
-        if (scenarioData != null && !string.IsNullOrWhiteSpace(scenarioData.description))
+        if (scenarioData != null)
         {
-            fallback = scenarioData.description.Trim();
+            string localizedDescription = scenarioData.GetLocalizedDescription();
+            if (!string.IsNullOrWhiteSpace(localizedDescription))
+            {
+                fallback = localizedDescription.Trim();
+            }
         }
 
         return ResolveLocalizedText(GetScenarioFieldLocalizationKey(scenario, "description"), fallback);
@@ -2845,8 +2849,8 @@ public class LevelSelectSceneController : MonoBehaviour
     {
         string difficulty = ResolveDifficulty(definition);
         CallPhaseScenarioData scenarioData = LoadScenarioData(scenario);
-        string category = scenarioData != null && !string.IsNullOrWhiteSpace(scenarioData.category)
-            ? scenarioData.category.Trim()
+        string category = scenarioData != null && !string.IsNullOrWhiteSpace(scenarioData.GetLocalizedCategory())
+            ? scenarioData.GetLocalizedCategory().Trim()
             : LanguageManager.Tr(SelectedScenarioLocalizationKey, "Selected Scenario");
         return CombineSummaryParts(difficulty, category);
     }
@@ -2866,9 +2870,9 @@ public class LevelSelectSceneController : MonoBehaviour
         else
         {
             CallPhaseScenarioData scenarioData = LoadScenarioData(scenario);
-            if (scenarioData != null && !string.IsNullOrWhiteSpace(scenarioData.displayName))
+            if (scenarioData != null && !string.IsNullOrWhiteSpace(scenarioData.GetLocalizedDisplayName()))
             {
-                fallback = scenarioData.displayName.Trim();
+                fallback = scenarioData.GetLocalizedDisplayName().Trim();
             }
             else if (!string.IsNullOrWhiteSpace(scenario.scenarioId))
             {

@@ -479,9 +479,12 @@ public class FollowUpPopupController : MonoBehaviour
 
     private string GetDisplayText(CallPhaseFollowUpQuestionOptionData questionOption)
     {
-        if (questionOption != null && !string.IsNullOrWhiteSpace(questionOption.questionText))
+        string localizedQuestion = followUpController != null
+            ? followUpController.GetQuestionDisplayText(questionOption)
+            : string.Empty;
+        if (!string.IsNullOrWhiteSpace(localizedQuestion))
         {
-            return questionOption.questionText.Trim();
+            return localizedQuestion;
         }
 
         return questionOption != null && !string.IsNullOrWhiteSpace(questionOption.questionId)

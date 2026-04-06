@@ -379,14 +379,17 @@ public class TranscriptLogItem : MonoBehaviour
         for (int i = 0; i < spanCount; i++)
         {
             CallPhaseExtractableSpanData spanData = lineData.extractableSpans[i];
-            if (string.IsNullOrWhiteSpace(spanData.displayText))
+            string displayText = scenarioData != null
+                ? scenarioData.GetLocalizedSpanDisplayText(lineData, spanData, i)
+                : spanData.displayText;
+            if (string.IsNullOrWhiteSpace(displayText))
             {
                 continue;
             }
 
             BindSpan(
                 i,
-                spanData.displayText,
+                displayText,
                 spanData.normalizedValue,
                 spanData.infoType,
                 spanData.targetFieldId,

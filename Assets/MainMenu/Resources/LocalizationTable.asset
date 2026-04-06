@@ -41,10 +41,12 @@ MonoBehaviour:
     vietnamese: "B\u1EA1n c\xF3 mu\u1ED1n l\u01B0u c\xE0i \u0111\u1EB7t kh\xF4ng?"
     english: Do you want to save settings?
   - key: settings.confirm.unsaved
-    vietnamese: "C\xF3 thay \u0111\u1ED5i ch\u01B0a l\u01B0u, b\u1EA1n c\xF3 mu\u1ED1n l\u01B0u kh\xF4ng?"
+    vietnamese: "C\xF3 thay \u0111\u1ED5i ch\u01B0a l\u01B0u, b\u1EA1n c\xF3 mu\u1ED1n
+      l\u01B0u kh\xF4ng?"
     english: You have unsaved changes. Do you want to save them?
   - key: settings.confirm.restore
-    vietnamese: "B\u1EA1n c\xF3 mu\u1ED1n kh\xF4i ph\u1EE5c c\xE0i \u0111\u1EB7t m\u1EB7c \u0111\u1ECBnh kh\xF4ng?"
+    vietnamese: "B\u1EA1n c\xF3 mu\u1ED1n kh\xF4i ph\u1EE5c c\xE0i \u0111\u1EB7t
+      m\u1EB7c \u0111\u1ECBnh kh\xF4ng?"
     english: Do you want to restore default settings?
   - key: common.btn.yes
     vietnamese: "C\xF3"
@@ -102,66 +104,82 @@ MonoBehaviour:
     english: Random Incident
   - key: levelselect.info.possible_incidents
     vietnamese: "S\u1ED1 t\xECnh hu\u1ED1ng: {0}"
-    english: "Possible incidents: {0}"
+    english: 'Possible incidents: {0}'
   - key: levelselect.info.selected_scenario
     vietnamese: "K\u1ECBch B\u1EA3n \u0110\xE3 Ch\u1ECDn"
     english: Selected Scenario
   - key: levelselect.info.selected_scenario_objective
-    vietnamese: "Tri\u1EC3n khai k\u1ECBch b\u1EA3n \u0111\u00E3 ch\u1ECDn trong l\u1EA7n ch\u01A1i ti\u1EBFp theo."
+    vietnamese: "Tri\u1EC3n khai k\u1ECBch b\u1EA3n \u0111\xE3 ch\u1ECDn trong l\u1EA7n
+      ch\u01A1i ti\u1EBFp theo."
     english: Deploy the selected scenario on the next run.
   - key: levelselect.level.training_map.name
     vietnamese: "B\u1EA3n \u0110\u1ED3 Hu\u1EA5n Luy\u1EC7n"
     english: Training Map
   - key: levelselect.level.training_map.description
-    vietnamese: "B\u1EA3n \u0111\u1ED3 hu\u1EA5n luy\u1EC7n c\xF3 h\u01B0\u1EDBng d\u1EABn, d\xF9ng \u0111\u1EC3 l\xE0m quen v\u1EDBi \u0111i\u1EC1u khi\u1EC3n v\xE0 lu\u1ED3ng ch\u01A1i."
+    vietnamese: "B\u1EA3n \u0111\u1ED3 hu\u1EA5n luy\u1EC7n c\xF3 h\u01B0\u1EDBng
+      d\u1EABn, d\xF9ng \u0111\u1EC3 l\xE0m quen v\u1EDBi \u0111i\u1EC1u khi\u1EC3n
+      v\xE0 lu\u1ED3ng ch\u01A1i."
     english: A guided training map used for onboarding and control familiarization.
   - key: levelselect.level.training_map.objective
-    vietnamese: "Tri\u1EC3n khai v\xE0o b\u1EA3n \u0111\u1ED3 hu\u1EA5n luy\u1EC7n v\xE0 ho\xE0n th\xE0nh k\u1ECBch b\u1EA3n h\u01B0\u1EDBng d\u1EABn."
+    vietnamese: "Tri\u1EC3n khai v\xE0o b\u1EA3n \u0111\u1ED3 hu\u1EA5n luy\u1EC7n
+      v\xE0 ho\xE0n th\xE0nh k\u1ECBch b\u1EA3n h\u01B0\u1EDBng d\u1EABn."
     english: Deploy into the training map and complete the tutorial scenario.
   - key: levelselect.level.suburban_map_01.name
     vietnamese: "B\u1EA3n \u0110\u1ED3 1"
     english: Map 1
   - key: levelselect.level.suburban_map_01.description
-    vietnamese: "B\u1EA3n \u0111\u1ED3 khu d\xE2n c\u01B0 c\xF3 nhi\u1EC1u t\xECnh hu\u1ED1ng s\u1EF1 c\u1ED1 c\xF3 th\u1EC3 x\u1EA3y ra. Ch\u1EC9 khi tri\u1EC3n khai m\u1EDBi bi\u1EBFt ch\xEDnh x\xE1c k\u1ECBch b\u1EA3n."
-    english: A suburban residential map with multiple possible incidents. The exact scenario will only be revealed after deployment.
+    vietnamese: "B\u1EA3n \u0111\u1ED3 khu d\xE2n c\u01B0 c\xF3 nhi\u1EC1u t\xECnh
+      hu\u1ED1ng s\u1EF1 c\u1ED1 c\xF3 th\u1EC3 x\u1EA3y ra. Ch\u1EC9 khi tri\u1EC3n
+      khai m\u1EDBi bi\u1EBFt ch\xEDnh x\xE1c k\u1ECBch b\u1EA3n."
+    english: A suburban residential map with multiple possible incidents. The exact
+      scenario will only be revealed after deployment.
   - key: levelselect.level.suburban_map_01.objective
-    vietnamese: "Tri\u1EC3n khai \u0111\u1EBFn b\u1EA3n \u0111\u1ED3 v\xE0 x\u1EED l\xFD k\u1ECBch b\u1EA3n \u0111\u01B0\u1EE3c g\xE1n ng\u1EABu nhi\xEAn."
+    vietnamese: "Tri\u1EC3n khai \u0111\u1EBFn b\u1EA3n \u0111\u1ED3 v\xE0 x\u1EED
+      l\xFD k\u1ECBch b\u1EA3n \u0111\u01B0\u1EE3c g\xE1n ng\u1EABu nhi\xEAn."
     english: Deploy to the map and respond to the randomly assigned scenario.
   - key: levelselect.level.suburban_map_02.name
     vietnamese: "B\u1EA3n \u0110\u1ED3 2"
     english: Map 2
   - key: levelselect.level.suburban_map_02.description
-    vietnamese: "B\u1EA3n \u0111\u1ED3 d\xE2n c\u01B0 hi\u1EC7n \u0111ang tri\u1EC3n khai k\u1ECBch b\u1EA3n ch\xE1y garage."
+    vietnamese: "B\u1EA3n \u0111\u1ED3 d\xE2n c\u01B0 hi\u1EC7n \u0111ang tri\u1EC3n
+      khai k\u1ECBch b\u1EA3n ch\xE1y garage."
     english: A residential map that currently deploys a garage fire scenario.
   - key: levelselect.level.suburban_map_02.objective
-    vietnamese: "Tri\u1EC3n khai \u0111\u1EBFn b\u1EA3n \u0111\u1ED3 v\xE0 x\u1EED l\xFD k\u1ECBch b\u1EA3n \u0111\u01B0\u1EE3c g\xE1n ng\u1EABu nhi\xEAn."
+    vietnamese: "Tri\u1EC3n khai \u0111\u1EBFn b\u1EA3n \u0111\u1ED3 v\xE0 x\u1EED
+      l\xFD k\u1ECBch b\u1EA3n \u0111\u01B0\u1EE3c g\xE1n ng\u1EABu nhi\xEAn."
     english: Deploy to the map and respond to the randomly assigned scenario.
   - key: levelselect.level.city_map_01.name
     vietnamese: "B\u1EA3n \u0110\u1ED3 3"
     english: Map 3
   - key: levelselect.level.city_map_01.description
-    vietnamese: "B\u1EA3n \u0111\u1ED3 th\xE0nh ph\u1ED1 n\xE0y \u0111ang \u0111\u1EC3 tr\u1ED1ng cho c\u1EA5u h\xECnh k\u1ECBch b\u1EA3n sau n\xE0y."
+    vietnamese: "B\u1EA3n \u0111\u1ED3 th\xE0nh ph\u1ED1 n\xE0y \u0111ang \u0111\u1EC3
+      tr\u1ED1ng cho c\u1EA5u h\xECnh k\u1ECBch b\u1EA3n sau n\xE0y."
     english: This city map is reserved for future scenario setup.
   - key: levelselect.level.city_map_01.objective
-    vietnamese: "G\xE1n k\u1ECBch b\u1EA3n \u0111\u1EC3 m\u1EDF kho\xE1 b\u1EA3n \u0111\u1ED3 n\xE0y."
+    vietnamese: "G\xE1n k\u1ECBch b\u1EA3n \u0111\u1EC3 m\u1EDF kho\xE1 b\u1EA3n
+      \u0111\u1ED3 n\xE0y."
     english: Assign scenarios to enable this map.
   - key: levelselect.level.city_map_02.name
     vietnamese: "B\u1EA3n \u0110\u1ED3 4"
     english: Map 4
   - key: levelselect.level.city_map_02.description
-    vietnamese: "B\u1EA3n \u0111\u1ED3 th\xE0nh ph\u1ED1 n\xE0y \u0111ang \u0111\u1EC3 tr\u1ED1ng cho c\u1EA5u h\xECnh k\u1ECBch b\u1EA3n sau n\xE0y."
+    vietnamese: "B\u1EA3n \u0111\u1ED3 th\xE0nh ph\u1ED1 n\xE0y \u0111ang \u0111\u1EC3
+      tr\u1ED1ng cho c\u1EA5u h\xECnh k\u1ECBch b\u1EA3n sau n\xE0y."
     english: This city map is reserved for future scenario setup.
   - key: levelselect.level.city_map_02.objective
-    vietnamese: "G\xE1n k\u1ECBch b\u1EA3n \u0111\u1EC3 m\u1EDF kho\xE1 b\u1EA3n \u0111\u1ED3 n\xE0y."
+    vietnamese: "G\xE1n k\u1ECBch b\u1EA3n \u0111\u1EC3 m\u1EDF kho\xE1 b\u1EA3n
+      \u0111\u1ED3 n\xE0y."
     english: Assign scenarios to enable this map.
   - key: levelselect.level.city_map_03.name
     vietnamese: "B\u1EA3n \u0110\u1ED3 5"
     english: Map 5
   - key: levelselect.level.city_map_03.description
-    vietnamese: "B\u1EA3n \u0111\u1ED3 th\xE0nh ph\u1ED1 n\xE0y \u0111ang \u0111\u1EC3 tr\u1ED1ng cho c\u1EA5u h\xECnh k\u1ECBch b\u1EA3n sau n\xE0y."
+    vietnamese: "B\u1EA3n \u0111\u1ED3 th\xE0nh ph\u1ED1 n\xE0y \u0111ang \u0111\u1EC3
+      tr\u1ED1ng cho c\u1EA5u h\xECnh k\u1ECBch b\u1EA3n sau n\xE0y."
     english: This city map is reserved for future scenario setup.
   - key: levelselect.level.city_map_03.objective
-    vietnamese: "G\xE1n k\u1ECBch b\u1EA3n \u0111\u1EC3 m\u1EDF kho\xE1 b\u1EA3n \u0111\u1ED3 n\xE0y."
+    vietnamese: "G\xE1n k\u1ECBch b\u1EA3n \u0111\u1EC3 m\u1EDF kho\xE1 b\u1EA3n
+      \u0111\u1ED3 n\xE0y."
     english: Assign scenarios to enable this map.
   - key: levelselect.scenario.training_map_tutorial.name
     vietnamese: "H\u01B0\u1EDBng D\u1EABn"
@@ -170,20 +188,29 @@ MonoBehaviour:
     vietnamese: "Ch\xE1y B\u1EBFp"
     english: Kitchen Fire
   - key: levelselect.scenario.suburban_map_01_kitchen_fire.description
-    vietnamese: "Ng\u01B0\u1EDDi g\u1ECDi b\xE1o c\xF3 ch\xE1y b\u1EBFp trong m\u1ED9t c\u0103n nh\xE0 khu d\xE2n c\u01B0. H\xE3y thu th\u1EADp th\xF4ng tin \u0111i\u1EC1u ph\u1ED1i v\xE0 \u1ED5n \u0111\u1ECBnh cu\u1ED9c g\u1ECDi."
-    english: Caller reports a kitchen fire in a suburban house. Collect the dispatch details and stabilize the call.
+    vietnamese: "Ng\u01B0\u1EDDi g\u1ECDi b\xE1o c\xF3 ch\xE1y b\u1EBFp trong m\u1ED9t
+      c\u0103n nh\xE0 khu d\xE2n c\u01B0. H\xE3y thu th\u1EADp th\xF4ng tin \u0111i\u1EC1u
+      ph\u1ED1i v\xE0 \u1ED5n \u0111\u1ECBnh cu\u1ED9c g\u1ECDi."
+    english: Caller reports a kitchen fire in a suburban house. Collect the dispatch
+      details and stabilize the call.
   - key: levelselect.scenario.suburban_map_01_laundry_room_fire.name
     vietnamese: "Ch\xE1y Ph\xF2ng Gi\u1EB7t"
     english: Laundry Room Fire
   - key: levelselect.scenario.suburban_map_01_laundry_room_fire.description
-    vietnamese: "Ch\xE1y ph\xF2ng gi\u1EB7t c\xF3 c\u1EA3 nguy c\u01A1 gas l\u1EABn \u0111i\u1EC7n. H\xE3y thu th\u1EADp \u0111\u1EA7y \u0111\u1EE7 b\xE1o c\xE1o v\xE0 \u0111\xE1nh gi\xE1 m\u1EE9c \u0111\u1ED9 nghi\xEAm tr\u1ECDng."
-    english: Laundry room fire with both gas and electrical hazards present. Collect the full report and assess the incident severity.
+    vietnamese: "Ch\xE1y ph\xF2ng gi\u1EB7t c\xF3 c\u1EA3 nguy c\u01A1 gas l\u1EABn
+      \u0111i\u1EC7n. H\xE3y thu th\u1EADp \u0111\u1EA7y \u0111\u1EE7 b\xE1o c\xE1o
+      v\xE0 \u0111\xE1nh gi\xE1 m\u1EE9c \u0111\u1ED9 nghi\xEAm tr\u1ECDng."
+    english: Laundry room fire with both gas and electrical hazards present. Collect
+      the full report and assess the incident severity.
   - key: levelselect.scenario.suburban_map_02_garage_fire.name
     vietnamese: "Ch\xE1y Garage"
     english: Garage Fire
   - key: levelselect.scenario.suburban_map_02_garage_fire.description
-    vietnamese: "Ch\xE1y garage khi v\u1EABn c\xF2n ng\u01B0\u1EDDi gi\xE0 b\xEAn trong, l\u1EA1i c\xF3 nhi\xEAn li\u1EC7u v\xE0 v\u1EADt d\u1EE5ng d\u1EC5 ch\xE1y \u1EDF g\u1EA7n."
-    english: Garage fire with an elderly parent still inside, fuel containers nearby, and a fast-moving interior risk.
+    vietnamese: "Ch\xE1y garage khi v\u1EABn c\xF2n ng\u01B0\u1EDDi gi\xE0 b\xEAn
+      trong, l\u1EA1i c\xF3 nhi\xEAn li\u1EC7u v\xE0 v\u1EADt d\u1EE5ng d\u1EC5 ch\xE1y
+      \u1EDF g\u1EA7n."
+    english: Garage fire with an elderly parent still inside, fuel containers nearby,
+      and a fast-moving interior risk.
   - key: levelselect.level.tutorial.name
     vietnamese: "H\u01B0\u1EDBng D\u1EABn"
     english: Tutorial
@@ -200,10 +227,14 @@ MonoBehaviour:
     vietnamese: "Ch\xE1y B\u1EBFp"
     english: Kitchen Fire
   - key: levelselect.level.suburban_02.description
-    vietnamese: "Ng\u01B0\u1EDDi g\u1ECDi b\xE1o c\xF3 ch\xE1y b\u1EBFp trong m\u1ED9t c\u0103n nh\xE0 \u1EDF khu d\xE2n c\u01B0. H\xE3y thu th\u1EADp th\xF4ng tin \u0111i\u1EC1u ph\u1ED1i v\xE0 \u1ED5n \u0111\u1ECBnh cu\u1ED9c g\u1ECDi."
-    english: Caller reports a kitchen fire in a suburban house. Collect the dispatch details and stabilize the call.
+    vietnamese: "Ng\u01B0\u1EDDi g\u1ECDi b\xE1o c\xF3 ch\xE1y b\u1EBFp trong m\u1ED9t
+      c\u0103n nh\xE0 \u1EDF khu d\xE2n c\u01B0. H\xE3y thu th\u1EADp th\xF4ng tin
+      \u0111i\u1EC1u ph\u1ED1i v\xE0 \u1ED5n \u0111\u1ECBnh cu\u1ED9c g\u1ECDi."
+    english: Caller reports a kitchen fire in a suburban house. Collect the dispatch
+      details and stabilize the call.
   - key: levelselect.level.suburban_02.objective
-    vietnamese: "Ho\xE0n th\xE0nh giai \u0111o\u1EA1n cu\u1ED9c g\u1ECDi v\xE0 chu\u1EA9n b\u1ECB b\xE1o c\xE1o s\u1EF1 c\u1ED1 \u0111\u1EC3 \u0111i\u1EC1u ph\u1ED1i."
+    vietnamese: "Ho\xE0n th\xE0nh giai \u0111o\u1EA1n cu\u1ED9c g\u1ECDi v\xE0 chu\u1EA9n
+      b\u1ECB b\xE1o c\xE1o s\u1EF1 c\u1ED1 \u0111\u1EC3 \u0111i\u1EC1u ph\u1ED1i."
     english: Complete the call phase and prepare the incident report for dispatch.
   - key: levelselect.level.suburban_02.difficulty
     vietnamese: "Th\u01B0\u1EDDng"
@@ -212,10 +243,15 @@ MonoBehaviour:
     vietnamese: "Ch\xE1y Ph\xF2ng Gi\u1EB7t"
     english: Laundry Room Fire
   - key: levelselect.level.suburban_03.description
-    vietnamese: "Ch\xE1y ph\xF2ng gi\u1EB7t c\xF3 c\u1EA3 nguy c\u01A1 v\u1EC1 gas l\u1EABn \u0111i\u1EC7n. H\xE3y thu th\u1EADp \u0111\u1EA7y \u0111\u1EE7 b\xE1o c\xE1o v\xE0 \u0111\xE1nh gi\xE1 m\u1EE9c \u0111\u1ED9 nghi\xEAm tr\u1ECDng c\u1EE7a s\u1EF1 c\u1ED1."
-    english: Laundry room fire with both gas and electrical hazards present. Collect the full report and assess the incident severity.
+    vietnamese: "Ch\xE1y ph\xF2ng gi\u1EB7t c\xF3 c\u1EA3 nguy c\u01A1 v\u1EC1 gas
+      l\u1EABn \u0111i\u1EC7n. H\xE3y thu th\u1EADp \u0111\u1EA7y \u0111\u1EE7 b\xE1o
+      c\xE1o v\xE0 \u0111\xE1nh gi\xE1 m\u1EE9c \u0111\u1ED9 nghi\xEAm tr\u1ECDng
+      c\u1EE7a s\u1EF1 c\u1ED1."
+    english: Laundry room fire with both gas and electrical hazards present. Collect
+      the full report and assess the incident severity.
   - key: levelselect.level.suburban_03.objective
-    vietnamese: "Ho\xE0n th\xE0nh giai \u0111o\u1EA1n cu\u1ED9c g\u1ECDi v\xE0 chu\u1EA9n b\u1ECB b\xE1o c\xE1o s\u1EF1 c\u1ED1 \u0111\u1EC3 \u0111i\u1EC1u ph\u1ED1i."
+    vietnamese: "Ho\xE0n th\xE0nh giai \u0111o\u1EA1n cu\u1ED9c g\u1ECDi v\xE0 chu\u1EA9n
+      b\u1ECB b\xE1o c\xE1o s\u1EF1 c\u1ED1 \u0111\u1EC3 \u0111i\u1EC1u ph\u1ED1i."
     english: Complete the call phase and prepare the incident report for dispatch.
   - key: levelselect.level.suburban_03.difficulty
     vietnamese: "Th\u01B0\u1EDDng"
@@ -224,10 +260,12 @@ MonoBehaviour:
     vietnamese: "B\xE1o \u0110\u1ED9ng Trung T\xE2m"
     english: Downtown Alarm
   - key: levelselect.level.city_01.description
-    vietnamese: "L\u1ED9 tr\xECnh m\xE0n ch\u01A1i n\xE0y ch\u01B0a \u0111\u01B0\u1EE3c c\u1EA5u h\xECnh."
+    vietnamese: "L\u1ED9 tr\xECnh m\xE0n ch\u01A1i n\xE0y ch\u01B0a \u0111\u01B0\u1EE3c
+      c\u1EA5u h\xECnh."
     english: Level route is not configured yet.
   - key: levelselect.level.city_01.objective
-    vietnamese: "H\xE3y c\u1EA5u h\xECnh scene \u0111\xEDch v\xE0 k\u1ECBch b\u1EA3n cho m\xE0n n\xE0y."
+    vietnamese: "H\xE3y c\u1EA5u h\xECnh scene \u0111\xEDch v\xE0 k\u1ECBch b\u1EA3n
+      cho m\xE0n n\xE0y."
     english: Configure target scene and scenario for this level.
   - key: levelselect.level.city_01.difficulty
     vietnamese: "S\u1EBD C\u1EADp Nh\u1EADt"
@@ -236,10 +274,12 @@ MonoBehaviour:
     vietnamese: "S\u01A1 T\xE1n Cao \u1ED0c"
     english: Highrise Evac
   - key: levelselect.level.city_02.description
-    vietnamese: "L\u1ED9 tr\xECnh m\xE0n ch\u01A1i n\xE0y ch\u01B0a \u0111\u01B0\u1EE3c c\u1EA5u h\xECnh."
+    vietnamese: "L\u1ED9 tr\xECnh m\xE0n ch\u01A1i n\xE0y ch\u01B0a \u0111\u01B0\u1EE3c
+      c\u1EA5u h\xECnh."
     english: Level route is not configured yet.
   - key: levelselect.level.city_02.objective
-    vietnamese: "H\xE3y c\u1EA5u h\xECnh scene \u0111\xEDch v\xE0 k\u1ECBch b\u1EA3n cho m\xE0n n\xE0y."
+    vietnamese: "H\xE3y c\u1EA5u h\xECnh scene \u0111\xEDch v\xE0 k\u1ECBch b\u1EA3n
+      cho m\xE0n n\xE0y."
     english: Configure target scene and scenario for this level.
   - key: levelselect.level.city_02.difficulty
     vietnamese: "S\u1EBD C\u1EADp Nh\u1EADt"
@@ -248,10 +288,12 @@ MonoBehaviour:
     vietnamese: "Khu Ch\u1EE3 Trung T\xE2m"
     english: Market District
   - key: levelselect.level.city_03.description
-    vietnamese: "L\u1ED9 tr\xECnh m\xE0n ch\u01A1i n\xE0y ch\u01B0a \u0111\u01B0\u1EE3c c\u1EA5u h\xECnh."
+    vietnamese: "L\u1ED9 tr\xECnh m\xE0n ch\u01A1i n\xE0y ch\u01B0a \u0111\u01B0\u1EE3c
+      c\u1EA5u h\xECnh."
     english: Level route is not configured yet.
   - key: levelselect.level.city_03.objective
-    vietnamese: "H\xE3y c\u1EA5u h\xECnh scene \u0111\xEDch v\xE0 k\u1ECBch b\u1EA3n cho m\xE0n n\xE0y."
+    vietnamese: "H\xE3y c\u1EA5u h\xECnh scene \u0111\xEDch v\xE0 k\u1ECBch b\u1EA3n
+      cho m\xE0n n\xE0y."
     english: Configure target scene and scenario for this level.
   - key: levelselect.level.city_03.difficulty
     vietnamese: "S\u1EBD C\u1EADp Nh\u1EADt"
@@ -260,10 +302,12 @@ MonoBehaviour:
     vietnamese: "TI\u1EBEP T\u1EE4C H\u1ED2 S\u01A0"
     english: CONTINUE PROFILE
   - key: continue.popup.subtitle
-    vietnamese: "Ch\u1ECDn h\u1ED3 s\u01A1 \u0111\u00E3 l\u01B0u \u0111\u1EC3 ti\u1EBFp t\u1EE5c"
+    vietnamese: "Ch\u1ECDn h\u1ED3 s\u01A1 \u0111\xE3 l\u01B0u \u0111\u1EC3 ti\u1EBFp
+      t\u1EE5c"
     english: Select a saved profile to continue
   - key: continue.popup.empty
-    vietnamese: "Ch\u01B0a c\u00F3 h\u1ED3 s\u01A1 l\u01B0u. H\u00E3y b\u1EAFt \u0111\u1EA7u tr\u00F2 ch\u01A1i m\u1EDBi."
+    vietnamese: "Ch\u01B0a c\xF3 h\u1ED3 s\u01A1 l\u01B0u. H\xE3y b\u1EAFt \u0111\u1EA7u
+      tr\xF2 ch\u01A1i m\u1EDBi."
     english: No saved profiles found. Start a new game first.
   - key: continue.popup.btn.back
     vietnamese: "Tr\u1EDF v\u1EC1"
@@ -272,8 +316,8 @@ MonoBehaviour:
     vietnamese: "Ti\u1EBFp t\u1EE5c"
     english: Continue
   - key: continue.popup.profile.progress
-    vietnamese: "{0} m\u00E0n \u0111\u00E3 ho\u00E0n th\u00E0nh"
-    english: "{0} completed levels"
+    vietnamese: "{0} m\xE0n \u0111\xE3 ho\xE0n th\xE0nh"
+    english: '{0} completed levels'
   - key: continue.popup.delete.confirm
     vietnamese: "B\u1EA1n c\xF3 mu\u1ED1n xo\xE1 Profile n\xE0y kh\xF4ng?"
     english: Do you want to delete this profile?
@@ -392,7 +436,8 @@ MonoBehaviour:
     vietnamese: "B\u1EAET \u0110\u1EA6U H\u1ED2 S\u01A0 M\u1EDAI"
     english: START A NEW PROFILE
   - key: newgame.form.subtitle
-    vietnamese: "T\u1EA1o nh\xE2n v\u1EADt \u0111\u1EC3 b\u1EAFt \u0111\u1EA7u ca tr\u1EF1c m\u1EDBi."
+    vietnamese: "T\u1EA1o nh\xE2n v\u1EADt \u0111\u1EC3 b\u1EAFt \u0111\u1EA7u ca
+      tr\u1EF1c m\u1EDBi."
     english: Create a character to begin a new shift.
   - key: newgame.form.label.name
     vietnamese: "T\xEAn nh\xE2n v\u1EADt"
@@ -402,7 +447,7 @@ MonoBehaviour:
     english: This name will be used for your save progress.
   - key: newgame.form.counter
     vietnamese: "{0}/{1} k\xFD t\u1EF1"
-    english: "{0}/{1} characters"
+    english: '{0}/{1} characters'
   - key: newgame.form.error.empty
     vietnamese: "Vui l\xF2ng nh\u1EADp t\xEAn nh\xE2n v\u1EADt"
     english: Please enter a character name
@@ -468,13 +513,13 @@ MonoBehaviour:
     english: INCIDENT REPORT
   - key: callphase.btn.ask_followup
     vietnamese: "[1] \u0110\u1EB7t c\xE2u h\u1ECFi"
-    english: "[1] Ask Follow-up"
+    english: '[1] Ask Follow-up'
   - key: callphase.btn.assess_risk
     vietnamese: "[2] \u0110\xE1nh gi\xE1 r\u1EE7i ro"
-    english: "[2] Assess Risk"
+    english: '[2] Assess Risk'
   - key: callphase.btn.submit_report
     vietnamese: "[3] N\u1ED9p b\xE1o c\xE1o"
-    english: "[3] Submit Report"
+    english: '[3] Submit Report'
   - key: callphase.header.ask_followup_question
     vietnamese: "H\u1ECEI TH\xCAM"
     english: ASK FOLLOW-UP QUESTION
@@ -487,6 +532,9 @@ MonoBehaviour:
   - key: callphase.header.assess_incident_risk
     vietnamese: "\u0110\xC1NH GI\xC1 R\u1EE6I RO"
     english: ASSESS INCIDENT RISK
+  - key: callphase.header.severity_assessment
+    vietnamese: "\u0110\xC1NH GI\xC1 M\u1EE8C \u0110\u1ED8"
+    english: SEVERITY ASSESSMENT
   - key: callphase.assess.hint.review_severity
     vietnamese: "Xem l\u1EA1i th\xF4ng tin v\xE0 ch\u1ECDn m\u1EE9c \u0111\u1ED9"
     english: Review gathered information and select severity
@@ -562,6 +610,463 @@ MonoBehaviour:
   - key: callphase.field.category
     vietnamese: "Danh m\u1EE5c"
     english: Category
+  - key: callphase.scenario.kitchen_fire_house_call.name
+    vietnamese: "Cu\u1ED9c G\u1ECDi Ch\xE1y B\u1EBFp"
+    english: Kitchen Fire House Call
+  - key: callphase.scenario.kitchen_fire_house_call.category
+    vietnamese: "Ch\xE1y Nh\xE0"
+    english: House Fire
+  - key: callphase.scenario.kitchen_fire_house_call.description
+    vietnamese: "K\u1ECBch b\u1EA3n ch\xE1y b\u1EBFp g\u1ED3m thu th\u1EADp th\xF4ng
+      tin, x\xE1c nh\u1EADn l\u1EA1i, \u0111\xE1nh gi\xE1 r\u1EE7i ro, n\u1ED9p b\xE1o
+      c\xE1o v\xE0 xem k\u1EBFt qu\u1EA3."
+    english: Kitchen-fire call prototype with follow-up collection, confirmation
+      read-back, assess-risk, submit, and result review.
+  - key: callphase.scenario.suburban_house_laundry_fire.name
+    vietnamese: "Nh\xE0 D\xE2n C\u01B0 - Ch\xE1y Ph\xF2ng Gi\u1EB7t"
+    english: Suburban House - Laundry Room Fire
+  - key: callphase.scenario.suburban_house_laundry_fire.category
+    vietnamese: "Ch\xE1y Nh\xE0"
+    english: House Fire
+  - key: callphase.scenario.suburban_house_laundry_fire.description
+    vietnamese: "Ch\xE1y ph\xF2ng gi\u1EB7t c\xF3 c\u1EA3 nguy c\u01A1 gas l\u1EABn
+      \u0111i\u1EC7n, kh\xF3i lan v\u1EC1 ph\xEDa b\u1EBFp, v\xE0 v\u1EABn c\xF2n
+      m\u1ED9t ng\u01B0\u1EDDi l\u1EDBn b\xEAn trong."
+    english: Laundry room fire with both gas and electrical hazards present, smoke
+      spreading toward the kitchen, and one adult still inside.
+  - key: callphase.scenario.suburban_house_garage_fire.name
+    vietnamese: "Nh\xE0 D\xE2n C\u01B0 - Ch\xE1y Garage"
+    english: Suburban House - Garage Fire
+  - key: callphase.scenario.suburban_house_garage_fire.category
+    vietnamese: "Ch\xE1y Nh\xE0"
+    english: House Fire
+  - key: callphase.scenario.suburban_house_garage_fire.description
+    vietnamese: "Ch\xE1y garage khi v\u1EABn c\xF2n ng\u01B0\u1EDDi gi\xE0 b\xEAn
+      trong, g\u1EA7n c\xF3 th\xF9ng nhi\xEAn li\u1EC7u, v\xE0 ng\u1ECDn l\u1EEDa
+      \u0111ang lan v\u1EC1 ph\xEDa h\xE0nh lang."
+    english: Garage fire with an elderly parent still inside, fuel containers nearby,
+      and fire spreading toward the hallway.
+  - key: callphase.scenario.kitchen_fire_house_call.line.ask_address
+    vietnamese: "\u0110\u1ECBa ch\u1EC9 l\xE0 g\xEC?"
+    english: What is the address?
+  - key: callphase.scenario.kitchen_fire_house_call.line.intro_operator_open
+    vietnamese: "911, b\u1EA1n c\u1EA7n tr\u1EE3 gi\xFAp g\xEC?"
+    english: 911, where is your emergency?
+  - key: callphase.scenario.kitchen_fire_house_call.line.intro_caller_open
+    vietnamese: "Nh\xE0 t\xF4i \u0111ang ch\xE1y! Xin h\xE3y gi\xFAp v\u1EDBi!"
+    english: My house is on fire! Please help!
+  - key: callphase.scenario.kitchen_fire_house_call.line.intro_operator_fire_location
+    vietnamese: "\u0110\xE1m ch\xE1y \u0111ang \u1EDF \u0111\xE2u ngay l\xFAc n\xE0y?"
+    english: Where is the fire right now?
+  - key: callphase.scenario.kitchen_fire_house_call.line.intro_caller_fire_location
+    vietnamese: "N\xF3 \u1EDF trong b\u1EBFp, kh\xF3i \u0111ang m\u1ECBt kh\u1EAFp
+      n\u01A1i!"
+    english: It's in the kitchen, there's smoke everywhere!
+  - key: callphase.scenario.kitchen_fire_house_call.span.intro_caller_fire_location_0
+    vietnamese: "b\u1EBFp"
+    english: kitchen
+  - key: callphase.scenario.kitchen_fire_house_call.span.intro_caller_fire_location_1
+    vietnamese: "kh\xF3i m\u1ECBt kh\u1EAFp n\u01A1i"
+    english: smoke everywhere
+  - key: callphase.scenario.kitchen_fire_house_call.line.reply_address
+    vietnamese: "L\xE0 27 Maple Street!"
+    english: It's 27 Maple Street!
+  - key: callphase.scenario.kitchen_fire_house_call.span.reply_address_0
+    vietnamese: 27 Maple Street
+    english: 27 Maple Street
+  - key: callphase.scenario.kitchen_fire_house_call.line.ask_occupant_risk
+    vietnamese: "C\xF2n ai b\xEAn trong kh\xF4ng?"
+    english: Is anyone still inside?
+  - key: callphase.scenario.kitchen_fire_house_call.line.reply_occupant_risk
+    vietnamese: "Con t\xF4i v\u1EABn \u1EDF tr\xEAn l\u1EA7u!"
+    english: My child is upstairs!
+  - key: callphase.scenario.kitchen_fire_house_call.span.reply_occupant_risk_0
+    vietnamese: "con t\xF4i v\u1EABn \u1EDF tr\xEAn l\u1EA7u"
+    english: child is upstairs
+  - key: callphase.scenario.kitchen_fire_house_call.line.ask_hazard
+    vietnamese: "C\xF3 r\xF2 r\u1EC9 gas ho\u1EB7c b\xECnh gas \u1EDF g\u1EA7n \u0111\xF3
+      kh\xF4ng?"
+    english: Is there any gas leak or gas cylinder nearby?
+  - key: callphase.scenario.kitchen_fire_house_call.line.reply_hazard
+    vietnamese: "C\xF3, c\xF3 m\u1ED9t b\xECnh gas g\u1EA7n b\u1EBFp!"
+    english: Yes, there's a gas cylinder near the kitchen!
+  - key: callphase.scenario.kitchen_fire_house_call.span.reply_hazard_0
+    vietnamese: "b\xECnh gas g\u1EA7n b\u1EBFp"
+    english: gas cylinder near the kitchen
+  - key: callphase.scenario.kitchen_fire_house_call.line.ask_spread_status
+    vietnamese: "L\u1EEDa c\xF3 \u0111ang lan sang \u0111\xE2u kh\xE1c kh\xF4ng?"
+    english: Is the fire spreading anywhere else?
+  - key: callphase.scenario.kitchen_fire_house_call.line.reply_spread_status
+    vietnamese: "L\u1EEDa \u0111ang lan v\u1EC1 ph\xEDa khu b\xE0n \u0103n!"
+    english: It's spreading toward the dining area!
+  - key: callphase.scenario.kitchen_fire_house_call.span.reply_spread_status_0
+    vietnamese: "lan v\u1EC1 ph\xEDa khu b\xE0n \u0103n"
+    english: spreading toward the dining area
+  - key: callphase.scenario.kitchen_fire_house_call.line.ask_caller_safety
+    vietnamese: "Hi\u1EC7n t\u1EA1i b\u1EA1n c\xF3 \u0111ang \u1EDF n\u01A1i an to\xE0n
+      kh\xF4ng?"
+    english: Are you somewhere safe right now?
+  - key: callphase.scenario.kitchen_fire_house_call.line.reply_caller_safety
+    vietnamese: "V\xE2ng, gi\u1EDD t\xF4i \u0111ang \u1EDF ngo\xE0i nh\xE0!"
+    english: Yes, I'm outside the house now!
+  - key: callphase.scenario.kitchen_fire_house_call.span.reply_caller_safety_0
+    vietnamese: "ngo\xE0i nh\xE0"
+    english: outside the house
+  - key: callphase.scenario.kitchen_fire_house_call.line.confirm_address_operator
+    vietnamese: "Cho t\xF4i x\xE1c nh\u1EADn l\u1EA1i \u0111\u1ECBa ch\u1EC9: 27
+      Maple Street, \u0111\xFAng kh\xF4ng?"
+    english: 'Let me confirm the address: 27 Maple Street, correct?'
+  - key: callphase.scenario.kitchen_fire_house_call.line.confirm_address_caller
+    vietnamese: "\u0110\xFAng r\u1ED3i."
+    english: Yes, that's correct.
+  - key: callphase.scenario.kitchen_fire_house_call.span.confirm_address_caller_0
+    vietnamese: "\u0110\xFAng r\u1ED3i."
+    english: Yes, that's correct.
+  - key: callphase.scenario.kitchen_fire_house_call.line.confirm_occupant_operator
+    vietnamese: "Con c\u1EE7a b\u1EA1n v\u1EABn c\xF2n \u1EDF tr\xEAn l\u1EA7u, \u0111\xFAng
+      kh\xF4ng?"
+    english: Your child is still upstairs, correct?
+  - key: callphase.scenario.kitchen_fire_house_call.line.confirm_occupant_caller
+    vietnamese: "\u0110\xFAng!"
+    english: Yes!
+  - key: callphase.scenario.kitchen_fire_house_call.span.confirm_occupant_caller_0
+    vietnamese: "\u0110\xFAng!"
+    english: Yes!
+  - key: callphase.scenario.kitchen_fire_house_call.line.confirm_safety_operator
+    vietnamese: "Hi\u1EC7n t\u1EA1i b\u1EA1n \u0111ang \u1EDF ngo\xE0i nh\xE0, \u0111\xFAng
+      kh\xF4ng?"
+    english: You are outside the house now, correct?
+  - key: callphase.scenario.kitchen_fire_house_call.line.confirm_safety_caller
+    vietnamese: "\u0110\xFAng, t\xF4i \u0111ang \u1EDF ngo\xE0i."
+    english: Yes, I'm outside.
+  - key: callphase.scenario.kitchen_fire_house_call.span.confirm_safety_caller_0
+    vietnamese: "\u0110\xFAng, t\xF4i \u0111ang \u1EDF ngo\xE0i."
+    english: Yes, I'm outside.
+  - key: callphase.scenario.kitchen_fire_house_call.question.kitchen_q_address_exact
+    vietnamese: "\u0110\u1ECBa ch\u1EC9 ch\xEDnh x\xE1c l\xE0 g\xEC?"
+    english: What is the exact address?
+  - key: callphase.scenario.kitchen_fire_house_call.question.kitchen_q_anyone_inside
+    vietnamese: "C\xF2n ai b\xEAn trong kh\xF4ng?"
+    english: Is anyone still inside?
+  - key: callphase.scenario.kitchen_fire_house_call.question.kitchen_q_hazard_gas
+    vietnamese: "C\xF3 r\xF2 r\u1EC9 gas ho\u1EB7c b\xECnh gas \u1EDF g\u1EA7n \u0111\xF3
+      kh\xF4ng?"
+    english: Is there any gas leak or gas cylinder nearby?
+  - key: callphase.scenario.kitchen_fire_house_call.question.kitchen_q_fire_spread
+    vietnamese: "L\u1EEDa c\xF3 \u0111ang lan sang \u0111\xE2u kh\xE1c kh\xF4ng?"
+    english: Is the fire spreading anywhere else?
+  - key: callphase.scenario.kitchen_fire_house_call.question.kitchen_q_caller_safe
+    vietnamese: "Hi\u1EC7n t\u1EA1i b\u1EA1n c\xF3 \u0111ang \u1EDF n\u01A1i an to\xE0n
+      kh\xF4ng?"
+    english: Are you somewhere safe right now?
+  - key: callphase.scenario.kitchen_fire_house_call.question.kitchen_q_pet_inside
+    vietnamese: "C\xF3 th\xFA c\u01B0ng n\xE0o v\u1EABn c\xF2n trong nh\xE0 kh\xF4ng?"
+    english: Are any pets still inside the house?
+  - key: callphase.scenario.kitchen_fire_house_call.question_reply.kitchen_q_pet_inside
+    vietnamese: "T\xF4i kh\xF4ng bi\u1EBFt, khi th\u1EA5y l\u1EEDa t\xF4i \u0111\xE3
+      ch\u1EA1y ra ngo\xE0i r\u1ED3i!"
+    english: I don't know, I ran outside when I saw the flames!
+  - key: callphase.scenario.kitchen_fire_house_call.question.kitchen_q_damage_cost
+    vietnamese: "B\u1EA1n c\xF3 th\u1EC3 \u01B0\u1EDBc l\u01B0\u1EE3ng nh\xE0 b\u1EBFp
+      \u0111\xE3 h\u01B0 h\u1EA1i t\u1EDBi m\u1EE9c n\xE0o kh\xF4ng?"
+    english: Can you estimate how much damage the kitchen already has?
+  - key: callphase.scenario.kitchen_fire_house_call.question_reply.kitchen_q_damage_cost
+    vietnamese: "T\xF4i kh\xF4ng r\xF5, b\u1EBFp \u0111ang ch\xE1y v\xE0 kh\xF3i
+      qu\xE1 nhi\u1EC1u!"
+    english: I can't tell, the kitchen is burning and there's too much smoke!
+  - key: callphase.scenario.kitchen_fire_house_call.question.kitchen_q_smell_food
+    vietnamese: "B\u1EA1n \u0111ang n\u1EA5u m\xF3n g\xEC khi \u0111\xE1m ch\xE1y
+      b\u1EAFt \u0111\u1EA7u?"
+    english: What were you cooking when the fire started?
+  - key: callphase.scenario.kitchen_fire_house_call.question_reply.kitchen_q_smell_food
+    vietnamese: "T\xF4i ch\u1EC9 \u0111ang n\u1EA5u b\u1EEFa t\u1ED1i th\xF4i, nh\u01B0ng
+      gi\u1EDD \u0111i\u1EC1u quan tr\u1ECDng l\xE0 \u0111\xE1m ch\xE1y!"
+    english: I was just making dinner, but the fire is what matters right now!
+  - key: callphase.scenario.suburban_house_laundry_fire.line.ask_address
+    vietnamese: "\u0110\u1ECBa ch\u1EC9 l\xE0 g\xEC?"
+    english: What is the address?
+  - key: callphase.scenario.suburban_house_laundry_fire.line.intro_operator_open
+    vietnamese: "911, b\u1EA1n c\u1EA7n tr\u1EE3 gi\xFAp g\xEC?"
+    english: 911, where is your emergency?
+  - key: callphase.scenario.suburban_house_laundry_fire.line.intro_caller_open
+    vietnamese: "Nh\xE0 t\xF4i c\xF3 ch\xE1y, xin h\xE3y \u0111\u1EBFn nhanh!"
+    english: There's a fire in my house, please hurry!
+  - key: callphase.scenario.suburban_house_laundry_fire.line.intro_operator_fire_location
+    vietnamese: "\u0110\xE1m ch\xE1y \u0111ang \u1EDF \u0111\xE2u ngay l\xFAc n\xE0y?"
+    english: Where is the fire right now?
+  - key: callphase.scenario.suburban_house_laundry_fire.line.intro_caller_fire_location
+    vietnamese: "N\xF3 \u1EDF trong ph\xF2ng gi\u1EB7t!"
+    english: It's in the laundry room!
+  - key: callphase.scenario.suburban_house_laundry_fire.span.intro_caller_fire_location_0
+    vietnamese: "ph\xF2ng gi\u1EB7t"
+    english: laundry room
+  - key: callphase.scenario.suburban_house_laundry_fire.line.reply_address
+    vietnamese: "L\xE0 52 Pine Street!"
+    english: It's 52 Pine Street!
+  - key: callphase.scenario.suburban_house_laundry_fire.span.reply_address_0
+    vietnamese: 52 Pine Street
+    english: 52 Pine Street
+  - key: callphase.scenario.suburban_house_laundry_fire.line.ask_occupant_risk
+    vietnamese: "C\xF2n ai b\xEAn trong kh\xF4ng?"
+    english: Is anyone still inside?
+  - key: callphase.scenario.suburban_house_laundry_fire.line.reply_occupant_risk
+    vietnamese: "Ch\u1ED3ng t\xF4i v\u1EABn c\xF2n \u1EDF b\xEAn trong!"
+    english: My husband is still inside!
+  - key: callphase.scenario.suburban_house_laundry_fire.span.reply_occupant_risk_0
+    vietnamese: "ch\u1ED3ng t\xF4i v\u1EABn c\xF2n \u1EDF b\xEAn trong"
+    english: husband is still inside
+  - key: callphase.scenario.suburban_house_laundry_fire.line.ask_hazard_gas
+    vietnamese: "Trong \u0111\xF3 c\xF3 thi\u1EBFt b\u1ECB gas ho\u1EB7c \u0111\u01B0\u1EDDng
+      gas n\xE0o kh\xF4ng?"
+    english: Are there any gas appliances or fuel lines in there?
+  - key: callphase.scenario.suburban_house_laundry_fire.line.reply_hazard_gas
+    vietnamese: "C\xF3, trong \u0111\xF3 c\xF3 m\u1ED9t \u0111\u01B0\u1EDDng gas
+      c\u1EE7a m\xE1y s\u1EA5y!"
+    english: Yes, there's a gas dryer line in there!
+  - key: callphase.scenario.suburban_house_laundry_fire.span.reply_hazard_gas_0
+    vietnamese: "\u0111\u01B0\u1EDDng gas c\u1EE7a m\xE1y s\u1EA5y"
+    english: gas dryer line
+  - key: callphase.scenario.suburban_house_laundry_fire.line.ask_hazard_electrical
+    vietnamese: "B\u1EA1n c\xF3 th\u1EA5y nguy c\u01A1 \u0111i\u1EC7n n\xE0o n\u1EEFa
+      kh\xF4ng?"
+    english: Do you see any electrical danger too?
+  - key: callphase.scenario.suburban_house_laundry_fire.line.reply_hazard_electrical
+    vietnamese: "C\xF3, c\xF3 tia l\u1EEDa t\u1EEB d\xE2y \u0111i\u1EC7n b\u1ECB
+      h\u1EDF!"
+    english: Yes, there are sparks from exposed wiring!
+  - key: callphase.scenario.suburban_house_laundry_fire.span.reply_hazard_electrical_0
+    vietnamese: "d\xE2y \u0111i\u1EC7n b\u1ECB h\u1EDF"
+    english: exposed wiring
+  - key: callphase.scenario.suburban_house_laundry_fire.line.ask_spread_status
+    vietnamese: "L\u1EEDa c\xF3 \u0111ang lan sang \u0111\xE2u kh\xE1c kh\xF4ng?"
+    english: Is the fire spreading anywhere else?
+  - key: callphase.scenario.suburban_house_laundry_fire.line.reply_spread_status
+    vietnamese: "L\u1EEDa \u0111ang lan v\u1EC1 ph\xEDa b\u1EBFp!"
+    english: It's spreading toward the kitchen!
+  - key: callphase.scenario.suburban_house_laundry_fire.span.reply_spread_status_0
+    vietnamese: "lan v\u1EC1 ph\xEDa b\u1EBFp"
+    english: spreading toward the kitchen
+  - key: callphase.scenario.suburban_house_laundry_fire.line.ask_caller_safety
+    vietnamese: "Hi\u1EC7n t\u1EA1i b\u1EA1n c\xF3 \u0111ang \u1EDF n\u01A1i an to\xE0n
+      kh\xF4ng?"
+    english: Are you somewhere safe right now?
+  - key: callphase.scenario.suburban_house_laundry_fire.line.reply_caller_safety
+    vietnamese: "Gi\u1EDD t\xF4i \u0111ang \u1EDF ngo\xE0i s\xE2n tr\u01B0\u1EDBc!"
+    english: I'm outside in the front yard now!
+  - key: callphase.scenario.suburban_house_laundry_fire.span.reply_caller_safety_0
+    vietnamese: "ngo\xE0i s\xE2n tr\u01B0\u1EDBc"
+    english: outside in the front yard
+  - key: callphase.scenario.suburban_house_laundry_fire.line.confirm_address_operator
+    vietnamese: "Cho t\xF4i x\xE1c nh\u1EADn l\u1EA1i \u0111\u1ECBa ch\u1EC9, 52
+      Pine Street, \u0111\xFAng kh\xF4ng?"
+    english: Let me confirm the address, 52 Pine Street, correct?
+  - key: callphase.scenario.suburban_house_laundry_fire.line.confirm_address_caller
+    vietnamese: "\u0110\xFAng r\u1ED3i."
+    english: Yes, that's correct.
+  - key: callphase.scenario.suburban_house_laundry_fire.span.confirm_address_caller_0
+    vietnamese: "\u0110\xFAng r\u1ED3i."
+    english: Yes, that's correct.
+  - key: callphase.scenario.suburban_house_laundry_fire.line.confirm_occupant_operator
+    vietnamese: "V\u1EABn c\xF2n m\u1ED9t ng\u01B0\u1EDDi l\u1EDBn \u1EDF b\xEAn
+      trong, \u0111\xFAng kh\xF4ng?"
+    english: One adult is still inside, correct?
+  - key: callphase.scenario.suburban_house_laundry_fire.line.confirm_occupant_caller
+    vietnamese: "\u0110\xFAng!"
+    english: Yes!
+  - key: callphase.scenario.suburban_house_laundry_fire.span.confirm_occupant_caller_0
+    vietnamese: "\u0110\xFAng!"
+    english: Yes!
+  - key: callphase.scenario.suburban_house_laundry_fire.line.confirm_safety_operator
+    vietnamese: "Hi\u1EC7n t\u1EA1i b\u1EA1n \u0111ang \u1EDF ngo\xE0i s\xE2n tr\u01B0\u1EDBc,
+      \u0111\xFAng kh\xF4ng?"
+    english: You are outside in the front yard now, correct?
+  - key: callphase.scenario.suburban_house_laundry_fire.line.confirm_safety_caller
+    vietnamese: "\u0110\xFAng, t\xF4i \u0111ang \u1EDF ngo\xE0i."
+    english: Yes, I am.
+  - key: callphase.scenario.suburban_house_laundry_fire.span.confirm_safety_caller_0
+    vietnamese: "\u0110\xFAng, t\xF4i \u0111ang \u1EDF ngo\xE0i."
+    english: Yes, I am.
+  - key: callphase.scenario.suburban_house_laundry_fire.question.laundry_q_address_exact
+    vietnamese: "\u0110\u1ECBa ch\u1EC9 ch\xEDnh x\xE1c l\xE0 g\xEC?"
+    english: What is the exact address?
+  - key: callphase.scenario.suburban_house_laundry_fire.question.laundry_q_anyone_inside
+    vietnamese: "C\xF2n ai b\xEAn trong kh\xF4ng?"
+    english: Is anyone still inside?
+  - key: callphase.scenario.suburban_house_laundry_fire.question.laundry_q_gas_hazard
+    vietnamese: "Trong \u0111\xF3 c\xF3 thi\u1EBFt b\u1ECB gas ho\u1EB7c \u0111\u01B0\u1EDDng
+      gas n\xE0o kh\xF4ng?"
+    english: Are there any gas appliances or fuel lines in there?
+  - key: callphase.scenario.suburban_house_laundry_fire.question.laundry_q_electrical_hazard
+    vietnamese: "B\u1EA1n c\xF3 th\u1EA5y nguy c\u01A1 \u0111i\u1EC7n n\xE0o n\u1EEFa
+      kh\xF4ng?"
+    english: Do you see any electrical danger too?
+  - key: callphase.scenario.suburban_house_laundry_fire.question.laundry_q_fire_spread
+    vietnamese: "L\u1EEDa c\xF3 \u0111ang lan sang \u0111\xE2u kh\xE1c kh\xF4ng?"
+    english: Is the fire spreading anywhere else?
+  - key: callphase.scenario.suburban_house_laundry_fire.question.laundry_q_caller_safe
+    vietnamese: "Hi\u1EC7n t\u1EA1i b\u1EA1n c\xF3 \u0111ang \u1EDF n\u01A1i an to\xE0n
+      kh\xF4ng?"
+    english: Are you somewhere safe right now?
+  - key: callphase.scenario.suburban_house_laundry_fire.question.laundry_q_washer_brand
+    vietnamese: "M\xE1y gi\u1EB7t thu\u1ED9c h\xE3ng n\xE0o?"
+    english: What brand is the washing machine?
+  - key: callphase.scenario.suburban_house_laundry_fire.question_reply.laundry_q_washer_brand
+    vietnamese: "T\xF4i kh\xF4ng bi\u1EBFt, trong \u0111\xF3 kh\xF3i qu\xE1 nhi\u1EC1u
+      n\xEAn t\xF4i kh\xF4ng th\u1EC3 nh\xECn!"
+    english: I don't know, it's smoking too badly in there to look at that!
+  - key: callphase.scenario.suburban_house_laundry_fire.question.laundry_q_laundry_load
+    vietnamese: "L\xFAc \u0111\xF3 b\u1EA1n \u0111ang gi\u1EB7t qu\u1EA7n \xE1o hay
+      kh\u0103n?"
+    english: Were you washing clothes or towels at the time?
+  - key: callphase.scenario.suburban_house_laundry_fire.question_reply.laundry_q_laundry_load
+    vietnamese: "T\xF4i kh\xF4ng nh\u1EDB n\u1EEFa, t\xF4i ch\u1EC9 bi\u1EBFt ph\xF2ng
+      gi\u1EB7t \u0111ang ch\xE1y!"
+    english: I can't remember, I just know the laundry room is on fire!
+  - key: callphase.scenario.suburban_house_laundry_fire.question.laundry_q_window_open
+    vietnamese: "B\u1EA1n c\xF3 \u0111\u1EC3 m\u1EDF c\u1EEDa s\u1ED5 ph\xF2ng gi\u1EB7t
+      kh\xF4ng?"
+    english: Did you leave the laundry room window open?
+  - key: callphase.scenario.suburban_house_laundry_fire.question_reply.laundry_q_window_open
+    vietnamese: "T\xF4i kh\xF4ng bi\u1EBFt, gi\u1EDD t\xF4i \u0111ang \u1EDF ngo\xE0i
+      v\xE0 kh\xF3i \u0111ang lan v\u1EC1 ph\xEDa b\u1EBFp!"
+    english: I don't know, I'm outside now and there's smoke pushing toward the kitchen!
+  - key: callphase.scenario.suburban_house_garage_fire.line.ask_address
+    vietnamese: "\u0110\u1ECBa ch\u1EC9 l\xE0 g\xEC?"
+    english: What is the address?
+  - key: callphase.scenario.suburban_house_garage_fire.line.intro_operator_open
+    vietnamese: "911, b\u1EA1n c\u1EA7n tr\u1EE3 gi\xFAp g\xEC?"
+    english: 911, where is your emergency?
+  - key: callphase.scenario.suburban_house_garage_fire.line.intro_caller_open
+    vietnamese: "Garage c\u1EE7a t\xF4i \u0111ang ch\xE1y, xin h\xE3y g\u1EEDi ng\u01B0\u1EDDi
+      \u0111\u1EBFn ngay!"
+    english: My garage is on fire, please send help now!
+  - key: callphase.scenario.suburban_house_garage_fire.line.intro_operator_fire_location
+    vietnamese: "\u0110\xE1m ch\xE1y \u0111ang \u1EDF \u0111\xE2u ngay l\xFAc n\xE0y?"
+    english: Where is the fire right now?
+  - key: callphase.scenario.suburban_house_garage_fire.line.intro_caller_fire_location
+    vietnamese: "N\xF3 \u1EDF trong garage, c\u1EA3 ph\xEDa tr\u01B0\u1EDBc \u0111ang
+      \u0111\u1EA7y kh\xF3i!"
+    english: It's in the garage, the whole front side is filling with smoke!
+  - key: callphase.scenario.suburban_house_garage_fire.span.intro_caller_fire_location_0
+    vietnamese: garage
+    english: garage
+  - key: callphase.scenario.suburban_house_garage_fire.span.intro_caller_fire_location_1
+    vietnamese: "\u0111ang \u0111\u1EA7y kh\xF3i"
+    english: filling with smoke
+  - key: callphase.scenario.suburban_house_garage_fire.line.reply_address
+    vietnamese: "\u1EDE 14 Oak Drive!"
+    english: It's at 14 Oak Drive!
+  - key: callphase.scenario.suburban_house_garage_fire.span.reply_address_0
+    vietnamese: 14 Oak Drive
+    english: 14 Oak Drive
+  - key: callphase.scenario.suburban_house_garage_fire.line.ask_occupant_risk
+    vietnamese: "C\xF2n ai b\xEAn trong kh\xF4ng?"
+    english: Is anyone still inside?
+  - key: callphase.scenario.suburban_house_garage_fire.line.reply_occupant_risk
+    vietnamese: "Cha t\xF4i l\u1EDBn tu\u1ED5i v\xE0 v\u1EABn c\xF2n \u1EDF b\xEAn
+      trong!"
+    english: My elderly father is still inside!
+  - key: callphase.scenario.suburban_house_garage_fire.span.reply_occupant_risk_0
+    vietnamese: "cha t\xF4i l\u1EDBn tu\u1ED5i v\u1EABn c\xF2n \u1EDF b\xEAn trong"
+    english: elderly father is still inside
+  - key: callphase.scenario.suburban_house_garage_fire.line.ask_hazard
+    vietnamese: "C\xF3 can nhi\xEAn li\u1EC7u ho\u1EB7c v\u1EADt li\u1EC7u nguy hi\u1EC3m
+      n\xE0o g\u1EA7n \u0111\xE1m ch\xE1y kh\xF4ng?"
+    english: Are there any fuel containers or hazardous materials near the fire?
+  - key: callphase.scenario.suburban_house_garage_fire.line.reply_hazard
+    vietnamese: "C\xF3 c\xE1c can nhi\xEAn li\u1EC7u \u1EDF g\u1EA7n garage!"
+    english: There are fuel cans near the garage!
+  - key: callphase.scenario.suburban_house_garage_fire.span.reply_hazard_0
+    vietnamese: "c\xE1c can nhi\xEAn li\u1EC7u g\u1EA7n garage"
+    english: fuel cans near the garage
+  - key: callphase.scenario.suburban_house_garage_fire.line.ask_spread_status
+    vietnamese: "L\u1EEDa c\xF3 \u0111ang lan sang \u0111\xE2u kh\xE1c kh\xF4ng?"
+    english: Is the fire spreading anywhere else?
+  - key: callphase.scenario.suburban_house_garage_fire.line.reply_spread_status
+    vietnamese: "L\u1EEDa \u0111ang lan v\u1EC1 ph\xEDa h\xE0nh lang!"
+    english: It's spreading toward the hallway!
+  - key: callphase.scenario.suburban_house_garage_fire.span.reply_spread_status_0
+    vietnamese: "lan v\u1EC1 ph\xEDa h\xE0nh lang"
+    english: spreading toward the hallway
+  - key: callphase.scenario.suburban_house_garage_fire.line.ask_caller_safety
+    vietnamese: "Hi\u1EC7n t\u1EA1i b\u1EA1n c\xF3 \u0111ang \u1EDF n\u01A1i an to\xE0n
+      kh\xF4ng?"
+    english: Are you somewhere safe right now?
+  - key: callphase.scenario.suburban_house_garage_fire.line.reply_caller_safety
+    vietnamese: "T\xF4i \u0111ang \u1EDF ngo\xE0i l\u1ED1i xe v\xE0o!"
+    english: I'm outside in the driveway now!
+  - key: callphase.scenario.suburban_house_garage_fire.span.reply_caller_safety_0
+    vietnamese: "ngo\xE0i l\u1ED1i xe v\xE0o"
+    english: outside in the driveway
+  - key: callphase.scenario.suburban_house_garage_fire.line.confirm_address_operator
+    vietnamese: "Cho t\xF4i x\xE1c nh\u1EADn l\u1EA1i \u0111\u1ECBa ch\u1EC9, 14
+      Oak Drive, \u0111\xFAng kh\xF4ng?"
+    english: Let me confirm the address, 14 Oak Drive, correct?
+  - key: callphase.scenario.suburban_house_garage_fire.line.confirm_address_caller
+    vietnamese: "\u0110\xFAng r\u1ED3i."
+    english: Yes, that's correct.
+  - key: callphase.scenario.suburban_house_garage_fire.span.confirm_address_caller_0
+    vietnamese: "\u0110\xFAng r\u1ED3i."
+    english: Yes, that's correct.
+  - key: callphase.scenario.suburban_house_garage_fire.line.confirm_occupant_operator
+    vietnamese: "Ng\u01B0\u1EDDi th\xE2n l\u1EDBn tu\u1ED5i c\u1EE7a b\u1EA1n v\u1EABn
+      c\xF2n \u1EDF b\xEAn trong, \u0111\xFAng kh\xF4ng?"
+    english: Your elderly parent is still inside, correct?
+  - key: callphase.scenario.suburban_house_garage_fire.line.confirm_occupant_caller
+    vietnamese: "\u0110\xFAng, \xF4ng \u1EA5y v\u1EABn \u1EDF trong!"
+    english: Yes, he is!
+  - key: callphase.scenario.suburban_house_garage_fire.span.confirm_occupant_caller_0
+    vietnamese: "\u0110\xFAng, \xF4ng \u1EA5y v\u1EABn \u1EDF trong!"
+    english: Yes, he is!
+  - key: callphase.scenario.suburban_house_garage_fire.line.confirm_safety_operator
+    vietnamese: "Hi\u1EC7n t\u1EA1i b\u1EA1n \u0111ang \u1EDF ngo\xE0i l\u1ED1i xe
+      v\xE0o, \u0111\xFAng kh\xF4ng?"
+    english: You are outside in the driveway now, correct?
+  - key: callphase.scenario.suburban_house_garage_fire.line.confirm_safety_caller
+    vietnamese: "\u0110\xFAng, t\xF4i \u0111ang \u1EDF l\u1ED1i xe v\xE0o."
+    english: Yes, I'm in the driveway.
+  - key: callphase.scenario.suburban_house_garage_fire.span.confirm_safety_caller_0
+    vietnamese: "\u0110\xFAng, t\xF4i \u0111ang \u1EDF l\u1ED1i xe v\xE0o."
+    english: Yes, I'm in the driveway.
+  - key: callphase.scenario.suburban_house_garage_fire.question.garage_q_address_exact
+    vietnamese: "\u0110\u1ECBa ch\u1EC9 ch\xEDnh x\xE1c l\xE0 g\xEC?"
+    english: What is the exact address?
+  - key: callphase.scenario.suburban_house_garage_fire.question.garage_q_anyone_inside
+    vietnamese: "C\xF2n ai b\xEAn trong kh\xF4ng?"
+    english: Is anyone still inside?
+  - key: callphase.scenario.suburban_house_garage_fire.question.garage_q_fuel_hazard
+    vietnamese: "C\xF3 can nhi\xEAn li\u1EC7u ho\u1EB7c v\u1EADt li\u1EC7u nguy hi\u1EC3m
+      n\xE0o g\u1EA7n \u0111\xE1m ch\xE1y kh\xF4ng?"
+    english: Are there any fuel containers or hazardous materials near the fire?
+  - key: callphase.scenario.suburban_house_garage_fire.question.garage_q_fire_spread
+    vietnamese: "L\u1EEDa c\xF3 \u0111ang lan sang \u0111\xE2u kh\xE1c kh\xF4ng?"
+    english: Is the fire spreading anywhere else?
+  - key: callphase.scenario.suburban_house_garage_fire.question.garage_q_caller_safe
+    vietnamese: "Hi\u1EC7n t\u1EA1i b\u1EA1n c\xF3 \u0111ang \u1EDF n\u01A1i an to\xE0n
+      kh\xF4ng?"
+    english: Are you somewhere safe right now?
+  - key: callphase.scenario.suburban_house_garage_fire.question.garage_q_vehicle_model
+    vietnamese: "Trong garage c\xF3 lo\u1EA1i xe n\xE0o?"
+    english: What type of car is inside the garage?
+  - key: callphase.scenario.suburban_house_garage_fire.question_reply.garage_q_vehicle_model
+    vietnamese: "T\xF4i kh\xF4ng bi\u1EBFt, t\xF4i \u0111ang lo cho b\u1ED1 t\xF4i
+      v\xE0 \u0111\xE1m ch\xE1y \u0111ang lan!"
+    english: I don't know, I'm worried about my dad and the fire spreading!
+  - key: callphase.scenario.suburban_house_garage_fire.question.garage_q_insurance
+    vietnamese: "B\u1EA1n c\xF3 bi\u1EBFt garage c\xF3 b\u1EA3o hi\u1EC3m kh\xF4ng?"
+    english: Do you know whether the garage is insured?
+  - key: callphase.scenario.suburban_house_garage_fire.question_reply.garage_q_insurance
+    vietnamese: "T\xF4i kh\xF4ng th\u1EC3 ngh\u0129 \u0111\u1EBFn b\u1EA3o hi\u1EC3m
+      l\xFAc n\xE0y, t\xF4i ch\u1EC9 c\u1EA7n gi\xFAp \u0111\u1EE1!"
+    english: I can't think about insurance right now, I just need help here!
+  - key: callphase.scenario.suburban_house_garage_fire.question.garage_q_when_started
+    vietnamese: "\u0110\xE1m ch\xE1y b\u1EAFt \u0111\u1EA7u v\xE0o kho\u1EA3ng th\u1EDDi
+      gian n\xE0o?"
+    english: About what time did the fire start?
+  - key: callphase.scenario.suburban_house_garage_fire.question_reply.garage_q_when_started
+    vietnamese: "N\xF3 m\u1EDBi x\u1EA3y ra th\xF4i, xin h\xE3y g\u1EEDi l\u1EF1c
+      l\u01B0\u1EE3ng ch\u1EEFa ch\xE1y \u0111\u1EBFn nhanh!"
+    english: It happened just now, please send the fire department fast!
   - key: callphase.field.source
     vietnamese: "Ngu\u1ED3n"
     english: Source
@@ -576,28 +1081,28 @@ MonoBehaviour:
     english: Unassessed
   - key: callphase.status.ready_to_submit
     vietnamese: "Tr\u1EA1ng th\xE1i: S\u1EB5n s\xE0ng n\u1ED9p"
-    english: "Status: Ready to submit"
+    english: 'Status: Ready to submit'
   - key: callphase.status.ready_to_submit_short
     vietnamese: "S\u1EB5n s\xE0ng n\u1ED9p"
     english: Ready to submit
   - key: callphase.status.active
     vietnamese: "Tr\u1EA1ng th\xE1i: \u0110ang ho\u1EA1t \u0111\u1ED9ng"
-    english: "Status: Active"
+    english: 'Status: Active'
   - key: callphase.status.active_short
     vietnamese: "\u0110ang ho\u1EA1t \u0111\u1ED9ng"
     english: Active
   - key: callphase.label.optional_note
     vietnamese: "Ghi ch\xFA / nh\u1EAFc nh\u1EDF t\xF9y ch\u1ECDn:"
-    english: "Optional note / reminder:"
+    english: 'Optional note / reminder:'
   - key: callphase.header.case_id
     vietnamese: "M\xE3 h\u1ED3 s\u01A1: {0}"
-    english: "Case ID: {0}"
+    english: 'Case ID: {0}'
   - key: callphase.header.case_id_na
     vietnamese: "M\xE3 h\u1ED3 s\u01A1: N/A"
-    english: "Case ID: N/A"
+    english: 'Case ID: N/A'
   - key: callphase.header.call_time
     vietnamese: "Th\u1EDDi gian g\u1ECDi: {0:00}:{1:00}"
-    english: "Call Time: {0:00}:{1:00}"
+    english: 'Call Time: {0:00}:{1:00}'
   - key: callphase.value.not_provided
     vietnamese: "Ch\u01B0a cung c\u1EA5p"
     english: Not provided
@@ -629,7 +1134,7 @@ MonoBehaviour:
     vietnamese: "TRUNG B\xCCNH"
     english: MEDIUM
   - key: callphase.severity.high
-    vietnamese: "CAO"
+    vietnamese: CAO
     english: HIGH
   - key: callphase.btn.confirm_submit
     vietnamese: "X\xE1c nh\u1EADn n\u1ED9p"
@@ -700,3 +1205,69 @@ MonoBehaviour:
   - key: callphase.result.call_time_efficiency.slow
     vietnamese: "Ch\u1EADm"
     english: Slow
+  - key: callphase.result.feedback.positive_severity
+    vietnamese: "\u0110\xE1nh gi\xE1 m\u1EE9c \u0111\u1ED9 t\u1ED1t."
+    english: Good risk assessment.
+  - key: callphase.result.feedback.missing_severity
+    vietnamese: "Ch\u01B0a \u0111\xE1nh gi\xE1 m\u1EE9c \u0111\u1ED9."
+    english: Severity assessment was missing.
+  - key: callphase.result.feedback.incorrect_severity
+    vietnamese: "M\u1EE9c \u0111\u1ED9 \u0111\xE1nh gi\xE1 th\u1EA5p h\u01A1n m\u1EE9c k\u1EF3 v\u1ECDng."
+    english: Severity was lower than expected.
+  - key: callphase.result.feedback.strong_followup
+    vietnamese: "B\u1EA1n \u0111\xE3 \u01B0u ti\xEAn c\xE1c c\xE2u h\u1ECFi b\u1ED5 sung kh\xE1 h\u1EE3p l\xFD."
+    english: You generally prioritized relevant follow-up questions.
+  - key: callphase.result.feedback.mixed_followup
+    vietnamese: "M\u1ED9t s\u1ED1 c\xE2u h\u1ECFi b\u1ED5 sung h\u1EEFu \xEDch, nh\u01B0ng m\u1EE9c \u0111\u1ED9 \u01B0u ti\xEAn ch\u01B0a \u0111\u1EC1u."
+    english: Some follow-up questions were useful, but prioritization was uneven.
+  - key: callphase.result.feedback.poor_followup
+    vietnamese: "M\u1ED9t s\u1ED1 c\xE2u h\u1ECFi b\u1ED5 sung c\xF3 \u0111\u1ED9 \u01B0u ti\xEAn th\u1EA5p h\u01A1n so v\u1EDBi t\xECnh hu\u1ED1ng."
+    english: Some follow-up questions were lower priority than the situation required.
+  - key: callphase.result.feedback.all_confirmed
+    vietnamese: "C\xE1c th\xF4ng tin quan tr\u1ECDng \u0111\u00E3 \u0111\u01B0\u1EE3c x\xE1c nh\u1EADn."
+    english: Critical facts were confirmed.
+  - key: callphase.result.feedback.none_confirmed
+    vietnamese: "Ch\u01B0a c\xF3 th\xF4ng tin quan tr\u1ECDng n\xE0o \u0111\u01B0\u1EE3c x\xE1c nh\u1EADn."
+    english: No critical facts were confirmed.
+  - key: callphase.result.feedback.partial_confirmed
+    vietnamese: "C\u1EA7n x\xE1c nh\u1EADn l\u1EA1i nhi\u1EC1u th\xF4ng tin quan tr\u1ECDng h\u01A1n."
+    english: More read-back confirmation was needed for critical facts.
+  - key: callphase.result.feedback.strong_correctness
+    vietnamese: "C\xE1c chi ti\u1EBFt s\u1EF1 c\u1ED1 quan tr\u1ECDng kh\u1EDBp t\u1ED1t v\u1EDBi k\u1ECBch b\u1EA3n."
+    english: Key incident details matched the scenario well.
+  - key: callphase.result.feedback.ready_to_submit
+    vietnamese: "B\xE1o c\xE1o \u0111\u00E3 s\u1EB5n s\xE0ng \u0111\u1EC3 n\u1ED9p."
+    english: Report was ready to submit.
+  - key: callphase.result.feedback.incomplete_submission
+    vietnamese: "V\u1EABn c\xF2n m\u1ED9t s\u1ED1 chi ti\u1EBFt thi\u1EBFu khi n\u1ED9p b\xE1o c\xE1o."
+    english: Some report details were missing at submission.
+  - key: callphase.result.feedback.call_time_good
+    vietnamese: "T\u1ED1c \u0111\u1ED9 x\u1EED l\xFD cu\u1ED9c g\u1ECDi hi\u1EC7u qu\u1EA3 cho k\u1ECBch b\u1EA3n n\xE0y."
+    english: Call handling was efficient for this scenario.
+  - key: callphase.result.feedback.call_time_acceptable
+    vietnamese: "T\u1ED1c \u0111\u1ED9 x\u1EED l\xFD cu\u1ED9c g\u1ECDi ch\u1EA5p nh\u1EADn \u0111\u01B0\u1EE3c, nh\u01B0ng c\xF3 th\u1EC3 nhanh h\u01A1n."
+    english: Call handling pace was acceptable, but could be faster.
+  - key: callphase.result.feedback.call_time_slow
+    vietnamese: "Th\u1EDDi gian x\u1EED l\xFD cu\u1ED9c g\u1ECDi l\xE2u h\u01A1n m\u1EE5c ti\xEAu c\u1EE7a k\u1ECBch b\u1EA3n."
+    english: Call handling took longer than the scenario target.
+  - key: callphase.result.feedback.call_time_not_scored
+    vietnamese: "Hi\u1EC7u qu\u1EA3 th\u1EDDi gian cu\u1ED9c g\u1ECDi kh\xF4ng \u0111\u01B0\u1EE3c t\xEDnh v\xEC b\xE1o c\xE1o n\u1ED9p ch\u01B0a \u0111\u1EE7 ho\xE0n ch\u1EC9nh."
+    english: Call Time efficiency was not scored because the submitted report was not complete enough.
+  - key: callphase.result.issue.field
+    vietnamese: "M\u1EE5c"
+    english: Field
+  - key: callphase.result.issue.incorrect_or_missing
+    vietnamese: "{0} ch\u01B0a \u0111\u00FAng ho\u1EB7c c\xF2n thi\u1EBFu."
+    english: "{0} was incorrect or missing."
+  - key: callphase.result.issue.hazard_incomplete
+    vietnamese: "Th\xF4ng tin m\u1ED1i nguy ch\u01B0a \u0111\u1EA7y \u0111\u1EE7."
+    english: Hazard information was incomplete.
+  - key: callphase.result.issue.hazard_missing
+    vietnamese: "Th\xF4ng tin m\u1ED1i nguy ch\u01B0a \u0111\u1EA7y \u0111\u1EE7. Thi\u1EBFu: {0}."
+    english: "Hazard information was incomplete. Missing: {0}."
+  - key: callphase.result.issue.hazard_unexpected
+    vietnamese: "Th\xF4ng tin m\u1ED1i nguy c\xF3 gi\xE1 tr\u1ECB kh\xF4ng mong \u0111\u1EE3i: {0}."
+    english: "Hazard information included unexpected values: {0}."
+  - key: callphase.result.issue.hazard_missing_and_unexpected
+    vietnamese: "Th\xF4ng tin m\u1ED1i nguy ch\u01B0a \u0111\u1EA7y \u0111\u1EE7. Thi\u1EBFu: {0}. Kh\xF4ng mong \u0111\u1EE3i: {1}."
+    english: "Hazard information was incomplete. Missing: {0}. Unexpected: {1}."

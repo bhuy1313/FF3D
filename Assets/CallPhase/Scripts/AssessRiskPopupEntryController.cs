@@ -1576,15 +1576,24 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
         if (severityScore >= GetSeverityCorrectScore())
         {
-            feedbackLines.Add(GetConfiguredFeedbackLine(feedbackConfig.positiveSeverity, "Good risk assessment."));
+            feedbackLines.Add(GetConfiguredFeedbackLine(
+                feedbackConfig.positiveSeverity,
+                "callphase.result.feedback.positive_severity",
+                "Good risk assessment."));
         }
         else if (IsMissingValue(severityChosen))
         {
-            feedbackLines.Add(GetConfiguredFeedbackLine(feedbackConfig.missingSeverity, "Severity assessment was missing."));
+            feedbackLines.Add(GetConfiguredFeedbackLine(
+                feedbackConfig.missingSeverity,
+                "callphase.result.feedback.missing_severity",
+                "Severity assessment was missing."));
         }
         else
         {
-            feedbackLines.Add(GetConfiguredFeedbackLine(feedbackConfig.incorrectSeverity, "Severity was lower than expected."));
+            feedbackLines.Add(GetConfiguredFeedbackLine(
+                feedbackConfig.incorrectSeverity,
+                "callphase.result.feedback.incorrect_severity",
+                "Severity was lower than expected."));
         }
 
         int maximumConfirmedFactsScore = GetMaximumScore(GetReviewExpectedConfirmedFields());
@@ -1592,16 +1601,21 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         {
             feedbackLines.Add(GetConfiguredFeedbackLine(
                 feedbackConfig.allConfirmed,
+                "callphase.result.feedback.all_confirmed",
                 BuildAllConfirmedFeedbackFallback()));
         }
         else if (confirmedFactsCount <= 0)
         {
-            feedbackLines.Add(GetConfiguredFeedbackLine(feedbackConfig.noneConfirmed, "No critical facts were confirmed."));
+            feedbackLines.Add(GetConfiguredFeedbackLine(
+                feedbackConfig.noneConfirmed,
+                "callphase.result.feedback.none_confirmed",
+                "No critical facts were confirmed."));
         }
         else
         {
             feedbackLines.Add(GetConfiguredFeedbackLine(
                 feedbackConfig.partialConfirmed,
+                "callphase.result.feedback.partial_confirmed",
                 "More read-back confirmation was needed for critical facts."));
         }
 
@@ -1609,6 +1623,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         {
             feedbackLines.Add(GetConfiguredFeedbackLine(
                 feedbackConfig.strongCorrectness,
+                "callphase.result.feedback.strong_correctness",
                 "Key incident details matched the scenario well."));
         }
         else if (keyValueIssues.Count > 0)
@@ -1620,12 +1635,14 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         {
             feedbackLines.Add(GetConfiguredFeedbackLine(
                 feedbackConfig.readyToSubmit,
+                "callphase.result.feedback.ready_to_submit",
                 "Report was ready to submit."));
         }
         else
         {
             feedbackLines.Add(GetConfiguredFeedbackLine(
                 feedbackConfig.incompleteSubmission,
+                "callphase.result.feedback.incomplete_submission",
                 "Some report details were missing at submission."));
         }
 
@@ -1635,18 +1652,21 @@ public class AssessRiskPopupEntryController : MonoBehaviour
             {
                 feedbackLines.Add(GetConfiguredFeedbackLine(
                     feedbackConfig.strongFollowUp,
+                    "callphase.result.feedback.strong_followup",
                     "You generally prioritized relevant follow-up questions."));
             }
             else if (followUpScore >= GetFollowUpMixedThreshold())
             {
                 feedbackLines.Add(GetConfiguredFeedbackLine(
                     feedbackConfig.mixedFollowUp,
+                    "callphase.result.feedback.mixed_followup",
                     "Some follow-up questions were useful, but prioritization was uneven."));
             }
             else
             {
                 feedbackLines.Add(GetConfiguredFeedbackLine(
                     feedbackConfig.poorFollowUp,
+                    "callphase.result.feedback.poor_followup",
                     "Some follow-up questions were lower priority than the situation required."));
             }
         }
@@ -1655,20 +1675,28 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         {
             if (callTimeScore >= GetMaximumCallTimeScore())
             {
-                feedbackLines.Add("Call handling was efficient for this scenario.");
+                feedbackLines.Add(CallPhaseUiChromeText.Tr(
+                    "callphase.result.feedback.call_time_good",
+                    "Call handling was efficient for this scenario."));
             }
             else if (callTimeScore > 0)
             {
-                feedbackLines.Add("Call handling pace was acceptable, but could be faster.");
+                feedbackLines.Add(CallPhaseUiChromeText.Tr(
+                    "callphase.result.feedback.call_time_acceptable",
+                    "Call handling pace was acceptable, but could be faster."));
             }
             else
             {
-                feedbackLines.Add("Call handling took longer than the scenario target.");
+                feedbackLines.Add(CallPhaseUiChromeText.Tr(
+                    "callphase.result.feedback.call_time_slow",
+                    "Call handling took longer than the scenario target."));
             }
         }
         else
         {
-            feedbackLines.Add("Call Time efficiency was not scored because the submitted report was not complete enough.");
+            feedbackLines.Add(CallPhaseUiChromeText.Tr(
+                "callphase.result.feedback.call_time_not_scored",
+                "Call Time efficiency was not scored because the submitted report was not complete enough."));
         }
 
         return feedbackLines;
@@ -1718,12 +1746,12 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
         return new List<CallPhaseScenarioScoredFieldData>
         {
-            new CallPhaseScenarioScoredFieldData { fieldId = "Address", displayName = "Address", scoreWeight = 8, issueText = "Address was incorrect or missing." },
-            new CallPhaseScenarioScoredFieldData { fieldId = FireLocationFieldId, displayName = "Fire Location", scoreWeight = 6, issueText = "Fire location was incorrect or missing." },
-            new CallPhaseScenarioScoredFieldData { fieldId = "OccupantRisk", displayName = "Occupant Risk", scoreWeight = 8, issueText = "Occupant risk was incomplete." },
-            new CallPhaseScenarioScoredFieldData { fieldId = "hazard", displayName = "Hazard", scoreWeight = 6, issueText = "Hazard information was incomplete." },
-            new CallPhaseScenarioScoredFieldData { fieldId = "SpreadStatus", displayName = "Spread Status", scoreWeight = 6, issueText = "Spread status was incomplete." },
-            new CallPhaseScenarioScoredFieldData { fieldId = "CallerSafety", displayName = "Caller Safety", scoreWeight = 6, issueText = "Caller safety information was incomplete." }
+            new CallPhaseScenarioScoredFieldData { fieldId = "Address", displayName = "Address", scoreWeight = 8 },
+            new CallPhaseScenarioScoredFieldData { fieldId = FireLocationFieldId, displayName = "Fire Location", scoreWeight = 6 },
+            new CallPhaseScenarioScoredFieldData { fieldId = "OccupantRisk", displayName = "Occupant Risk", scoreWeight = 8 },
+            new CallPhaseScenarioScoredFieldData { fieldId = "hazard", displayName = "Hazard", scoreWeight = 6 },
+            new CallPhaseScenarioScoredFieldData { fieldId = "SpreadStatus", displayName = "Spread Status", scoreWeight = 6 },
+            new CallPhaseScenarioScoredFieldData { fieldId = "CallerSafety", displayName = "Caller Safety", scoreWeight = 6 }
         };
     }
 
@@ -2070,11 +2098,18 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         return 18;
     }
 
-    private string GetConfiguredFeedbackLine(string configuredValue, string fallbackValue)
+    private string GetConfiguredFeedbackLine(string configuredValue, string localizationKey, string fallbackValue)
     {
-        return !string.IsNullOrWhiteSpace(configuredValue)
-            ? configuredValue.Trim()
-            : fallbackValue;
+        string localizedFallback = CallPhaseUiChromeText.Tr(localizationKey, fallbackValue);
+        if (string.IsNullOrWhiteSpace(configuredValue))
+        {
+            return localizedFallback;
+        }
+
+        string trimmedValue = configuredValue.Trim();
+        return string.Equals(trimmedValue, fallbackValue, StringComparison.Ordinal)
+            ? localizedFallback
+            : trimmedValue;
     }
 
     private string BuildAllConfirmedFeedbackFallback()
@@ -2089,34 +2124,14 @@ public class AssessRiskPopupEntryController : MonoBehaviour
                 continue;
             }
 
-            string displayName = !string.IsNullOrWhiteSpace(fieldConfig.displayName)
-                ? fieldConfig.displayName.Trim()
-                : GetFieldDisplayName(fieldConfig.fieldId);
-
+            string displayName = GetFieldDisplayName(fieldConfig.fieldId);
             if (!string.IsNullOrWhiteSpace(displayName))
             {
-                names.Add(displayName.ToLowerInvariant());
+                names.Add(displayName);
             }
         }
 
-        if (names.Count <= 0)
-        {
-            return "Critical facts were confirmed.";
-        }
-
-        if (names.Count == 1)
-        {
-            return names[0] + " was confirmed.";
-        }
-
-        if (names.Count == 2)
-        {
-            return names[0] + " and " + names[1] + " were confirmed.";
-        }
-
-        string trailingName = names[names.Count - 1];
-        names.RemoveAt(names.Count - 1);
-        return string.Join(", ", names) + ", and " + trailingName + " were confirmed.";
+        return CallPhaseUiChromeText.Tr("callphase.result.feedback.all_confirmed", "Critical facts were confirmed.");
     }
 
     private string BuildDefaultFieldIssueText(string fieldId, string displayName)
@@ -2127,10 +2142,13 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
         if (string.IsNullOrWhiteSpace(resolvedDisplayName))
         {
-            resolvedDisplayName = "Field";
+            resolvedDisplayName = CallPhaseUiChromeText.Tr("callphase.result.issue.field", "Field");
         }
 
-        return resolvedDisplayName + " was incorrect or missing.";
+        string format = CallPhaseUiChromeText.Tr(
+            "callphase.result.issue.incorrect_or_missing",
+            "{0} was incorrect or missing.");
+        return string.Format(format, resolvedDisplayName);
     }
 
     private string GetFieldDisplayName(string fieldId)
@@ -2568,7 +2586,9 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         string expectedHazardValue = GetExpectedFieldValue("hazard");
         if (string.IsNullOrWhiteSpace(expectedHazardValue))
         {
-            return "Hazard information was incomplete.";
+            return CallPhaseUiChromeText.Tr(
+                "callphase.result.issue.hazard_incomplete",
+                "Hazard information was incomplete.");
         }
 
         string resolvedActualValue = IsMissingValue(actualHazardValue)

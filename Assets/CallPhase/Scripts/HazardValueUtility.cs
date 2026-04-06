@@ -85,24 +85,31 @@ public static class HazardValueUtility
 
         if (missingValues.Count > 0 && extraValues.Count > 0)
         {
-            return "Hazard information was incomplete. Missing: "
-                + JoinValues(missingValues)
-                + ". Unexpected: "
-                + JoinValues(extraValues)
-                + ".";
+            string format = CallPhaseUiChromeText.Tr(
+                "callphase.result.issue.hazard_missing_and_unexpected",
+                "Hazard information was incomplete. Missing: {0}. Unexpected: {1}.");
+            return string.Format(format, JoinValues(missingValues), JoinValues(extraValues));
         }
 
         if (missingValues.Count > 0)
         {
-            return "Hazard information was incomplete. Missing: " + JoinValues(missingValues) + ".";
+            string format = CallPhaseUiChromeText.Tr(
+                "callphase.result.issue.hazard_missing",
+                "Hazard information was incomplete. Missing: {0}.");
+            return string.Format(format, JoinValues(missingValues));
         }
 
         if (extraValues.Count > 0)
         {
-            return "Hazard information included unexpected values: " + JoinValues(extraValues) + ".";
+            string format = CallPhaseUiChromeText.Tr(
+                "callphase.result.issue.hazard_unexpected",
+                "Hazard information included unexpected values: {0}.");
+            return string.Format(format, JoinValues(extraValues));
         }
 
-        return "Hazard information was incomplete.";
+        return CallPhaseUiChromeText.Tr(
+            "callphase.result.issue.hazard_incomplete",
+            "Hazard information was incomplete.");
     }
 
     public static List<string> ParseValues(string combinedValue)
