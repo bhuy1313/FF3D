@@ -14,7 +14,7 @@ public class SubMenuGameplayLock : MonoBehaviour
     [SerializeField] private GameObject playerRoot;
     [SerializeField] private StarterAssetsInputs starterAssetsInputs;
     [SerializeField] private FPSCommandSystem commandSystem;
-    [SerializeField] private BreakActionLock breakActionLock;
+    [SerializeField] private PlayerActionLock breakActionLock;
 
     [Header("Cursor")]
     [SerializeField] private bool unlockCursorWhileOpen = true;
@@ -82,7 +82,7 @@ public class SubMenuGameplayLock : MonoBehaviour
 
         if (breakActionLock != null)
         {
-            breakActionLock.Acquire();
+            breakActionLock.AcquireFullLock();
         }
 
         if (commandSystem != null)
@@ -127,7 +127,7 @@ public class SubMenuGameplayLock : MonoBehaviour
 
         if (breakActionLock != null)
         {
-            breakActionLock.Release();
+            breakActionLock.ReleaseFullLock();
         }
 
         if (commandSystem != null)
@@ -205,7 +205,7 @@ public class SubMenuGameplayLock : MonoBehaviour
 
         if (breakActionLock == null && playerRoot != null)
         {
-            breakActionLock = BreakActionLock.GetOrCreate(playerRoot);
+            breakActionLock = PlayerActionLock.GetOrCreate(playerRoot);
         }
     }
 }

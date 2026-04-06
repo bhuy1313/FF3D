@@ -23,7 +23,7 @@ public class CallPhaseDeskInteractTrigger : MonoBehaviour, IInteractable
 
     [Header("Gameplay Lock")]
     [SerializeField] private GameObject playerRoot;
-    [SerializeField] private BreakActionLock breakActionLock;
+    [SerializeField] private PlayerActionLock breakActionLock;
     [SerializeField] private StarterAssetsInputs starterAssetsInputs;
     [SerializeField] private FPSCommandSystem commandSystem;
     [SerializeField] private bool unlockCursorWhileOpen = true;
@@ -68,7 +68,7 @@ public class CallPhaseDeskInteractTrigger : MonoBehaviour, IInteractable
     {
         if (breakActionLock != null)
         {
-            breakActionLock.Acquire();
+            breakActionLock.AcquireFullLock();
         }
 
         if (commandSystem != null)
@@ -215,7 +215,7 @@ public class CallPhaseDeskInteractTrigger : MonoBehaviour, IInteractable
 
         if (breakActionLock == null && playerRoot != null)
         {
-            breakActionLock = BreakActionLock.GetOrCreate(playerRoot);
+            breakActionLock = PlayerActionLock.GetOrCreate(playerRoot);
         }
 
         if (starterAssetsInputs == null && playerRoot != null)
