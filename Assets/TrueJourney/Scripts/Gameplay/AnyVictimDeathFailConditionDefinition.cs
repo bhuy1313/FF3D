@@ -20,7 +20,11 @@ public class AnyVictimDeathFailConditionDefinition : MissionFailConditionDefinit
         string title = ResolveTitle("Any Victim Death");
         bool isRelevant = context.Snapshot.TotalTrackedVictims > 0;
         bool hasFailed = isRelevant && context.Snapshot.DeceasedVictimCount > 0;
-        string summary = $"{title}: {context.Snapshot.DeceasedVictimCount} deceased";
+        string summary = MissionLocalization.Format(
+            "mission.fail_condition.any_victim_death.summary",
+            "{0}: {1} deceased",
+            title,
+            context.Snapshot.DeceasedVictimCount);
         return new MissionFailConditionEvaluation(title, summary, hasFailed, isRelevant);
     }
 }

@@ -6,6 +6,8 @@ using UnityEngine;
 public class TimeLimitFailConditionDefinition : MissionFailConditionDefinition
 {
     [SerializeField] private float timeLimitSeconds = 60f;
+    [SerializeField] private string remainingSummaryLocalizationKey;
+    [SerializeField] private string disabledSummaryLocalizationKey;
 
     public override MissionFailConditionEvaluation Evaluate(MissionFailConditionContext context)
     {
@@ -15,8 +17,14 @@ public class TimeLimitFailConditionDefinition : MissionFailConditionDefinition
         bool hasFailed = isRelevant && context.ElapsedTimeSeconds >= limit;
         float remaining = Mathf.Max(0f, limit - context.ElapsedTimeSeconds);
         string summary = isRelevant
-            ? $"{title}: {remaining:F1}s remaining"
-            : $"{title}: disabled";
+            ? ResolveText(
+                remainingSummaryLocalizationKey,
+                string.Empty,
+                MissionLocalization.Format("mission.fail_condition.time_limit.remaining", "{0}: {1:F1}s remaining", title, remaining))
+            : ResolveText(
+                disabledSummaryLocalizationKey,
+                string.Empty,
+                MissionLocalization.Format("mission.fail_condition.time_limit.disabled", "{0}: disabled", title));
 
         return new MissionFailConditionEvaluation(title, summary, hasFailed, isRelevant);
     }

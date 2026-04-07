@@ -8,7 +8,9 @@ public class MissionStageDefinition : ScriptableObject
 {
     [Header("Stage")]
     [SerializeField] private string stageId = "stage";
+    [SerializeField] private string stageTitleLocalizationKey;
     [SerializeField] private string stageTitle = "Mission Stage";
+    [SerializeField] private string stageDescriptionLocalizationKey;
     [SerializeField, TextArea] private string stageDescription;
     [SerializeField, Min(0f)] private float nextStageDelaySeconds;
 
@@ -20,8 +22,8 @@ public class MissionStageDefinition : ScriptableObject
     [SerializeField] private List<MissionActionDefinition> onStageCompletedActions = new List<MissionActionDefinition>();
 
     public string StageId => stageId;
-    public string StageTitle => stageTitle;
-    public string StageDescription => stageDescription;
+    public string StageTitle => MissionLocalization.Get(stageTitleLocalizationKey, stageTitle);
+    public string StageDescription => MissionLocalization.Get(stageDescriptionLocalizationKey, stageDescription);
     public float NextStageDelaySeconds => Mathf.Max(0f, nextStageDelaySeconds);
 
     public void CollectObjectives(List<MissionObjectiveDefinition> results)

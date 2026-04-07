@@ -22,7 +22,12 @@ public class MaxVictimDeathsFailConditionDefinition : MissionFailConditionDefini
         int maxDeaths = Mathf.Max(0, maxAllowedVictimDeaths);
         bool isRelevant = context.Snapshot.TotalTrackedVictims > 0;
         bool hasFailed = isRelevant && context.Snapshot.DeceasedVictimCount > maxDeaths;
-        string summary = $"{title}: {context.Snapshot.DeceasedVictimCount}/{maxDeaths}";
+        string summary = MissionLocalization.Format(
+            "mission.fail_condition.max_victim_deaths.summary",
+            "{0}: {1}/{2}",
+            title,
+            context.Snapshot.DeceasedVictimCount,
+            maxDeaths);
         return new MissionFailConditionEvaluation(title, summary, hasFailed, isRelevant);
     }
 }

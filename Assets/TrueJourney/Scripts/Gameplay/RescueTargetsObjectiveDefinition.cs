@@ -20,7 +20,12 @@ public class RescueTargetsObjectiveDefinition : MissionObjectiveDefinition
         string title = ResolveTitle("Rescue Targets");
         bool isRelevant = snapshot.TotalTrackedRescuables > 0;
         bool isComplete = isRelevant && snapshot.RescuedCount >= snapshot.TotalTrackedRescuables;
-        string summary = $"{title}: {snapshot.RescuedCount}/{snapshot.TotalTrackedRescuables}";
+        string summary = MissionLocalization.Format(
+            "mission.objective.rescue_targets.summary",
+            "{0}: {1}/{2}",
+            title,
+            snapshot.RescuedCount,
+            snapshot.TotalTrackedRescuables);
         return new MissionObjectiveEvaluation(title, summary, isComplete, false, isRelevant);
     }
 

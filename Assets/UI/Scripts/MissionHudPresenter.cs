@@ -7,6 +7,8 @@ using UnityEngine.UI;
 [DisallowMultipleComponent]
 public class MissionHudPresenter : MonoBehaviour
 {
+    private const float MissingMissionHideGraceSeconds = 0.5f;
+
     private enum ObjectiveVisualState
     {
         Pending = 0,
@@ -134,6 +136,9 @@ public class MissionHudPresenter : MonoBehaviour
     private GameObject activeToastRoot;
     private float activeToastHideTime;
     private float nextToastAvailableTime;
+    private float lastMissionSystemSeenTime = float.NegativeInfinity;
+    private bool hasAppliedVisibility;
+    private bool lastAppliedVisibility;
 
     private void Awake()
     {
@@ -144,6 +149,7 @@ public class MissionHudPresenter : MonoBehaviour
 
     private void OnEnable()
     {
+        hasAppliedVisibility = false;
         ResetToastTracking();
         HideAllToasts();
         RefreshView();
@@ -159,12 +165,17 @@ public class MissionHudPresenter : MonoBehaviour
     {
         if (missionSystem == null)
         {
-            missionSystem = FindAnyObjectByType<IncidentMissionSystem>();
+            missionSystem = FindAnyObjectByType<IncidentMissionSystem>(FindObjectsInactive.Exclude);
         }
 
         if (rootCanvasGroup == null)
         {
             rootCanvasGroup = GetComponent<CanvasGroup>();
+        }
+
+        if (missionSystem != null)
+        {
+            lastMissionSystemSeenTime = Time.unscaledTime;
         }
     }
 
@@ -186,7 +197,7 @@ public class MissionHudPresenter : MonoBehaviour
 
         SetText(missionTitleText, missionTitle);
         SetText(missionDescriptionText, missionSummary);
-        SetText(stateText, $"State: {missionSystem.State}");
+        SetText(stateText, MissionLocalization.Format("mission.hud.state", "State: {0}", LocalizeMissionState(missionSystem.State)));
         SetText(stageText, legacyStageText);
         SetText(timerText, BuildTimerText());
         SetText(scoreText, BuildScoreText());
@@ -207,7 +218,12 @@ public class MissionHudPresenter : MonoBehaviour
     {
         if (missionSystem == null)
         {
-            return !hideWhenMissionMissing;
+            if (!hideWhenMissionMissing)
+            {
+                return true;
+            }
+
+            return Time.unscaledTime - lastMissionSystemSeenTime <= MissingMissionHideGraceSeconds;
         }
 
         if (hideWhenMissionIdle && missionSystem.State == IncidentMissionSystem.MissionState.Idle)
@@ -225,9 +241,16 @@ public class MissionHudPresenter : MonoBehaviour
             return;
         }
 
+        if (hasAppliedVisibility && lastAppliedVisibility == visible)
+        {
+            return;
+        }
+
         rootCanvasGroup.alpha = visible ? 1f : 0f;
-        rootCanvasGroup.interactable = visible;
-        rootCanvasGroup.blocksRaycasts = visible;
+        rootCanvasGroup.interactable = false;
+        rootCanvasGroup.blocksRaycasts = false;
+        hasAppliedVisibility = true;
+        lastAppliedVisibility = visible;
     }
 
     private string BuildStageText()
@@ -239,10 +262,19 @@ public class MissionHudPresenter : MonoBehaviour
 
         if (string.IsNullOrWhiteSpace(missionSystem.CurrentStageTitle))
         {
-            return $"Stage {missionSystem.CurrentStageIndex + 1}/{missionSystem.TotalStageCount}";
+            return MissionLocalization.Format(
+                "mission.hud.stage.short",
+                "Stage {0}/{1}",
+                missionSystem.CurrentStageIndex + 1,
+                missionSystem.TotalStageCount);
         }
 
-        return $"Stage {missionSystem.CurrentStageIndex + 1}/{missionSystem.TotalStageCount}: {missionSystem.CurrentStageTitle}";
+        return MissionLocalization.Format(
+            "mission.hud.stage.full",
+            "Stage {0}/{1}: {2}",
+            missionSystem.CurrentStageIndex + 1,
+            missionSystem.TotalStageCount,
+            missionSystem.CurrentStageTitle);
     }
 
     private string BuildTimerText()
@@ -254,10 +286,10 @@ public class MissionHudPresenter : MonoBehaviour
 
         if (missionSystem.TimeLimitSeconds > 0f)
         {
-            return string.Format(timerRemainingFormat, missionSystem.RemainingTimeSeconds);
+            return MissionLocalization.Format("mission.hud.timer.remaining", timerRemainingFormat, missionSystem.RemainingTimeSeconds);
         }
 
-        return string.Format(timerElapsedFormat, missionSystem.ElapsedTime);
+        return MissionLocalization.Format("mission.hud.timer.elapsed", timerElapsedFormat, missionSystem.ElapsedTime);
     }
 
     private string BuildCompactTimerText()
@@ -299,7 +331,7 @@ public class MissionHudPresenter : MonoBehaviour
                 objectiveBuilder.Append('\n');
             }
 
-            string prefix = status.HasFailed ? failedPrefix : status.IsComplete ? completedPrefix : pendingPrefix;
+            string prefix = status.HasFailed ? GetFailedPrefix() : status.IsComplete ? GetCompletedPrefix() : GetPendingPrefix();
             objectiveBuilder.Append(prefix);
             objectiveBuilder.Append(' ');
             objectiveBuilder.Append(status.Summary);
@@ -327,7 +359,12 @@ public class MissionHudPresenter : MonoBehaviour
         string rankSuffix = string.IsNullOrWhiteSpace(missionSystem.DisplayedScoreRank)
             ? string.Empty
             : $" [{missionSystem.DisplayedScoreRank}]";
-        return string.Format(scoreFormat, missionSystem.DisplayedScore, missionSystem.DisplayedMaximumScore, rankSuffix);
+        return MissionLocalization.Format(
+            "mission.hud.score",
+            scoreFormat,
+            missionSystem.DisplayedScore,
+            missionSystem.DisplayedMaximumScore,
+            rankSuffix);
     }
 
     private string BuildMissionSummaryText()
@@ -360,7 +397,11 @@ public class MissionHudPresenter : MonoBehaviour
         int stageNumber = missionSystem.State == IncidentMissionSystem.MissionState.Completed
             ? missionSystem.TotalStageCount
             : Mathf.Clamp(missionSystem.CurrentStageIndex + 1, 1, missionSystem.TotalStageCount);
-        return string.Format(stageCounterFormat, stageNumber, missionSystem.TotalStageCount);
+        return MissionLocalization.Format(
+            "mission.hud.stage.counter",
+            stageCounterFormat,
+            stageNumber,
+            missionSystem.TotalStageCount);
     }
 
     private string BuildStageHeadlineText()
@@ -385,8 +426,8 @@ public class MissionHudPresenter : MonoBehaviour
 
         return missionSystem.State switch
         {
-            IncidentMissionSystem.MissionState.Completed => "Mission Complete",
-            IncidentMissionSystem.MissionState.Failed => "Mission Failed",
+            IncidentMissionSystem.MissionState.Completed => MissionLocalization.Get("mission.hud.state.completed_headline", "Mission Complete"),
+            IncidentMissionSystem.MissionState.Failed => MissionLocalization.Get("mission.hud.state.failed_headline", "Mission Failed"),
             _ => string.Empty
         };
     }
@@ -395,15 +436,18 @@ public class MissionHudPresenter : MonoBehaviour
     {
         if (missionSystem == null)
         {
-            return "OBJECTIVES";
+            return MissionLocalization.Get("mission.hud.objectives.header.default", "OBJECTIVES");
         }
 
         if (string.IsNullOrWhiteSpace(objectivesHeaderFormat))
         {
-            return "OBJECTIVES";
+            return MissionLocalization.Get("mission.hud.objectives.header.default", "OBJECTIVES");
         }
 
-        return string.Format(objectivesHeaderFormat, missionSystem.State.ToString().ToUpperInvariant());
+        return MissionLocalization.Format(
+            "mission.hud.objectives.header.with_state",
+            objectivesHeaderFormat,
+            LocalizeMissionState(missionSystem.State).ToUpperInvariant());
     }
 
     private float BuildProgressNormalized()
@@ -446,14 +490,14 @@ public class MissionHudPresenter : MonoBehaviour
     private string BuildProgressText()
     {
         float percent = BuildProgressNormalized() * 100f;
-        string progressText = string.Format(progressPercentFormat, percent);
+        string progressText = MissionLocalization.Format("mission.hud.progress.percent", progressPercentFormat, percent);
         string scoreValue = BuildScoreValueText();
         if (string.IsNullOrWhiteSpace(scoreValue))
         {
             return progressText;
         }
 
-        return string.Format(progressWithScoreFormat, percent, scoreValue);
+        return MissionLocalization.Format("mission.hud.progress.with_score", progressWithScoreFormat, percent, scoreValue);
     }
 
     private string BuildScoreValueText()
@@ -576,12 +620,12 @@ public class MissionHudPresenter : MonoBehaviour
 
         lastDoneToastStageIndex = stageIndex;
         string resolvedStageTitle = string.IsNullOrWhiteSpace(stageTitle)
-            ? $"Stage {Mathf.Max(1, stageIndex + 1)}"
+            ? MissionLocalization.Format("mission.hud.stage.single", "Stage {0}", Mathf.Max(1, stageIndex + 1))
             : stageTitle.Trim();
         pendingToastRequests.Enqueue(new ToastRequest(
             ToastType.Done,
             string.Empty,
-            string.Format(objectiveDoneToastFormat, resolvedStageTitle),
+            MissionLocalization.Format("mission.hud.toast.objective_done", objectiveDoneToastFormat, resolvedStageTitle),
             objectiveDoneToastDuration));
     }
 
@@ -589,9 +633,36 @@ public class MissionHudPresenter : MonoBehaviour
     {
         pendingToastRequests.Enqueue(new ToastRequest(
             ToastType.Update,
-            objectiveUpdateToastTitle,
+            MissionLocalization.Get("mission.hud.toast.objective_updated", objectiveUpdateToastTitle),
             BuildObjectiveUpdateToastBodyText(),
             objectiveUpdateToastDuration));
+    }
+
+    private string GetPendingPrefix()
+    {
+        return MissionLocalization.Get("mission.hud.prefix.pending", pendingPrefix);
+    }
+
+    private string GetCompletedPrefix()
+    {
+        return MissionLocalization.Get("mission.hud.prefix.completed", completedPrefix);
+    }
+
+    private string GetFailedPrefix()
+    {
+        return MissionLocalization.Get("mission.hud.prefix.failed", failedPrefix);
+    }
+
+    private static string LocalizeMissionState(IncidentMissionSystem.MissionState state)
+    {
+        return state switch
+        {
+            IncidentMissionSystem.MissionState.Idle => MissionLocalization.Get("mission.state.idle", "Idle"),
+            IncidentMissionSystem.MissionState.Running => MissionLocalization.Get("mission.state.running", "Running"),
+            IncidentMissionSystem.MissionState.Completed => MissionLocalization.Get("mission.state.completed", "Completed"),
+            IncidentMissionSystem.MissionState.Failed => MissionLocalization.Get("mission.state.failed", "Failed"),
+            _ => state.ToString()
+        };
     }
 
     private string BuildObjectiveUpdateToastBodyText()

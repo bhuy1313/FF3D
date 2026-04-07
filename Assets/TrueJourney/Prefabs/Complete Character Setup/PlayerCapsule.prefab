@@ -355,26 +355,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9b0f6ad13f0c4d4eaa8f2f6d4f2f1b71, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerHazardExposure
-  viewCamera: {fileID: 0}
-  viewTransform: {fileID: 0}
   smokeRiseSpeed: 2.5
   smokeFallSpeed: 1.75
   smokeEnterThreshold: 0.08
   smokeExitThreshold: 0.04
-  fireGlareMaxDistance: 10
-  fireGlareMinViewDot: 0.6
-  fireGlareRiseSpeed: 4
-  fireGlareFallSpeed: 5.5
-  fireViewOriginOffset: 0.05
-  fireViewportPadding: 0.15
-  fireOcclusionMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
   smokeDensity01: 0
-  fireGlare01: 0
   isInSmoke: 0
-  isLookingAtFire: 0
-  fireGlareViewportPosition: {x: 0.5, y: 0.5}
 --- !u!114 &4492952563589190220
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -103,11 +103,11 @@ namespace StarterAssets
 
             if (IsGrabActive)
             {
-                ClearFocus();
+                UpdateFocus(grabbedBody != null ? grabbedBody.transform : null);
             }
             else
             {
-                UpdateFocus();
+                UpdateFocus(null);
             }
 
             bool currentGrab = input != null && input.grab;
@@ -121,7 +121,7 @@ namespace StarterAssets
             if (IsGrabActive)
             {
                 bool usePressedWhileGrabbed = WasPressed(input != null && input.use, ref previousUse);
-                WasPressed(input != null && input.interact, ref previousInteract);
+                bool interactPressedWhileGrabbed = WasPressed(input != null && input.interact, ref previousInteract);
                 WasPressed(input != null && input.pickup, ref previousPickup);
                 WasPressed(input != null && input.drop, ref previousDrop);
 
@@ -131,6 +131,12 @@ namespace StarterAssets
                 if (usePressedWhileGrabbed)
                 {
                     TryPlaceGrabbed();
+                }
+
+                if (interactPressedWhileGrabbed && CanInteractWhileGrabbed(currentInteractable))
+                {
+                    currentInteractable.Interact(gameObject);
+                    NotifyInteractionSignalRelay(currentTarget, currentInteractable, gameObject);
                 }
 
                 BlockGameplayActionsWhileGrabbed();
@@ -200,22 +206,32 @@ namespace StarterAssets
             }
         }
 
-        private void UpdateFocus()
+        private void UpdateFocus(Transform ignoredRoot)
         {
             Ray ray = viewCamera.ScreenPointToRay(new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 0f));
 
-            if (Physics.Raycast(ray, out RaycastHit hit, interactDistance, interactMask, QueryTriggerInteraction.Ignore))
+            RaycastHit[] hits = Physics.RaycastAll(ray, interactDistance, interactMask, QueryTriggerInteraction.Ignore);
+            if (hits != null && hits.Length > 0)
             {
-                IInteractable interactable = FindInteractable(hit.collider);
-
-                if (interactable != null)
+                System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+                for (int i = 0; i < hits.Length; i++)
                 {
-                    SetFocus(hit.collider.gameObject, interactable);
-                    if (drawDebugRay)
+                    RaycastHit hit = hits[i];
+                    if (ignoredRoot != null && hit.collider != null && hit.collider.transform.IsChildOf(ignoredRoot))
                     {
-                        Debug.DrawRay(ray.origin, ray.direction * interactDistance, Color.green);
+                        continue;
                     }
-                    return;
+
+                    IInteractable interactable = FindInteractable(hit.collider);
+                    if (interactable != null)
+                    {
+                        SetFocus(hit.collider.gameObject, interactable);
+                        if (drawDebugRay)
+                        {
+                            Debug.DrawRay(ray.origin, ray.direction * interactDistance, Color.green);
+                        }
+                        return;
+                    }
                 }
             }
 
@@ -846,7 +862,23 @@ namespace StarterAssets
                 return false;
             }
 
-            return !(playerActionLock.AllowsSafeZoneInteractionOnly && interactable is ISafeZoneTarget);
+            if (playerActionLock.AllowsSafeZoneInteractionOnly &&
+                (interactable is ISafeZoneTarget || CanInteractWhileHandsOccupied(interactable)))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private static bool CanInteractWhileGrabbed(IInteractable interactable)
+        {
+            return CanInteractWhileHandsOccupied(interactable);
+        }
+
+        private static bool CanInteractWhileHandsOccupied(IInteractable interactable)
+        {
+            return interactable is Door;
         }
 
         private static bool WasPressed(bool current, ref bool previous)

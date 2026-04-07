@@ -27,12 +27,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f78a1e5c57cb4c79a2e55ffca71af14d, type: 3}
   m_Name: Tutorial_RescueVictimObjective_DeliverTargetToZoneObjectiveDefinition
   m_EditorClassIdentifier: Assembly-CSharp::DeliverTargetToZoneObjectiveDefinition
+  objectiveTitleLocalizationKey: mission.tutorial.objective.rescue_victim.title
   objectiveTitle: Rescue Victim Objective
+  objectiveDescriptionLocalizationKey: mission.tutorial.objective.rescue_victim.description
   objectiveDescription: Bring Victim To Safe Zone
   scoreWeight: 10
   scoreMode: 0
   targetSignalKey: tutorial-rescue-victim
+  pendingSummaryLocalizationKey: mission.tutorial.objective.rescue_victim.pending
   pendingSummary: Deliver target to safe zone
+  completedSummaryLocalizationKey: mission.tutorial.objective.rescue_victim.completed
   completedSummary: Target delivered to safe zone
 --- !u!114 &-6961200827763521532
 MonoBehaviour:
@@ -47,7 +51,9 @@ MonoBehaviour:
   m_Name: Tutorial_ContainFireStage_MissionStageDefinition
   m_EditorClassIdentifier: Assembly-CSharp::MissionStageDefinition
   stageId: contain-fire
+  stageTitleLocalizationKey: mission.tutorial.stage.contain_fire.title
   stageTitle: Contain the Fire
+  stageDescriptionLocalizationKey: mission.tutorial.stage.contain_fire.description
   stageDescription: Pick up the hose and extinguish the fires inside the yard.
   nextStageDelaySeconds: 1
   objectives:
@@ -82,7 +88,9 @@ MonoBehaviour:
   m_Name: Tutorial_BreakBarricadeStage_MissionStageDefinition
   m_EditorClassIdentifier: Assembly-CSharp::MissionStageDefinition
   stageId: break-barricade
+  stageTitleLocalizationKey: mission.tutorial.stage.break_barricade.title
   stageTitle: Break the Barricade
+  stageDescriptionLocalizationKey: mission.tutorial.stage.break_barricade.description
   stageDescription: Clear the blocked path by breaking the barricade.
   nextStageDelaySeconds: 0
   objectives:
@@ -101,12 +109,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 18f5bf78b5364d6ead303ebdb616e58f, type: 3}
   m_Name: Tutorial_OpenGateObjective_InteractTargetObjectiveDefinition
   m_EditorClassIdentifier: Assembly-CSharp::InteractTargetObjectiveDefinition
+  objectiveTitleLocalizationKey: mission.tutorial.objective.open_gate.title
   objectiveTitle: Open the Gate
+  objectiveDescriptionLocalizationKey: mission.tutorial.objective.open_gate.description
   objectiveDescription: Interact with the chainlink gate to access the incident area.
   scoreWeight: 10
   scoreMode: 0
   targetSignalKey: tutorial-open-gate
+  pendingSummaryLocalizationKey: mission.tutorial.objective.open_gate.pending
   pendingSummary: Interact with the gate to open the route
+  completedSummaryLocalizationKey: mission.tutorial.objective.open_gate.completed
   completedSummary: Gate opened
 --- !u!114 &-3614503000730669455
 MonoBehaviour:
@@ -121,7 +133,9 @@ MonoBehaviour:
   m_Name: Tutorial_ReachExitStage_MissionStageDefinition
   m_EditorClassIdentifier: Assembly-CSharp::MissionStageDefinition
   stageId: reach-exit
+  stageTitleLocalizationKey: mission.tutorial.stage.reach_exit.title
   stageTitle: Reach the Exit
+  stageDescriptionLocalizationKey: mission.tutorial.stage.reach_exit.description
   stageDescription: Move through the cleared route and step into the extraction area.
   nextStageDelaySeconds: 0
   objectives:
@@ -141,7 +155,9 @@ MonoBehaviour:
   m_Name: Tutorial_OpenGateStage_MissionStageDefinition
   m_EditorClassIdentifier: Assembly-CSharp::MissionStageDefinition
   stageId: open-gate
+  stageTitleLocalizationKey: mission.tutorial.stage.open_gate.title
   stageTitle: Open the Gate
+  stageDescriptionLocalizationKey: mission.tutorial.stage.open_gate.description
   stageDescription: Use the gate to enter the training yard.
   nextStageDelaySeconds: 1
   objectives:
@@ -177,7 +193,9 @@ MonoBehaviour:
   m_Name: Tutorial_IncidentMission
   m_EditorClassIdentifier: Assembly-CSharp::MissionDefinition
   missionId: tutorial-incident
+  missionTitleLocalizationKey: mission.tutorial.title
   missionTitle: Complete Incident Tutorial
+  missionDescriptionLocalizationKey: mission.tutorial.description
   missionDescription: Open the gate, contain the fire, then move to the extraction
     point.
   timeLimitSeconds: 0
@@ -218,7 +236,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d22fafc10ff4fcdbef9c5d66f63d16f, type: 3}
   m_Name: Tutorial_ContainFireObjective_ExtinguishFiresObjectiveDefinition
   m_EditorClassIdentifier: Assembly-CSharp::ExtinguishFiresObjectiveDefinition
+  objectiveTitleLocalizationKey: mission.tutorial.objective.contain_fire.title
   objectiveTitle: Contain the Fire
+  objectiveDescriptionLocalizationKey: mission.tutorial.objective.contain_fire.description
   objectiveDescription: Extinguish all visible fires inside the yard.
   scoreWeight: 10
   scoreMode: 0
@@ -235,13 +255,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 935577cc867e4d6ab534bb1ec0efb605, type: 3}
   m_Name: Tutorial_ReachExitObjective_ReachAreaObjectiveDefinition
   m_EditorClassIdentifier: Assembly-CSharp::ReachAreaObjectiveDefinition
+  objectiveTitleLocalizationKey: mission.tutorial.objective.reach_exit.title
   objectiveTitle: Reach the Exit
+  objectiveDescriptionLocalizationKey: mission.tutorial.objective.reach_exit.description
   objectiveDescription: Move into the highlighted extraction area after the fire
     is out.
   scoreWeight: 10
   scoreMode: 0
   targetSignalKey: tutorial-reach-exit
+  pendingSummaryLocalizationKey: mission.tutorial.objective.reach_exit.pending
   pendingSummary: Move to the extraction point
+  completedSummaryLocalizationKey: mission.tutorial.objective.reach_exit.completed
   completedSummary: Extraction point reached
 --- !u!114 &6914176494378091833
 MonoBehaviour:
@@ -255,12 +279,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 98e6762d87534aceb27f6dd73f366f36, type: 3}
   m_Name: Tutorial_BreakBarricadeObjective_BreakTargetObjectiveDefinition
   m_EditorClassIdentifier: Assembly-CSharp::BreakTargetObjectiveDefinition
+  objectiveTitleLocalizationKey: mission.tutorial.objective.break_barricade.title
   objectiveTitle: Break target
+  objectiveDescriptionLocalizationKey: mission.tutorial.objective.break_barricade.description
   objectiveDescription: 
   scoreWeight: 10
   scoreMode: 0
   targetSignalKey: tutorial-break-barricade
+  pendingSummaryLocalizationKey: mission.tutorial.objective.break_barricade.pending
   pendingSummary: Break target
+  completedSummaryLocalizationKey: mission.tutorial.objective.break_barricade.completed
   completedSummary: Target broken
 --- !u!114 &7531105325497548688
 MonoBehaviour:
@@ -275,7 +303,9 @@ MonoBehaviour:
   m_Name: Tutorial_RescueVictimStage_MissionStageDefinition
   m_EditorClassIdentifier: Assembly-CSharp::MissionStageDefinition
   stageId: rescue-victim
+  stageTitleLocalizationKey: mission.tutorial.stage.rescue_victim.title
   stageTitle: Rescue the Victim
+  stageDescriptionLocalizationKey: mission.tutorial.stage.rescue_victim.description
   stageDescription: Carry the victim to the safe zone.
   nextStageDelaySeconds: 0
   objectives:
@@ -296,6 +326,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c2ba32152f3f4b92a46c7421b3319a2a, type: 3}
   m_Name: Tutorial_TimeLimitFailCondition_TimeLimitFailConditionDefinition
   m_EditorClassIdentifier: Assembly-CSharp::TimeLimitFailConditionDefinition
+  failConditionTitleLocalizationKey: mission.tutorial.fail.time_limit.title
   failConditionTitle: Tutorial Time Limit
+  failConditionDescriptionLocalizationKey: mission.tutorial.fail.time_limit.description
   failConditionDescription: Finish the tutorial before time runs out.
   timeLimitSeconds: 240
+  remainingSummaryLocalizationKey:
+  disabledSummaryLocalizationKey:

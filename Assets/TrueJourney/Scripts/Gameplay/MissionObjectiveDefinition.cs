@@ -3,15 +3,17 @@ using UnityEngine;
 public abstract class MissionObjectiveDefinition : ScriptableObject
 {
     [Header("Objective")]
+    [SerializeField] private string objectiveTitleLocalizationKey;
     [SerializeField] private string objectiveTitle;
+    [SerializeField] private string objectiveDescriptionLocalizationKey;
     [SerializeField, TextArea] private string objectiveDescription;
 
     [Header("Scoring")]
     [SerializeField, Min(0)] private int scoreWeight = 10;
     [SerializeField] private MissionObjectiveScoreMode scoreMode = MissionObjectiveScoreMode.Binary;
 
-    public string ObjectiveTitle => objectiveTitle;
-    public string ObjectiveDescription => objectiveDescription;
+    public string ObjectiveTitle => ResolveTitle();
+    public string ObjectiveDescription => ResolveDescription();
     public int ScoreWeight => Mathf.Max(0, scoreWeight);
     public MissionObjectiveScoreMode ScoreMode => scoreMode;
 
@@ -42,9 +44,22 @@ public abstract class MissionObjectiveDefinition : ScriptableObject
 
     public abstract MissionObjectiveEvaluation Evaluate(MissionProgressSnapshot snapshot);
 
-    protected string ResolveTitle(string fallbackTitle)
+    protected string ResolveTitle(string fallbackTitle = "")
     {
-        return string.IsNullOrWhiteSpace(objectiveTitle) ? fallbackTitle : objectiveTitle;
+        string resolvedFallback = !string.IsNullOrWhiteSpace(objectiveTitle) ? objectiveTitle : fallbackTitle;
+        return MissionLocalization.Get(objectiveTitleLocalizationKey, resolvedFallback);
+    }
+
+    protected string ResolveDescription(string fallbackDescription = "")
+    {
+        string resolvedFallback = !string.IsNullOrWhiteSpace(objectiveDescription) ? objectiveDescription : fallbackDescription;
+        return MissionLocalization.Get(objectiveDescriptionLocalizationKey, resolvedFallback);
+    }
+
+    protected string ResolveText(string localizationKey, string fallbackText, string secondaryFallback = "")
+    {
+        string resolvedFallback = !string.IsNullOrWhiteSpace(fallbackText) ? fallbackText : secondaryFallback;
+        return MissionLocalization.Get(localizationKey, resolvedFallback);
     }
 
     protected MissionObjectiveScoreEvaluation CreateBinaryScoreEvaluation(bool isComplete, string summary = null)

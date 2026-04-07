@@ -186,6 +186,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8916907086897807096}
   - component: {fileID: 3447858380073853657}
+  - component: {fileID: 7923412341234123412}
   - component: {fileID: 6783775267924060584}
   - component: {fileID: 7857196384671778857}
   - component: {fileID: 6149454474236452101}
@@ -225,6 +226,28 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: '::'
   canvas: {fileID: 0}
+--- !u!114 &7923412341234123412
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1056660501349176053}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5174fb168e7044cea41ec0ad13b14a9f, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::LanguageManager
+  defaultLanguage: 0
+  localizationTable: {fileID: 11400000, guid: 1d7332cf891b3294ea373abb22fcfb31, type: 2}
+  keepAliveAcrossScenes: 1
+  vietnameseTMPFont: {fileID: 0}
+  englishTMPFont: {fileID: 0}
+  vietnameseLegacyFont: {fileID: 0}
+  englishLegacyFont: {fileID: 0}
+  fontEntries: []
+  autoLoadTableFromResources: 0
+  tableResourcePath: LocalizationTable
 --- !u!114 &6783775267924060584
 MonoBehaviour:
   m_ObjectHideFlags: 0

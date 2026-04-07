@@ -220,6 +220,8 @@ public class IncidentMissionSystem : MonoBehaviour
 
     private void OnEnable()
     {
+        LanguageManager.LanguageChanged -= HandleLanguageChanged;
+        LanguageManager.LanguageChanged += HandleLanguageChanged;
         RefreshObjectives();
 
         if (autoStartOnEnable)
@@ -228,6 +230,7 @@ public class IncidentMissionSystem : MonoBehaviour
 
     private void OnDisable()
     {
+        LanguageManager.LanguageChanged -= HandleLanguageChanged;
         UnsubscribeFromTrackedTargetEvents();
     }
 
@@ -411,15 +414,15 @@ public class IncidentMissionSystem : MonoBehaviour
 
         float activeTimeLimit = ResolveTimeLimitSeconds();
         string timerText = activeTimeLimit > 0f
-            ? $"{Mathf.Max(0f, activeTimeLimit - elapsedTime):F1}s left"
-            : $"{elapsedTime:F1}s elapsed";
+            ? MissionLocalization.Format("mission.hud.timer.remaining", "{0:F1}s left", Mathf.Max(0f, activeTimeLimit - elapsedTime))
+            : MissionLocalization.Format("mission.hud.timer.elapsed", "{0:F1}s elapsed", elapsedTime);
         string overlayText =
             $"{MissionTitle}\n" +
-            $"State: {missionState}\n" +
+            $"{MissionLocalization.Format("mission.hud.state", "State: {0}", LocalizeMissionState(missionState))}\n" +
             BuildStageOverlayLine() +
             BuildObjectiveOverlayLines() +
             BuildScoreOverlayLine() +
-            $"Time: {timerText}";
+            $"{MissionLocalization.Format("mission.overlay.time", "Time: {0}", timerText)}";
 
         Vector2 size = overlayGuiStyle.CalcSize(new GUIContent(overlayText));
         Rect rect = new Rect(
@@ -697,7 +700,14 @@ public class IncidentMissionSystem : MonoBehaviour
         if (totalTrackedVictims <= 0)
             return string.Empty;
 
-        return $"Victims: U {urgentVictimCount} | C {criticalVictimCount} | S {stabilizedVictimCount} | X {extractedVictimCount} | D {deceasedVictimCount}\n";
+        return MissionLocalization.Format(
+            "mission.overlay.victims",
+            "Victims: U {0} | C {1} | S {2} | X {3} | D {4}\n",
+            urgentVictimCount,
+            criticalVictimCount,
+            stabilizedVictimCount,
+            extractedVictimCount,
+            deceasedVictimCount);
     }
 
     private bool HasFailedVictimOutcome()
@@ -1089,8 +1099,13 @@ public class IncidentMissionSystem : MonoBehaviour
                 ? (float)snapshot.ExtinguishedFireCount / snapshot.TotalTrackedFires
                 : 0f;
             AddObjectiveStatus(new MissionObjectiveEvaluation(
-                "Extinguish Fires",
-                $"Extinguish Fires: {snapshot.ExtinguishedFireCount}/{snapshot.TotalTrackedFires}",
+                MissionLocalization.Get("mission.objective.extinguish_fires.title", "Extinguish Fires"),
+                MissionLocalization.Format(
+                    "mission.objective.extinguish_fires.summary",
+                    "{0}: {1}/{2} extinguished",
+                    MissionLocalization.Get("mission.objective.extinguish_fires.title", "Extinguish Fires"),
+                    snapshot.ExtinguishedFireCount,
+                    snapshot.TotalTrackedFires),
                 snapshot.ExtinguishedFireCount >= snapshot.TotalTrackedFires,
                 false,
                 true),
@@ -1103,8 +1118,13 @@ public class IncidentMissionSystem : MonoBehaviour
                 ? (float)snapshot.RescuedCount / snapshot.TotalTrackedRescuables
                 : 0f;
             AddObjectiveStatus(new MissionObjectiveEvaluation(
-                "Rescue Targets",
-                $"Rescue Targets: {snapshot.RescuedCount}/{snapshot.TotalTrackedRescuables}",
+                MissionLocalization.Get("mission.objective.rescue_targets.title", "Rescue Targets"),
+                MissionLocalization.Format(
+                    "mission.objective.rescue_targets.summary",
+                    "{0}: {1}/{2}",
+                    MissionLocalization.Get("mission.objective.rescue_targets.title", "Rescue Targets"),
+                    snapshot.RescuedCount,
+                    snapshot.TotalTrackedRescuables),
                 snapshot.RescuedCount >= snapshot.TotalTrackedRescuables,
                 false,
                 true),
@@ -1123,8 +1143,16 @@ public class IncidentMissionSystem : MonoBehaviour
             bool livingVictimsStabilized = !requireAllLivingVictimsStabilized || snapshot.AliveVictimCount == snapshot.StabilizedVictimCount;
 
             AddObjectiveStatus(new MissionObjectiveEvaluation(
-                "Victim Outcome",
-                $"Victim Outcome: U {snapshot.UrgentVictimCount} | C {snapshot.CriticalVictimCount} | S {snapshot.StabilizedVictimCount} | X {snapshot.ExtractedVictimCount} | D {snapshot.DeceasedVictimCount}",
+                MissionLocalization.Get("mission.objective.victim_outcome.title", "Victim Outcome"),
+                MissionLocalization.Format(
+                    "mission.objective.victim_outcome.summary",
+                    "{0}: U {1} | C {2} | S {3} | X {4} | D {5}",
+                    MissionLocalization.Get("mission.objective.victim_outcome.title", "Victim Outcome"),
+                    snapshot.UrgentVictimCount,
+                    snapshot.CriticalVictimCount,
+                    snapshot.StabilizedVictimCount,
+                    snapshot.ExtractedVictimCount,
+                    snapshot.DeceasedVictimCount),
                 !failedByAnyDeath && !failedByDeathLimit && criticalResolved && livingVictimsStabilized,
                 failedByAnyDeath || failedByDeathLimit,
                 true),
@@ -1308,8 +1336,8 @@ public class IncidentMissionSystem : MonoBehaviour
         if (objectiveStatuses == null || objectiveStatuses.Count == 0)
         {
             return
-                $"Fires: {extinguishedFireCount}/{totalTrackedFires}\n" +
-                $"Rescues: {rescuedCount}/{totalTrackedRescuables}\n" +
+                MissionLocalization.Format("mission.overlay.fires", "Fires: {0}/{1}\n", extinguishedFireCount, totalTrackedFires) +
+                MissionLocalization.Format("mission.overlay.rescues", "Rescues: {0}/{1}\n", rescuedCount, totalTrackedRescuables) +
                 BuildVictimOverlayLine();
         }
 
@@ -1322,7 +1350,11 @@ public class IncidentMissionSystem : MonoBehaviour
                 continue;
             }
 
-            string prefix = status.HasFailed ? "[FAILED]" : status.IsComplete ? "[DONE]" : "[ ]";
+            string prefix = status.HasFailed
+                ? MissionLocalization.Get("mission.hud.prefix.failed", "[FAILED]")
+                : status.IsComplete
+                    ? MissionLocalization.Get("mission.hud.prefix.completed", "[DONE]")
+                    : MissionLocalization.Get("mission.hud.prefix.pending", "[ ]");
             builder.Append(prefix);
             builder.Append(' ');
             builder.Append(status.Summary);
@@ -1342,7 +1374,12 @@ public class IncidentMissionSystem : MonoBehaviour
         string rankSuffix = string.IsNullOrWhiteSpace(DisplayedScoreRank)
             ? string.Empty
             : $" ({DisplayedScoreRank})";
-        return $"Score: {DisplayedScore}/{DisplayedMaximumScore}{rankSuffix}\n";
+        return MissionLocalization.Format(
+            "mission.hud.score",
+            "Score: {0}/{1}{2}",
+            DisplayedScore,
+            DisplayedMaximumScore,
+            rankSuffix) + "\n";
     }
 
     private string BuildStageOverlayLine()
@@ -1353,9 +1390,21 @@ public class IncidentMissionSystem : MonoBehaviour
         }
 
         string stageLabel = string.IsNullOrWhiteSpace(currentStageTitle)
-            ? $"Stage {currentStageIndex + 1}"
-            : $"Stage {currentStageIndex + 1}/{totalStageCount}: {currentStageTitle}";
+            ? MissionLocalization.Format("mission.hud.stage.single", "Stage {0}", currentStageIndex + 1)
+            : MissionLocalization.Format("mission.hud.stage.full", "Stage {0}/{1}: {2}", currentStageIndex + 1, totalStageCount, currentStageTitle);
         return $"{stageLabel}\n";
+    }
+
+    private static string LocalizeMissionState(MissionState state)
+    {
+        return state switch
+        {
+            MissionState.Idle => MissionLocalization.Get("mission.state.idle", "Idle"),
+            MissionState.Running => MissionLocalization.Get("mission.state.running", "Running"),
+            MissionState.Completed => MissionLocalization.Get("mission.state.completed", "Completed"),
+            MissionState.Failed => MissionLocalization.Get("mission.state.failed", "Failed"),
+            _ => state.ToString()
+        };
     }
 
     private bool TryAdvanceMissionStageIfReady()
@@ -1676,5 +1725,10 @@ public class IncidentMissionSystem : MonoBehaviour
                 resettable.ResetMissionSignalState();
             }
         }
+    }
+
+    private void HandleLanguageChanged(AppLanguage _)
+    {
+        RefreshObjectives();
     }
 }

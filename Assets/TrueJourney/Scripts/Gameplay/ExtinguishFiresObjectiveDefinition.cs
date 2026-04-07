@@ -20,7 +20,12 @@ public class ExtinguishFiresObjectiveDefinition : MissionObjectiveDefinition
         string title = ResolveTitle("Extinguish Fires");
         bool isRelevant = snapshot.TotalTrackedFires > 0;
         bool isComplete = isRelevant && snapshot.ExtinguishedFireCount >= snapshot.TotalTrackedFires;
-        string summary = $"{title}: {snapshot.ExtinguishedFireCount}/{snapshot.TotalTrackedFires} extinguished";
+        string summary = MissionLocalization.Format(
+            "mission.objective.extinguish_fires.summary",
+            "{0}: {1}/{2} extinguished",
+            title,
+            snapshot.ExtinguishedFireCount,
+            snapshot.TotalTrackedFires);
         return new MissionObjectiveEvaluation(title, summary, isComplete, false, isRelevant);
     }
 

@@ -1271,3 +1271,255 @@ MonoBehaviour:
   - key: callphase.result.issue.hazard_missing_and_unexpected
     vietnamese: "Th\xF4ng tin m\u1ED1i nguy ch\u01B0a \u0111\u1EA7y \u0111\u1EE7. Thi\u1EBFu: {0}. Kh\xF4ng mong \u0111\u1EE3i: {1}."
     english: "Hazard information was incomplete. Missing: {0}. Unexpected: {1}."
+  - key: mission.state.idle
+    vietnamese: "Ch\u01B0a b\u1EAFt \u0111\u1EA7u"
+    english: Idle
+  - key: mission.state.running
+    vietnamese: "\u0110ang th\u1EF1c hi\u1EC7n"
+    english: Running
+  - key: mission.state.completed
+    vietnamese: "Ho\xE0n th\xE0nh"
+    english: Completed
+  - key: mission.state.failed
+    vietnamese: "Th\u1EA5t b\u1EA1i"
+    english: Failed
+  - key: mission.hud.state
+    vietnamese: "Tr\u1EA1ng th\xE1i: {0}"
+    english: "State: {0}"
+  - key: mission.hud.timer.remaining
+    vietnamese: "C\xF2n {0:F1} gi\xE2y"
+    english: "{0:F1}s left"
+  - key: mission.hud.timer.elapsed
+    vietnamese: "\u0110\xE3 qua {0:F1} gi\xE2y"
+    english: "{0:F1}s elapsed"
+  - key: mission.hud.score
+    vietnamese: "\u0110i\u1EC3m: {0}/{1}{2}"
+    english: "Score: {0}/{1}{2}"
+  - key: mission.hud.stage.single
+    vietnamese: "Giai \u0111o\u1EA1n {0}"
+    english: "Stage {0}"
+  - key: mission.hud.stage.short
+    vietnamese: "Giai \u0111o\u1EA1n {0}/{1}"
+    english: "Stage {0}/{1}"
+  - key: mission.hud.stage.full
+    vietnamese: "Giai \u0111o\u1EA1n {0}/{1}: {2}"
+    english: "Stage {0}/{1}: {2}"
+  - key: mission.hud.stage.counter
+    vietnamese: "Giai \u0111o\u1EA1n {0} / {1}"
+    english: "Stage {0} / {1}"
+  - key: mission.hud.objectives.header.default
+    vietnamese: "M\u1EE4C TI\xCAU"
+    english: OBJECTIVES
+  - key: mission.hud.objectives.header.with_state
+    vietnamese: "M\u1EE4C TI\xCAU - {0}"
+    english: "OBJECTIVES - {0}"
+  - key: mission.hud.progress.percent
+    vietnamese: "{0:0}%"
+    english: "{0:0}%"
+  - key: mission.hud.progress.with_score
+    vietnamese: "{0:0}% | {1}"
+    english: "{0:0}% | {1}"
+  - key: mission.hud.prefix.pending
+    vietnamese: "[ ]"
+    english: "[ ]"
+  - key: mission.hud.prefix.completed
+    vietnamese: "[XONG]"
+    english: "[DONE]"
+  - key: mission.hud.prefix.failed
+    vietnamese: "[TH\u1EA4T B\u1EA0I]"
+    english: "[FAILED]"
+  - key: mission.hud.toast.objective_done
+    vietnamese: "{0} ho\xE0n t\u1EA5t"
+    english: "{0} done"
+  - key: mission.hud.toast.objective_updated
+    vietnamese: "C\u1EACP NH\u1EACT M\u1EE4C TI\xCAU"
+    english: OBJECTIVE UPDATED
+  - key: mission.hud.state.completed_headline
+    vietnamese: "Nhi\u1EC7m v\u1EE5 ho\xE0n th\xE0nh"
+    english: Mission Complete
+  - key: mission.hud.state.failed_headline
+    vietnamese: "Nhi\u1EC7m v\u1EE5 th\u1EA5t b\u1EA1i"
+    english: Mission Failed
+  - key: mission.overlay.time
+    vietnamese: "Th\u1EDDi gian: {0}"
+    english: "Time: {0}"
+  - key: mission.overlay.fires
+    vietnamese: "Ch\xE1y: {0}/{1}\n"
+    english: "Fires: {0}/{1}\n"
+  - key: mission.overlay.rescues
+    vietnamese: "C\u1EE9u h\u1ED9: {0}/{1}\n"
+    english: "Rescues: {0}/{1}\n"
+  - key: mission.overlay.victims
+    vietnamese: "N\u1EA1n nh\xE2n: Kh\u1EA9n {0} | Nguy {1} | \u1ED4n {2} | Ra {3} | T\u1EED {4}\n"
+    english: "Victims: U {0} | C {1} | S {2} | X {3} | D {4}\n"
+  - key: mission.objective.summary.pending
+    vietnamese: "{0}: ch\u01B0a ho\xE0n t\u1EA5t"
+    english: "{0}: pending"
+  - key: mission.objective.summary.completed
+    vietnamese: "{0}: ho\xE0n t\u1EA5t"
+    english: "{0}: complete"
+  - key: mission.objective.extinguish_fires.title
+    vietnamese: "D\u1EADp \u0111\xE1m ch\xE1y"
+    english: Extinguish Fires
+  - key: mission.objective.extinguish_fires.summary
+    vietnamese: "{0}: \u0111\xE3 d\u1EADp {1}/{2}"
+    english: "{0}: {1}/{2} extinguished"
+  - key: mission.objective.rescue_targets.title
+    vietnamese: "C\u1EE9u m\u1EE5c ti\xEAu"
+    english: Rescue Targets
+  - key: mission.objective.rescue_targets.summary
+    vietnamese: "{0}: {1}/{2}"
+    english: "{0}: {1}/{2}"
+  - key: mission.objective.victim_outcome.title
+    vietnamese: "T\xECnh tr\u1EA1ng n\u1EA1n nh\xE2n"
+    english: Victim Outcome
+  - key: mission.objective.victim_outcome.summary
+    vietnamese: "{0}: Kh\u1EA9n {1} | Nguy {2} | \u1ED4n {3} | Ra {4} | T\u1EED {5}"
+    english: "{0}: U {1} | C {2} | S {3} | X {4} | D {5}"
+  - key: mission.fail_condition.any_victim_death.summary
+    vietnamese: "{0}: {1} t\u1EED vong"
+    english: "{0}: {1} deceased"
+  - key: mission.fail_condition.max_victim_deaths.summary
+    vietnamese: "{0}: {1}/{2}"
+    english: "{0}: {1}/{2}"
+  - key: mission.fail_condition.time_limit.remaining
+    vietnamese: "{0}: c\xF2n {1:F1} gi\xE2y"
+    english: "{0}: {1:F1}s remaining"
+  - key: mission.fail_condition.time_limit.disabled
+    vietnamese: "{0}: t\u1EAFt"
+    english: "{0}: disabled"
+  - key: mission.end.completed_title
+    vietnamese: "NHI\u1EC6M V\u1EE4 HO\xC0N TH\xC0NH"
+    english: MISSION COMPLETE
+  - key: mission.end.failed_title
+    vietnamese: "NHI\u1EC6M V\u1EE4 TH\u1EA4T B\u1EA0I"
+    english: MISSION FAILED
+  - key: mission.end.retry_button
+    vietnamese: "Ch\u01A1i l\u1EA1i"
+    english: Retry
+  - key: mission.end.main_menu_button
+    vietnamese: "Menu ch\xEDnh"
+    english: Main Menu
+  - key: mission.end.stats_header
+    vietnamese: "T\u1ED4NG K\u1EBET"
+    english: Summary
+  - key: mission.end.objectives_header
+    vietnamese: "M\u1EE4C TI\xCAU"
+    english: Objectives
+  - key: mission.end.no_objectives
+    vietnamese: "Kh\xF4ng c\xF3 m\u1EE5c ti\xEAu \u0111ang theo d\xF5i."
+    english: No tracked objectives.
+  - key: mission.end.summary.mission
+    vietnamese: "Nhi\u1EC7m v\u1EE5: "
+    english: "Mission: "
+  - key: mission.end.summary.state
+    vietnamese: "Tr\u1EA1ng th\xE1i: "
+    english: "State: "
+  - key: mission.end.summary.score
+    vietnamese: "\u0110i\u1EC3m: "
+    english: "Score: "
+  - key: mission.end.summary.time
+    vietnamese: "Th\u1EDDi gian: "
+    english: "Time: "
+  - key: mission.end.summary.fires
+    vietnamese: "Ch\xE1y: "
+    english: "Fires: "
+  - key: mission.end.summary.rescues
+    vietnamese: "C\u1EE9u h\u1ED9: "
+    english: "Rescues: "
+  - key: mission.tutorial.title
+    vietnamese: "Ho\xE0n th\xE0nh hu\u1EA5n luy\u1EC7n s\u1EF1 c\u1ED1"
+    english: Complete Incident Tutorial
+  - key: mission.tutorial.description
+    vietnamese: "M\u1EDF c\u1ED5ng, kh\u1ED1ng ch\u1EBF \u0111\xE1m ch\xE1y, r\u1ED3i di chuy\u1EC3n t\u1EDBi \u0111i\u1EC3m tho\xE1t."
+    english: Open the gate, contain the fire, then move to the extraction point.
+  - key: mission.tutorial.stage.open_gate.title
+    vietnamese: "M\u1EDF c\u1ED5ng"
+    english: Open the Gate
+  - key: mission.tutorial.stage.open_gate.description
+    vietnamese: "D\xF9ng c\u1ED5ng \u0111\u1EC3 v\xE0o khu hu\u1EA5n luy\u1EC7n."
+    english: Use the gate to enter the training yard.
+  - key: mission.tutorial.stage.contain_fire.title
+    vietnamese: "Kh\u1ED1ng ch\u1EBF \u0111\xE1m ch\xE1y"
+    english: Contain the Fire
+  - key: mission.tutorial.stage.contain_fire.description
+    vietnamese: "Nh\u1EB7t v\xF2i v\xE0 d\u1EADp c\xE1c \u0111\xE1m ch\xE1y trong s\xE2n."
+    english: Pick up the hose and extinguish the fires inside the yard.
+  - key: mission.tutorial.stage.break_barricade.title
+    vietnamese: "Ph\xE1 ch\u01B0\u1EDBng ng\u1EA1i"
+    english: Break the Barricade
+  - key: mission.tutorial.stage.break_barricade.description
+    vietnamese: "Ph\xE1 ch\u01B0\u1EDBng ng\u1EA1i \u0111\u1EC3 m\u1EDF l\u1ED1i \u0111i b\u1ECB ch\u1EB7n."
+    english: Clear the blocked path by breaking the barricade.
+  - key: mission.tutorial.stage.rescue_victim.title
+    vietnamese: "C\u1EE9u n\u1EA1n nh\xE2n"
+    english: Rescue the Victim
+  - key: mission.tutorial.stage.rescue_victim.description
+    vietnamese: "\u0110\u01B0a n\u1EA1n nh\xE2n t\u1EDBi khu v\u1EF1c an to\xE0n."
+    english: Carry the victim to the safe zone.
+  - key: mission.tutorial.stage.reach_exit.title
+    vietnamese: "Ra \u0111i\u1EC3m tho\xE1t"
+    english: Reach the Exit
+  - key: mission.tutorial.stage.reach_exit.description
+    vietnamese: "Di theo l\u1ED1i \u0111\u00E3 m\u1EDF v\xE0 b\u01B0\u1EDBc v\xE0o khu v\u1EF1c tho\xE1t."
+    english: Move through the cleared route and step into the extraction area.
+  - key: mission.tutorial.objective.open_gate.title
+    vietnamese: "M\u1EDF c\u1ED5ng"
+    english: Open the Gate
+  - key: mission.tutorial.objective.open_gate.description
+    vietnamese: "T\u01B0\u01A1ng t\xE1c v\u1EDBi c\u1ED5ng l\u01B0\u1EDBi \u0111\u1EC3 v\xE0o khu s\u1EF1 c\u1ED1."
+    english: Interact with the chainlink gate to access the incident area.
+  - key: mission.tutorial.objective.open_gate.pending
+    vietnamese: "T\u01B0\u01A1ng t\xE1c v\u1EDBi c\u1ED5ng \u0111\u1EC3 m\u1EDF \u0111\u01B0\u1EDDng"
+    english: Interact with the gate to open the route
+  - key: mission.tutorial.objective.open_gate.completed
+    vietnamese: "\u0110\xE3 m\u1EDF c\u1ED5ng"
+    english: Gate opened
+  - key: mission.tutorial.objective.contain_fire.title
+    vietnamese: "Kh\u1ED1ng ch\u1EBF \u0111\xE1m ch\xE1y"
+    english: Contain the Fire
+  - key: mission.tutorial.objective.contain_fire.description
+    vietnamese: "D\u1EADp t\u1EA5t c\u1EA3 \u0111\xE1m ch\xE1y nh\xECn th\u1EA5y trong s\xE2n."
+    english: Extinguish all visible fires inside the yard.
+  - key: mission.tutorial.objective.break_barricade.title
+    vietnamese: "Ph\xE1 ch\u01B0\u1EDBng ng\u1EA1i"
+    english: Break the Barricade
+  - key: mission.tutorial.objective.break_barricade.description
+    vietnamese: "Ph\xE1 ch\u01B0\u1EDBng ng\u1EA1i \u0111\u1EC3 m\u1EDF l\u1ED1i."
+    english: Break the barricade to clear the route.
+  - key: mission.tutorial.objective.break_barricade.pending
+    vietnamese: "Ph\xE1 ch\u01B0\u1EDBng ng\u1EA1i"
+    english: Break target
+  - key: mission.tutorial.objective.break_barricade.completed
+    vietnamese: "\u0110\xE3 ph\xE1 ch\u01B0\u1EDBng ng\u1EA1i"
+    english: Target broken
+  - key: mission.tutorial.objective.rescue_victim.title
+    vietnamese: "C\u1EE9u n\u1EA1n nh\xE2n"
+    english: Rescue Victim Objective
+  - key: mission.tutorial.objective.rescue_victim.description
+    vietnamese: "\u0110\u01B0a n\u1EA1n nh\xE2n t\u1EDBi v\xF9ng an to\xE0n."
+    english: Bring Victim To Safe Zone
+  - key: mission.tutorial.objective.rescue_victim.pending
+    vietnamese: "\u0110\u01B0a n\u1EA1n nh\xE2n t\u1EDBi v\xF9ng an to\xE0n"
+    english: Deliver target to safe zone
+  - key: mission.tutorial.objective.rescue_victim.completed
+    vietnamese: "\u0110\xE3 \u0111\u01B0a n\u1EA1n nh\xE2n t\u1EDBi v\xF9ng an to\xE0n"
+    english: Target delivered to safe zone
+  - key: mission.tutorial.objective.reach_exit.title
+    vietnamese: "Ra \u0111i\u1EC3m tho\xE1t"
+    english: Reach the Exit
+  - key: mission.tutorial.objective.reach_exit.description
+    vietnamese: "Di chuy\u1EC3n v\xE0o khu v\u1EF1c tho\xE1t sau khi \u0111\xE1m ch\xE1y \u0111\u00E3 t\u1EAFt."
+    english: Move into the highlighted extraction area after the fire is out.
+  - key: mission.tutorial.objective.reach_exit.pending
+    vietnamese: "Di chuy\u1EC3n t\u1EDBi \u0111i\u1EC3m tho\xE1t"
+    english: Move to the extraction point
+  - key: mission.tutorial.objective.reach_exit.completed
+    vietnamese: "\u0110\xE3 t\u1EDBi \u0111i\u1EC3m tho\xE1t"
+    english: Extraction point reached
+  - key: mission.tutorial.fail.time_limit.title
+    vietnamese: "Gi\u1EDBi h\u1EA1n th\u1EDDi gian"
+    english: Tutorial Time Limit
+  - key: mission.tutorial.fail.time_limit.description
+    vietnamese: "Ho\xE0n th\xE0nh ph\u1EA7n h\u01B0\u1EDBng d\u1EABn tr\u01B0\u1EDBc khi h\u1EBFt gi\u1EDD."
+    english: Finish the tutorial before time runs out.

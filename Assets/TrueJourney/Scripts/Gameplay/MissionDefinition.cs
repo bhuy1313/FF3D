@@ -8,7 +8,9 @@ public class MissionDefinition : ScriptableObject
 {
     [Header("Mission")]
     [SerializeField] private string missionId = "incident";
+    [SerializeField] private string missionTitleLocalizationKey;
     [SerializeField] private string missionTitle = "Resolve Incident";
+    [SerializeField] private string missionDescriptionLocalizationKey;
     [SerializeField, TextArea] private string missionDescription = "Extinguish fires and rescue civilians.";
     [SerializeField] private float timeLimitSeconds = 0f;
     [SerializeField] private MissionScoreConfig scoreConfig = new MissionScoreConfig();
@@ -23,8 +25,8 @@ public class MissionDefinition : ScriptableObject
     [SerializeField] private List<MissionStageDefinition> stages = new List<MissionStageDefinition>();
 
     public string MissionId => missionId;
-    public string MissionTitle => missionTitle;
-    public string MissionDescription => missionDescription;
+    public string MissionTitle => MissionLocalization.Get(missionTitleLocalizationKey, missionTitle);
+    public string MissionDescription => MissionLocalization.Get(missionDescriptionLocalizationKey, missionDescription);
     public float TimeLimitSeconds => timeLimitSeconds;
     public MissionScoreConfig ScoreConfig
     {

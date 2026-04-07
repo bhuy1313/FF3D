@@ -59,7 +59,17 @@ public class LanguageManager : MonoBehaviour
     {
         if (instance != null && instance != this)
         {
-            Destroy(gameObject);
+            // Some gameplay prefabs host LanguageManager alongside other systems.
+            // On duplicate singleton detection, only destroy the whole GameObject
+            // when it is effectively a dedicated language-manager object.
+            if (ShouldDestroyWholeGameObjectOnDuplicate())
+            {
+                Destroy(gameObject);
+            }
+            else
+            {
+                Destroy(this);
+            }
             return;
         }
 
@@ -244,6 +254,22 @@ public class LanguageManager : MonoBehaviour
         }
 
         SetLanguage(languageToUse, false, true);
+    }
+
+    private bool ShouldDestroyWholeGameObjectOnDuplicate()
+    {
+        Component[] components = GetComponents<Component>();
+        int nonNullComponentCount = 0;
+        for (int i = 0; i < components.Length; i++)
+        {
+            if (components[i] != null)
+            {
+                nonNullComponentCount++;
+            }
+        }
+
+        // Transform + LanguageManager only.
+        return nonNullComponentCount <= 2;
     }
 
     private TMP_FontAsset GetDefaultTMPFont(AppLanguage language)

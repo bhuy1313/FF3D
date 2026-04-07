@@ -28,6 +28,7 @@ public class SmokeHazard : MonoBehaviour
     [SerializeField] private MonoBehaviour[] linkedVentPoints = System.Array.Empty<MonoBehaviour>();
 
     [Header("Smoke Simulation")]
+    [SerializeField] private bool forceMaximumSmokeDensity;
     [Range(0f, 1f)]
     [SerializeField] private float startSmokeDensity;
     [SerializeField] private float smokePerBurningFire = 0.3f;
@@ -91,11 +92,18 @@ public class SmokeHazard : MonoBehaviour
         victimConditionDamagePerSecond = Mathf.Max(0f, victimConditionDamagePerSecond);
         maxVisibilityPenalty = Mathf.Clamp01(maxVisibilityPenalty);
         currentSmokeDensity = Mathf.Clamp01(currentSmokeDensity);
+
+        if (forceMaximumSmokeDensity)
+        {
+            currentSmokeDensity = 1f;
+        }
     }
 
     private void OnEnable()
     {
-        currentSmokeDensity = Mathf.Clamp01(startSmokeDensity);
+        currentSmokeDensity = forceMaximumSmokeDensity
+            ? 1f
+            : Mathf.Clamp01(startSmokeDensity);
     }
 
     private void Update()
@@ -115,6 +123,12 @@ public class SmokeHazard : MonoBehaviour
 
     private void UpdateSmokeDensity(float deltaTime)
     {
+        if (forceMaximumSmokeDensity)
+        {
+            currentSmokeDensity = 1f;
+            return;
+        }
+
         float targetDensity = CalculateTargetSmokeDensity();
         float rate = targetDensity >= currentSmokeDensity ? smokeAccumulationRate : smokeDissipationRate;
         currentSmokeDensity = Mathf.MoveTowards(

@@ -33,17 +33,15 @@ public class VictimOutcomeObjectiveDefinition : MissionObjectiveDefinition
         bool hasFailed = isRelevant && (failedByAnyDeath || failedByDeathLimit);
 
         StringBuilder summaryBuilder = new StringBuilder();
-        summaryBuilder.Append(title);
-        summaryBuilder.Append(": U ");
-        summaryBuilder.Append(snapshot.UrgentVictimCount);
-        summaryBuilder.Append(" | C ");
-        summaryBuilder.Append(snapshot.CriticalVictimCount);
-        summaryBuilder.Append(" | S ");
-        summaryBuilder.Append(snapshot.StabilizedVictimCount);
-        summaryBuilder.Append(" | X ");
-        summaryBuilder.Append(snapshot.ExtractedVictimCount);
-        summaryBuilder.Append(" | D ");
-        summaryBuilder.Append(snapshot.DeceasedVictimCount);
+        summaryBuilder.Append(MissionLocalization.Format(
+            "mission.objective.victim_outcome.summary",
+            "{0}: U {1} | C {2} | S {3} | X {4} | D {5}",
+            title,
+            snapshot.UrgentVictimCount,
+            snapshot.CriticalVictimCount,
+            snapshot.StabilizedVictimCount,
+            snapshot.ExtractedVictimCount,
+            snapshot.DeceasedVictimCount));
 
         return new MissionObjectiveEvaluation(title, summaryBuilder.ToString(), isComplete, hasFailed, isRelevant);
     }
