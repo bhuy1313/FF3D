@@ -7,6 +7,8 @@ using UnityEngine.UI;
 
 public class Setting_UIScript : MonoBehaviour
 {
+    private const string MouseSensitivityLocalizationKey = "setting.control.mousesensitivity";
+
     [Header("Buttons")]
     [SerializeField] private Button btnGen;
     [SerializeField] private Button btnGrap;
@@ -48,6 +50,8 @@ public class Setting_UIScript : MonoBehaviour
     [SerializeField] private Slider fovSlider;
     [SerializeField] private SliderPercentText fovSliderValueText;
     [SerializeField] private TMP_Text fovValueText;
+    [SerializeField] private Slider mouseSensitivitySlider;
+    [SerializeField] private SliderPercentText mouseSensitivitySliderValueText;
 
     [Header("Call Phase Settings")]
     [SerializeField] private ThreeStepSlider responseSpeedSlider;
@@ -97,8 +101,10 @@ public class Setting_UIScript : MonoBehaviour
         ResolveRuntimeReferences();
         ConfigureResolutionDropdown(useSavedSelection: false);
         ConfigureFovSlider();
+        ConfigureMouseSensitivitySlider();
         InitializeResponseSpeedDefaultSelection();
         InitializeFovDefaultSelection();
+        InitializeMouseSensitivityDefaultSelection();
         InitializeAutoQuestionDefaultSelection();
         InitializeAutoValidateDefaultSelection();
         ValidateResolvedReferences();
@@ -138,6 +144,7 @@ public class Setting_UIScript : MonoBehaviour
         if (btnExit != null) btnExit.onClick.AddListener(OnExitButtonClicked);
         if (fpsToggle != null) fpsToggle.onValueChanged.AddListener(OnFpsToggleValueChanged);
         if (fovSlider != null) fovSlider.onValueChanged.AddListener(OnFovSliderValueChanged);
+        if (mouseSensitivitySlider != null) mouseSensitivitySlider.onValueChanged.AddListener(OnMouseSensitivitySliderValueChanged);
 
     }
 
@@ -172,6 +179,7 @@ public class Setting_UIScript : MonoBehaviour
         LoadSavedVSyncSelection();
         LoadSavedFpsSelection();
         LoadSavedFovSelection();
+        LoadSavedMouseSensitivitySelection();
         LoadSavedResponseSpeedSelection();
         LoadSavedAutoQuestionSelection();
         LoadSavedAutoValidateSelection();
@@ -450,6 +458,8 @@ public class Setting_UIScript : MonoBehaviour
         fovSlider = FindSliderInNamedPanelChild(panelGrap, "FOV");
         fovSliderValueText = FindSliderPercentTextInNamedPanelChild(panelGrap, "FOV");
         fovValueText = FindTextInNamedPanelChild(panelGrap, "FOV", "FOVValueText");
+        mouseSensitivitySlider = FindSliderInLocalizedPanelChild(panelCont, MouseSensitivityLocalizationKey);
+        mouseSensitivitySliderValueText = FindSliderPercentTextInLocalizedPanelChild(panelCont, MouseSensitivityLocalizationKey);
 
         if (responseSpeedSlider == null)
         {
@@ -490,6 +500,11 @@ public class Setting_UIScript : MonoBehaviour
         if (panelGrap != null && fovSlider == null)
         {
             Debug.LogWarning("Setting_UIScript: FOV slider could not be resolved from the graphics panel.", this);
+        }
+
+        if (panelCont != null && mouseSensitivitySlider == null)
+        {
+            Debug.LogWarning("Setting_UIScript: Mouse sensitivity slider could not be resolved from the control panel.", this);
         }
 
         if (panelGen != null && responseSpeedSlider == null)
@@ -643,6 +658,18 @@ public class Setting_UIScript : MonoBehaviour
         return null;
     }
 
+    private Slider FindSliderInLocalizedPanelChild(GameObject panelRoot, string localizationKey)
+    {
+        Transform section = FindPanelSectionByLocalizationKey(panelRoot, localizationKey);
+        return section != null ? section.GetComponentInChildren<Slider>(true) : null;
+    }
+
+    private SliderPercentText FindSliderPercentTextInLocalizedPanelChild(GameObject panelRoot, string localizationKey)
+    {
+        Transform section = FindPanelSectionByLocalizationKey(panelRoot, localizationKey);
+        return section != null ? section.GetComponentInChildren<SliderPercentText>(true) : null;
+    }
+
     private Transform FindNamedPanelChild(GameObject panelRoot, string childName)
     {
         if (panelRoot == null || string.IsNullOrWhiteSpace(childName))
@@ -656,6 +683,43 @@ public class Setting_UIScript : MonoBehaviour
             if (child != null && string.Equals(child.name, childName, StringComparison.OrdinalIgnoreCase))
             {
                 return child;
+            }
+        }
+
+        return null;
+    }
+
+    private Transform FindPanelSectionByLocalizationKey(GameObject panelRoot, string localizationKey)
+    {
+        if (panelRoot == null || string.IsNullOrWhiteSpace(localizationKey))
+        {
+            return null;
+        }
+
+        LocalizedText[] localizedTexts = panelRoot.GetComponentsInChildren<LocalizedText>(true);
+        Transform panelRootTransform = panelRoot.transform;
+
+        foreach (LocalizedText localizedText in localizedTexts)
+        {
+            if (localizedText == null || !string.Equals(localizedText.LocalizationKey, localizationKey, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            Transform current = localizedText.transform;
+            while (current != null)
+            {
+                if (current.GetComponentInChildren<Slider>(true) != null)
+                {
+                    return current;
+                }
+
+                if (current == panelRootTransform)
+                {
+                    break;
+                }
+
+                current = current.parent;
             }
         }
 
@@ -933,6 +997,7 @@ public class Setting_UIScript : MonoBehaviour
         SaveVSyncSelection();
         SaveFpsSelection();
         SaveFovSelection();
+        SaveMouseSensitivitySelection();
         SaveResponseSpeedSelection();
         SaveAutoQuestionSelection();
         SaveAutoValidateSelection();
@@ -1094,6 +1159,30 @@ public class Setting_UIScript : MonoBehaviour
         }
     }
 
+    private void ConfigureMouseSensitivitySlider()
+    {
+        if (mouseSensitivitySlider == null)
+        {
+            return;
+        }
+
+        mouseSensitivitySlider.minValue = GameplayMouseSensitivitySettings.SliderMinValue;
+        mouseSensitivitySlider.maxValue = GameplayMouseSensitivitySettings.SliderMaxValue;
+        mouseSensitivitySlider.wholeNumbers = false;
+
+        if (mouseSensitivitySliderValueText != null)
+        {
+            mouseSensitivitySliderValueText.ConfigureDisplay(
+                SliderPercentText.PercentMode.CenterAsHundred,
+                string.Empty,
+                "%",
+                true,
+                0,
+                200,
+                false);
+        }
+    }
+
     private void HideFovMilestoneLabels()
     {
         Transform fovRoot = FindNamedPanelChild(panelGrap, "FOV");
@@ -1157,6 +1246,40 @@ public class Setting_UIScript : MonoBehaviour
             fovSliderValueText.RefreshDisplay();
         }
         ApplyFovSliderPreview();
+    }
+
+    private void LoadSavedMouseSensitivitySelection()
+    {
+        if (mouseSensitivitySlider == null)
+        {
+            return;
+        }
+
+        float savedSensitivity = GameplayMouseSensitivitySettings.GetSavedOrDefaultSensitivity();
+        mouseSensitivitySlider.SetValueWithoutNotify(GameplayMouseSensitivitySettings.SensitivityToSliderValue(savedSensitivity));
+        if (mouseSensitivitySliderValueText != null)
+        {
+            mouseSensitivitySliderValueText.RefreshDisplay();
+        }
+
+        ApplyMouseSensitivitySliderPreview();
+    }
+
+    private void InitializeMouseSensitivityDefaultSelection()
+    {
+        if (mouseSensitivitySlider == null)
+        {
+            return;
+        }
+
+        mouseSensitivitySlider.SetValueWithoutNotify(
+            GameplayMouseSensitivitySettings.SensitivityToSliderValue(GameplayMouseSensitivitySettings.DefaultSensitivity));
+        if (mouseSensitivitySliderValueText != null)
+        {
+            mouseSensitivitySliderValueText.RefreshDisplay();
+        }
+
+        ApplyMouseSensitivitySliderPreview();
     }
 
     private void LoadSavedResponseSpeedSelection()
@@ -1252,6 +1375,24 @@ public class Setting_UIScript : MonoBehaviour
         GameplayFovRuntimeApplier.ApplyFov(selectedValue);
     }
 
+    private void SaveMouseSensitivitySelection()
+    {
+        if (mouseSensitivitySlider == null)
+        {
+            return;
+        }
+
+        float selectedSensitivity = GameplayMouseSensitivitySettings.ClampSensitivity(
+            GameplayMouseSensitivitySettings.SliderValueToSensitivity(mouseSensitivitySlider.value));
+        bool hasSavedValue = GameplayMouseSensitivitySettings.TryGetSavedSensitivity(out float savedSensitivity);
+        if (!hasSavedValue || !Mathf.Approximately(savedSensitivity, selectedSensitivity))
+        {
+            GameplayMouseSensitivitySettings.SaveSensitivity(selectedSensitivity);
+        }
+
+        GameplayMouseSensitivityRuntimeApplier.ApplySensitivity(selectedSensitivity);
+    }
+
     private void SaveResponseSpeedSelection()
     {
         if (responseSpeedSlider == null)
@@ -1327,6 +1468,11 @@ public class Setting_UIScript : MonoBehaviour
         ApplyFovSliderPreview();
     }
 
+    private void OnMouseSensitivitySliderValueChanged(float _)
+    {
+        ApplyMouseSensitivitySliderPreview();
+    }
+
     private void ApplyFpsTogglePreview()
     {
         if (fpsToggle == null)
@@ -1346,6 +1492,17 @@ public class Setting_UIScript : MonoBehaviour
 
         RefreshFovValueText();
         GameplayFovRuntimeApplier.ApplyFov(fovSlider.value);
+    }
+
+    private void ApplyMouseSensitivitySliderPreview()
+    {
+        if (mouseSensitivitySlider == null)
+        {
+            return;
+        }
+
+        GameplayMouseSensitivityRuntimeApplier.ApplySensitivity(
+            GameplayMouseSensitivitySettings.SliderValueToSensitivity(mouseSensitivitySlider.value));
     }
 
     private void RefreshFovValueText()

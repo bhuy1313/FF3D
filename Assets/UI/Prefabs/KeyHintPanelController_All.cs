@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -8,12 +8,13 @@ public class KeyHintPanelController_All : MonoBehaviour
     [SerializeField] private PlayerInput playerInput;
 
     [Header("UI")]
-    [SerializeField] private Transform container;          // Panel có VerticalLayoutGroup
-    [SerializeField] private KeyHintItemView itemPrefab;   // Prefab có 2 TMP + script KeyHintItemView
+    [SerializeField] private Transform container;        // Panel with VerticalLayoutGroup
+    [SerializeField] private KeyHintItemView itemPrefab; // Prefab with 2 TMP fields + KeyHintItemView
 
     [Header("Config")]
     [SerializeField] private string actionMapName = "Player";
-    [SerializeField] private bool includeValueActions = true; // Move/Look (Vector2) nếu muốn show
+    [SerializeField] private bool includeValueActions = true; // Include Move/Look value actions
+    [SerializeField] private bool hideLookAction = true;
 
     private readonly List<KeyHintItemView> spawned = new();
 
@@ -43,13 +44,11 @@ public class KeyHintPanelController_All : MonoBehaviour
 
     private void OnControlsChanged(PlayerInput _)
     {
-        // đổi control scheme -> đổi key hiển thị
         Rebuild();
     }
 
     private void OnActionChange(object obj, InputActionChange change)
     {
-        // rebind -> đổi key hiển thị
         if (change == InputActionChange.BoundControlsChanged)
             Rebuild();
     }
@@ -69,20 +68,9 @@ public class KeyHintPanelController_All : MonoBehaviour
 
         foreach (var action in map.actions)
         {
-            // 1) Bỏ qua Look hoàn toàn
-            if (action.name == "Look")
+            if (hideLookAction && action.name == "Look")
                 continue;
 
-            // 2) Move: hiển thị WASD cố định
-            if (action.name == "Move")
-            {
-                var item = Instantiate(itemPrefab, container);
-                item.Set("WASD", action.name);
-                spawned.Add(item);
-                continue;
-            }
-
-            // Nếu không muốn show Value actions (Move/Look) - Move đã xử lý ở trên rồi
             if (!includeValueActions && action.type != InputActionType.Button)
                 continue;
 
@@ -90,9 +78,9 @@ public class KeyHintPanelController_All : MonoBehaviour
             if (string.IsNullOrEmpty(key))
                 continue;
 
-            var itemNormal = Instantiate(itemPrefab, container);
-            itemNormal.Set(key, action.name);
-            spawned.Add(itemNormal);
+            var item = Instantiate(itemPrefab, container);
+            item.Set(key, GetActionDisplayName(action.name));
+            spawned.Add(item);
         }
     }
 
@@ -103,6 +91,40 @@ public class KeyHintPanelController_All : MonoBehaviour
             if (spawned[i] != null)
                 Destroy(spawned[i].gameObject);
         }
+
         spawned.Clear();
+    }
+
+    private static string GetActionDisplayName(string actionName)
+    {
+        return actionName switch
+        {
+            "Move" => "Move",
+            "Look" => "Look",
+            "Jump" => "Jump",
+            "Sprint" => "Sprint",
+            "Crouch" => "Crouch",
+            "Interact" => "Interact",
+            "Pickup" => "Pick Up",
+            "Use" => "Use",
+            "Drop" => "Drop",
+            "Grab" => "Grab",
+            "Slot1" => "Slot 1",
+            "Slot2" => "Slot 2",
+            "Slot3" => "Slot 3",
+            "Slot4" => "Slot 4",
+            "Slot5" => "Slot 5",
+            "Slot6" => "Slot 6",
+            "ToolWheel" => "Tool Wheel",
+            "CommandMove" => "Command Bot",
+            "CommandCancel" => "Cancel Command",
+            "CommandCancelAllFollow" => "Cancel All Follow",
+            "ToggleBotOutline" => "Toggle Bot Outline",
+            "CommandConfirm" => "Confirm Command",
+            "ToggleSprayPattern" => "Toggle Spray",
+            "IncreasePressure" => "Increase Pressure",
+            "DecreasePressure" => "Decrease Pressure",
+            _ => actionName
+        };
     }
 }

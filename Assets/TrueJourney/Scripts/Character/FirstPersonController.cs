@@ -184,13 +184,45 @@ namespace StarterAssets
 		private float _cameraBobTimer;
 		private Vector2 _lookInputSmoothed;
 		private Vector2 _lookInputSmoothVelocity;
+		private float _mouseSensitivityMultiplier = 1.0f;
 
 		private bool IsCurrentDeviceMouse
 		{
 			get
 			{
 				#if ENABLE_INPUT_SYSTEM
-				return _playerInput.currentControlScheme == "KeyboardMouse";
+				if (_playerInput == null)
+				{
+					return Mouse.current != null;
+				}
+
+				if (!string.IsNullOrWhiteSpace(_playerInput.currentControlScheme)
+					&& _playerInput.currentControlScheme.IndexOf("mouse", System.StringComparison.OrdinalIgnoreCase) >= 0)
+				{
+					return true;
+				}
+
+				if (!string.IsNullOrWhiteSpace(_playerInput.currentControlScheme)
+					&& _playerInput.currentControlScheme.IndexOf("keyboard", System.StringComparison.OrdinalIgnoreCase) >= 0
+					&& Mouse.current != null)
+				{
+					return true;
+				}
+
+				if (Mouse.current == null)
+				{
+					return false;
+				}
+
+				foreach (InputDevice device in _playerInput.devices)
+				{
+					if (device == Mouse.current || device is Mouse)
+					{
+						return true;
+					}
+				}
+
+				return false;
 				#else
 				return false;
 				#endif
@@ -217,6 +249,7 @@ namespace StarterAssets
 #else
 			Debug.LogError( "Starter Assets package is missing dependencies. Please use Tools/Starter Assets/Reinstall Dependencies to fix it");
 #endif
+			SetMouseSensitivityMultiplier(GameplayMouseSensitivityRuntimeApplier.GetCurrentOrSavedSensitivity());
 
 			// reset our timeouts on start
 			_jumpTimeoutDelta = JumpTimeout;
@@ -297,9 +330,14 @@ namespace StarterAssets
 			{
 				//Don't multiply mouse input by Time.deltaTime
 				float deltaTimeMultiplier = IsCurrentDeviceMouse ? 1.0f : Time.deltaTime;
-				
-				_cinemachineTargetPitch += lookInput.y * RotationSpeed * deltaTimeMultiplier;
-				_rotationVelocity = lookInput.x * RotationSpeed * deltaTimeMultiplier;
+				float effectiveRotationSpeed = RotationSpeed;
+				if (IsCurrentDeviceMouse)
+				{
+					effectiveRotationSpeed *= _mouseSensitivityMultiplier;
+				}
+
+				_cinemachineTargetPitch -= lookInput.y * effectiveRotationSpeed * deltaTimeMultiplier;
+				_rotationVelocity = lookInput.x * effectiveRotationSpeed * deltaTimeMultiplier;
 
 				// clamp our pitch rotation
 				_cinemachineTargetPitch = ClampAngle(_cinemachineTargetPitch, BottomClamp, TopClamp);
@@ -307,6 +345,11 @@ namespace StarterAssets
 				// rotate the player left and right
 				transform.Rotate(Vector3.up * _rotationVelocity);
 			}
+		}
+
+		public void SetMouseSensitivityMultiplier(float multiplier)
+		{
+			_mouseSensitivityMultiplier = Mathf.Max(0f, multiplier);
 		}
 
 		private void Move()

@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Utilities;
 
 public class KeyHintBindingUtil : MonoBehaviour
 {
@@ -22,12 +23,17 @@ public class KeyHintBindingUtil : MonoBehaviour
         var bindings = action.bindings;
         for (int i = 0; i < bindings.Count; i++)
         {
-            var b = bindings[i];
-            if (b.isComposite || b.isPartOfComposite) continue;
+            var binding = bindings[i];
+            if (binding.isComposite)
+            {
+                if (CompositeMatchesScheme(bindings, i, scheme))
+                    return i;
 
-            // groups chứa tên scheme (vd "Keyboard&Mouse", "Gamepad")
-            if (!string.IsNullOrEmpty(b.groups) &&
-                b.groups.IndexOf(scheme, StringComparison.OrdinalIgnoreCase) >= 0)
+                continue;
+            }
+
+            if (binding.isPartOfComposite) continue;
+            if (GroupsContainScheme(binding.groups, scheme))
                 return i;
         }
 
@@ -39,11 +45,68 @@ public class KeyHintBindingUtil : MonoBehaviour
         var bindings = action.bindings;
         for (int i = 0; i < bindings.Count; i++)
         {
-            var b = bindings[i];
-            if (b.isComposite || b.isPartOfComposite) continue;
-            if (string.IsNullOrEmpty(b.effectivePath)) continue;
+            var binding = bindings[i];
+            if (binding.isComposite)
+            {
+                if (CompositeHasUsablePart(bindings, i))
+                    return i;
+
+                continue;
+            }
+
+            if (binding.isPartOfComposite) continue;
+            if (string.IsNullOrEmpty(binding.effectivePath)) continue;
             return i;
         }
+
         return -1;
+    }
+
+    private static bool CompositeMatchesScheme(ReadOnlyArray<InputBinding> bindings, int compositeIndex, string scheme)
+    {
+        for (int i = compositeIndex + 1; i < bindings.Count; i++)
+        {
+            var part = bindings[i];
+            if (!part.isPartOfComposite)
+                break;
+
+            if (string.IsNullOrEmpty(part.effectivePath))
+                continue;
+
+            if (GroupsContainScheme(part.groups, scheme))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool CompositeHasUsablePart(ReadOnlyArray<InputBinding> bindings, int compositeIndex)
+    {
+        for (int i = compositeIndex + 1; i < bindings.Count; i++)
+        {
+            var part = bindings[i];
+            if (!part.isPartOfComposite)
+                break;
+
+            if (!string.IsNullOrEmpty(part.effectivePath))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool GroupsContainScheme(string groups, string scheme)
+    {
+        if (string.IsNullOrEmpty(groups) || string.IsNullOrEmpty(scheme))
+            return false;
+
+        string[] split = groups.Split(';');
+        for (int i = 0; i < split.Length; i++)
+        {
+            if (string.Equals(split[i], scheme, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
     }
 }

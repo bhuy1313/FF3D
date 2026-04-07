@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using TrueJourney.BotBehavior;
 using UnityEngine;
 using UnityEngine.EventSystems;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 namespace StarterAssets
 {
@@ -11,6 +14,7 @@ namespace StarterAssets
         [Header("References")]
         [SerializeField] private Camera viewCamera;
         [SerializeField] private FPSInteractionSystem interactionSystem;
+        [SerializeField] private PlayerInput playerInput;
 
         [Header("Selection")]
         [SerializeField] private float selectionDistance = 12f;
@@ -84,6 +88,11 @@ namespace StarterAssets
                 interactionSystem = GetComponent<FPSInteractionSystem>();
             }
 
+            if (playerInput == null)
+            {
+                playerInput = GetComponent<PlayerInput>();
+            }
+
             if (wheelSelector != null)
             {
                 wheelSelector.OnOptionSelected += OnWheelOptionSelected;
@@ -107,12 +116,12 @@ namespace StarterAssets
                 return;
             }
 
-            if (Input.GetKeyDown(toggleBotOutlineKey))
+            if (WasCommandActionPressedThisFrame("ToggleBotOutline", toggleBotOutlineKey))
             {
                 ToggleBotOutlineVisibility();
             }
 
-            if (Input.GetKeyDown(cancelAllFollowKey))
+            if (WasCommandActionPressedThisFrame("CommandCancelAllFollow", cancelAllFollowKey))
             {
                 CancelAllFollowCommands();
             }
@@ -131,7 +140,7 @@ namespace StarterAssets
 
             UpdateHoveredCommandable();
 
-            if (Input.GetKeyDown(cancelCommandKey))
+            if (WasCommandActionPressedThisFrame("CommandCancel", cancelCommandKey))
             {
                 CancelPendingCommand();
                 return;
@@ -145,7 +154,7 @@ namespace StarterAssets
 
             if (!commandState.IsAwaitingTarget)
             {
-                if (Input.GetKeyDown(moveCommandKey))
+                if (WasCommandActionPressedThisFrame("CommandMove", moveCommandKey))
                 {
                     TryStartCommandSelection();
                 }
@@ -155,7 +164,9 @@ namespace StarterAssets
 
             UpdatePreviewPoint();
 
-            if (destinationConfirmClickGate.ShouldProcessClick(Input.GetMouseButtonDown(0), Input.GetMouseButton(0)))
+            if (destinationConfirmClickGate.ShouldProcessClick(
+                WasCommandConfirmPressedThisFrame(),
+                IsCommandConfirmPressed()))
             {
                 TryConfirmPendingCommand();
             }
@@ -1176,5 +1187,76 @@ namespace StarterAssets
         {
             return target != null ? target.name : "(none)";
         }
+
+        private bool WasCommandActionPressedThisFrame(string actionName, KeyCode fallbackKey)
+        {
+#if ENABLE_INPUT_SYSTEM
+            if (TryGetPlayerAction(actionName, out InputAction action) && action.WasPressedThisFrame())
+            {
+                return true;
+            }
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+            if (Input.GetKeyDown(fallbackKey))
+            {
+                return true;
+            }
+#endif
+
+            return false;
+        }
+
+        private bool WasCommandConfirmPressedThisFrame()
+        {
+#if ENABLE_INPUT_SYSTEM
+            if (TryGetPlayerAction("CommandConfirm", out InputAction action) && action.WasPressedThisFrame())
+            {
+                return true;
+            }
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+            if (Input.GetMouseButtonDown(0))
+            {
+                return true;
+            }
+#endif
+
+            return false;
+        }
+
+        private bool IsCommandConfirmPressed()
+        {
+#if ENABLE_INPUT_SYSTEM
+            if (TryGetPlayerAction("CommandConfirm", out InputAction action) && action.IsPressed())
+            {
+                return true;
+            }
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+            if (Input.GetMouseButton(0))
+            {
+                return true;
+            }
+#endif
+
+            return false;
+        }
+
+#if ENABLE_INPUT_SYSTEM
+        private bool TryGetPlayerAction(string actionName, out InputAction action)
+        {
+            action = null;
+            if (playerInput == null || playerInput.actions == null)
+            {
+                return false;
+            }
+
+            action = playerInput.actions.FindAction(actionName, throwIfNotFound: false);
+            return action != null;
+        }
+#endif
     }
 }

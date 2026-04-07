@@ -838,9 +838,14 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         }
     }
 
-    private static bool WasTogglePatternPressedThisFrame()
+    private bool WasTogglePatternPressedThisFrame()
     {
 #if ENABLE_INPUT_SYSTEM
+        if (WasInputActionPressedThisFrame("ToggleSprayPattern"))
+        {
+            return true;
+        }
+
         Keyboard keyboard = Keyboard.current;
         if (keyboard != null && keyboard.vKey.wasPressedThisFrame)
         {
@@ -858,9 +863,14 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         return false;
     }
 
-    private static bool WasIncreasePressurePressedThisFrame()
+    private bool WasIncreasePressurePressedThisFrame()
     {
 #if ENABLE_INPUT_SYSTEM
+        if (WasInputActionPressedThisFrame("IncreasePressure"))
+        {
+            return true;
+        }
+
         Keyboard keyboard = Keyboard.current;
         if (keyboard != null &&
             (keyboard.rightBracketKey.wasPressedThisFrame || keyboard.equalsKey.wasPressedThisFrame))
@@ -879,9 +889,14 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         return false;
     }
 
-    private static bool WasDecreasePressurePressedThisFrame()
+    private bool WasDecreasePressurePressedThisFrame()
     {
 #if ENABLE_INPUT_SYSTEM
+        if (WasInputActionPressedThisFrame("DecreasePressure"))
+        {
+            return true;
+        }
+
         Keyboard keyboard = Keyboard.current;
         if (keyboard != null &&
             (keyboard.leftBracketKey.wasPressedThisFrame || keyboard.minusKey.wasPressedThisFrame))
@@ -899,6 +914,43 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
 
         return false;
     }
+
+#if ENABLE_INPUT_SYSTEM
+    private bool WasInputActionPressedThisFrame(string actionName)
+    {
+        PlayerInput input = ResolveRuntimePlayerInput();
+        if (input == null || input.actions == null)
+        {
+            return false;
+        }
+
+        InputAction action = input.actions.FindAction(actionName, throwIfNotFound: false);
+        return action != null && action.WasPressedThisFrame();
+    }
+
+    private PlayerInput ResolveRuntimePlayerInput()
+    {
+        if (currentUser != null)
+        {
+            PlayerInput userInput = currentUser.GetComponentInParent<PlayerInput>();
+            if (userInput != null)
+            {
+                return userInput;
+            }
+        }
+
+        if (currentHolder != null)
+        {
+            PlayerInput holderInput = currentHolder.GetComponentInParent<PlayerInput>();
+            if (holderInput != null)
+            {
+                return holderInput;
+            }
+        }
+
+        return null;
+    }
+#endif
 
     private void CacheWaterParticleDefaults()
     {
