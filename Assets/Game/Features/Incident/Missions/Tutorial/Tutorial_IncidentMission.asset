@@ -75,6 +75,52 @@ MonoBehaviour:
   actionTitle: Activate Exit Trigger
   actionDescription: Reveal the extraction trigger after the fire is contained.
   targetKey: event-1
+--- !u!114 &-6510022302844551002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71d070a933174ca0883d92d5166ea502, type: 3}
+  m_Name: Tutorial_IsolatePowerStage_MissionStageDefinition
+  m_EditorClassIdentifier: Assembly-CSharp::MissionStageDefinition
+  stageId: isolate-power
+  stageTitleLocalizationKey: 
+  stageTitle: Isolate Power
+  stageDescriptionLocalizationKey: 
+  stageDescription: Use the electrical panel to isolate the energized fire before
+    applying water.
+  nextStageDelaySeconds: 0.5
+  objectives:
+  - {fileID: -6510022302844551001}
+  onStageStartedActions: []
+  onStageCompletedActions: []
+--- !u!114 &-6510022302844551001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 18f5bf78b5364d6ead303ebdb616e58f, type: 3}
+  m_Name: Tutorial_IsolatePowerObjective_InteractTargetObjectiveDefinition
+  m_EditorClassIdentifier: Assembly-CSharp::InteractTargetObjectiveDefinition
+  objectiveTitleLocalizationKey: 
+  objectiveTitle: Isolate Power
+  objectiveDescriptionLocalizationKey: 
+  objectiveDescription: Shut off the electrical panel before suppressing the hazard.
+  scoreWeight: 10
+  scoreMode: 0
+  targetSignalKey: tutorial-isolate-power
+  pendingSummaryLocalizationKey: 
+  pendingSummary: Isolate the electrical panel before attacking the fire
+  completedSummaryLocalizationKey: 
+  completedSummary: Electrical supply isolated
 --- !u!114 &-6214757763015457672
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -97,6 +143,49 @@ MonoBehaviour:
   - {fileID: 6914176494378091833}
   onStageStartedActions: []
   onStageCompletedActions: []
+--- !u!114 &-6214757763015457602
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f3f9e14cc5d4d788da16fe3e793954c, type: 3}
+  m_Name: Tutorial_VictimOutcomeObjective_VictimOutcomeObjectiveDefinition
+  m_EditorClassIdentifier: Assembly-CSharp::VictimOutcomeObjectiveDefinition
+  objectiveTitleLocalizationKey: 
+  objectiveTitle: Victim Condition
+  objectiveDescriptionLocalizationKey: 
+  objectiveDescription: Keep victims alive, resolve critical status, and stabilize
+    all survivors.
+  scoreWeight: 20
+  scoreMode: 1
+  autoDiscoverVictimConditions: 1
+  failOnAnyVictimDeath: 1
+  maxAllowedVictimDeaths: 0
+  requireNoCriticalVictimsAtCompletion: 1
+  requireAllLivingVictimsStabilized: 1
+--- !u!114 &-6214757763015457601
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b6c5c86e3c8f4a5f97e42d1df5b43f35, type: 3}
+  m_Name: Tutorial_RescueAllVictimsObjective_RescueTargetsObjectiveDefinition
+  m_EditorClassIdentifier: Assembly-CSharp::RescueTargetsObjectiveDefinition
+  objectiveTitleLocalizationKey: 
+  objectiveTitle: Extract Victims
+  objectiveDescriptionLocalizationKey: 
+  objectiveDescription: Bring every victim to the safe zone.
+  scoreWeight: 20
+  scoreMode: 1
+  autoDiscoverRescuables: 1
 --- !u!114 &-3849525741119110217
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -196,8 +285,8 @@ MonoBehaviour:
   missionTitleLocalizationKey: mission.tutorial.title
   missionTitle: Complete Incident Tutorial
   missionDescriptionLocalizationKey: mission.tutorial.description
-  missionDescription: Open the gate, contain the fire, then move to the extraction
-    point.
+  missionDescription: Open the gate, isolate the electrical hazard, contain the fire,
+    then stabilize and extract the victims.
   timeLimitSeconds: 0
   scoreConfig:
     enableScoring: 1
@@ -208,6 +297,11 @@ MonoBehaviour:
     timeBonusMaxScore: 10
     targetTimeSeconds: 120
     acceptableTimeSeconds: 240
+    signalScoreRules:
+    - signalKey: tutorial-isolate-power
+      summaryLabel: Isolate power
+      scoreDelta: 5
+      includeInMaximumScore: 1
     sRankThreshold: 0.9
     aRankThreshold: 0.75
     bRankThreshold: 0.5
@@ -218,8 +312,10 @@ MonoBehaviour:
   objectives: []
   failConditions:
   - {fileID: 8481906818168850071}
+  - {fileID: 8481906818168850072}
   stages:
   - {fileID: -934915021428583584}
+  - {fileID: -6510022302844551002}
   - {fileID: -6961200827763521532}
   - {fileID: -6214757763015457672}
   - {fileID: 7531105325497548688}
@@ -304,12 +400,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MissionStageDefinition
   stageId: rescue-victim
   stageTitleLocalizationKey: mission.tutorial.stage.rescue_victim.title
-  stageTitle: Rescue the Victim
+  stageTitle: Stabilize and Extract Victims
   stageDescriptionLocalizationKey: mission.tutorial.stage.rescue_victim.description
-  stageDescription: Carry the victim to the safe zone.
+  stageDescription: Stabilize both victims as needed, then bring them to the safe
+    zone.
   nextStageDelaySeconds: 0
   objectives:
-  - {fileID: -8098691778419735755}
+  - {fileID: -6214757763015457602}
+  - {fileID: -6214757763015457601}
   onStageStartedActions: []
   onStageCompletedActions:
   - {fileID: -8957857897406397094}
@@ -331,5 +429,22 @@ MonoBehaviour:
   failConditionDescriptionLocalizationKey: mission.tutorial.fail.time_limit.description
   failConditionDescription: Finish the tutorial before time runs out.
   timeLimitSeconds: 240
-  remainingSummaryLocalizationKey:
-  disabledSummaryLocalizationKey:
+  remainingSummaryLocalizationKey: 
+  disabledSummaryLocalizationKey: 
+--- !u!114 &8481906818168850072
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 521dc86dc5a04d3599ad626fa5556b89, type: 3}
+  m_Name: Tutorial_AnyVictimDeathFailCondition_AnyVictimDeathFailConditionDefinition
+  m_EditorClassIdentifier: Assembly-CSharp::AnyVictimDeathFailConditionDefinition
+  failConditionTitleLocalizationKey: 
+  failConditionTitle: Victim Fatality
+  failConditionDescriptionLocalizationKey: 
+  failConditionDescription: Do not allow any victim to die during the tutorial.
+  autoDiscoverVictimConditions: 1

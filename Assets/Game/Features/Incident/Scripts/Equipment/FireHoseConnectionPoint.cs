@@ -7,13 +7,15 @@ public class FireHoseConnectionPoint : MonoBehaviour, IInteractable
 {
     [Header("Supply")]
     [SerializeField] private bool providesPressurizedWater = true;
+    [SerializeField] private float supplyPressureMultiplier = 1f;
     [SerializeField] private float refillInternalTankPerSecond = 0f;
     [SerializeField] private bool logConnections = false;
 
     [Header("Runtime")]
     [SerializeField] private FireHose connectedHose;
 
-    public bool ProvidesPressurizedWater => providesPressurizedWater;
+    public bool ProvidesPressurizedWater => providesPressurizedWater && SupplyPressureMultiplier > 0f;
+    public float SupplyPressureMultiplier => providesPressurizedWater ? Mathf.Max(0f, supplyPressureMultiplier) : 0f;
     public float RefillInternalTankPerSecond => Mathf.Max(0f, refillInternalTankPerSecond);
     public bool IsOccupied => connectedHose != null;
     public FireHose ConnectedHose => connectedHose;
@@ -43,7 +45,9 @@ public class FireHoseConnectionPoint : MonoBehaviour, IInteractable
 
         if (logConnections)
         {
-            Debug.Log($"[FireHoseConnectionPoint] Connected hose '{hose.name}' to '{name}'.", this);
+            Debug.Log(
+                $"[FireHoseConnectionPoint] Connected hose '{hose.name}' to '{name}' with {SupplyPressureMultiplier:0.00}x supply pressure.",
+                this);
         }
     }
 
@@ -81,6 +85,12 @@ public class FireHoseConnectionPoint : MonoBehaviour, IInteractable
         FireHose hose = connectedHose;
         connectedHose = null;
         hose.DisconnectFromSupply(this);
+    }
+
+    private void OnValidate()
+    {
+        supplyPressureMultiplier = Mathf.Max(0f, supplyPressureMultiplier);
+        refillInternalTankPerSecond = Mathf.Max(0f, refillInternalTankPerSecond);
     }
 
     private static FireHose ResolveHeldFireHose(GameObject interactor)

@@ -12437,6 +12437,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FireHoseConnectionPoint
   providesPressurizedWater: 1
+  supplyPressureMultiplier: 1.15
   refillInternalTankPerSecond: 0
   logConnections: 0
   connectedHose: {fileID: 0}
@@ -16884,10 +16885,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 491220265}
     m_Modifications:
-    - target: {fileID: 4988142597812104658, guid: 557eb5e26df167a4fb747c5bea651109, type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 6757308541524658747, guid: 557eb5e26df167a4fb747c5bea651109, type: 3}
       propertyPath: safeZone
       value: 
@@ -16898,7 +16895,7 @@ PrefabInstance:
       objectReference: {fileID: 830000000000000030}
     - target: {fileID: 6760553134421898100, guid: 557eb5e26df167a4fb747c5bea651109, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 71.35
+      value: 43.225
       objectReference: {fileID: 0}
     - target: {fileID: 6760553134421898100, guid: 557eb5e26df167a4fb747c5bea651109, type: 3}
       propertyPath: m_LocalPosition.y
@@ -16906,7 +16903,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6760553134421898100, guid: 557eb5e26df167a4fb747c5bea651109, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 71.54
+      value: 55.79
       objectReference: {fileID: 0}
     - target: {fileID: 6760553134421898100, guid: 557eb5e26df167a4fb747c5bea651109, type: 3}
       propertyPath: m_LocalRotation.w
@@ -16936,32 +16933,39 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7262871480878325381, guid: 557eb5e26df167a4fb747c5bea651109, type: 3}
+      propertyPath: stabilizeDuration
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 7262871480878325381, guid: 557eb5e26df167a4fb747c5bea651109, type: 3}
+      propertyPath: extractionDuration
+      value: 2.25
+      objectReference: {fileID: 0}
     - target: {fileID: 7962027411762718406, guid: 557eb5e26df167a4fb747c5bea651109, type: 3}
       propertyPath: triageState
       value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7962027411762718406, guid: 557eb5e26df167a4fb747c5bea651109, type: 3}
-      propertyPath: maxCondition
-      value: 1000
-      objectReference: {fileID: 0}
-    - target: {fileID: 7962027411762718406, guid: 557eb5e26df167a4fb747c5bea651109, type: 3}
-      propertyPath: urgentThreshold
-      value: 60
       objectReference: {fileID: 0}
     - target: {fileID: 7962027411762718406, guid: 557eb5e26df167a4fb747c5bea651109, type: 3}
       propertyPath: currentCondition
       value: 1000
       objectReference: {fileID: 0}
     - target: {fileID: 7962027411762718406, guid: 557eb5e26df167a4fb747c5bea651109, type: 3}
-      propertyPath: criticalThreshold
-      value: 30
+      propertyPath: passiveDeteriorationPerSecond
+      value: 0.25
+      objectReference: {fileID: 0}
+    - target: {fileID: 7962027411762718406, guid: 557eb5e26df167a4fb747c5bea651109, type: 3}
+      propertyPath: carriedUnstabilizedDeteriorationMultiplier
+      value: 2.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 7962027411762718406, guid: 557eb5e26df167a4fb747c5bea651109, type: 3}
+      propertyPath: requireStabilizationBeforeCarryWhenCritical
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8675152600097378572, guid: 557eb5e26df167a4fb747c5bea651109, type: 3}
       propertyPath: m_Name
-      value: Joe
+      value: Joe Stable
       objectReference: {fileID: 0}
-    m_RemovedComponents:
-    - {fileID: 2869225029408589221, guid: 557eb5e26df167a4fb747c5bea651109, type: 3}
+    m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -39138,7 +39142,7 @@ MonoBehaviour:
       m_Calls: []
   m_text: Stage 2 done
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 5e26e6cd2a3ed844fb8b74167f8807a8, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: a14230f6adbce6642b2a625b814a40c1, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -101024,14 +101028,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b4f4b168b7454888b3e6df965d83d842, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HazardIsolationDevice
-  startsIsolated: 1
+  startsIsolated: 0
   allowToggleAfterIsolation: 1
+  hazardType: 1
+  applyHazardTypeToLinkedFires: 1
   autoCollectChildFires: 0
   linkedFires:
   - {fileID: 1809375774}
-  - {fileID: 0}
-  - {fileID: 0}
   - {fileID: 1524798934}
+  missionSystem: {fileID: 830000000000000030}
+  isolatedSignalKey: tutorial-isolate-power
+  reactivatedSignalKey: 
   onHazardIsolated:
     m_PersistentCalls:
       m_Calls: []

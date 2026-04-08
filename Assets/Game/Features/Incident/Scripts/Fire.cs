@@ -247,6 +247,12 @@ public class Fire : MonoBehaviour, IFireTarget
         hazardSourceIsolated = isolated;
     }
 
+    public void SetFireHazardType(FireHazardType type)
+    {
+        fireType = type;
+        ApplyHazardDefaults();
+    }
+
     public void ToggleHazardSourceIsolation()
     {
         SetHazardSourceIsolated(!hazardSourceIsolated);
@@ -778,7 +784,8 @@ public class Fire : MonoBehaviour, IFireTarget
 
     private void ApplyHazardDefaults()
     {
-        if (fireType == FireHazardType.GasFed && !requiresIsolationToFullyExtinguish)
+        if ((fireType == FireHazardType.GasFed || fireType == FireHazardType.Electrical) &&
+            !requiresIsolationToFullyExtinguish)
         {
             requiresIsolationToFullyExtinguish = true;
         }

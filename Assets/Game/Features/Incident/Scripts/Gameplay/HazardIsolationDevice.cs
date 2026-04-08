@@ -4,11 +4,25 @@ using UnityEngine.Events;
 [DisallowMultipleComponent]
 public class HazardIsolationDevice : MonoBehaviour, IInteractable
 {
+    private enum IsolationHazardType
+    {
+        None = 0,
+        Electrical = 1,
+        Gas = 2
+    }
+
     [Header("Isolation")]
     [SerializeField] private bool startsIsolated;
     [SerializeField] private bool allowToggleAfterIsolation;
+    [SerializeField] private IsolationHazardType hazardType = IsolationHazardType.None;
+    [SerializeField] private bool applyHazardTypeToLinkedFires = true;
     [SerializeField] private bool autoCollectChildFires = true;
     [SerializeField] private Fire[] linkedFires = new Fire[0];
+
+    [Header("Mission Signals")]
+    [SerializeField] private IncidentMissionSystem missionSystem;
+    [SerializeField] private string isolatedSignalKey;
+    [SerializeField] private string reactivatedSignalKey;
 
     [Header("Events")]
     [SerializeField] private UnityEvent onHazardIsolated;
@@ -34,6 +48,7 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable
     private void OnValidate()
     {
         ResolveLinkedFires();
+        ApplyLinkedFireConfiguration();
     }
 
     public void Interact(GameObject interactor)
@@ -67,16 +82,19 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable
     {
         bool changed = isIsolated != isolated;
         isIsolated = isolated;
+        ApplyLinkedFireConfiguration();
 
-        if (linkedFires != null)
+        if (linkedFires == null)
         {
-            for (int i = 0; i < linkedFires.Length; i++)
+            linkedFires = new Fire[0];
+        }
+
+        for (int i = 0; i < linkedFires.Length; i++)
+        {
+            Fire fire = linkedFires[i];
+            if (fire != null)
             {
-                Fire fire = linkedFires[i];
-                if (fire != null)
-                {
-                    fire.SetHazardSourceIsolated(isolated);
-                }
+                fire.SetHazardSourceIsolated(isolated);
             }
         }
 
@@ -87,21 +105,98 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable
 
         if (isIsolated)
         {
+            RaiseMissionSignal(isolatedSignalKey);
             onHazardIsolated?.Invoke();
         }
         else
         {
+            RaiseMissionSignal(reactivatedSignalKey);
             onHazardReactivated?.Invoke();
         }
     }
 
     private void ResolveLinkedFires()
     {
-        if (!autoCollectChildFires || (linkedFires != null && linkedFires.Length > 0))
+        System.Collections.Generic.List<Fire> resolvedFires = new System.Collections.Generic.List<Fire>();
+        AddUniqueNonNullFires(linkedFires, resolvedFires);
+
+        if (autoCollectChildFires)
+        {
+            Fire[] childFires = GetComponentsInChildren<Fire>(true);
+            AddUniqueNonNullFires(childFires, resolvedFires);
+        }
+
+        linkedFires = resolvedFires.ToArray();
+    }
+
+    private void ApplyLinkedFireConfiguration()
+    {
+        if (!applyHazardTypeToLinkedFires || hazardType == IsolationHazardType.None || linkedFires == null)
         {
             return;
         }
 
-        linkedFires = GetComponentsInChildren<Fire>(true);
+        FireHazardType fireHazardType = ResolveFireHazardType();
+        for (int i = 0; i < linkedFires.Length; i++)
+        {
+            Fire fire = linkedFires[i];
+            if (fire != null)
+            {
+                fire.SetFireHazardType(fireHazardType);
+            }
+        }
+    }
+
+    private FireHazardType ResolveFireHazardType()
+    {
+        switch (hazardType)
+        {
+            case IsolationHazardType.Electrical:
+                return FireHazardType.Electrical;
+            case IsolationHazardType.Gas:
+                return FireHazardType.GasFed;
+            default:
+                return FireHazardType.OrdinaryCombustibles;
+        }
+    }
+
+    private void RaiseMissionSignal(string signalKey)
+    {
+        if (string.IsNullOrWhiteSpace(signalKey))
+        {
+            return;
+        }
+
+        ResolveMissionSystem();
+        missionSystem?.NotifySignal(signalKey);
+    }
+
+    private void ResolveMissionSystem()
+    {
+        if (missionSystem == null)
+        {
+            missionSystem = FindAnyObjectByType<IncidentMissionSystem>();
+        }
+    }
+
+    private static void AddUniqueNonNullFires(
+        Fire[] source,
+        System.Collections.Generic.List<Fire> destination)
+    {
+        if (source == null || destination == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < source.Length; i++)
+        {
+            Fire fire = source[i];
+            if (fire == null || destination.Contains(fire))
+            {
+                continue;
+            }
+
+            destination.Add(fire);
+        }
     }
 }

@@ -24,7 +24,11 @@ public class VictimCondition : MonoBehaviour
     private float criticalThreshold = 30f;
     [SerializeField] private bool stopPassiveDeteriorationWhenStabilized = true;
     [SerializeField] private bool stopConditionLossWhenExtracted = true;
+    [SerializeField] private bool allowTreatmentWhenUrgent = true;
+    [SerializeField] private bool allowTreatmentWhenCritical = true;
+    [SerializeField] private bool requireStabilizationBeforeCarryWhenUrgent = false;
     [SerializeField] private bool requireStabilizationBeforeCarryWhenCritical = false;
+    [SerializeField] private float carriedUnstabilizedDeteriorationMultiplier = 1.85f;
 
     [Header("Runtime")]
     [SerializeField] private float currentCondition = 100f;
@@ -54,8 +58,11 @@ public class VictimCondition : MonoBehaviour
     public bool IsStabilized => isStabilized;
     public bool IsExtracted => isExtracted;
     public bool CanBeStabilized => IsAlive && !isExtracted && !isStabilized;
-    public bool RequiresStabilization => requireStabilizationBeforeCarryWhenCritical && triageState == TriageState.Critical && !isStabilized;
-    public bool CanBeginCarry => !requireStabilizationBeforeCarryWhenCritical || triageState != TriageState.Critical || isStabilized;
+    public bool CanReceiveStabilizationTreatment => CanBeStabilized && IsTreatmentAllowedAtCurrentTriageState();
+    public bool RequiresStabilization => !isStabilized && (
+        (requireStabilizationBeforeCarryWhenUrgent && triageState == TriageState.Urgent) ||
+        (requireStabilizationBeforeCarryWhenCritical && triageState == TriageState.Critical));
+    public bool CanBeginCarry => IsAlive && !RequiresStabilization;
 
     public event Action<TriageState> OnTriageStateChanged;
     public event Action OnConditionContextChanged;
@@ -120,7 +127,13 @@ public class VictimCondition : MonoBehaviour
         if (isStabilized && stopPassiveDeteriorationWhenStabilized)
             return;
 
-        ApplyConditionDamage(passiveDeteriorationPerSecond * Time.deltaTime);
+        float deteriorationPerSecond = passiveDeteriorationPerSecond;
+        if (ShouldApplyCarryDeterioration())
+        {
+            deteriorationPerSecond *= Mathf.Max(1f, carriedUnstabilizedDeteriorationMultiplier);
+        }
+
+        ApplyConditionDamage(deteriorationPerSecond * Time.deltaTime);
     }
 
     public void ApplySmokeExposure(float amount)
@@ -244,6 +257,7 @@ public class VictimCondition : MonoBehaviour
         smokeDamageMultiplier = Mathf.Max(0f, smokeDamageMultiplier);
         criticalThreshold = Mathf.Clamp(criticalThreshold, 0f, 100f);
         urgentThreshold = Mathf.Clamp(urgentThreshold, criticalThreshold, 100f);
+        carriedUnstabilizedDeteriorationMultiplier = Mathf.Max(1f, carriedUnstabilizedDeteriorationMultiplier);
     }
 
     private bool CanLoseCondition()
@@ -252,6 +266,29 @@ public class VictimCondition : MonoBehaviour
             return false;
 
         return !isExtracted || !stopConditionLossWhenExtracted;
+    }
+
+    private bool IsTreatmentAllowedAtCurrentTriageState()
+    {
+        switch (triageState)
+        {
+            case TriageState.Critical:
+                return allowTreatmentWhenCritical;
+            case TriageState.Urgent:
+                return allowTreatmentWhenUrgent;
+            default:
+                return false;
+        }
+    }
+
+    private bool ShouldApplyCarryDeterioration()
+    {
+        if (isStabilized || rescuable == null || !rescuable.IsCarried)
+        {
+            return false;
+        }
+
+        return triageState == TriageState.Urgent || triageState == TriageState.Critical;
     }
 
     private void CacheReferences()

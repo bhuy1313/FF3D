@@ -83,7 +83,7 @@ MonoBehaviour:
   rechargePerSecond: 0
   minWaterToUse: 0.05
   toggleUse: 1
-  requiresConnectionToSpray: 0
+  requiresConnectionToSpray: 1
   keepConnectionOnDrop: 1
   movementWeightKg: 18
   sprayOrigin: {fileID: 1512506647122416683}
@@ -99,19 +99,21 @@ MonoBehaviour:
   minPressureMultiplier: 0.5
   maxPressureMultiplier: 1.75
   pressureStep: 0.25
+  localSupplyPressureMultiplier: 1
+  minimumEffectivePressureToSpray: 0.15
   allowRuntimeTuning: 1
   tuningOnlyWhileSpraying: 1
   showTuningLogs: 0
-  concentratedRangeMultiplier: 1.25
-  concentratedRadiusMultiplier: 0.6
-  concentratedEffectivenessMultiplier: 1.35
-  concentratedVfxSpeedMultiplier: 1.2
-  concentratedVfxSpreadMultiplier: 0.5
-  wideRangeMultiplier: 0.8
-  wideRadiusMultiplier: 1.7
-  wideEffectivenessMultiplier: 0.75
-  wideVfxSpeedMultiplier: 0.9
-  wideVfxSpreadMultiplier: 1.45
+  straightStreamRangeMultiplier: 1.25
+  straightStreamRadiusMultiplier: 0.6
+  straightStreamEffectivenessMultiplier: 1.35
+  straightStreamVfxSpeedMultiplier: 1.2
+  straightStreamVfxSpreadMultiplier: 0.5
+  fogRangeMultiplier: 0.8
+  fogRadiusMultiplier: 1.7
+  fogEffectivenessMultiplier: 0.75
+  fogVfxSpeedMultiplier: 0.9
+  fogVfxSpreadMultiplier: 1.45
   waterParticles: {fileID: 0}
   sprayAudio: {fileID: 0}
   enableParticle: 1

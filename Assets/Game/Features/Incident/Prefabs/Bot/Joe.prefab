@@ -2871,7 +2871,6 @@ GameObject:
   - component: {fileID: 7962027411762718406}
   - component: {fileID: 6757308541524658747}
   - component: {fileID: 1135309908745278832}
-  - component: {fileID: 2869225029408589221}
   m_Layer: 0
   m_Name: Joe
   m_TagString: Untagged
@@ -2918,6 +2917,12 @@ MonoBehaviour:
   carryLeftHandHoldPoint: {fileID: 7638269928132271146}
   stabilizeDuration: 1
   stabilizeRestoreAmount: 15
+  urgentStabilizeDurationMultiplier: 0.9
+  criticalStabilizeDurationMultiplier: 1.25
+  urgentStabilizeRestoreMultiplier: 0.8
+  criticalStabilizeRestoreMultiplier: 1.35
+  extractionDuration: 1.5
+  extractionRestoreAmount: 5
   lockPlayerWhilePickingUp: 1
   lockPlayerWhileStabilizing: 1
   restrictPlayerActionsWhileCarried: 1
@@ -2932,6 +2937,7 @@ MonoBehaviour:
   isRescued: 0
   isRescueInProgress: 0
   isCarried: 0
+  isExtractionInProgress: 0
   activeRescuer: {fileID: 0}
 --- !u!54 &7275183537248677464
 Rigidbody:
@@ -2992,15 +2998,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d13c07cab7d04ec499814c9c4de791bf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VictimCondition
-  maxCondition: 100
+  maxCondition: 1000
   passiveDeteriorationPerSecond: 0
   smokeDamageMultiplier: 1
-  urgentThreshold: 65
+  urgentThreshold: 60
   criticalThreshold: 30
   stopPassiveDeteriorationWhenStabilized: 1
   stopConditionLossWhenExtracted: 1
+  allowTreatmentWhenUrgent: 1
+  allowTreatmentWhenCritical: 1
+  requireStabilizationBeforeCarryWhenUrgent: 0
   requireStabilizationBeforeCarryWhenCritical: 1
-  currentCondition: 100
+  carriedUnstabilizedDeteriorationMultiplier: 1.85
+  currentCondition: 1000
   triageState: 0
   isStabilized: 0
   isExtracted: 0
@@ -3056,28 +3066,6 @@ CapsuleCollider:
   m_Height: 1.8
   m_Direction: 1
   m_Center: {x: 0, y: 0.9, z: 0}
---- !u!95 &2869225029408589221
-Animator:
-  serializedVersion: 7
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8675152600097378572}
-  m_Enabled: 1
-  m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 0}
-  m_CullingMode: 0
-  m_UpdateMode: 0
-  m_ApplyRootMotion: 0
-  m_LinearVelocityBlending: 0
-  m_StabilizeFeet: 0
-  m_AnimatePhysics: 0
-  m_WarningMessage: 
-  m_HasTransformHierarchy: 1
-  m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorStateOnDisable: 0
-  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &8675317407985938073
 GameObject:
   m_ObjectHideFlags: 0

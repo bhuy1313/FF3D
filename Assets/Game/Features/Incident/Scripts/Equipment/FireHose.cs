@@ -9,8 +9,8 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
 {
     private enum SprayPattern
     {
-        Concentrated,
-        Wide
+        StraightStream,
+        Fog
     }
 
     private struct SprayPatternConfig
@@ -40,28 +40,40 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
     [SerializeField] private float botApplyWaterPerSecond = 1.5f;
 
     [Header("Spray Control")]
-    [SerializeField] private SprayPattern sprayPattern = SprayPattern.Concentrated;
+    [SerializeField] private SprayPattern sprayPattern = SprayPattern.StraightStream;
     [SerializeField] private float pressureMultiplier = 1f;
     [SerializeField] private float minPressureMultiplier = 0.5f;
     [SerializeField] private float maxPressureMultiplier = 1.75f;
     [SerializeField] private float pressureStep = 0.25f;
+    [SerializeField] private float localSupplyPressureMultiplier = 1f;
+    [SerializeField] private float minimumEffectivePressureToSpray = 0.15f;
     [SerializeField] private bool allowRuntimeTuning = true;
     [SerializeField] private bool tuningOnlyWhileSpraying = true;
     [SerializeField] private bool showTuningLogs = false;
 
-    [Header("Concentrated Pattern")]
-    [SerializeField] private float concentratedRangeMultiplier = 1.25f;
-    [SerializeField] private float concentratedRadiusMultiplier = 0.6f;
-    [SerializeField] private float concentratedEffectivenessMultiplier = 1.35f;
-    [SerializeField] private float concentratedVfxSpeedMultiplier = 1.2f;
-    [SerializeField] private float concentratedVfxSpreadMultiplier = 0.5f;
+    [Header("Straight Stream")]
+    [FormerlySerializedAs("concentratedRangeMultiplier")]
+    [SerializeField] private float straightStreamRangeMultiplier = 1.25f;
+    [FormerlySerializedAs("concentratedRadiusMultiplier")]
+    [SerializeField] private float straightStreamRadiusMultiplier = 0.6f;
+    [FormerlySerializedAs("concentratedEffectivenessMultiplier")]
+    [SerializeField] private float straightStreamEffectivenessMultiplier = 1.35f;
+    [FormerlySerializedAs("concentratedVfxSpeedMultiplier")]
+    [SerializeField] private float straightStreamVfxSpeedMultiplier = 1.2f;
+    [FormerlySerializedAs("concentratedVfxSpreadMultiplier")]
+    [SerializeField] private float straightStreamVfxSpreadMultiplier = 0.5f;
 
-    [Header("Wide Pattern")]
-    [SerializeField] private float wideRangeMultiplier = 0.8f;
-    [SerializeField] private float wideRadiusMultiplier = 1.7f;
-    [SerializeField] private float wideEffectivenessMultiplier = 0.75f;
-    [SerializeField] private float wideVfxSpeedMultiplier = 0.9f;
-    [SerializeField] private float wideVfxSpreadMultiplier = 1.45f;
+    [Header("Fog Pattern")]
+    [FormerlySerializedAs("wideRangeMultiplier")]
+    [SerializeField] private float fogRangeMultiplier = 0.8f;
+    [FormerlySerializedAs("wideRadiusMultiplier")]
+    [SerializeField] private float fogRadiusMultiplier = 1.7f;
+    [FormerlySerializedAs("wideEffectivenessMultiplier")]
+    [SerializeField] private float fogEffectivenessMultiplier = 0.75f;
+    [FormerlySerializedAs("wideVfxSpeedMultiplier")]
+    [SerializeField] private float fogVfxSpeedMultiplier = 0.9f;
+    [FormerlySerializedAs("wideVfxSpreadMultiplier")]
+    [SerializeField] private float fogVfxSpreadMultiplier = 1.45f;
 
     [Header("References")]
     [SerializeField] private ParticleSystem waterParticles;
@@ -108,6 +120,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
     public float CurrentApplyWaterRate => currentApplyWaterRate;
     public float ApplyWaterPerSecond => currentApplyWaterRate;
     public FireSuppressionAgent SuppressionAgent => FireSuppressionAgent.Water;
+    public bool IsSpraying => isSpraying;
     public float PreferredSprayDistance => botStandDistanceOverride > 0f
         ? Mathf.Min(botStandDistanceOverride, MaxSprayDistance)
         : Mathf.Max(4f, currentSprayRange * 0.75f);
@@ -116,10 +129,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
     public float BallisticLaunchSpeed => arcVelocity;
     public float BallisticGravityMultiplier => arcGravityMultiplier;
     public bool RequiresPreciseAim => true;
-    public bool HasUsableCharge => connectionState.CanUse(
-        HasConnectedPressurizedSupply(),
-        requiresConnectionToSpray,
-        HasLocalUsableWater());
+    public bool HasUsableCharge => CanStartSpraying();
     public bool IsHeld => currentHolder != null;
     public GameObject ClaimOwner => claimOwner;
     public bool IsConnectedToSupply => connectionState.IsConnected;
@@ -403,6 +413,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         currentConnectionPoint = connectionPoint;
         connectionState.TryConnect(connectionPoint);
         previousConnectionPoint?.ClearConnection(this);
+        RecalculateSprayRuntimeValues();
         return true;
     }
 
@@ -422,6 +433,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         currentConnectionPoint = null;
         connectionState.TryDisconnect(previousConnectionPoint);
         previousConnectionPoint.ClearConnection(this);
+        RecalculateSprayRuntimeValues();
 
         if (isSpraying && !CanStartSpraying())
         {
@@ -445,15 +457,92 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
 
     private bool CanStartSpraying()
     {
-        return connectionState.CanUse(
-            HasConnectedPressurizedSupply(),
-            requiresConnectionToSpray,
-            HasLocalUsableWater());
+        return EvaluateSprayAvailability(out _);
     }
 
     private bool HasConnectedPressurizedSupply()
     {
         return currentConnectionPoint != null && currentConnectionPoint.ProvidesPressurizedWater;
+    }
+
+    private float GetLocalSupplyPressureMultiplier()
+    {
+        if (!HasLocalUsableWater())
+        {
+            return 0f;
+        }
+
+        return Mathf.Max(0f, localSupplyPressureMultiplier);
+    }
+
+    private float GetConnectedSupplyPressureMultiplier()
+    {
+        return currentConnectionPoint != null
+            ? currentConnectionPoint.SupplyPressureMultiplier
+            : 0f;
+    }
+
+    private float GetActiveSourcePressureMultiplier()
+    {
+        if (HasConnectedPressurizedSupply())
+        {
+            return GetConnectedSupplyPressureMultiplier();
+        }
+
+        if (!requiresConnectionToSpray)
+        {
+            return GetLocalSupplyPressureMultiplier();
+        }
+
+        return 0f;
+    }
+
+    private float GetEffectivePressureMultiplier(float sourcePressureMultiplier)
+    {
+        return Mathf.Max(0f, pressureMultiplier) * Mathf.Max(0f, sourcePressureMultiplier);
+    }
+
+    private bool EvaluateSprayAvailability(out string reason)
+    {
+        float sourcePressureMultiplier = GetActiveSourcePressureMultiplier();
+        float effectivePressureMultiplier = GetEffectivePressureMultiplier(sourcePressureMultiplier);
+
+        if (sourcePressureMultiplier > 0f)
+        {
+            if (effectivePressureMultiplier >= minimumEffectivePressureToSpray)
+            {
+                reason = HasConnectedPressurizedSupply()
+                    ? "Connected to pressurized water"
+                    : maxWater > 0f
+                        ? "Using internal water reserve"
+                        : "Using local water supply";
+                return true;
+            }
+
+            reason = "Supply pressure too low";
+            return false;
+        }
+
+        if (currentConnectionPoint != null && !currentConnectionPoint.ProvidesPressurizedWater)
+        {
+            reason = "Connected source has no pressurized water";
+            return false;
+        }
+
+        if (requiresConnectionToSpray)
+        {
+            reason = "No hose connection";
+            return false;
+        }
+
+        if (maxWater > 0f)
+        {
+            reason = "Internal water depleted";
+            return false;
+        }
+
+        reason = "No local water supply";
+        return false;
     }
 
     private void SetSprayState(bool enable)
@@ -706,18 +795,20 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         minPressureMultiplier = Mathf.Max(0.1f, minPressureMultiplier);
         maxPressureMultiplier = Mathf.Max(minPressureMultiplier, maxPressureMultiplier);
         pressureMultiplier = Mathf.Clamp(pressureMultiplier, minPressureMultiplier, maxPressureMultiplier);
+        localSupplyPressureMultiplier = Mathf.Max(0f, localSupplyPressureMultiplier);
+        minimumEffectivePressureToSpray = Mathf.Max(0.01f, minimumEffectivePressureToSpray);
 
-        concentratedRangeMultiplier = Mathf.Max(0.1f, concentratedRangeMultiplier);
-        concentratedRadiusMultiplier = Mathf.Max(0.05f, concentratedRadiusMultiplier);
-        concentratedEffectivenessMultiplier = Mathf.Max(0f, concentratedEffectivenessMultiplier);
-        concentratedVfxSpeedMultiplier = Mathf.Max(0.1f, concentratedVfxSpeedMultiplier);
-        concentratedVfxSpreadMultiplier = Mathf.Max(0.05f, concentratedVfxSpreadMultiplier);
+        straightStreamRangeMultiplier = Mathf.Max(0.1f, straightStreamRangeMultiplier);
+        straightStreamRadiusMultiplier = Mathf.Max(0.05f, straightStreamRadiusMultiplier);
+        straightStreamEffectivenessMultiplier = Mathf.Max(0f, straightStreamEffectivenessMultiplier);
+        straightStreamVfxSpeedMultiplier = Mathf.Max(0.1f, straightStreamVfxSpeedMultiplier);
+        straightStreamVfxSpreadMultiplier = Mathf.Max(0.05f, straightStreamVfxSpreadMultiplier);
 
-        wideRangeMultiplier = Mathf.Max(0.1f, wideRangeMultiplier);
-        wideRadiusMultiplier = Mathf.Max(0.05f, wideRadiusMultiplier);
-        wideEffectivenessMultiplier = Mathf.Max(0f, wideEffectivenessMultiplier);
-        wideVfxSpeedMultiplier = Mathf.Max(0.1f, wideVfxSpeedMultiplier);
-        wideVfxSpreadMultiplier = Mathf.Max(0.05f, wideVfxSpreadMultiplier);
+        fogRangeMultiplier = Mathf.Max(0.1f, fogRangeMultiplier);
+        fogRadiusMultiplier = Mathf.Max(0.05f, fogRadiusMultiplier);
+        fogEffectivenessMultiplier = Mathf.Max(0f, fogEffectivenessMultiplier);
+        fogVfxSpeedMultiplier = Mathf.Max(0.1f, fogVfxSpeedMultiplier);
+        fogVfxSpreadMultiplier = Mathf.Max(0.05f, fogVfxSpreadMultiplier);
 
         arcVelocity = Mathf.Max(0.01f, arcVelocity);
         arcGravityMultiplier = Mathf.Max(0f, arcGravityMultiplier);
@@ -728,16 +819,21 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
     private void RecalculateSprayRuntimeValues()
     {
         ClampSpraySettings();
-        SprayPatternConfig config = GetCurrentPatternConfig();
+        float sourcePressureMultiplier = GetActiveSourcePressureMultiplier();
+        float effectivePressureMultiplier = GetEffectivePressureMultiplier(sourcePressureMultiplier);
+        bool canSpray = EvaluateSprayAvailability(out _);
 
-        float pressureT = GetPressure01();
+        SprayPatternConfig config = GetCurrentPatternConfig();
+        float pressureT = GetPressure01(effectivePressureMultiplier);
         float pressureRangeMultiplier = Mathf.Lerp(0.85f, 1.2f, pressureT);
         float pressureRadiusMultiplier = Mathf.Lerp(1.15f, 0.85f, pressureT);
         float baseApplyWaterPerSecond = currentUserIsBot
             ? botApplyWaterPerSecond
             : playerApplyWaterPerSecond;
 
-        currentApplyWaterRate = baseApplyWaterPerSecond * config.effectivenessMultiplier * pressureMultiplier;
+        currentApplyWaterRate = canSpray
+            ? baseApplyWaterPerSecond * config.effectivenessMultiplier * effectivePressureMultiplier
+            : 0f;
         currentSprayRange = sprayRange * config.rangeMultiplier * pressureRangeMultiplier;
         currentSprayRadius = sprayRadius * config.radiusMultiplier * pressureRadiusMultiplier;
     }
@@ -750,36 +846,36 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
 
     private SprayPatternConfig GetCurrentPatternConfig()
     {
-        if (sprayPattern == SprayPattern.Wide)
+        if (sprayPattern == SprayPattern.Fog)
         {
             return new SprayPatternConfig
             {
-                rangeMultiplier = wideRangeMultiplier,
-                radiusMultiplier = wideRadiusMultiplier,
-                effectivenessMultiplier = wideEffectivenessMultiplier,
-                vfxSpeedMultiplier = wideVfxSpeedMultiplier,
-                vfxSpreadMultiplier = wideVfxSpreadMultiplier
+                rangeMultiplier = fogRangeMultiplier,
+                radiusMultiplier = fogRadiusMultiplier,
+                effectivenessMultiplier = fogEffectivenessMultiplier,
+                vfxSpeedMultiplier = fogVfxSpeedMultiplier,
+                vfxSpreadMultiplier = fogVfxSpreadMultiplier
             };
         }
 
         return new SprayPatternConfig
         {
-            rangeMultiplier = concentratedRangeMultiplier,
-            radiusMultiplier = concentratedRadiusMultiplier,
-            effectivenessMultiplier = concentratedEffectivenessMultiplier,
-            vfxSpeedMultiplier = concentratedVfxSpeedMultiplier,
-            vfxSpreadMultiplier = concentratedVfxSpreadMultiplier
+            rangeMultiplier = straightStreamRangeMultiplier,
+            radiusMultiplier = straightStreamRadiusMultiplier,
+            effectivenessMultiplier = straightStreamEffectivenessMultiplier,
+            vfxSpeedMultiplier = straightStreamVfxSpeedMultiplier,
+            vfxSpreadMultiplier = straightStreamVfxSpreadMultiplier
         };
     }
 
-    private float GetPressure01()
+    private float GetPressure01(float effectivePressureMultiplier)
     {
         if (Mathf.Approximately(minPressureMultiplier, maxPressureMultiplier))
         {
-            return 1f;
+            return effectivePressureMultiplier > 0f ? 1f : 0f;
         }
 
-        return Mathf.InverseLerp(minPressureMultiplier, maxPressureMultiplier, pressureMultiplier);
+        return Mathf.InverseLerp(minPressureMultiplier, maxPressureMultiplier, effectivePressureMultiplier);
     }
 
     private void HandleRuntimeTuningInput()
@@ -816,9 +912,9 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
 
         if (WasTogglePatternPressedThisFrame())
         {
-            sprayPattern = sprayPattern == SprayPattern.Concentrated
-                ? SprayPattern.Wide
-                : SprayPattern.Concentrated;
+            sprayPattern = sprayPattern == SprayPattern.StraightStream
+                ? SprayPattern.Fog
+                : SprayPattern.StraightStream;
             changed = true;
         }
 
@@ -976,7 +1072,8 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         }
 
         SprayPatternConfig config = GetCurrentPatternConfig();
-        float pressureT = GetPressure01();
+        float effectivePressureMultiplier = GetEffectivePressureMultiplier(GetActiveSourcePressureMultiplier());
+        float pressureT = GetPressure01(effectivePressureMultiplier);
         float pressureSpeedMultiplier = Mathf.Lerp(0.8f, 1.25f, pressureT);
         float pressureSpreadMultiplier = Mathf.Lerp(1.1f, 0.85f, pressureT);
 

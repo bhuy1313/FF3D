@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 [Serializable]
@@ -18,6 +19,9 @@ public class MissionScoreConfig
     [SerializeField, Min(0f)] private float targetTimeSeconds = 120f;
     [SerializeField, Min(0f)] private float acceptableTimeSeconds = 240f;
 
+    [Header("Signal Score Rules")]
+    [SerializeField] private List<MissionSignalScoreRule> signalScoreRules = new List<MissionSignalScoreRule>();
+
     [Header("Rank Thresholds")]
     [SerializeField, Range(0f, 1f)] private float sRankThreshold = 0.9f;
     [SerializeField, Range(0f, 1f)] private float aRankThreshold = 0.75f;
@@ -35,10 +39,11 @@ public class MissionScoreConfig
     public int TimeBonusMaxScore => Mathf.Max(0, timeBonusMaxScore);
     public float TargetTimeSeconds => Mathf.Max(0f, targetTimeSeconds);
     public float AcceptableTimeSeconds => Mathf.Max(TargetTimeSeconds, acceptableTimeSeconds);
+    public IReadOnlyList<MissionSignalScoreRule> SignalScoreRules => signalScoreRules;
 
     public int GetMaximumBonusScore()
     {
-        return CompletionBonus + NoVictimDeathsBonus + TimeBonusMaxScore;
+        return CompletionBonus + NoVictimDeathsBonus + TimeBonusMaxScore + GetMaximumSignalRuleScore();
     }
 
     public int EvaluateTimeBonus(float elapsedTimeSeconds)
@@ -95,5 +100,27 @@ public class MissionScoreConfig
         }
 
         return string.IsNullOrWhiteSpace(cRankLabel) ? "C" : cRankLabel;
+    }
+
+    public int GetMaximumSignalRuleScore()
+    {
+        if (signalScoreRules == null || signalScoreRules.Count == 0)
+        {
+            return 0;
+        }
+
+        int score = 0;
+        for (int i = 0; i < signalScoreRules.Count; i++)
+        {
+            MissionSignalScoreRule rule = signalScoreRules[i];
+            if (rule == null || !rule.IncludeInMaximumScore)
+            {
+                continue;
+            }
+
+            score += Mathf.Max(0, rule.ScoreDelta);
+        }
+
+        return score;
     }
 }

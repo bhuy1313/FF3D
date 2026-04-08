@@ -171,7 +171,7 @@ public partial class IncidentMissionSystem
 
         public bool HasFailedConditionOutcome()
         {
-            MissionFailConditionContext context = new MissionFailConditionContext(owner.BuildProgressSnapshot(), owner.elapsedTime);
+            MissionFailConditionContext context = new MissionFailConditionContext(owner, owner.BuildProgressSnapshot(), owner.elapsedTime);
 
             if (owner.activeFailConditionDefinitions.Count > 0)
             {
@@ -408,6 +408,9 @@ public partial class IncidentMissionSystem
             int bonusMaxScore = 0;
             if (scoreConfig != null && scoreConfig.EnableScoring)
             {
+                bonusScore += EvaluateSignalRuleScore(scoreConfig);
+                bonusMaxScore += scoreConfig.GetMaximumSignalRuleScore();
+
                 if (owner.missionState == MissionState.Completed)
                 {
                     bonusScore += scoreConfig.CompletionBonus;
@@ -439,6 +442,31 @@ public partial class IncidentMissionSystem
             owner.currentScoreRank = scoreConfig != null && scoreConfig.EnableScoring
                 ? scoreConfig.EvaluateRank(owner.currentScore, owner.maximumScore)
                 : string.Empty;
+        }
+
+        private int EvaluateSignalRuleScore(MissionScoreConfig scoreConfig)
+        {
+            if (scoreConfig == null || scoreConfig.SignalScoreRules == null)
+            {
+                return 0;
+            }
+
+            int score = 0;
+            for (int i = 0; i < scoreConfig.SignalScoreRules.Count; i++)
+            {
+                MissionSignalScoreRule rule = scoreConfig.SignalScoreRules[i];
+                if (rule == null || string.IsNullOrWhiteSpace(rule.SignalKey))
+                {
+                    continue;
+                }
+
+                if (owner.HasSignal(rule.SignalKey))
+                {
+                    score += rule.ScoreDelta;
+                }
+            }
+
+            return score;
         }
 
         public void CaptureCurrentStageScoreIfNeeded(string stageId)

@@ -27,6 +27,14 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
     [Header("Medical")]
     [SerializeField] private float stabilizeDuration = 1.25f;
     [SerializeField] private float stabilizeRestoreAmount = 15f;
+    [SerializeField] private float urgentStabilizeDurationMultiplier = 0.9f;
+    [SerializeField] private float criticalStabilizeDurationMultiplier = 1.25f;
+    [SerializeField] private float urgentStabilizeRestoreMultiplier = 0.8f;
+    [SerializeField] private float criticalStabilizeRestoreMultiplier = 1.35f;
+
+    [Header("Extraction")]
+    [SerializeField] private float extractionDuration = 1.5f;
+    [SerializeField] private float extractionRestoreAmount = 5f;
 
     [Header("Player Locking")]
     [SerializeField] private bool lockPlayerWhilePickingUp = true;
@@ -45,6 +53,7 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
     [SerializeField] private bool isRescued;
     [SerializeField] private bool isRescueInProgress;
     [SerializeField] private bool isCarried;
+    [SerializeField] private bool isExtractionInProgress;
     [SerializeField] private GameObject activeRescuer;
 
     public bool NeedsRescue => !isRescued;
@@ -52,6 +61,7 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
     public GameObject ActiveRescuer => activeRescuer;
     public bool IsCarried => isCarried;
     public bool IsRescued => isRescued;
+    public bool IsExtractionInProgress => isExtractionInProgress;
     public float MovementWeightKg => Mathf.Max(0f, movementWeightKg);
     public bool RequiresStabilization
     {
@@ -75,6 +85,7 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
 
     private Coroutine rescueRoutine;
     private Coroutine stabilizationRoutine;
+    private Coroutine extractionRoutine;
     private Transform activeCarryAnchor;
     private Transform originalParent;
     private Quaternion originalRotation;
@@ -98,10 +109,12 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
         activeRescuer = null;
         rescueRoutine = null;
         stabilizationRoutine = null;
+        extractionRoutine = null;
         activeCarryAnchor = null;
         activePlayerActionLock = null;
         hasActiveProgressLock = false;
         hasActiveCarryRestriction = false;
+        isExtractionInProgress = false;
         if (!isRescued)
         {
             originalParent = transform.parent;
@@ -128,8 +141,15 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
             stabilizationRoutine = null;
         }
 
+        if (extractionRoutine != null)
+        {
+            StopCoroutine(extractionRoutine);
+            extractionRoutine = null;
+        }
+
         isRescueInProgress = false;
         isCarried = false;
+        isExtractionInProgress = false;
         activeRescuer = null;
         activeCarryAnchor = null;
         ReleasePlayerLocks();
@@ -141,6 +161,15 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
     private void OnValidate()
     {
         movementWeightKg = Mathf.Max(0f, movementWeightKg);
+        pickupDuration = Mathf.Max(0.01f, pickupDuration);
+        stabilizeDuration = Mathf.Max(0.01f, stabilizeDuration);
+        extractionDuration = Mathf.Max(0f, extractionDuration);
+        stabilizeRestoreAmount = Mathf.Max(0f, stabilizeRestoreAmount);
+        extractionRestoreAmount = Mathf.Max(0f, extractionRestoreAmount);
+        urgentStabilizeDurationMultiplier = Mathf.Max(0.1f, urgentStabilizeDurationMultiplier);
+        criticalStabilizeDurationMultiplier = Mathf.Max(0.1f, criticalStabilizeDurationMultiplier);
+        urgentStabilizeRestoreMultiplier = Mathf.Max(0f, urgentStabilizeRestoreMultiplier);
+        criticalStabilizeRestoreMultiplier = Mathf.Max(0f, criticalStabilizeRestoreMultiplier);
         ResolveCarryHoldPoints();
     }
 
@@ -207,12 +236,7 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
     public bool TryStabilize(GameObject rescuer)
     {
         CacheVictimCondition();
-        if (isRescued || isCarried || victimCondition == null || !victimCondition.CanBeStabilized)
-        {
-            return false;
-        }
-
-        if (!victimCondition.RequiresStabilization)
+        if (isRescued || isCarried || victimCondition == null || !victimCondition.CanReceiveStabilizationTreatment)
         {
             return false;
         }
@@ -226,7 +250,7 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
         activeRescuer = rescuer;
         activeCarryAnchor = null;
         AcquirePlayerProgressLock(rescuer, lockPlayerWhileStabilizing);
-        stabilizationRoutine = StartCoroutine(StabilizeAfterDelay(Mathf.Max(0.01f, stabilizeDuration)));
+        stabilizationRoutine = StartCoroutine(StabilizeAfterDelay(GetAdjustedStabilizeDuration()));
         return true;
     }
 
@@ -249,36 +273,32 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
             stabilizationRoutine = null;
         }
 
+        if (extractionRoutine != null)
+        {
+            StopCoroutine(extractionRoutine);
+            extractionRoutine = null;
+        }
+
         transform.SetParent(originalParent, true);
         transform.position = dropPosition;
         transform.rotation = originalRotation;
-
-        isRescued = true;
-        isRescueInProgress = false;
         isCarried = false;
-        activeRescuer = null;
         activeCarryAnchor = null;
         ReleasePlayerLocks();
 
         RestoreRigidbodyState();
         RestoreColliderStates();
+        activeRescuer = null;
 
-        onRescued?.Invoke();
-        RescueCompleted?.Invoke();
-
-        if (disableRenderersOnRescue)
+        if (extractionDuration <= 0f)
         {
-            Renderer[] renderers = GetComponentsInChildren<Renderer>();
-            for (int i = 0; i < renderers.Length; i++)
-            {
-                renderers[i].enabled = false;
-            }
+            FinalizeRescue();
+            return;
         }
 
-        if (deactivateOnRescue)
-        {
-            gameObject.SetActive(false);
-        }
+        isRescueInProgress = true;
+        isExtractionInProgress = true;
+        extractionRoutine = StartCoroutine(FinishExtractionAfterDelay(extractionDuration));
     }
 
     private IEnumerator BeginCarryAfterDelay(float duration)
@@ -321,10 +341,33 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
             yield break;
         }
 
-        victimCondition.Stabilize(stabilizeRestoreAmount);
+        victimCondition.Stabilize(GetAdjustedStabilizeRestoreAmount());
         isRescueInProgress = false;
         activeRescuer = null;
         ReleasePlayerProgressLock();
+    }
+
+    private IEnumerator FinishExtractionAfterDelay(float duration)
+    {
+        yield return new WaitForSeconds(duration);
+
+        extractionRoutine = null;
+        isExtractionInProgress = false;
+        isRescueInProgress = false;
+
+        CacheVictimCondition();
+        if (victimCondition != null && !victimCondition.IsAlive)
+        {
+            activeRescuer = null;
+            yield break;
+        }
+
+        if (victimCondition != null && extractionRestoreAmount > 0f)
+        {
+            victimCondition.Stabilize(extractionRestoreAmount);
+        }
+
+        FinalizeRescue();
     }
 
     private void CacheRigidbodyState()
@@ -553,5 +596,76 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
     private static bool IsPlayerRescuer(GameObject rescuer)
     {
         return rescuer != null && rescuer.GetComponent<BotCommandAgent>() == null;
+    }
+
+    private float GetAdjustedStabilizeDuration()
+    {
+        CacheVictimCondition();
+        if (victimCondition == null)
+        {
+            return Mathf.Max(0.01f, stabilizeDuration);
+        }
+
+        float multiplier = 1f;
+        switch (victimCondition.CurrentTriageState)
+        {
+            case VictimCondition.TriageState.Critical:
+                multiplier = criticalStabilizeDurationMultiplier;
+                break;
+            case VictimCondition.TriageState.Urgent:
+                multiplier = urgentStabilizeDurationMultiplier;
+                break;
+        }
+
+        return Mathf.Max(0.01f, stabilizeDuration * multiplier);
+    }
+
+    private float GetAdjustedStabilizeRestoreAmount()
+    {
+        CacheVictimCondition();
+        if (victimCondition == null)
+        {
+            return Mathf.Max(0f, stabilizeRestoreAmount);
+        }
+
+        float multiplier = 1f;
+        switch (victimCondition.CurrentTriageState)
+        {
+            case VictimCondition.TriageState.Critical:
+                multiplier = criticalStabilizeRestoreMultiplier;
+                break;
+            case VictimCondition.TriageState.Urgent:
+                multiplier = urgentStabilizeRestoreMultiplier;
+                break;
+        }
+
+        return Mathf.Max(0f, stabilizeRestoreAmount * multiplier);
+    }
+
+    private void FinalizeRescue()
+    {
+        isRescued = true;
+        isRescueInProgress = false;
+        isCarried = false;
+        isExtractionInProgress = false;
+        activeRescuer = null;
+        activeCarryAnchor = null;
+
+        onRescued?.Invoke();
+        RescueCompleted?.Invoke();
+
+        if (disableRenderersOnRescue)
+        {
+            Renderer[] renderers = GetComponentsInChildren<Renderer>();
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                renderers[i].enabled = false;
+            }
+        }
+
+        if (deactivateOnRescue)
+        {
+            gameObject.SetActive(false);
+        }
     }
 }
