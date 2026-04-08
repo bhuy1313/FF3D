@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
 using TMPro;
@@ -59,6 +60,7 @@ public class MissionHudPresenter : MonoBehaviour
 
     [Header("References")]
     [SerializeField] private IncidentMissionSystem missionSystem;
+    [SerializeField] private PlayerHazardExposure playerHazardExposure;
     [SerializeField] private CanvasGroup rootCanvasGroup;
     [SerializeField] private TMP_Text missionTitleText;
     [SerializeField] private TMP_Text missionDescriptionText;
@@ -114,6 +116,11 @@ public class MissionHudPresenter : MonoBehaviour
     [SerializeField] private Color completedObjectiveColor = new Color(0.59f, 1f, 0.77f, 0.9f);
     [SerializeField] private Color failedObjectiveColor = new Color(1f, 0.62f, 0.62f, 0.95f);
 
+    [Header("Situation Advisories")]
+    [SerializeField] private bool showSituationAdvisories = true;
+    [SerializeField, Range(0f, 1f)] private float smokeWarningThreshold = 0.2f;
+    [SerializeField, Range(0f, 1f)] private float heavySmokeWarningThreshold = 0.55f;
+
     [Header("Toast Display")]
     [SerializeField] private bool showInitialObjectiveUpdateToast = true;
     [SerializeField] private float objectiveDoneToastDuration = 1.1f;
@@ -128,6 +135,7 @@ public class MissionHudPresenter : MonoBehaviour
     [SerializeField] private KeyCode toggleHudKey = KeyCode.N;
 
     private readonly StringBuilder objectiveBuilder = new StringBuilder();
+    private readonly StringBuilder summaryBuilder = new StringBuilder();
     private readonly List<ObjectiveItemView> objectiveItemViews = new List<ObjectiveItemView>();
     private readonly Queue<ToastRequest> pendingToastRequests = new Queue<ToastRequest>();
 
@@ -194,6 +202,11 @@ public class MissionHudPresenter : MonoBehaviour
         if (missionSystem != null)
         {
             lastMissionSystemSeenTime = Time.unscaledTime;
+        }
+
+        if (playerHazardExposure == null)
+        {
+            playerHazardExposure = FindAnyObjectByType<PlayerHazardExposure>(FindObjectsInactive.Exclude);
         }
     }
 
@@ -416,17 +429,133 @@ public class MissionHudPresenter : MonoBehaviour
             return string.Empty;
         }
 
+        summaryBuilder.Clear();
+
         if (showMissionDescription && !string.IsNullOrWhiteSpace(missionSystem.MissionDescription))
         {
-            return missionSystem.MissionDescription;
+            summaryBuilder.Append(missionSystem.MissionDescription);
+        }
+        else if (!string.IsNullOrWhiteSpace(missionSystem.CurrentStageDescription))
+        {
+            summaryBuilder.Append(missionSystem.CurrentStageDescription);
         }
 
-        if (!string.IsNullOrWhiteSpace(missionSystem.CurrentStageDescription))
+        AppendSituationAdvisories();
+        return summaryBuilder.ToString();
+    }
+
+    private void AppendSituationAdvisories()
+    {
+        if (!showSituationAdvisories || missionSystem == null || missionSystem.State != IncidentMissionSystem.MissionState.Running)
         {
-            return missionSystem.CurrentStageDescription;
+            return;
+        }
+
+        AppendAdvisory(BuildHazardAdvisory());
+        AppendAdvisory(BuildSmokeAdvisory());
+        AppendAdvisory(BuildVictimAdvisory());
+        AppendAdvisory(BuildPenaltyAdvisory());
+    }
+
+    private void AppendAdvisory(string advisory)
+    {
+        if (string.IsNullOrWhiteSpace(advisory))
+        {
+            return;
+        }
+
+        if (summaryBuilder.Length > 0)
+        {
+            summaryBuilder.Append('\n');
+        }
+
+        summaryBuilder.Append(advisory);
+    }
+
+    private string BuildHazardAdvisory()
+    {
+        if (missionSystem == null)
+        {
+            return string.Empty;
+        }
+
+        string currentStageId = missionSystem.CurrentStageId;
+        bool powerIsolated = missionSystem.HasSignal("tutorial-isolate-power");
+        if ((string.Equals(currentStageId, "isolate-power", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(currentStageId, "contain-fire", StringComparison.OrdinalIgnoreCase)) &&
+            !powerIsolated)
+        {
+            return "Hazard: electrical source active. Isolate the panel before using water.";
+        }
+
+        if (powerIsolated &&
+            string.Equals(currentStageId, "contain-fire", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Hazard: power isolated. Hose attack is now safe.";
         }
 
         return string.Empty;
+    }
+
+    private string BuildSmokeAdvisory()
+    {
+        if (playerHazardExposure == null)
+        {
+            return string.Empty;
+        }
+
+        float smokeDensity = playerHazardExposure.SmokeDensity01;
+        if (smokeDensity >= heavySmokeWarningThreshold)
+        {
+            return "Smoke: heavy smoke. Stay low and clear the room before advancing.";
+        }
+
+        if (smokeDensity >= smokeWarningThreshold)
+        {
+            return "Smoke: visibility dropping. Crouch to reduce exposure.";
+        }
+
+        return string.Empty;
+    }
+
+    private string BuildVictimAdvisory()
+    {
+        if (missionSystem == null || missionSystem.TotalTrackedVictims <= 0)
+        {
+            return string.Empty;
+        }
+
+        if (missionSystem.CriticalVictimCount > 0)
+        {
+            return "Victims: critical casualty present. Stabilize before carry.";
+        }
+
+        if (missionSystem.UrgentVictimCount > 0)
+        {
+            return $"Victims: {missionSystem.UrgentVictimCount} urgent remaining. Stabilize if condition worsens.";
+        }
+
+        return string.Empty;
+    }
+
+    private string BuildPenaltyAdvisory()
+    {
+        if (missionSystem == null || missionSystem.TotalTrackedVictims <= 0)
+        {
+            return string.Empty;
+        }
+
+        if (missionSystem.DeceasedVictimCount > 0)
+        {
+            return "Penalty: victim loss recorded.";
+        }
+
+        if (missionSystem.FailsOnAnyVictimDeath)
+        {
+            return "Penalty: any victim death fails the mission.";
+        }
+
+        return "Penalty: victim deaths reduce score.";
     }
 
     private string BuildStageCounterText()

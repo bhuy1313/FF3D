@@ -8,6 +8,8 @@ public class MaxVictimDeathsFailConditionDefinition : MissionFailConditionDefini
     [SerializeField] private bool autoDiscoverVictimConditions = true;
     [SerializeField] private int maxAllowedVictimDeaths = 0;
 
+    public int MaxAllowedVictimDeaths => Mathf.Max(0, maxAllowedVictimDeaths);
+
     public override void CollectTargets(MissionRuntimeSceneData sceneData)
     {
         if (autoDiscoverVictimConditions && sceneData != null)

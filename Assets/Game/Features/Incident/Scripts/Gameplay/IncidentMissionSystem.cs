@@ -272,6 +272,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
     public int DisplayedDeceasedVictimCount => missionState == MissionState.Completed || missionState == MissionState.Failed ? finalDeceasedVictimCount : deceasedVictimCount;
     public float RemainingTimeSeconds => Mathf.Max(0f, ResolveTimeLimitSeconds() - elapsedTime);
     public string CurrentStageId => ResolveCurrentStageId();
+    public bool FailsOnAnyVictimDeath => ResolveFailsOnAnyVictimDeath();
 
     private GUIStyle overlayGuiStyle;
 
@@ -572,6 +573,11 @@ public partial class IncidentMissionSystem : MonoBehaviour
     private void RefreshScoreState()
     {
         Scoring.RefreshScoreState();
+    }
+
+    private bool ResolveFailsOnAnyVictimDeath()
+    {
+        return Objectives.FailsOnAnyVictimDeath();
     }
 
     private bool AreCompletionConditionsMet()

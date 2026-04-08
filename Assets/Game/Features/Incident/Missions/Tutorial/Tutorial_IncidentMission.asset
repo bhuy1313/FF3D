@@ -114,7 +114,7 @@ MonoBehaviour:
   objectiveTitle: Isolate Power
   objectiveDescriptionLocalizationKey: 
   objectiveDescription: Shut off the electrical panel before suppressing the hazard.
-  scoreWeight: 10
+  scoreWeight: 15
   scoreMode: 0
   targetSignalKey: tutorial-isolate-power
   pendingSummaryLocalizationKey: 
@@ -160,7 +160,7 @@ MonoBehaviour:
   objectiveDescriptionLocalizationKey: 
   objectiveDescription: Keep victims alive, resolve critical status, and stabilize
     all survivors.
-  scoreWeight: 20
+  scoreWeight: 25
   scoreMode: 1
   autoDiscoverVictimConditions: 1
   failOnAnyVictimDeath: 1
@@ -183,7 +183,7 @@ MonoBehaviour:
   objectiveTitle: Extract Victims
   objectiveDescriptionLocalizationKey: 
   objectiveDescription: Bring every victim to the safe zone.
-  scoreWeight: 20
+  scoreWeight: 25
   scoreMode: 1
   autoDiscoverRescuables: 1
 --- !u!114 &-3849525741119110217
@@ -202,7 +202,7 @@ MonoBehaviour:
   objectiveTitle: Open the Gate
   objectiveDescriptionLocalizationKey: mission.tutorial.objective.open_gate.description
   objectiveDescription: Interact with the chainlink gate to access the incident area.
-  scoreWeight: 10
+  scoreWeight: 5
   scoreMode: 0
   targetSignalKey: tutorial-open-gate
   pendingSummaryLocalizationKey: mission.tutorial.objective.open_gate.pending
@@ -290,10 +290,10 @@ MonoBehaviour:
   timeLimitSeconds: 0
   scoreConfig:
     enableScoring: 1
-    completionBonus: 10
+    completionBonus: 15
     failurePenalty: 0
-    noVictimDeathsBonus: 5
-    perVictimDeathPenalty: 5
+    noVictimDeathsBonus: 15
+    perVictimDeathPenalty: 15
     timeBonusMaxScore: 10
     targetTimeSeconds: 120
     acceptableTimeSeconds: 240
@@ -336,8 +336,8 @@ MonoBehaviour:
   objectiveTitle: Contain the Fire
   objectiveDescriptionLocalizationKey: mission.tutorial.objective.contain_fire.description
   objectiveDescription: Extinguish all visible fires inside the yard.
-  scoreWeight: 10
-  scoreMode: 0
+  scoreWeight: 20
+  scoreMode: 1
   autoDiscoverFires: 1
 --- !u!114 &4534189158508311404
 MonoBehaviour:
@@ -356,7 +356,7 @@ MonoBehaviour:
   objectiveDescriptionLocalizationKey: mission.tutorial.objective.reach_exit.description
   objectiveDescription: Move into the highlighted extraction area after the fire
     is out.
-  scoreWeight: 10
+  scoreWeight: 5
   scoreMode: 0
   targetSignalKey: tutorial-reach-exit
   pendingSummaryLocalizationKey: mission.tutorial.objective.reach_exit.pending
@@ -379,7 +379,7 @@ MonoBehaviour:
   objectiveTitle: Break target
   objectiveDescriptionLocalizationKey: mission.tutorial.objective.break_barricade.description
   objectiveDescription: 
-  scoreWeight: 10
+  scoreWeight: 5
   scoreMode: 0
   targetSignalKey: tutorial-break-barricade
   pendingSummaryLocalizationKey: mission.tutorial.objective.break_barricade.pending

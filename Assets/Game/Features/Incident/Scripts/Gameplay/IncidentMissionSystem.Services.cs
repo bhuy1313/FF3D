@@ -207,6 +207,46 @@ public partial class IncidentMissionSystem
             return false;
         }
 
+        public bool FailsOnAnyVictimDeath()
+        {
+            if (owner.activeFailConditionDefinitions != null && owner.activeFailConditionDefinitions.Count > 0)
+            {
+                for (int i = 0; i < owner.activeFailConditionDefinitions.Count; i++)
+                {
+                    MissionFailConditionDefinition failCondition = owner.activeFailConditionDefinitions[i];
+                    if (failCondition is AnyVictimDeathFailConditionDefinition)
+                    {
+                        return true;
+                    }
+
+                    if (failCondition is MaxVictimDeathsFailConditionDefinition maxDeathsFailCondition &&
+                        maxDeathsFailCondition.MaxAllowedVictimDeaths <= 0)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            if (owner.activeObjectiveDefinitions != null)
+            {
+                for (int i = 0; i < owner.activeObjectiveDefinitions.Count; i++)
+                {
+                    if (owner.activeObjectiveDefinitions[i] is VictimOutcomeObjectiveDefinition victimOutcomeObjective &&
+                        victimOutcomeObjective.FailsOnAnyVictimDeath)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            if (owner.activeObjectiveDefinitions.Count == 0)
+            {
+                return owner.failOnAnyVictimDeath || owner.maxAllowedVictimDeaths == 0;
+            }
+
+            return false;
+        }
+
         public void RefreshObjectiveStatuses()
         {
             owner.objectiveStatuses.Clear();

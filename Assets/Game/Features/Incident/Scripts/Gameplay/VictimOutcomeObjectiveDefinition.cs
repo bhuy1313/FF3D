@@ -12,6 +12,8 @@ public class VictimOutcomeObjectiveDefinition : MissionObjectiveDefinition
     [SerializeField] private bool requireNoCriticalVictimsAtCompletion = false;
     [SerializeField] private bool requireAllLivingVictimsStabilized = false;
 
+    public bool FailsOnAnyVictimDeath => failOnAnyVictimDeath || Mathf.Max(-1, maxAllowedVictimDeaths) == 0;
+
     public override void CollectTargets(MissionRuntimeSceneData sceneData)
     {
         if (autoDiscoverVictimConditions && sceneData != null)
