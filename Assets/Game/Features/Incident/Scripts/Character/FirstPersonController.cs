@@ -184,6 +184,7 @@ namespace StarterAssets
 		private float _climbGroundedGraceTimer;
 		private float _standHeight;
 		private Vector3 _standCenter;
+		private float _defaultStepOffset;
 		private Vector3 _cameraTargetInitialLocalPos;
 		private Vector3 _cameraBaseLocalPosCurrent;
 		private Vector3 _cameraMotionCurrentPosOffset;
@@ -195,11 +196,8 @@ namespace StarterAssets
 		private float _lastCrouchBlockedLogTime = float.NegativeInfinity;
 		private bool _hasLoggedCrouchRequestState;
 		private bool _lastLoggedCrouchRequestState;
-<<<<<<< HEAD
 
 		public bool IsCrouching => _isCrouching;
-=======
->>>>>>> main0
 
 		private bool IsCurrentDeviceMouse
 		{
@@ -272,6 +270,7 @@ namespace StarterAssets
 
 			_standHeight = _controller.height;
 			_standCenter = _controller.center;
+			_defaultStepOffset = _controller.stepOffset;
 			_cameraTargetInitialLocalPos = CinemachineCameraTarget != null
 				? CinemachineCameraTarget.transform.localPosition
 				: Vector3.zero;
@@ -300,6 +299,7 @@ namespace StarterAssets
 				StopClimb();
 			}
 			UpdateCrouch();
+			UpdateStepOffset();
 			Move();
 
 			if (_climbGroundedGraceTimer > 0f)
@@ -316,9 +316,48 @@ namespace StarterAssets
 
 		private void GroundedCheck()
 		{
-			// set sphere position, with offset
-			Vector3 spherePosition = new Vector3(transform.position.x, transform.position.y - GroundedOffset, transform.position.z);
-			Grounded = Physics.CheckSphere(spherePosition, GroundedRadius, GroundLayers, QueryTriggerInteraction.Ignore);
+			if (_controller == null)
+			{
+				Grounded = false;
+				return;
+			}
+
+			float controllerRadius = Mathf.Max(0.05f, _controller.radius);
+			float groundedRadius = Mathf.Clamp(GroundedRadius, 0.05f, controllerRadius);
+			float castRadius = Mathf.Max(0.05f, groundedRadius - _controller.skinWidth);
+			float bottomHemisphereOffset = Mathf.Max(0f, (_controller.height * 0.5f) - controllerRadius);
+			Vector3 bottomHemisphereCenter = transform.position + _controller.center + (Vector3.down * bottomHemisphereOffset);
+			float castStartLift = Mathf.Max(0.05f, _controller.skinWidth + 0.02f);
+			Vector3 castOrigin = bottomHemisphereCenter + (Vector3.up * castStartLift);
+			float castDistance = castStartLift + Mathf.Max(0.05f, Mathf.Abs(GroundedOffset));
+
+			if (!Physics.SphereCast(
+				castOrigin,
+				castRadius,
+				Vector3.down,
+				out RaycastHit hit,
+				castDistance,
+				GroundLayers,
+				QueryTriggerInteraction.Ignore))
+			{
+				Grounded = false;
+				return;
+			}
+
+			float slopeLimit = Mathf.Clamp(_controller.slopeLimit, 0f, 89f);
+			float minGroundNormalY = Mathf.Cos(slopeLimit * Mathf.Deg2Rad);
+			Grounded = hit.normal.y >= minGroundNormalY;
+		}
+
+		private void UpdateStepOffset()
+		{
+			if (_controller == null)
+			{
+				return;
+			}
+
+			bool allowStepOffset = Grounded && !_isClimbing && _verticalVelocity <= 0f;
+			_controller.stepOffset = allowStepOffset ? _defaultStepOffset : 0f;
 		}
 
 		private void CameraRotation()

@@ -526,7 +526,7 @@ public class MissionEndOverlayController : MonoBehaviour
         {
             row.Text.enableAutoSizing = true;
             row.Text.fontSizeMin = 12f;
-            row.Text.enableWordWrapping = true;
+            row.Text.textWrappingMode = TextWrappingModes.Normal;
             row.Text.overflowMode = TextOverflowModes.Overflow;
 
             RectTransform rowRectTransform = row.Root.transform as RectTransform;

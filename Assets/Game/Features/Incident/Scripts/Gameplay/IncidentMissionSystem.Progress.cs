@@ -58,7 +58,7 @@ public partial class IncidentMissionSystem
 
     private static List<T> CollectSceneObjectsIncludingInactive<T>() where T : Component
     {
-        T[] found = FindObjectsByType<T>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        T[] found = FindObjectsByType<T>(FindObjectsInactive.Include);
         List<T> results = new List<T>(found.Length);
         for (int i = 0; i < found.Length; i++)
         {
