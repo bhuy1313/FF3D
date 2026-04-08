@@ -39,6 +39,38 @@ public partial class IncidentMissionSystem : MonoBehaviour
     }
 
     [System.Serializable]
+    private class MissionCompletedObjectiveRecord
+    {
+        [SerializeField] private int stageIndex = -1;
+        [SerializeField] private string stageId;
+        [SerializeField] private string title;
+        [SerializeField] private string summary;
+        [SerializeField] private bool isComplete;
+        [SerializeField] private bool hasFailed;
+        [SerializeField] private int score;
+        [SerializeField] private int maxScore;
+
+        public int StageIndex => stageIndex;
+
+        public void Set(int resolvedStageIndex, string resolvedStageId, MissionObjectiveStatus status)
+        {
+            stageIndex = resolvedStageIndex;
+            stageId = resolvedStageId;
+            title = status != null ? status.Title : string.Empty;
+            summary = status != null ? status.Summary : string.Empty;
+            isComplete = status != null && status.IsComplete;
+            hasFailed = status != null && status.HasFailed;
+            score = status != null ? status.Score : 0;
+            maxScore = status != null ? status.MaxScore : 0;
+        }
+
+        public MissionObjectiveStatusSnapshot ToSnapshot()
+        {
+            return new MissionObjectiveStatusSnapshot(title, summary, isComplete, hasFailed, score, maxScore);
+        }
+    }
+
+    [System.Serializable]
     private class MissionStageScoreRecord
     {
         [SerializeField] private int stageIndex;
@@ -160,6 +192,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
     [SerializeField] private int lastStartedStageEventIndex = -1;
     [SerializeField] private int lastCompletedStageEventIndex = -1;
     [SerializeField] private List<MissionObjectiveStatus> objectiveStatuses = new List<MissionObjectiveStatus>();
+    [SerializeField] private List<MissionCompletedObjectiveRecord> completedObjectiveRecords = new List<MissionCompletedObjectiveRecord>();
     [SerializeField] private List<MissionStageScoreRecord> completedStageScoreRecords = new List<MissionStageScoreRecord>();
     [SerializeField] private int currentScore;
     [SerializeField] private int maximumScore;
@@ -167,6 +200,16 @@ public partial class IncidentMissionSystem : MonoBehaviour
     [SerializeField] private int finalScore;
     [SerializeField] private int finalMaximumScore;
     [SerializeField] private string finalScoreRank;
+    [SerializeField] private int finalTotalTrackedFires;
+    [SerializeField] private int finalExtinguishedFireCount;
+    [SerializeField] private int finalTotalTrackedRescuables;
+    [SerializeField] private int finalRescuedCount;
+    [SerializeField] private int finalTotalTrackedVictims;
+    [SerializeField] private int finalUrgentVictimCount;
+    [SerializeField] private int finalCriticalVictimCount;
+    [SerializeField] private int finalStabilizedVictimCount;
+    [SerializeField] private int finalExtractedVictimCount;
+    [SerializeField] private int finalDeceasedVictimCount;
     [SerializeField] private bool progressDirty = true;
     [SerializeField] private List<string> activatedSignalKeys = new List<string>();
 
@@ -174,6 +217,9 @@ public partial class IncidentMissionSystem : MonoBehaviour
     private readonly List<MissionFailConditionDefinition> activeFailConditionDefinitions = new List<MissionFailConditionDefinition>();
     private readonly List<MissionStageDefinition> activeStageDefinitions = new List<MissionStageDefinition>();
     private readonly List<MissionObjectiveDefinition> scoreScratchObjectives = new List<MissionObjectiveDefinition>();
+    private readonly List<MissionStageDefinition> resultStageScratch = new List<MissionStageDefinition>();
+    private readonly List<MissionObjectiveDefinition> resultObjectiveScratch = new List<MissionObjectiveDefinition>();
+    private readonly List<MissionFailConditionDefinition> resultFailConditionScratch = new List<MissionFailConditionDefinition>();
 
     public string MissionId => ResolveMissionId();
     public string MissionTitle => ResolveMissionTitle();
@@ -204,6 +250,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
         ? Mathf.Max(0f, pendingStageStartTime - elapsedTime)
         : 0f;
     public int ObjectiveStatusCount => objectiveStatuses != null ? objectiveStatuses.Count : 0;
+    public int ResultObjectiveStatusCount => GetResultObjectiveStatusCount();
     public int CurrentScore => currentScore;
     public int MaximumScore => maximumScore;
     public string CurrentScoreRank => currentScoreRank;
@@ -213,6 +260,16 @@ public partial class IncidentMissionSystem : MonoBehaviour
     public int DisplayedScore => missionState == MissionState.Completed || missionState == MissionState.Failed ? finalScore : currentScore;
     public int DisplayedMaximumScore => missionState == MissionState.Completed || missionState == MissionState.Failed ? finalMaximumScore : maximumScore;
     public string DisplayedScoreRank => missionState == MissionState.Completed || missionState == MissionState.Failed ? finalScoreRank : currentScoreRank;
+    public int DisplayedTotalTrackedFires => missionState == MissionState.Completed || missionState == MissionState.Failed ? finalTotalTrackedFires : totalTrackedFires;
+    public int DisplayedExtinguishedFireCount => missionState == MissionState.Completed || missionState == MissionState.Failed ? finalExtinguishedFireCount : extinguishedFireCount;
+    public int DisplayedTotalTrackedRescuables => missionState == MissionState.Completed || missionState == MissionState.Failed ? finalTotalTrackedRescuables : totalTrackedRescuables;
+    public int DisplayedRescuedCount => missionState == MissionState.Completed || missionState == MissionState.Failed ? finalRescuedCount : rescuedCount;
+    public int DisplayedTotalTrackedVictims => missionState == MissionState.Completed || missionState == MissionState.Failed ? finalTotalTrackedVictims : totalTrackedVictims;
+    public int DisplayedUrgentVictimCount => missionState == MissionState.Completed || missionState == MissionState.Failed ? finalUrgentVictimCount : urgentVictimCount;
+    public int DisplayedCriticalVictimCount => missionState == MissionState.Completed || missionState == MissionState.Failed ? finalCriticalVictimCount : criticalVictimCount;
+    public int DisplayedStabilizedVictimCount => missionState == MissionState.Completed || missionState == MissionState.Failed ? finalStabilizedVictimCount : stabilizedVictimCount;
+    public int DisplayedExtractedVictimCount => missionState == MissionState.Completed || missionState == MissionState.Failed ? finalExtractedVictimCount : extractedVictimCount;
+    public int DisplayedDeceasedVictimCount => missionState == MissionState.Completed || missionState == MissionState.Failed ? finalDeceasedVictimCount : deceasedVictimCount;
     public float RemainingTimeSeconds => Mathf.Max(0f, ResolveTimeLimitSeconds() - elapsedTime);
     public string CurrentStageId => ResolveCurrentStageId();
 
@@ -287,6 +344,8 @@ public partial class IncidentMissionSystem : MonoBehaviour
     {
         ResetMissionStageRuntime();
         ResetScoreRuntime();
+        ResetFinalPerformanceSnapshot();
+        ResetObjectiveHistoryRuntime();
         ResetSignalEmitters();
         RefreshObjectives();
         elapsedTime = 0f;
@@ -306,6 +365,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
         missionState = MissionState.Failed;
         RefreshScoreState();
         CacheFinalScore();
+        CacheFinalPerformanceSnapshot();
         onMissionFailed?.Invoke();
     }
 
@@ -321,6 +381,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
         missionState = MissionState.Completed;
         RefreshScoreState();
         CacheFinalScore();
+        CacheFinalPerformanceSnapshot();
         onMissionCompleted?.Invoke();
     }
 
@@ -352,6 +413,36 @@ public partial class IncidentMissionSystem : MonoBehaviour
             objectiveStatus.Score,
             objectiveStatus.MaxScore);
         return true;
+    }
+
+    public bool TryGetResultObjectiveStatus(int index, out MissionObjectiveStatusSnapshot status)
+    {
+        status = default;
+        if (index < 0)
+        {
+            return false;
+        }
+
+        int completedCount = completedObjectiveRecords != null ? completedObjectiveRecords.Count : 0;
+        if (index < completedCount)
+        {
+            MissionCompletedObjectiveRecord record = completedObjectiveRecords[index];
+            if (record == null)
+            {
+                return false;
+            }
+
+            status = record.ToSnapshot();
+            return true;
+        }
+
+        if (!ShouldIncludeCurrentObjectiveStatusesInResult())
+        {
+            return false;
+        }
+
+        int currentIndex = index - completedCount;
+        return TryGetObjectiveStatus(currentIndex, out status);
     }
 
     public bool TryResolveSceneObject(string key, out GameObject targetObject)
@@ -447,6 +538,35 @@ public partial class IncidentMissionSystem : MonoBehaviour
     private void CacheFinalScore()
     {
         Scoring.CacheFinalScore();
+    }
+
+    private void ResetFinalPerformanceSnapshot()
+    {
+        finalTotalTrackedFires = 0;
+        finalExtinguishedFireCount = 0;
+        finalTotalTrackedRescuables = 0;
+        finalRescuedCount = 0;
+        finalTotalTrackedVictims = 0;
+        finalUrgentVictimCount = 0;
+        finalCriticalVictimCount = 0;
+        finalStabilizedVictimCount = 0;
+        finalExtractedVictimCount = 0;
+        finalDeceasedVictimCount = 0;
+    }
+
+    private void CacheFinalPerformanceSnapshot()
+    {
+        MissionProgressSnapshot snapshot = BuildResultPerformanceSnapshot();
+        finalTotalTrackedFires = snapshot.TotalTrackedFires;
+        finalExtinguishedFireCount = snapshot.ExtinguishedFireCount;
+        finalTotalTrackedRescuables = snapshot.TotalTrackedRescuables;
+        finalRescuedCount = snapshot.RescuedCount;
+        finalTotalTrackedVictims = snapshot.TotalTrackedVictims;
+        finalUrgentVictimCount = snapshot.UrgentVictimCount;
+        finalCriticalVictimCount = snapshot.CriticalVictimCount;
+        finalStabilizedVictimCount = snapshot.StabilizedVictimCount;
+        finalExtractedVictimCount = snapshot.ExtractedVictimCount;
+        finalDeceasedVictimCount = snapshot.DeceasedVictimCount;
     }
 
     private void RefreshScoreState()
@@ -680,6 +800,130 @@ public partial class IncidentMissionSystem : MonoBehaviour
             deceasedVictimCount);
     }
 
+    private MissionProgressSnapshot BuildResultPerformanceSnapshot()
+    {
+        List<Fire> resultFires = null;
+        List<Rescuable> resultRescuables = null;
+        List<VictimCondition> resultVictimConditions = null;
+
+        if (missionDefinition != null)
+        {
+            MissionRuntimeSceneData sceneData = new MissionRuntimeSceneData();
+            CollectResultSceneTargets(sceneData);
+
+            resultFires = sceneData.CreateFireList();
+            resultRescuables = sceneData.CreateRescuableList();
+            resultVictimConditions = sceneData.CreateVictimConditionList();
+            AppendVictimConditionsFromRescuables(resultVictimConditions, resultRescuables);
+        }
+
+        if (resultFires == null || resultFires.Count == 0)
+        {
+            resultFires = CollectSceneObjectsIncludingInactive<Fire>();
+        }
+
+        if (resultRescuables == null || resultRescuables.Count == 0)
+        {
+            resultRescuables = CollectSceneObjectsIncludingInactive<Rescuable>();
+        }
+
+        if (resultVictimConditions == null || resultVictimConditions.Count == 0)
+        {
+            resultVictimConditions = CollectSceneObjectsIncludingInactive<VictimCondition>();
+            AppendVictimConditionsFromRescuables(resultVictimConditions, resultRescuables);
+        }
+
+        RemoveNullEntries(resultFires);
+        RemoveNullEntries(resultRescuables);
+        RemoveNullEntries(resultVictimConditions);
+
+        return new MissionProgressSnapshot(
+            resultFires.Count,
+            CountExtinguishedFires(resultFires),
+            resultRescuables.Count,
+            CountRescuedTargets(resultRescuables),
+            resultVictimConditions.Count,
+            CountLivingVictims(resultVictimConditions),
+            CountVictimsInState(resultVictimConditions, VictimCondition.TriageState.Urgent),
+            CountVictimsInState(resultVictimConditions, VictimCondition.TriageState.Critical),
+            CountStabilizedVictims(resultVictimConditions),
+            CountExtractedVictims(resultVictimConditions),
+            CountVictimsInState(resultVictimConditions, VictimCondition.TriageState.Deceased));
+    }
+
+    private void CollectResultSceneTargets(MissionRuntimeSceneData sceneData)
+    {
+        if (sceneData == null || missionDefinition == null)
+        {
+            return;
+        }
+
+        missionDefinition.CollectObjectives(resultObjectiveScratch);
+        for (int i = 0; i < resultObjectiveScratch.Count; i++)
+        {
+            MissionObjectiveDefinition objective = resultObjectiveScratch[i];
+            if (objective != null)
+            {
+                objective.CollectTargets(sceneData);
+            }
+        }
+
+        missionDefinition.CollectStages(resultStageScratch);
+        for (int stageIndex = 0; stageIndex < resultStageScratch.Count; stageIndex++)
+        {
+            MissionStageDefinition stage = resultStageScratch[stageIndex];
+            if (stage == null)
+            {
+                continue;
+            }
+
+            resultObjectiveScratch.Clear();
+            stage.CollectObjectives(resultObjectiveScratch);
+            for (int objectiveIndex = 0; objectiveIndex < resultObjectiveScratch.Count; objectiveIndex++)
+            {
+                MissionObjectiveDefinition objective = resultObjectiveScratch[objectiveIndex];
+                if (objective != null)
+                {
+                    objective.CollectTargets(sceneData);
+                }
+            }
+        }
+
+        missionDefinition.CollectFailConditions(resultFailConditionScratch);
+        for (int i = 0; i < resultFailConditionScratch.Count; i++)
+        {
+            MissionFailConditionDefinition failCondition = resultFailConditionScratch[i];
+            if (failCondition != null)
+            {
+                failCondition.CollectTargets(sceneData);
+            }
+        }
+    }
+
+    private static void AppendVictimConditionsFromRescuables(List<VictimCondition> victims, List<Rescuable> rescuables)
+    {
+        if (victims == null || rescuables == null)
+        {
+            return;
+        }
+
+        HashSet<VictimCondition> existingVictims = new HashSet<VictimCondition>(victims);
+        for (int i = 0; i < rescuables.Count; i++)
+        {
+            Rescuable rescuable = rescuables[i];
+            if (rescuable == null)
+            {
+                continue;
+            }
+
+            VictimCondition victimCondition = rescuable.GetComponent<VictimCondition>();
+            if (victimCondition != null && existingVictims.Add(victimCondition))
+            {
+                victims.Add(victimCondition);
+            }
+        }
+    }
+
     private bool AreActiveDefinitionObjectivesSatisfied(MissionProgressSnapshot snapshot, bool allowNoRelevantObjectives)
     {
         MissionObjectiveContext context = BuildObjectiveContext(snapshot);
@@ -721,6 +965,42 @@ public partial class IncidentMissionSystem : MonoBehaviour
     private void RefreshObjectiveStatuses()
     {
         Objectives.RefreshObjectiveStatuses();
+    }
+
+    private void ResetObjectiveHistoryRuntime()
+    {
+        Objectives.ResetObjectiveHistoryRuntime();
+    }
+
+    private void CaptureCurrentStageObjectiveHistoryIfNeeded(string stageId)
+    {
+        Objectives.CaptureCurrentStageObjectiveHistoryIfNeeded(stageId);
+    }
+
+    private bool HasCapturedStageObjectiveHistory(int stageIndex)
+    {
+        return Objectives.HasCapturedStageObjectiveHistory(stageIndex);
+    }
+
+    private int GetResultObjectiveStatusCount()
+    {
+        int completedCount = completedObjectiveRecords != null ? completedObjectiveRecords.Count : 0;
+        if (!ShouldIncludeCurrentObjectiveStatusesInResult())
+        {
+            return completedCount;
+        }
+
+        return completedCount + ObjectiveStatusCount;
+    }
+
+    private bool ShouldIncludeCurrentObjectiveStatusesInResult()
+    {
+        if (!HasActiveStageSequence())
+        {
+            return ObjectiveStatusCount > 0;
+        }
+
+        return !HasCapturedStageObjectiveHistory(currentStageIndex) && ObjectiveStatusCount > 0;
     }
 
     private void BuildLegacyObjectiveStatuses(MissionProgressSnapshot snapshot)
