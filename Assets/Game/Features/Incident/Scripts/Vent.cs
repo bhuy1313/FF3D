@@ -3,6 +3,7 @@ using UnityEngine;
 public class Vent : MonoBehaviour, IInteractable, IGrabbable, IOpenable, ISmokeVentPoint, IMovementWeightSource
 {
     [SerializeField] private bool startsOpen;
+    [SerializeField] private bool allowToggle = true;
     [SerializeField] private float smokeVentilationReliefWhenOpen = 0.35f;
     [SerializeField] private float fireDraftRiskWhenOpen;
     [SerializeField] private float movementWeightKg = 12f;
@@ -53,7 +54,7 @@ public class Vent : MonoBehaviour, IInteractable, IGrabbable, IOpenable, ISmokeV
 
     public void Interact(GameObject interactor)
     {
-        isOpen = true;
+        isOpen = allowToggle ? !isOpen : true;
         ApplyVentState();
     }
 

@@ -53,7 +53,12 @@ namespace StarterAssets
 
 		public void OnCrouch(InputValue value)
 		{
-			CrouchInput(value.isPressed);
+			if (!value.isPressed)
+			{
+				return;
+			}
+
+			ToggleCrouchInput();
 		}
 
 		public void OnInteract(InputValue value)
@@ -113,6 +118,11 @@ namespace StarterAssets
 		public void CrouchInput(bool newCrouchState)
 		{
 			crouch = newCrouchState;
+		}
+
+		public void ToggleCrouchInput()
+		{
+			crouch = !crouch;
 		}
 
 		public void InteractInput(bool newInteractState)

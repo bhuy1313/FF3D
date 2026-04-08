@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Text;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
@@ -35,6 +36,12 @@ namespace StarterAssets
 		public float CrouchCameraOffset = -0.5f;
 		[Tooltip("How fast to transition between stand and crouch")]
 		public float CrouchTransitionSpeed = 20.0f;
+
+		[Header("Crouch Debug")]
+		[Tooltip("Logs crouch request and stand-up blockers to the Console.")]
+		public bool DebugCrouchState;
+		[Tooltip("Minimum time between repeated stand-up blocked logs.")]
+		public float CrouchDebugLogCooldown = 0.5f;
 
 		[Header("Encumbrance")]
 		[Tooltip("Reduce player movement speed while grabbing or carrying heavy objects.")]
@@ -185,6 +192,11 @@ namespace StarterAssets
 		private Vector2 _lookInputSmoothed;
 		private Vector2 _lookInputSmoothVelocity;
 		private float _mouseSensitivityMultiplier = 1.0f;
+		private float _lastCrouchBlockedLogTime = float.NegativeInfinity;
+		private bool _hasLoggedCrouchRequestState;
+		private bool _lastLoggedCrouchRequestState;
+
+		public bool IsCrouching => _isCrouching;
 
 		private bool IsCurrentDeviceMouse
 		{
@@ -446,7 +458,11 @@ namespace StarterAssets
 		private void UpdateCrouch()
 		{
 			bool wantsCrouch = !IsGrabActionLocked() && _input.crouch;
-			float targetHeight = wantsCrouch ? CrouchHeight : (CanStandUp() ? _standHeight : _controller.height);
+			LogCrouchRequestIfNeeded(wantsCrouch);
+
+			string standUpBlockerSummary = string.Empty;
+			bool canStandUp = wantsCrouch || CanStandUp(out standUpBlockerSummary);
+			float targetHeight = wantsCrouch ? CrouchHeight : (canStandUp ? _standHeight : _controller.height);
 			float heightDelta = _standHeight - targetHeight;
 			float targetCenterY = _standCenter.y - (heightDelta * 0.5f);
 
@@ -458,6 +474,11 @@ namespace StarterAssets
 			);
 
 			_isCrouching = _controller.height < (_standHeight - 0.05f);
+
+			if (!wantsCrouch && _isCrouching && !canStandUp)
+			{
+				LogStandUpBlocked(standUpBlockerSummary);
+			}
 		}
 
 		private void UpdateCameraTargetTransform()
@@ -570,16 +591,125 @@ namespace StarterAssets
 			return Mathf.Clamp01(horizontalSpeed / maxMoveSpeed);
 		}
 
-		private bool CanStandUp()
+		private bool CanStandUp(out string blockerSummary)
 		{
+			blockerSummary = string.Empty;
+
 			if (_controller == null)
 			{
 				return true;
 			}
 
-			Vector3 bottom = transform.position + Vector3.up * _controller.radius;
-			Vector3 top = transform.position + Vector3.up * (_standHeight - _controller.radius);
-			return !Physics.CheckCapsule(bottom, top, _controller.radius, GroundLayers, QueryTriggerInteraction.Ignore);
+			float targetHeight = Mathf.Max(_standHeight, CrouchHeight);
+			float currentHeight = Mathf.Clamp(_controller.height, 0f, targetHeight);
+			float addedHeight = targetHeight - currentHeight;
+			if (addedHeight <= 0.001f)
+			{
+				return true;
+			}
+
+			float checkRadius = Mathf.Max(0.05f, _controller.radius - (_controller.skinWidth * 0.25f));
+			float currentTopOffset = Mathf.Max(0f, (currentHeight * 0.5f) - _controller.radius);
+			Vector3 currentTop = transform.position + _controller.center + (Vector3.up * currentTopOffset);
+			Vector3 targetTop = currentTop + (Vector3.up * addedHeight);
+			Collider[] blockers = Physics.OverlapCapsule(
+				currentTop,
+				targetTop,
+				checkRadius,
+				GroundLayers,
+				QueryTriggerInteraction.Ignore);
+
+			if (blockers == null || blockers.Length == 0)
+			{
+				return true;
+			}
+
+			blockerSummary = BuildStandUpBlockerSummary(blockers, currentTop, targetTop, checkRadius);
+			return false;
+		}
+
+		private void LogCrouchRequestIfNeeded(bool wantsCrouch)
+		{
+			if (!DebugCrouchState)
+			{
+				return;
+			}
+
+			if (_hasLoggedCrouchRequestState && wantsCrouch == _lastLoggedCrouchRequestState)
+			{
+				return;
+			}
+
+			_hasLoggedCrouchRequestState = true;
+			_lastLoggedCrouchRequestState = wantsCrouch;
+			Debug.Log(
+				$"[CrouchDebug] Request changed. wantsCrouch={wantsCrouch}, inputCrouch={_input.crouch}, isCrouching={_isCrouching}, controllerHeight={_controller.height:F3}",
+				this);
+		}
+
+		private void LogStandUpBlocked(string blockerSummary)
+		{
+			if (!DebugCrouchState)
+			{
+				return;
+			}
+
+			if (Time.time - _lastCrouchBlockedLogTime < Mathf.Max(0.05f, CrouchDebugLogCooldown))
+			{
+				return;
+			}
+
+			_lastCrouchBlockedLogTime = Time.time;
+			Debug.LogWarning(
+				$"[CrouchDebug] Stand up blocked. inputCrouch={_input.crouch}, isCrouching={_isCrouching}, controllerHeight={_controller.height:F3}, grounded={Grounded}. {blockerSummary}",
+				this);
+		}
+
+		private string BuildStandUpBlockerSummary(Collider[] blockers, Vector3 currentTop, Vector3 targetTop, float checkRadius)
+		{
+			StringBuilder builder = new StringBuilder();
+			builder.Append("Clearance capsule ");
+			builder.Append(currentTop.ToString("F3"));
+			builder.Append(" -> ");
+			builder.Append(targetTop.ToString("F3"));
+			builder.Append(", radius=");
+			builder.Append(checkRadius.ToString("F3"));
+			builder.Append(", blockers=");
+
+			bool foundAny = false;
+			for (int i = 0; i < blockers.Length; i++)
+			{
+				Collider blocker = blockers[i];
+				if (blocker == null)
+				{
+					continue;
+				}
+
+				if (blocker.transform == transform || blocker.transform.IsChildOf(transform))
+				{
+					continue;
+				}
+
+				if (foundAny)
+				{
+					builder.Append(" | ");
+				}
+
+				foundAny = true;
+				builder.Append(blocker.name);
+				builder.Append(" [layer=");
+				builder.Append(LayerMask.LayerToName(blocker.gameObject.layer));
+				builder.Append(", center=");
+				builder.Append(blocker.bounds.center.ToString("F3"));
+				builder.Append(']');
+			}
+
+			if (!foundAny)
+			{
+				builder.Append("none");
+			}
+
+			return builder.ToString();
 		}
 
 		private void JumpAndGravity()

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using StarterAssets;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -38,6 +39,25 @@ public class SmokeHazard : MonoBehaviour
     [SerializeField] private float smokeDissipationRate = 1f;
     [SerializeField] private float fireDraftBoostPerSecond = 0.2f;
 
+    [Header("Crouch Relief")]
+    [SerializeField] private bool reduceSmokeWhileCrouching = true;
+    [Range(0f, 1f)]
+    [SerializeField] private float crouchReliefUntilDensity = 0.8f;
+    [Range(0f, 1f)]
+    [SerializeField] private float crouchedExposureMultiplier = 0.55f;
+
+    [Header("Ventilation Response")]
+    [SerializeField] private bool enhanceCrossVentilation = true;
+    [SerializeField] private float extraOpeningReliefBonus = 0.12f;
+    [SerializeField] private float extraOpeningDraftBonus = 0.18f;
+    [SerializeField] private float maxCrossVentilationBonus = 0.6f;
+    [SerializeField] private float doorVentilationMultiplier = 1f;
+    [SerializeField] private float windowVentilationMultiplier = 1.15f;
+    [SerializeField] private float ventVentilationMultiplier = 1.25f;
+    [SerializeField] private float doorDraftMultiplier = 1.15f;
+    [SerializeField] private float windowDraftMultiplier = 1.35f;
+    [SerializeField] private float ventDraftMultiplier = 0.85f;
+
     [Header("Effects")]
     [SerializeField] private bool affectPlayers = true;
     [SerializeField] private bool affectVictims = true;
@@ -55,8 +75,21 @@ public class SmokeHazard : MonoBehaviour
     private readonly HashSet<Component> processedTargets = new HashSet<Component>();
     private int processedFrame = -1;
 
+    private readonly struct VentilationResponse
+    {
+        public VentilationResponse(float relief, float draftRisk)
+        {
+            Relief = relief;
+            DraftRisk = draftRisk;
+        }
+
+        public float Relief { get; }
+        public float DraftRisk { get; }
+    }
+
     public float CurrentSmokeDensity => currentSmokeDensity;
     public float CurrentVisibilityPenalty => currentSmokeDensity * maxVisibilityPenalty;
+    public Collider TriggerZone => triggerZone;
 
     private void Awake()
     {
@@ -87,6 +120,17 @@ public class SmokeHazard : MonoBehaviour
         smokeAccumulationRate = Mathf.Max(0f, smokeAccumulationRate);
         smokeDissipationRate = Mathf.Max(0f, smokeDissipationRate);
         fireDraftBoostPerSecond = Mathf.Max(0f, fireDraftBoostPerSecond);
+        crouchReliefUntilDensity = Mathf.Clamp01(crouchReliefUntilDensity);
+        crouchedExposureMultiplier = Mathf.Clamp01(crouchedExposureMultiplier);
+        extraOpeningReliefBonus = Mathf.Max(0f, extraOpeningReliefBonus);
+        extraOpeningDraftBonus = Mathf.Max(0f, extraOpeningDraftBonus);
+        maxCrossVentilationBonus = Mathf.Max(0f, maxCrossVentilationBonus);
+        doorVentilationMultiplier = Mathf.Max(0f, doorVentilationMultiplier);
+        windowVentilationMultiplier = Mathf.Max(0f, windowVentilationMultiplier);
+        ventVentilationMultiplier = Mathf.Max(0f, ventVentilationMultiplier);
+        doorDraftMultiplier = Mathf.Max(0f, doorDraftMultiplier);
+        windowDraftMultiplier = Mathf.Max(0f, windowDraftMultiplier);
+        ventDraftMultiplier = Mathf.Max(0f, ventDraftMultiplier);
         minimumDangerousDensity = Mathf.Clamp01(minimumDangerousDensity);
         oxygenDrainPerSecond = Mathf.Max(0f, oxygenDrainPerSecond);
         victimConditionDamagePerSecond = Mathf.Max(0f, victimConditionDamagePerSecond);
@@ -140,6 +184,7 @@ public class SmokeHazard : MonoBehaviour
     private float CalculateTargetSmokeDensity()
     {
         float density = 0f;
+        VentilationResponse ventilation = GetVentilationResponse();
 
         if (linkedFires != null)
         {
@@ -154,14 +199,14 @@ public class SmokeHazard : MonoBehaviour
         }
 
         density -= passiveVentilationRelief;
-        density -= GetVentilationRelief();
+        density -= ventilation.Relief;
         return Mathf.Clamp01(density);
     }
 
     private void ApplySmokeEffects(Collider other, float deltaTime)
     {
         float scaledDeltaTime = Mathf.Max(0f, deltaTime);
-        float effectScale = currentSmokeDensity;
+        float effectScale = CalculateLocalSmokeEffectScale(other);
 
         PlayerHazardExposure exposure = other.GetComponentInParent<PlayerHazardExposure>();
         if (exposure != null && processedTargets.Add(exposure))
@@ -169,7 +214,7 @@ public class SmokeHazard : MonoBehaviour
             exposure.ReportSmokeExposure(effectScale);
         }
 
-        if (currentSmokeDensity < minimumDangerousDensity)
+        if (effectScale < minimumDangerousDensity)
             return;
 
         if (affectPlayers)
@@ -207,6 +252,13 @@ public class SmokeHazard : MonoBehaviour
 
         if (triggerZone != null && !triggerZone.isTrigger)
             triggerZone.isTrigger = true;
+    }
+
+    public void SetTriggerZone(Collider newTriggerZone)
+    {
+        triggerZone = newTriggerZone;
+        ResolveTriggerZone();
+        ResolveSupportComponents();
     }
 
     private void ResolveSupportComponents()
@@ -248,7 +300,7 @@ public class SmokeHazard : MonoBehaviour
         if (linkedFires == null || linkedFires.Length == 0 || fireDraftBoostPerSecond <= 0f)
             return;
 
-        float draftRisk = GetVentilationDraftRisk();
+        float draftRisk = GetVentilationResponse().DraftRisk;
         if (draftRisk <= 0f)
             return;
 
@@ -267,34 +319,89 @@ public class SmokeHazard : MonoBehaviour
         }
     }
 
-    private float GetVentilationRelief()
+    private VentilationResponse GetVentilationResponse()
     {
         float relief = 0f;
+        float risk = 0f;
+        int openingCount = 0;
         if (linkedVentPoints == null)
-            return relief;
+            return new VentilationResponse(relief, risk);
 
         for (int i = 0; i < linkedVentPoints.Length; i++)
         {
-            if (linkedVentPoints[i] is ISmokeVentPoint ventPoint)
-                relief += Mathf.Max(0f, ventPoint.SmokeVentilationRelief);
+            if (!(linkedVentPoints[i] is ISmokeVentPoint ventPoint))
+                continue;
+
+            float ventRelief = Mathf.Max(0f, ventPoint.SmokeVentilationRelief);
+            float ventRisk = Mathf.Max(0f, ventPoint.FireDraftRisk);
+            if (ventRelief <= 0f && ventRisk <= 0f)
+                continue;
+
+            openingCount++;
+            GetVentilationTypeMultipliers(ventPoint, out float reliefMultiplier, out float riskMultiplier);
+            relief += ventRelief * reliefMultiplier;
+            risk += ventRisk * riskMultiplier;
         }
 
-        return relief;
+        if (enhanceCrossVentilation && openingCount > 1)
+        {
+            float additionalOpenings = openingCount - 1;
+            float reliefBonus = Mathf.Min(maxCrossVentilationBonus, additionalOpenings * extraOpeningReliefBonus);
+            float draftBonus = Mathf.Min(maxCrossVentilationBonus, additionalOpenings * extraOpeningDraftBonus);
+            relief *= 1f + reliefBonus;
+            risk *= 1f + draftBonus;
+        }
+
+        return new VentilationResponse(relief, risk);
     }
 
-    private float GetVentilationDraftRisk()
+    private void GetVentilationTypeMultipliers(ISmokeVentPoint ventPoint, out float reliefMultiplier, out float riskMultiplier)
     {
-        float risk = 0f;
-        if (linkedVentPoints == null)
-            return risk;
-
-        for (int i = 0; i < linkedVentPoints.Length; i++)
+        if (ventPoint is Window)
         {
-            if (linkedVentPoints[i] is ISmokeVentPoint ventPoint)
-                risk += Mathf.Max(0f, ventPoint.FireDraftRisk);
+            reliefMultiplier = windowVentilationMultiplier;
+            riskMultiplier = windowDraftMultiplier;
+            return;
         }
 
-        return risk;
+        if (ventPoint is Vent)
+        {
+            reliefMultiplier = ventVentilationMultiplier;
+            riskMultiplier = ventDraftMultiplier;
+            return;
+        }
+
+        if (ventPoint is Door)
+        {
+            reliefMultiplier = doorVentilationMultiplier;
+            riskMultiplier = doorDraftMultiplier;
+            return;
+        }
+
+        reliefMultiplier = 1f;
+        riskMultiplier = 1f;
+    }
+
+    private float CalculateLocalSmokeEffectScale(Collider other)
+    {
+        if (other == null)
+            return 0f;
+
+        float effectScale = currentSmokeDensity;
+        if (reduceSmokeWhileCrouching &&
+            currentSmokeDensity < crouchReliefUntilDensity &&
+            TryGetCrouchingController(other, out _))
+        {
+            effectScale *= crouchedExposureMultiplier;
+        }
+
+        return Mathf.Clamp01(effectScale);
+    }
+
+    private bool TryGetCrouchingController(Collider other, out FirstPersonController controller)
+    {
+        controller = other != null ? other.GetComponentInParent<FirstPersonController>() : null;
+        return controller != null && controller.IsCrouching;
     }
 
     private Fire[] CollectAutoFires()
