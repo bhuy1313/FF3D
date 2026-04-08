@@ -56,6 +56,22 @@ public partial class IncidentMissionSystem
         return results;
     }
 
+    private static List<T> CollectSceneObjectsIncludingInactive<T>() where T : Component
+    {
+        T[] found = FindObjectsByType<T>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        List<T> results = new List<T>(found.Length);
+        for (int i = 0; i < found.Length; i++)
+        {
+            T candidate = found[i];
+            if (candidate != null && candidate.gameObject.scene.IsValid())
+            {
+                results.Add(candidate);
+            }
+        }
+
+        return results;
+    }
+
     private static int CountExtinguishedFires(List<Fire> fires)
     {
         int count = 0;

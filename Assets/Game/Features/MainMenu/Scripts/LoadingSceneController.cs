@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -19,6 +20,8 @@ public class LoadingSceneController : MonoBehaviour
     [SerializeField] private RawImage backgroundImage;
     [SerializeField] private Texture[] backgroundSlides;
     [SerializeField] private Image[] backgroundSlideIndicators;
+    [SerializeField] private RectTransform backgroundSlideIndicatorContainer;
+    [SerializeField] private Image backgroundSlideIndicatorTemplate;
     [SerializeField] private Image progressBar;
     [SerializeField] private TMP_Text progressLabel;
     [SerializeField] private TMP_Text progressPercentLabel;
@@ -266,6 +269,9 @@ public class LoadingSceneController : MonoBehaviour
                 FindComponentByName<Image>(transform, "Barh3")
             };
         }
+
+        ResolveBackgroundSlideIndicatorSupportReferences();
+        SyncBackgroundSlideIndicators();
     }
 
     private void InitializeBackgroundSlideshow()
@@ -450,6 +456,120 @@ public class LoadingSceneController : MonoBehaviour
 
             indicator.color = i == activeIndex ? activeSlideIndicatorColor : inactiveSlideIndicatorColor;
         }
+    }
+
+    private void ResolveBackgroundSlideIndicatorSupportReferences()
+    {
+        if (backgroundSlideIndicators != null)
+        {
+            for (int i = 0; i < backgroundSlideIndicators.Length; i++)
+            {
+                Image indicator = backgroundSlideIndicators[i];
+                if (indicator == null)
+                {
+                    continue;
+                }
+
+                if (backgroundSlideIndicatorContainer == null)
+                {
+                    backgroundSlideIndicatorContainer = indicator.transform.parent as RectTransform;
+                }
+
+                if (backgroundSlideIndicatorTemplate == null)
+                {
+                    backgroundSlideIndicatorTemplate = indicator;
+                }
+
+                if (backgroundSlideIndicatorContainer != null && backgroundSlideIndicatorTemplate != null)
+                {
+                    break;
+                }
+            }
+        }
+
+        if (backgroundSlideIndicatorContainer == null && backgroundSlideIndicatorTemplate != null)
+        {
+            backgroundSlideIndicatorContainer = backgroundSlideIndicatorTemplate.transform.parent as RectTransform;
+        }
+    }
+
+    private void SyncBackgroundSlideIndicators()
+    {
+        int slideCount = backgroundSlides != null ? backgroundSlides.Length : 0;
+        if (slideCount <= 0)
+        {
+            backgroundSlideIndicators = System.Array.Empty<Image>();
+            return;
+        }
+
+        ResolveBackgroundSlideIndicatorSupportReferences();
+        if (backgroundSlideIndicatorContainer == null || backgroundSlideIndicatorTemplate == null)
+        {
+            return;
+        }
+
+        List<Image> indicators = CollectBackgroundSlideIndicators();
+        if (indicators.Count == 0)
+        {
+            indicators.Add(backgroundSlideIndicatorTemplate);
+        }
+
+        while (indicators.Count < slideCount)
+        {
+            Image clonedIndicator = Instantiate(backgroundSlideIndicatorTemplate, backgroundSlideIndicatorContainer);
+            clonedIndicator.gameObject.name = $"Barh{indicators.Count + 1}";
+            clonedIndicator.gameObject.SetActive(true);
+            clonedIndicator.transform.SetAsLastSibling();
+            indicators.Add(clonedIndicator);
+        }
+
+        for (int i = 0; i < indicators.Count; i++)
+        {
+            Image indicator = indicators[i];
+            if (indicator == null)
+            {
+                continue;
+            }
+
+            bool shouldBeActive = i < slideCount;
+            indicator.gameObject.SetActive(shouldBeActive);
+            indicator.color = inactiveSlideIndicatorColor;
+        }
+
+        if (backgroundSlideIndicatorContainer != null)
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(backgroundSlideIndicatorContainer);
+        }
+
+        backgroundSlideIndicators = indicators.GetRange(0, slideCount).ToArray();
+    }
+
+    private List<Image> CollectBackgroundSlideIndicators()
+    {
+        var indicators = new List<Image>();
+        if (backgroundSlideIndicatorContainer == null)
+        {
+            return indicators;
+        }
+
+        for (int i = 0; i < backgroundSlideIndicatorContainer.childCount; i++)
+        {
+            Transform child = backgroundSlideIndicatorContainer.GetChild(i);
+            if (child == null)
+            {
+                continue;
+            }
+
+            Image indicator = child.GetComponent<Image>();
+            if (indicator == null)
+            {
+                continue;
+            }
+
+            indicators.Add(indicator);
+        }
+
+        return indicators;
     }
 
     private static RectTransform FindBarChildByAnchor(RectTransform barRect, bool useRightAnchor)

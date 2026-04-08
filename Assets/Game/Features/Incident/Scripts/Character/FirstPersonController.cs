@@ -195,8 +195,11 @@ namespace StarterAssets
 		private float _lastCrouchBlockedLogTime = float.NegativeInfinity;
 		private bool _hasLoggedCrouchRequestState;
 		private bool _lastLoggedCrouchRequestState;
+<<<<<<< HEAD
 
 		public bool IsCrouching => _isCrouching;
+=======
+>>>>>>> main0
 
 		private bool IsCurrentDeviceMouse
 		{

@@ -241,6 +241,59 @@ public partial class IncidentMissionSystem
             BuildLegacyObjectiveStatuses(snapshot);
         }
 
+        public void ResetObjectiveHistoryRuntime()
+        {
+            if (owner.completedObjectiveRecords != null)
+            {
+                owner.completedObjectiveRecords.Clear();
+            }
+        }
+
+        public void CaptureCurrentStageObjectiveHistoryIfNeeded(string stageId)
+        {
+            if (!owner.HasActiveStageSequence() || owner.currentStageIndex < 0 || HasCapturedStageObjectiveHistory(owner.currentStageIndex))
+            {
+                return;
+            }
+
+            if (owner.objectiveStatuses == null || owner.objectiveStatuses.Count == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < owner.objectiveStatuses.Count; i++)
+            {
+                MissionObjectiveStatus status = owner.objectiveStatuses[i];
+                if (status == null)
+                {
+                    continue;
+                }
+
+                MissionCompletedObjectiveRecord record = new MissionCompletedObjectiveRecord();
+                record.Set(owner.currentStageIndex, stageId, status);
+                owner.completedObjectiveRecords.Add(record);
+            }
+        }
+
+        public bool HasCapturedStageObjectiveHistory(int stageIndex)
+        {
+            if (stageIndex < 0 || owner.completedObjectiveRecords == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < owner.completedObjectiveRecords.Count; i++)
+            {
+                MissionCompletedObjectiveRecord record = owner.completedObjectiveRecords[i];
+                if (record != null && record.StageIndex == stageIndex)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public void BuildLegacyObjectiveStatuses(MissionProgressSnapshot snapshot)
         {
             if (owner.requireAllFiresExtinguished && snapshot.TotalTrackedFires > 0)
@@ -651,6 +704,7 @@ public partial class IncidentMissionSystem
             }
 
             string stageId = owner.ResolveCurrentStageId();
+            owner.CaptureCurrentStageObjectiveHistoryIfNeeded(stageId);
             owner.CaptureCurrentStageScoreIfNeeded(stageId);
             owner.lastCompletedStageEventIndex = owner.currentStageIndex;
             owner.onStageCompleted?.Invoke(owner.currentStageIndex, stageId);

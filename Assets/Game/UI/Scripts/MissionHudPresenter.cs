@@ -122,6 +122,11 @@ public class MissionHudPresenter : MonoBehaviour
     [SerializeField] private string objectiveDoneToastFormat = "{0} done";
     [SerializeField] private string objectiveUpdateToastTitle = "OBJECTIVE UPDATED";
 
+    [Header("HUD Visibility")]
+    [SerializeField] private CanvasGroup hudCanvasGroup;
+    [SerializeField] private bool allowHudToggleHotkey = true;
+    [SerializeField] private KeyCode toggleHudKey = KeyCode.N;
+
     private readonly StringBuilder objectiveBuilder = new StringBuilder();
     private readonly List<ObjectiveItemView> objectiveItemViews = new List<ObjectiveItemView>();
     private readonly Queue<ToastRequest> pendingToastRequests = new Queue<ToastRequest>();
@@ -139,12 +144,14 @@ public class MissionHudPresenter : MonoBehaviour
     private float lastMissionSystemSeenTime = float.NegativeInfinity;
     private bool hasAppliedVisibility;
     private bool lastAppliedVisibility;
+    private bool isHudManuallyHidden;
 
     private void Awake()
     {
         ResolveReferences();
         HideAllToasts();
         RefreshView();
+        ApplyHudCanvasVisibility();
     }
 
     private void OnEnable()
@@ -153,10 +160,12 @@ public class MissionHudPresenter : MonoBehaviour
         ResetToastTracking();
         HideAllToasts();
         RefreshView();
+        ApplyHudCanvasVisibility();
     }
 
     private void Update()
     {
+        HandleHudToggleHotkey();
         RefreshView();
         RefreshToastFlow();
     }
@@ -171,6 +180,15 @@ public class MissionHudPresenter : MonoBehaviour
         if (rootCanvasGroup == null)
         {
             rootCanvasGroup = GetComponent<CanvasGroup>();
+        }
+
+        if (hudCanvasGroup == null)
+        {
+            hudCanvasGroup = GetComponent<CanvasGroup>();
+            if (hudCanvasGroup == null)
+            {
+                hudCanvasGroup = gameObject.AddComponent<CanvasGroup>();
+            }
         }
 
         if (missionSystem != null)
@@ -212,6 +230,30 @@ public class MissionHudPresenter : MonoBehaviour
         SetText(objectivesHeaderText, BuildObjectivesHeaderText());
         SetFillAmount(stageProgressFillImage, BuildProgressNormalized());
         RefreshObjectiveItemList();
+    }
+
+    private void HandleHudToggleHotkey()
+    {
+        if (!allowHudToggleHotkey || !Input.GetKeyDown(toggleHudKey))
+        {
+            return;
+        }
+
+        isHudManuallyHidden = !isHudManuallyHidden;
+        ApplyHudCanvasVisibility();
+    }
+
+    private void ApplyHudCanvasVisibility()
+    {
+        if (hudCanvasGroup == null)
+        {
+            return;
+        }
+
+        bool visible = !isHudManuallyHidden;
+        hudCanvasGroup.alpha = visible ? 1f : 0f;
+        hudCanvasGroup.interactable = visible;
+        hudCanvasGroup.blocksRaycasts = visible;
     }
 
     private bool ShouldBeVisible()

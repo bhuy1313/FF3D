@@ -1404,6 +1404,8 @@ MonoBehaviour:
   - {fileID: 2800000, guid: 3e902b3f96af2a84eb1005d1382f0762, type: 3}
   - {fileID: 2800000, guid: 47b822aabc3736b4ea818b9e8e566412, type: 3}
   - {fileID: 2800000, guid: 4efd126d969ed77418757fb89499346a, type: 3}
+  - {fileID: 2800000, guid: b4307e206e39b8744aaa9a6be1c67aae, type: 3}
+  - {fileID: 2800000, guid: f899d910db33c8c4885bfd5a08d12d7c, type: 3}
   backgroundSlideIndicators:
   - {fileID: 237443214}
   - {fileID: 886754456}
@@ -1415,6 +1417,7 @@ MonoBehaviour:
   progressIndicatorEndReference: {fileID: 71959050}
   minimumDisplayTime: 5
   backgroundSlideInterval: 1.5
+  backgroundFadeDuration: 0.6
   fallbackTargetSceneName: LevelSelectScene
   readyHoldProgress: 0.95
   progressCurveExponent: 5
@@ -1422,6 +1425,7 @@ MonoBehaviour:
   lateProgressFillSpeed: 0.2
   activeSlideIndicatorColor: {r: 1, g: 1, b: 1, a: 0.95}
   inactiveSlideIndicatorColor: {r: 1, g: 1, b: 1, a: 0.3}
+  backgroundFadeMidBrightness: 0.7
 --- !u!1 &1476622126
 GameObject:
   m_ObjectHideFlags: 0

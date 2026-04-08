@@ -13,6 +13,11 @@ public class KeyHintBindingUtil : MonoBehaviour
         if (idx < 0) idx = FindFirstUsableBinding(action);
         if (idx < 0) return "";
 
+        if (TryGetPreferredCompositeDisplay(action, idx, controlScheme, out string compositeDisplay))
+        {
+            return compositeDisplay;
+        }
+
         return action.GetBindingDisplayString(idx);
     }
 
@@ -108,5 +113,105 @@ public class KeyHintBindingUtil : MonoBehaviour
         }
 
         return false;
+    }
+
+    private static bool TryGetPreferredCompositeDisplay(InputAction action, int bindingIndex, string controlScheme, out string display)
+    {
+        display = null;
+        if (action == null || bindingIndex < 0 || bindingIndex >= action.bindings.Count)
+        {
+            return false;
+        }
+
+        InputBinding composite = action.bindings[bindingIndex];
+        if (!composite.isComposite)
+        {
+            return false;
+        }
+
+        if (!string.Equals(controlScheme, "KeyboardMouse", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (!string.Equals(composite.path, "2DVector(mode=1)", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        string up = null;
+        string down = null;
+        string left = null;
+        string right = null;
+
+        for (int i = bindingIndex + 1; i < action.bindings.Count; i++)
+        {
+            InputBinding part = action.bindings[i];
+            if (!part.isPartOfComposite)
+            {
+                break;
+            }
+
+            if (!GroupsContainScheme(part.groups, controlScheme))
+            {
+                continue;
+            }
+
+            string keyName = GetPreferredKeyboardPartName(part.effectivePath);
+            if (string.IsNullOrEmpty(keyName))
+            {
+                continue;
+            }
+
+            switch (part.name)
+            {
+                case "up":
+                    up ??= keyName;
+                    break;
+                case "down":
+                    down ??= keyName;
+                    break;
+                case "left":
+                    left ??= keyName;
+                    break;
+                case "right":
+                    right ??= keyName;
+                    break;
+            }
+        }
+
+        if (up == "W" && left == "A" && down == "S" && right == "D")
+        {
+            display = "W A S D";
+            return true;
+        }
+
+        if (!string.IsNullOrEmpty(up) &&
+            !string.IsNullOrEmpty(left) &&
+            !string.IsNullOrEmpty(down) &&
+            !string.IsNullOrEmpty(right))
+        {
+            display = $"{up} {left} {down} {right}";
+            return true;
+        }
+
+        return false;
+    }
+
+    private static string GetPreferredKeyboardPartName(string effectivePath)
+    {
+        if (string.IsNullOrEmpty(effectivePath))
+        {
+            return null;
+        }
+
+        return effectivePath switch
+        {
+            "<Keyboard>/w" => "W",
+            "<Keyboard>/a" => "A",
+            "<Keyboard>/s" => "S",
+            "<Keyboard>/d" => "D",
+            _ => null
+        };
     }
 }
