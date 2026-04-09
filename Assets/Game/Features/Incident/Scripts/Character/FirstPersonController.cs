@@ -259,6 +259,10 @@ namespace StarterAssets
 			_interactionSystem = GetComponent<FPSInteractionSystem>();
 #if ENABLE_INPUT_SYSTEM
 			_playerInput = GetComponent<PlayerInput>();
+			if (_playerInput != null && _playerInput.actions != null)
+			{
+				InputBindingOverridesStore.ApplySavedOverrides(_playerInput.actions);
+			}
 #else
 			Debug.LogError( "Starter Assets package is missing dependencies. Please use Tools/Starter Assets/Reinstall Dependencies to fix it");
 #endif

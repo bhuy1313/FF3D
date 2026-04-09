@@ -20,6 +20,11 @@ public partial class Setting_UIScript
         CapturePanelDefaults(panelGrap);
         CapturePanelDefaults(panelAudio);
         CapturePanelDefaults(panelCont);
+        if (inputActionsAsset != null && !hasBindingDefaultSnapshot)
+        {
+            bindingDefaultJson = InputBindingOverridesStore.GetCurrentOverridesJson(inputActionsAsset);
+            hasBindingDefaultSnapshot = true;
+        }
 
         hasDefaultState = true;
     }
@@ -105,6 +110,7 @@ public partial class Setting_UIScript
             languageSnapshot = LanguageManager.Instance.CurrentLanguage;
         }
 
+        CaptureBindingSnapshot();
         hasSnapshot = true;
 
         if (vsyncToggle != null && toggleSnapshot.TryGetValue(vsyncToggle, out bool vsyncSnapshotValue))
@@ -281,6 +287,11 @@ public partial class Setting_UIScript
             }
         }
 
+        if (TryGetBindingDifferenceDescription(out description))
+        {
+            return true;
+        }
+
         if (LanguageManager.Instance != null && LanguageManager.Instance.CurrentLanguage != languageSnapshot)
         {
             description = $"Language current={LanguageManager.Instance.CurrentLanguage} snapshot={languageSnapshot}";
@@ -352,6 +363,7 @@ public partial class Setting_UIScript
             LanguageManager.Instance.SetLanguage(languageSnapshot, false, true);
         }
 
+        RestoreBindingSnapshot();
         isRestoringSnapshot = false;
         hasUnsavedChanges = false;
     }
@@ -422,6 +434,7 @@ public partial class Setting_UIScript
             LanguageManager.Instance.SetLanguage(defaultLanguage, false, true);
         }
 
+        RestoreDefaultBindings();
         isRestoringSnapshot = false;
         hasUnsavedChanges = HasDifferencesFromSnapshot();
     }

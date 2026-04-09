@@ -942,10 +942,13 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
             return true;
         }
 
-        Keyboard keyboard = Keyboard.current;
-        if (keyboard != null && keyboard.vKey.wasPressedThisFrame)
+        if (!HasInputActionBinding("ToggleSprayPattern"))
         {
-            return true;
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard != null && keyboard.vKey.wasPressedThisFrame)
+            {
+                return true;
+            }
         }
 #endif
 
@@ -967,11 +970,14 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
             return true;
         }
 
-        Keyboard keyboard = Keyboard.current;
-        if (keyboard != null &&
-            (keyboard.rightBracketKey.wasPressedThisFrame || keyboard.equalsKey.wasPressedThisFrame))
+        if (!HasInputActionBinding("IncreasePressure"))
         {
-            return true;
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard != null &&
+                (keyboard.rightBracketKey.wasPressedThisFrame || keyboard.equalsKey.wasPressedThisFrame))
+            {
+                return true;
+            }
         }
 #endif
 
@@ -993,11 +999,14 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
             return true;
         }
 
-        Keyboard keyboard = Keyboard.current;
-        if (keyboard != null &&
-            (keyboard.leftBracketKey.wasPressedThisFrame || keyboard.minusKey.wasPressedThisFrame))
+        if (!HasInputActionBinding("DecreasePressure"))
         {
-            return true;
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard != null &&
+                (keyboard.leftBracketKey.wasPressedThisFrame || keyboard.minusKey.wasPressedThisFrame))
+            {
+                return true;
+            }
         }
 #endif
 
@@ -1022,6 +1031,17 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
 
         InputAction action = input.actions.FindAction(actionName, throwIfNotFound: false);
         return action != null && action.WasPressedThisFrame();
+    }
+
+    private bool HasInputActionBinding(string actionName)
+    {
+        PlayerInput input = ResolveRuntimePlayerInput();
+        if (input == null || input.actions == null)
+        {
+            return false;
+        }
+
+        return input.actions.FindAction(actionName, throwIfNotFound: false) != null;
     }
 
     private PlayerInput ResolveRuntimePlayerInput()
