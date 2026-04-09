@@ -1476,6 +1476,7 @@ public partial class LevelSelectSceneController : MonoBehaviour
         levelInfoPopup.scenarioDropdownRoot.gameObject.SetActive(true);
         if (visible)
         {
+            PositionScenarioDropdownBelowToggle();
             levelInfoPopup.scenarioDropdownRoot.SetAsLastSibling();
         }
 
@@ -1527,6 +1528,44 @@ public partial class LevelSelectSceneController : MonoBehaviour
         proxyRect.localScale = Vector3.one;
         proxyRect.SetAsLastSibling();
         proxyRect.gameObject.SetActive(true);
+    }
+
+    private void PositionScenarioDropdownBelowToggle()
+    {
+        if (levelInfoPopup == null ||
+            levelInfoPopup.scenarioDropdownRoot == null ||
+            levelInfoPopup.scenarioDropdownToggleButton == null)
+        {
+            return;
+        }
+
+        RectTransform toggleRect = levelInfoPopup.scenarioDropdownToggleButton.transform as RectTransform;
+        RectTransform dropdownRect = levelInfoPopup.scenarioDropdownRoot;
+        RectTransform dropdownParent = dropdownRect.parent as RectTransform;
+        if (toggleRect == null || dropdownParent == null)
+        {
+            return;
+        }
+
+        Canvas.ForceUpdateCanvases();
+        LayoutRebuilder.ForceRebuildLayoutImmediate(levelInfoPopup.root);
+        LayoutRebuilder.ForceRebuildLayoutImmediate(dropdownRect);
+        Canvas.ForceUpdateCanvases();
+
+        Vector3[] toggleCorners = new Vector3[4];
+        Vector3[] dropdownCorners = new Vector3[4];
+        toggleRect.GetWorldCorners(toggleCorners);
+        dropdownRect.GetWorldCorners(dropdownCorners);
+
+        Vector3 toggleBottomCenterWorld = (toggleCorners[0] + toggleCorners[3]) * 0.5f;
+        Vector3 dropdownTopCenterWorld = (dropdownCorners[1] + dropdownCorners[2]) * 0.5f;
+        Vector3 dropdownTargetWorldPosition = dropdownRect.position + (toggleBottomCenterWorld - dropdownTopCenterWorld);
+        Vector3 dropdownTargetLocalPosition = dropdownParent.InverseTransformPoint(dropdownTargetWorldPosition);
+
+        dropdownRect.localPosition = new Vector3(
+            dropdownTargetLocalPosition.x,
+            dropdownTargetLocalPosition.y,
+            dropdownRect.localPosition.z);
     }
 
     private void CloseScenarioDropdownFromProxy()

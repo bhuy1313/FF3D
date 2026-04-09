@@ -20,28 +20,28 @@ MonoBehaviour:
   initialTranscriptLines:
   - lineId: intro_operator_open
     speaker: 0
-    text: 911, where is your emergency?
+    text: 911, what is the address of the emergency?
     isExtractable: 0
     startsAsActiveChunk: 0
     isConfirmationLine: 0
     extractableSpans: []
   - lineId: intro_caller_open
     speaker: 1
-    text: There's a fire in my house, please hurry!
+    text: Please hurry, there's a fire in my house!
     isExtractable: 0
     startsAsActiveChunk: 0
     isConfirmationLine: 0
     extractableSpans: []
   - lineId: intro_operator_fire_location
     speaker: 0
-    text: Where is the fire right now?
+    text: Where in the house is the fire?
     isExtractable: 0
     startsAsActiveChunk: 0
     isConfirmationLine: 0
     extractableSpans: []
   - lineId: intro_caller_fire_location
     speaker: 1
-    text: It's in the laundry room!
+    text: It started in the laundry room!
     isExtractable: 1
     startsAsActiveChunk: 1
     isConfirmationLine: 0
@@ -62,7 +62,7 @@ MonoBehaviour:
     operatorLine:
       lineId: ask_address
       speaker: 0
-      text: What is the address?
+      text: What is the exact address?
       isExtractable: 0
       startsAsActiveChunk: 0
       isConfirmationLine: 0
@@ -70,7 +70,7 @@ MonoBehaviour:
     callerLine:
       lineId: reply_address
       speaker: 1
-      text: It's 52 Pine Street!
+      text: We're at 52 Pine Street!
       isExtractable: 1
       startsAsActiveChunk: 1
       isConfirmationLine: 0
@@ -90,7 +90,7 @@ MonoBehaviour:
     operatorLine:
       lineId: ask_occupant_risk
       speaker: 0
-      text: Is anyone still inside?
+      text: Is anyone still inside the house?
       isExtractable: 0
       startsAsActiveChunk: 0
       isConfirmationLine: 0
@@ -98,7 +98,7 @@ MonoBehaviour:
     callerLine:
       lineId: reply_occupant_risk
       speaker: 1
-      text: My husband is still inside!
+      text: My husband is still inside, I can't get back to him!
       isExtractable: 1
       startsAsActiveChunk: 1
       isConfirmationLine: 0
@@ -118,7 +118,7 @@ MonoBehaviour:
     operatorLine:
       lineId: ask_hazard_gas
       speaker: 0
-      text: Are there any gas appliances or fuel lines in there?
+      text: Is there any gas appliance or gas line in that room?
       isExtractable: 0
       startsAsActiveChunk: 0
       isConfirmationLine: 0
@@ -146,7 +146,7 @@ MonoBehaviour:
     operatorLine:
       lineId: ask_hazard_electrical
       speaker: 0
-      text: Do you see any electrical danger too?
+      text: Do you see any electrical danger as well?
       isExtractable: 0
       startsAsActiveChunk: 0
       isConfirmationLine: 0
@@ -174,7 +174,7 @@ MonoBehaviour:
     operatorLine:
       lineId: ask_spread_status
       speaker: 0
-      text: Is the fire spreading anywhere else?
+      text: Is the fire spreading beyond the laundry room?
       isExtractable: 0
       startsAsActiveChunk: 0
       isConfirmationLine: 0
@@ -182,7 +182,7 @@ MonoBehaviour:
     callerLine:
       lineId: reply_spread_status
       speaker: 1
-      text: It's spreading toward the kitchen!
+      text: Yes, it's spreading toward the kitchen now!
       isExtractable: 1
       startsAsActiveChunk: 1
       isConfirmationLine: 0
@@ -202,7 +202,7 @@ MonoBehaviour:
     operatorLine:
       lineId: ask_caller_safety
       speaker: 0
-      text: Are you somewhere safe right now?
+      text: Are you outside and somewhere safe right now?
       isExtractable: 0
       startsAsActiveChunk: 0
       isConfirmationLine: 0
@@ -210,7 +210,7 @@ MonoBehaviour:
     callerLine:
       lineId: reply_caller_safety
       speaker: 1
-      text: I'm outside in the front yard now!
+      text: I'm outside in the front yard now.
       isExtractable: 1
       startsAsActiveChunk: 1
       isConfirmationLine: 0
@@ -230,7 +230,7 @@ MonoBehaviour:
     operatorLine:
       lineId: confirm_address_operator
       speaker: 0
-      text: Let me confirm the address, 52 Pine Street, correct?
+      text: Let me confirm, the address is 52 Pine Street?
       isExtractable: 0
       startsAsActiveChunk: 0
       isConfirmationLine: 1
@@ -258,7 +258,7 @@ MonoBehaviour:
     operatorLine:
       lineId: confirm_occupant_operator
       speaker: 0
-      text: One adult is still inside, correct?
+      text: Your husband is still inside, correct?
       isExtractable: 0
       startsAsActiveChunk: 0
       isConfirmationLine: 1
@@ -266,12 +266,12 @@ MonoBehaviour:
     callerLine:
       lineId: confirm_occupant_caller
       speaker: 1
-      text: Yes!
+      text: Yes, he is!
       isExtractable: 1
       startsAsActiveChunk: 1
       isConfirmationLine: 1
       extractableSpans:
-      - displayText: Yes!
+      - displayText: Yes, he is!
         normalizedValue: Adult still inside
         targetFieldId: OccupantRisk
         infoType: OccupantRisk
@@ -286,7 +286,7 @@ MonoBehaviour:
     operatorLine:
       lineId: confirm_safety_operator
       speaker: 0
-      text: You are outside in the front yard now, correct?
+      text: You're outside in the front yard now, correct?
       isExtractable: 0
       startsAsActiveChunk: 0
       isConfirmationLine: 1
@@ -294,12 +294,12 @@ MonoBehaviour:
     callerLine:
       lineId: confirm_safety_caller
       speaker: 1
-      text: Yes, I am.
+      text: Yes, I'm outside in the front yard.
       isExtractable: 1
       startsAsActiveChunk: 1
       isConfirmationLine: 1
       extractableSpans:
-      - displayText: Yes, I am.
+      - displayText: Yes, I'm outside in the front yard.
         normalizedValue: Outside front yard
         targetFieldId: CallerSafety
         infoType: CallerSafety
@@ -307,7 +307,7 @@ MonoBehaviour:
         hasExtraContext: 0
   followUpQuestionPool:
   - questionId: laundry_q_address_exact
-    questionText: What is the exact address?
+    questionText: What is the exact address there?
     quality: 0
     relatedFieldId: Address
     suggestedWhenFieldMissing: 1
@@ -316,7 +316,7 @@ MonoBehaviour:
     isDistractorQuestion: 0
     authorNote: Primary dispatch-location question.
   - questionId: laundry_q_anyone_inside
-    questionText: Is anyone still inside?
+    questionText: Is anyone still inside the house?
     quality: 0
     relatedFieldId: OccupantRisk
     suggestedWhenFieldMissing: 1
@@ -325,7 +325,7 @@ MonoBehaviour:
     isDistractorQuestion: 0
     authorNote: Critical life-safety question.
   - questionId: laundry_q_gas_hazard
-    questionText: Are there any gas appliances or fuel lines in there?
+    questionText: Is there any gas appliance or gas line in that room?
     quality: 0
     relatedFieldId: hazard
     suggestedWhenFieldMissing: 1
@@ -334,7 +334,7 @@ MonoBehaviour:
     isDistractorQuestion: 0
     authorNote: First major hazard question for the laundry scenario.
   - questionId: laundry_q_electrical_hazard
-    questionText: Do you see any electrical danger too?
+    questionText: Do you see any electrical danger as well?
     quality: 1
     relatedFieldId: hazard
     suggestedWhenFieldMissing: 1
@@ -343,7 +343,7 @@ MonoBehaviour:
     isDistractorQuestion: 0
     authorNote: Follow-up hazard question after gas risk is identified.
   - questionId: laundry_q_fire_spread
-    questionText: Is the fire spreading anywhere else?
+    questionText: Is the fire spreading beyond that room?
     quality: 1
     relatedFieldId: SpreadStatus
     suggestedWhenFieldMissing: 1
@@ -352,7 +352,7 @@ MonoBehaviour:
     isDistractorQuestion: 0
     authorNote: Useful scene-development question.
   - questionId: laundry_q_caller_safe
-    questionText: Are you somewhere safe right now?
+    questionText: Are you outside and somewhere safe right now?
     quality: 1
     relatedFieldId: CallerSafety
     suggestedWhenFieldMissing: 1
@@ -367,27 +367,27 @@ MonoBehaviour:
     suggestedWhenFieldMissing: 0
     hideIfFieldAlreadyKnown: 0
     linkedStepId: 
-    distractorCallerReplyText: I don't know, it's smoking too badly in there to look at that!
+    distractorCallerReplyText: I can't tell you that, there's too much smoke in there!
     isDistractorQuestion: 1
     authorNote: Intentional low-priority distractor question.
   - questionId: laundry_q_laundry_load
-    questionText: Were you washing clothes or towels at the time?
+    questionText: Were you washing clothes or towels?
     quality: 2
     relatedFieldId: 
     suggestedWhenFieldMissing: 0
     hideIfFieldAlreadyKnown: 0
     linkedStepId: 
-    distractorCallerReplyText: I can't remember, I just know the laundry room is on fire!
+    distractorCallerReplyText: I don't remember, I just know the laundry room is on fire!
     isDistractorQuestion: 1
     authorNote: Cause-oriented distractor, not urgent for intake.
   - questionId: laundry_q_window_open
-    questionText: Did you leave the laundry room window open?
+    questionText: Was the laundry room window open?
     quality: 2
     relatedFieldId: 
     suggestedWhenFieldMissing: 0
     hideIfFieldAlreadyKnown: 0
     linkedStepId: 
-    distractorCallerReplyText: I don't know, I'm outside now and there's smoke pushing toward the kitchen!
+    distractorCallerReplyText: I don't know, I'm outside now and the smoke is moving toward the kitchen!
     isDistractorQuestion: 1
     authorNote: Lower-priority contextual distractor.
   expectedReport:
