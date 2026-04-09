@@ -19,7 +19,6 @@ public partial class Setting_UIScript
         SaveResponseSpeedSelection();
         SaveAutoQuestionSelection();
         SaveAutoValidateSelection();
-        SaveControlBindingOverrides();
         SaveLanguageSelection();
 
         PlayerPrefs.Save();

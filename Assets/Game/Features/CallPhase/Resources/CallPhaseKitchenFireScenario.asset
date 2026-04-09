@@ -20,28 +20,28 @@ MonoBehaviour:
   initialTranscriptLines:
   - lineId: intro_operator_open
     speaker: 0
-    text: 911, what is the address of the emergency?
+    text: 911, where is your emergency?
     isExtractable: 0
     startsAsActiveChunk: 0
     isConfirmationLine: 0
     extractableSpans: []
   - lineId: intro_caller_open
     speaker: 1
-    text: Please send help, my house is on fire!
+    text: My house is on fire! Please help!
     isExtractable: 0
     startsAsActiveChunk: 0
     isConfirmationLine: 0
     extractableSpans: []
   - lineId: intro_operator_fire_location
     speaker: 0
-    text: Tell me exactly where the fire is right now.
+    text: Where is the fire right now?
     isExtractable: 0
     startsAsActiveChunk: 0
     isConfirmationLine: 0
     extractableSpans: []
   - lineId: intro_caller_fire_location
     speaker: 1
-    text: It's in the kitchen, and there's smoke everywhere downstairs!
+    text: It's in the kitchen, there's smoke everywhere!
     isExtractable: 1
     startsAsActiveChunk: 1
     isConfirmationLine: 0
@@ -68,7 +68,7 @@ MonoBehaviour:
     operatorLine:
       lineId: ask_address
       speaker: 0
-      text: What is the exact address?
+      text: What is the address?
       isExtractable: 0
       startsAsActiveChunk: 0
       isConfirmationLine: 0
@@ -76,7 +76,7 @@ MonoBehaviour:
     callerLine:
       lineId: reply_address
       speaker: 1
-      text: We're at 27 Maple Street, please hurry!
+      text: It's 27 Maple Street!
       isExtractable: 1
       startsAsActiveChunk: 1
       isConfirmationLine: 0
@@ -96,7 +96,7 @@ MonoBehaviour:
     operatorLine:
       lineId: ask_occupant_risk
       speaker: 0
-      text: Is anyone still inside the house?
+      text: Is anyone still inside?
       isExtractable: 0
       startsAsActiveChunk: 0
       isConfirmationLine: 0
@@ -104,12 +104,12 @@ MonoBehaviour:
     callerLine:
       lineId: reply_occupant_risk
       speaker: 1
-      text: My child is still upstairs, I couldn't get back in!
+      text: My child is upstairs!
       isExtractable: 1
       startsAsActiveChunk: 1
       isConfirmationLine: 0
       extractableSpans:
-      - displayText: child is still upstairs
+      - displayText: child is upstairs
         normalizedValue: Child trapped upstairs
         targetFieldId: OccupantRisk
         infoType: OccupantRisk
@@ -124,7 +124,7 @@ MonoBehaviour:
     operatorLine:
       lineId: ask_hazard
       speaker: 0
-      text: Is there a gas line, gas cylinder, or anything dangerous near the fire?
+      text: Is there any gas leak or gas cylinder nearby?
       isExtractable: 0
       startsAsActiveChunk: 0
       isConfirmationLine: 0
@@ -132,7 +132,7 @@ MonoBehaviour:
     callerLine:
       lineId: reply_hazard
       speaker: 1
-      text: Yes, there's a gas cylinder near the kitchen stove!
+      text: Yes, there's a gas cylinder near the kitchen!
       isExtractable: 1
       startsAsActiveChunk: 1
       isConfirmationLine: 0
@@ -152,7 +152,7 @@ MonoBehaviour:
     operatorLine:
       lineId: ask_spread_status
       speaker: 0
-      text: Has the fire spread beyond the kitchen yet?
+      text: Is the fire spreading anywhere else?
       isExtractable: 0
       startsAsActiveChunk: 0
       isConfirmationLine: 0
@@ -160,7 +160,7 @@ MonoBehaviour:
     callerLine:
       lineId: reply_spread_status
       speaker: 1
-      text: Yes, it's spreading toward the dining area now!
+      text: It's spreading toward the dining area!
       isExtractable: 1
       startsAsActiveChunk: 1
       isConfirmationLine: 0
@@ -180,7 +180,7 @@ MonoBehaviour:
     operatorLine:
       lineId: ask_caller_safety
       speaker: 0
-      text: Are you in a safe place outside right now?
+      text: Are you somewhere safe right now?
       isExtractable: 0
       startsAsActiveChunk: 0
       isConfirmationLine: 0
@@ -188,7 +188,7 @@ MonoBehaviour:
     callerLine:
       lineId: reply_caller_safety
       speaker: 1
-      text: Yes, I'm outside the house in the front yard now!
+      text: Yes, I'm outside the house now!
       isExtractable: 1
       startsAsActiveChunk: 1
       isConfirmationLine: 0
@@ -216,12 +216,12 @@ MonoBehaviour:
     callerLine:
       lineId: confirm_address_caller
       speaker: 1
-      text: Yes, that's right.
+      text: Yes, that's correct.
       isExtractable: 1
       startsAsActiveChunk: 1
       isConfirmationLine: 1
       extractableSpans:
-      - displayText: Yes, that's right.
+      - displayText: Yes, that's correct.
         normalizedValue: 27 Maple Street
         targetFieldId: Address
         infoType: Address
@@ -236,7 +236,7 @@ MonoBehaviour:
     operatorLine:
       lineId: confirm_occupant_operator
       speaker: 0
-      text: And to confirm, your child is still upstairs, correct?
+      text: Your child is still upstairs, correct?
       isExtractable: 0
       startsAsActiveChunk: 0
       isConfirmationLine: 1
@@ -244,12 +244,12 @@ MonoBehaviour:
     callerLine:
       lineId: confirm_occupant_caller
       speaker: 1
-      text: Yes, my child is still upstairs!
+      text: Yes!
       isExtractable: 1
       startsAsActiveChunk: 1
       isConfirmationLine: 1
       extractableSpans:
-      - displayText: Yes, my child is still upstairs!
+      - displayText: Yes!
         normalizedValue: Child trapped upstairs
         targetFieldId: OccupantRisk
         infoType: OccupantRisk
@@ -264,7 +264,7 @@ MonoBehaviour:
     operatorLine:
       lineId: confirm_safety_operator
       speaker: 0
-      text: And you are outside the house now, correct?
+      text: You are outside the house now, correct?
       isExtractable: 0
       startsAsActiveChunk: 0
       isConfirmationLine: 1
@@ -272,12 +272,12 @@ MonoBehaviour:
     callerLine:
       lineId: confirm_safety_caller
       speaker: 1
-      text: Yes, I'm outside the house now.
+      text: Yes, I'm outside.
       isExtractable: 1
       startsAsActiveChunk: 1
       isConfirmationLine: 1
       extractableSpans:
-      - displayText: Yes, I'm outside the house now.
+      - displayText: Yes, I'm outside.
         normalizedValue: Outside house
         targetFieldId: CallerSafety
         infoType: CallerSafety
@@ -285,7 +285,7 @@ MonoBehaviour:
         hasExtraContext: 0
   followUpQuestionPool:
   - questionId: kitchen_q_address_exact
-    questionText: What is the exact address of the house?
+    questionText: What is the exact address?
     quality: 0
     relatedFieldId: Address
     suggestedWhenFieldMissing: 1
@@ -294,7 +294,7 @@ MonoBehaviour:
     isDistractorQuestion: 0
     authorNote: Primary location-identification question.
   - questionId: kitchen_q_anyone_inside
-    questionText: Is anyone still inside the house?
+    questionText: Is anyone still inside?
     quality: 0
     relatedFieldId: OccupantRisk
     suggestedWhenFieldMissing: 1
@@ -303,7 +303,7 @@ MonoBehaviour:
     isDistractorQuestion: 0
     authorNote: Critical life-safety follow-up.
   - questionId: kitchen_q_hazard_gas
-    questionText: Is there a gas line or gas cylinder near the kitchen?
+    questionText: Is there any gas leak or gas cylinder nearby?
     quality: 0
     relatedFieldId: hazard
     suggestedWhenFieldMissing: 1
@@ -312,7 +312,7 @@ MonoBehaviour:
     isDistractorQuestion: 0
     authorNote: High-priority hazard-identification question.
   - questionId: kitchen_q_fire_spread
-    questionText: Has the fire spread beyond the kitchen?
+    questionText: Is the fire spreading anywhere else?
     quality: 1
     relatedFieldId: SpreadStatus
     suggestedWhenFieldMissing: 1
@@ -321,7 +321,7 @@ MonoBehaviour:
     isDistractorQuestion: 0
     authorNote: Useful but secondary to immediate life-safety questions.
   - questionId: kitchen_q_caller_safe
-    questionText: Are you in a safe place outside right now?
+    questionText: Are you somewhere safe right now?
     quality: 1
     relatedFieldId: CallerSafety
     suggestedWhenFieldMissing: 1
@@ -336,7 +336,7 @@ MonoBehaviour:
     suggestedWhenFieldMissing: 0
     hideIfFieldAlreadyKnown: 0
     linkedStepId: 
-    distractorCallerReplyText: I don't know, I got out as soon as I saw the flames and smoke!
+    distractorCallerReplyText: I don't know, I ran outside when I saw the flames!
     isDistractorQuestion: 1
     authorNote: Lower-priority distractor for the current prototype.
   - questionId: kitchen_q_damage_cost
@@ -346,7 +346,7 @@ MonoBehaviour:
     suggestedWhenFieldMissing: 0
     hideIfFieldAlreadyKnown: 0
     linkedStepId: 
-    distractorCallerReplyText: I can't tell, the whole kitchen is filling with smoke and I had to get out!
+    distractorCallerReplyText: I can't tell, the kitchen is burning and there's too much smoke!
     isDistractorQuestion: 1
     authorNote: Not operationally useful during urgent intake.
   - questionId: kitchen_q_smell_food
@@ -356,7 +356,7 @@ MonoBehaviour:
     suggestedWhenFieldMissing: 0
     hideIfFieldAlreadyKnown: 0
     linkedStepId: 
-    distractorCallerReplyText: I was making dinner, but right now the fire is spreading and my child is still inside!
+    distractorCallerReplyText: I was just making dinner, but the fire is what matters right now!
     isDistractorQuestion: 1
     authorNote: Low-priority cause question for this phase.
   expectedReport:

@@ -20,14 +20,14 @@ MonoBehaviour:
   initialTranscriptLines:
   - lineId: intro_operator_open
     speaker: 0
-    text: 911, what is the address of the emergency?
+    text: 911, where is your emergency?
     isExtractable: 0
     startsAsActiveChunk: 0
     isConfirmationLine: 0
     extractableSpans: []
   - lineId: intro_caller_open
     speaker: 1
-    text: Please send help right now, my garage is on fire!
+    text: My garage is on fire, please send help now!
     isExtractable: 0
     startsAsActiveChunk: 0
     isConfirmationLine: 0
@@ -41,7 +41,7 @@ MonoBehaviour:
     extractableSpans: []
   - lineId: intro_caller_fire_location
     speaker: 1
-    text: It's in the garage, and the whole front is filling with smoke!
+    text: It's in the garage, the whole front side is filling with smoke!
     isExtractable: 1
     startsAsActiveChunk: 1
     isConfirmationLine: 0
@@ -68,7 +68,7 @@ MonoBehaviour:
     operatorLine:
       lineId: ask_address
       speaker: 0
-      text: What is the exact address?
+      text: What is the address?
       isExtractable: 0
       startsAsActiveChunk: 0
       isConfirmationLine: 0
@@ -76,7 +76,7 @@ MonoBehaviour:
     callerLine:
       lineId: reply_address
       speaker: 1
-      text: It's 14 Oak Drive!
+      text: It's at 14 Oak Drive!
       isExtractable: 1
       startsAsActiveChunk: 1
       isConfirmationLine: 0
@@ -96,7 +96,7 @@ MonoBehaviour:
     operatorLine:
       lineId: ask_occupant_risk
       speaker: 0
-      text: Is anyone still inside the house?
+      text: Is anyone still inside?
       isExtractable: 0
       startsAsActiveChunk: 0
       isConfirmationLine: 0
@@ -104,7 +104,7 @@ MonoBehaviour:
     callerLine:
       lineId: reply_occupant_risk
       speaker: 1
-      text: My elderly father is still inside, I can't reach him!
+      text: My elderly father is still inside!
       isExtractable: 1
       startsAsActiveChunk: 1
       isConfirmationLine: 0
@@ -124,7 +124,7 @@ MonoBehaviour:
     operatorLine:
       lineId: ask_hazard
       speaker: 0
-      text: Are there any fuel cans or other hazardous materials near the fire?
+      text: Are there any fuel containers or hazardous materials near the fire?
       isExtractable: 0
       startsAsActiveChunk: 0
       isConfirmationLine: 0
@@ -132,7 +132,7 @@ MonoBehaviour:
     callerLine:
       lineId: reply_hazard
       speaker: 1
-      text: Yes, there are fuel cans near the garage!
+      text: There are fuel cans near the garage!
       isExtractable: 1
       startsAsActiveChunk: 1
       isConfirmationLine: 0
@@ -152,7 +152,7 @@ MonoBehaviour:
     operatorLine:
       lineId: ask_spread_status
       speaker: 0
-      text: Is the fire spreading beyond the garage?
+      text: Is the fire spreading anywhere else?
       isExtractable: 0
       startsAsActiveChunk: 0
       isConfirmationLine: 0
@@ -160,7 +160,7 @@ MonoBehaviour:
     callerLine:
       lineId: reply_spread_status
       speaker: 1
-      text: Yes, it's spreading toward the hallway now!
+      text: It's spreading toward the hallway!
       isExtractable: 1
       startsAsActiveChunk: 1
       isConfirmationLine: 0
@@ -180,7 +180,7 @@ MonoBehaviour:
     operatorLine:
       lineId: ask_caller_safety
       speaker: 0
-      text: Are you outside and somewhere safe right now?
+      text: Are you somewhere safe right now?
       isExtractable: 0
       startsAsActiveChunk: 0
       isConfirmationLine: 0
@@ -188,7 +188,7 @@ MonoBehaviour:
     callerLine:
       lineId: reply_caller_safety
       speaker: 1
-      text: I'm outside in the driveway now.
+      text: I'm outside in the driveway now!
       isExtractable: 1
       startsAsActiveChunk: 1
       isConfirmationLine: 0
@@ -208,7 +208,7 @@ MonoBehaviour:
     operatorLine:
       lineId: confirm_address_operator
       speaker: 0
-      text: Let me confirm, the address is 14 Oak Drive?
+      text: Let me confirm the address, 14 Oak Drive, correct?
       isExtractable: 0
       startsAsActiveChunk: 0
       isConfirmationLine: 1
@@ -236,7 +236,7 @@ MonoBehaviour:
     operatorLine:
       lineId: confirm_occupant_operator
       speaker: 0
-      text: Your elderly father is still inside, correct?
+      text: Your elderly parent is still inside, correct?
       isExtractable: 0
       startsAsActiveChunk: 0
       isConfirmationLine: 1
@@ -244,12 +244,12 @@ MonoBehaviour:
     callerLine:
       lineId: confirm_occupant_caller
       speaker: 1
-      text: Yes, he is still inside!
+      text: Yes, he is!
       isExtractable: 1
       startsAsActiveChunk: 1
       isConfirmationLine: 1
       extractableSpans:
-      - displayText: Yes, he is still inside!
+      - displayText: Yes, he is!
         normalizedValue: Elderly parent inside
         targetFieldId: OccupantRisk
         infoType: OccupantRisk
@@ -264,7 +264,7 @@ MonoBehaviour:
     operatorLine:
       lineId: confirm_safety_operator
       speaker: 0
-      text: You're outside in the driveway now, correct?
+      text: You are outside in the driveway now, correct?
       isExtractable: 0
       startsAsActiveChunk: 0
       isConfirmationLine: 1
@@ -272,12 +272,12 @@ MonoBehaviour:
     callerLine:
       lineId: confirm_safety_caller
       speaker: 1
-      text: Yes, I'm outside in the driveway.
+      text: Yes, I'm in the driveway.
       isExtractable: 1
       startsAsActiveChunk: 1
       isConfirmationLine: 1
       extractableSpans:
-      - displayText: Yes, I'm outside in the driveway.
+      - displayText: Yes, I'm in the driveway.
         normalizedValue: Outside driveway
         targetFieldId: CallerSafety
         infoType: CallerSafety
@@ -285,7 +285,7 @@ MonoBehaviour:
         hasExtraContext: 0
   followUpQuestionPool:
   - questionId: garage_q_address_exact
-    questionText: What is the exact address there?
+    questionText: What is the exact address?
     quality: 0
     relatedFieldId: Address
     suggestedWhenFieldMissing: 1
@@ -294,7 +294,7 @@ MonoBehaviour:
     isDistractorQuestion: 0
     authorNote: Primary dispatch location question.
   - questionId: garage_q_anyone_inside
-    questionText: Is anyone still inside the house?
+    questionText: Is anyone still inside?
     quality: 0
     relatedFieldId: OccupantRisk
     suggestedWhenFieldMissing: 1
@@ -303,7 +303,7 @@ MonoBehaviour:
     isDistractorQuestion: 0
     authorNote: Critical rescue-priority question.
   - questionId: garage_q_fuel_hazard
-    questionText: Are there any fuel cans or other hazardous materials near the fire?
+    questionText: Are there any fuel containers or hazardous materials near the fire?
     quality: 0
     relatedFieldId: hazard
     suggestedWhenFieldMissing: 1
@@ -312,7 +312,7 @@ MonoBehaviour:
     isDistractorQuestion: 0
     authorNote: Important escalation-risk question.
   - questionId: garage_q_fire_spread
-    questionText: Is the fire spreading beyond the garage?
+    questionText: Is the fire spreading anywhere else?
     quality: 1
     relatedFieldId: SpreadStatus
     suggestedWhenFieldMissing: 1
@@ -321,7 +321,7 @@ MonoBehaviour:
     isDistractorQuestion: 0
     authorNote: Useful follow-up once core hazards are checked.
   - questionId: garage_q_caller_safe
-    questionText: Are you outside and somewhere safe right now?
+    questionText: Are you somewhere safe right now?
     quality: 1
     relatedFieldId: CallerSafety
     suggestedWhenFieldMissing: 1
@@ -330,13 +330,13 @@ MonoBehaviour:
     isDistractorQuestion: 0
     authorNote: Good scene-safety follow-up.
   - questionId: garage_q_vehicle_model
-    questionText: What type of car is in the garage?
+    questionText: What type of car is inside the garage?
     quality: 2
     relatedFieldId: 
     suggestedWhenFieldMissing: 0
     hideIfFieldAlreadyKnown: 0
     linkedStepId: 
-    distractorCallerReplyText: I don't know, I'm trying to help my dad and the fire is spreading!
+    distractorCallerReplyText: I don't know, I'm worried about my dad and the fire spreading!
     isDistractorQuestion: 1
     authorNote: Low-priority distractor question.
   - questionId: garage_q_insurance
@@ -346,17 +346,17 @@ MonoBehaviour:
     suggestedWhenFieldMissing: 0
     hideIfFieldAlreadyKnown: 0
     linkedStepId: 
-    distractorCallerReplyText: I can't think about insurance right now, I need the fire department here!
+    distractorCallerReplyText: I can't think about insurance right now, I just need help here!
     isDistractorQuestion: 1
     authorNote: Not useful during emergency intake.
   - questionId: garage_q_when_started
-    questionText: When did the fire start?
+    questionText: About what time did the fire start?
     quality: 2
     relatedFieldId: 
     suggestedWhenFieldMissing: 0
     hideIfFieldAlreadyKnown: 0
     linkedStepId: 
-    distractorCallerReplyText: It just happened, please send them fast!
+    distractorCallerReplyText: It happened just now, please send the fire department fast!
     isDistractorQuestion: 1
     authorNote: Lower-priority history question for this prototype.
   expectedReport:

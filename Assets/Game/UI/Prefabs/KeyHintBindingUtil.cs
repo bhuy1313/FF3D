@@ -205,7 +205,7 @@ public class KeyHintBindingUtil : MonoBehaviour
             return null;
         }
 
-        string explicitName = effectivePath switch
+        return effectivePath switch
         {
             "<Keyboard>/w" => "W",
             "<Keyboard>/a" => "A",
@@ -213,16 +213,5 @@ public class KeyHintBindingUtil : MonoBehaviour
             "<Keyboard>/d" => "D",
             _ => null
         };
-
-        if (!string.IsNullOrEmpty(explicitName))
-        {
-            return explicitName;
-        }
-
-        string humanReadable = InputControlPath.ToHumanReadableString(
-            effectivePath,
-            InputControlPath.HumanReadableStringOptions.OmitDevice);
-
-        return string.IsNullOrWhiteSpace(humanReadable) ? null : humanReadable;
     }
 }

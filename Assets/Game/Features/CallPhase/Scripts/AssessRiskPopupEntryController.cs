@@ -95,8 +95,6 @@ public class AssessRiskPopupEntryController : MonoBehaviour
     [SerializeField] private GameObject resultPopupNextPhaseButtonObject;
     [SerializeField] private GameObject resultPopupSummaryTextObject;
     [SerializeField] private GameObject resultPopupReviewTextObject;
-    [SerializeField] private GameObject onsiteSeedDebugPanelObject;
-    [SerializeField] private GameObject onsiteSeedDebugTextObject;
 
     private Button assessRiskButton;
     private Button submitReportButton;
@@ -121,8 +119,6 @@ public class AssessRiskPopupEntryController : MonoBehaviour
     private TMP_Text submitPopupConfirmLabel;
     private TMP_Text resultPopupSummaryText;
     private TMP_Text resultPopupReviewText;
-    private GameObject onsiteSeedDebugPanel;
-    private TMP_Text onsiteSeedDebugText;
     private Button lowSeverityButton;
     private Button mediumSeverityButton;
     private Button highSeverityButton;
@@ -149,7 +145,6 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         HidePopupImmediate();
         HideSubmitPopupImmediate();
         HideResultPopupImmediate();
-        HideOnsiteSeedDebugImmediate();
     }
 
     private void OnEnable()
@@ -165,7 +160,6 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         HidePopupImmediate();
         HideSubmitPopupImmediate();
         HideResultPopupImmediate();
-        HideOnsiteSeedDebugImmediate();
         RefreshAssessRiskButtonState();
         RefreshSubmitReportButtonState();
     }
@@ -201,7 +195,6 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         HidePopupImmediate();
         HideSubmitPopupImmediate();
         HideResultPopupImmediate();
-        HideOnsiteSeedDebugImmediate();
     }
 
     private void OnDestroy()
@@ -217,7 +210,6 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         HidePopupImmediate();
         HideSubmitPopupImmediate();
         HideResultPopupImmediate();
-        HideOnsiteSeedDebugImmediate();
         ResetPopupSelectionState();
         ClearCurrentSelection();
 
@@ -239,11 +231,6 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         if (resultPopupReviewText != null)
         {
             resultPopupReviewText.text = string.Empty;
-        }
-
-        if (onsiteSeedDebugText != null)
-        {
-            onsiteSeedDebugText.text = string.Empty;
         }
 
         RefreshAssessRiskButtonState();
@@ -527,7 +514,6 @@ public class AssessRiskPopupEntryController : MonoBehaviour
     private void HideResultPopupImmediate()
     {
         isResultPopupOpen = false;
-        HideOnsiteSeedDebugImmediate();
 
         if (resultPopupBlockerImage != null)
         {
@@ -537,19 +523,6 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         if (resultPopup != null)
         {
             resultPopup.SetActive(false);
-        }
-    }
-
-    private void HideOnsiteSeedDebugImmediate()
-    {
-        if (onsiteSeedDebugPanel != null)
-        {
-            onsiteSeedDebugPanel.SetActive(false);
-        }
-
-        if (onsiteSeedDebugText != null)
-        {
-            onsiteSeedDebugText.text = string.Empty;
         }
     }
 
@@ -973,36 +946,6 @@ public class AssessRiskPopupEntryController : MonoBehaviour
             }
         }
 
-        if (onsiteSeedDebugPanel == null)
-        {
-            onsiteSeedDebugPanel = onsiteSeedDebugPanelObject;
-        }
-
-        if (onsiteSeedDebugPanel == null)
-        {
-            onsiteSeedDebugPanel = FindSiblingObject("OnsiteSeedDebugPanel");
-        }
-
-        if (onsiteSeedDebugPanel == null)
-        {
-            onsiteSeedDebugPanel = FindSceneObjectByName("OnsiteSeedDebugPanel");
-        }
-
-        if (onsiteSeedDebugText == null)
-        {
-            onsiteSeedDebugText = GetTextFromObject(onsiteSeedDebugTextObject);
-        }
-
-        if (onsiteSeedDebugText == null && onsiteSeedDebugPanel != null)
-        {
-            onsiteSeedDebugText = FindTextInChildrenByName(onsiteSeedDebugPanel.transform, "OnsiteSeedDebugText");
-        }
-
-        if (onsiteSeedDebugText == null)
-        {
-            onsiteSeedDebugText = FindSceneTextByName("OnsiteSeedDebugText");
-        }
-
         WarnIfMissingReference("Assess Risk button", assessRiskButton, this);
         WarnIfMissingReference("Submit Report button", submitReportButton, this);
         WarnIfMissingReference("Ask Follow-Up button", askFollowUpButton, this);
@@ -1022,8 +965,6 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         WarnIfMissingReference("Result popup next phase button", resultPopupNextPhaseButton, resultPopup);
         WarnIfMissingReference("Result popup summary text", resultPopupSummaryText, resultPopup);
         WarnIfMissingReference("Result popup review text", resultPopupReviewText, resultPopup);
-        WarnIfMissingReference("Onsite seed debug panel", onsiteSeedDebugPanel, this);
-        WarnIfMissingReference("Onsite seed debug text", onsiteSeedDebugText, onsiteSeedDebugPanel);
     }
 
     private void SelectLowSeverity()
@@ -1178,7 +1119,6 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
         PopulateResultPopupSummary();
         PopulateResultPopupReview();
-        PopulateOnsiteSeedDebugPanel();
         resultPopup.SetActive(true);
         ClearCurrentSelection();
         RefreshAssessRiskButtonState();
@@ -1400,50 +1340,6 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
         CallPhaseUiChromeText.ApplyCurrentFont(resultPopupReviewText);
         resultPopupReviewText.text = BuildResultPopupReviewText();
-    }
-
-    private void PopulateOnsiteSeedDebugPanel()
-    {
-        if (onsiteSeedDebugPanel == null || onsiteSeedDebugText == null)
-        {
-            return;
-        }
-
-        OnsiteIncidentSeed seed = BuildOnsiteIncidentSeed();
-        CallPhaseUiChromeText.ApplyCurrentFont(onsiteSeedDebugText);
-        onsiteSeedDebugText.text = seed.ToDebugDisplayString();
-        onsiteSeedDebugPanel.SetActive(true);
-    }
-
-    private OnsiteIncidentSeed BuildOnsiteIncidentSeed()
-    {
-        string fireLocation = GetSeedSourceFieldValue(FireLocationFieldId);
-        string hazard = GetSeedSourceFieldValue("hazard");
-        string spreadStatus = GetSeedSourceFieldValue("SpreadStatus");
-        string severity = GetSeedSourceFieldValue(SeverityFieldId);
-        string callerSafety = GetSeedSourceFieldValue("CallerSafety");
-        string normalizedLocation = NormalizeForScenarioComparison(fireLocation);
-        string normalizedHazard = NormalizeForScenarioComparison(hazard);
-        string normalizedSpreadStatus = NormalizeForScenarioComparison(spreadStatus);
-        string normalizedSeverity = NormalizeForScenarioComparison(severity);
-        string normalizedCallerSafety = NormalizeForScenarioComparison(callerSafety);
-
-        FireHazardType hazardType = ResolveOnsiteHazardType(normalizedLocation, normalizedHazard);
-        float initialFireIntensity = ResolveInitialFireIntensity(normalizedSeverity, normalizedSpreadStatus, hazardType, normalizedLocation);
-        int initialFireCount = ResolveInitialFireCount(normalizedLocation, normalizedHazard, normalizedSpreadStatus);
-
-        return new OnsiteIncidentSeed
-        {
-            fireOrigin = ResolveFireOrigin(normalizedLocation, normalizedHazard, hazardType),
-            hazardType = hazardType.ToString(),
-            requiresIsolation = hazardType == FireHazardType.Electrical || hazardType == FireHazardType.GasFed,
-            initialFireIntensity = initialFireIntensity,
-            initialFireCount = initialFireCount,
-            fireSpreadPreset = ResolveFireSpreadPreset(normalizedSpreadStatus, hazardType, initialFireIntensity),
-            startSmokeDensity = ResolveStartSmokeDensity(normalizedLocation, normalizedHazard, normalizedSpreadStatus, initialFireIntensity),
-            smokeAccumulationMultiplier = ResolveSmokeAccumulationMultiplier(normalizedLocation, hazardType, initialFireIntensity, initialFireCount),
-            ventilationPreset = ResolveVentilationPreset(normalizedLocation, normalizedCallerSafety, normalizedSpreadStatus)
-        };
     }
 
     private string BuildSubmittedReportSummaryText()
@@ -2502,295 +2398,6 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         return !IsMissingValue(GetFieldValueOrFallback(fieldId));
     }
 
-    private string GetSeedSourceFieldValue(string fieldId)
-    {
-        string reportValue = GetRawReportFieldValue(fieldId);
-        if (!IsMissingValue(reportValue))
-        {
-            return reportValue;
-        }
-
-        string expectedValue = GetExpectedFieldValue(fieldId);
-        return !string.IsNullOrWhiteSpace(expectedValue)
-            ? expectedValue.Trim()
-            : string.Empty;
-    }
-
-    private string GetRawReportFieldValue(string fieldId)
-    {
-        if (incidentReportController == null)
-        {
-            return MissingValueToken;
-        }
-
-        IncidentReportFieldView fieldView = incidentReportController.GetFieldView(fieldId);
-        if (fieldView == null || fieldView.CurrentState == ReportFieldState.Empty || string.IsNullOrWhiteSpace(fieldView.CurrentValue))
-        {
-            return MissingValueToken;
-        }
-
-        return fieldView.CurrentValue.Trim();
-    }
-
-    private FireHazardType ResolveOnsiteHazardType(string normalizedLocation, string normalizedHazard)
-    {
-        bool hasElectricalHazard = normalizedHazard.Contains("electrical")
-            || normalizedHazard.Contains("outlet")
-            || normalizedHazard.Contains("panel")
-            || normalizedHazard.Contains("wiring");
-        bool hasGasHazard = normalizedHazard.Contains("gas")
-            || normalizedHazard.Contains("cylinder")
-            || normalizedHazard.Contains("gas leak");
-        bool hasFuelHazard = normalizedHazard.Contains("fuel")
-            || normalizedHazard.Contains("petrol")
-            || normalizedHazard.Contains("diesel");
-
-        if (normalizedLocation.Contains("laundry") && hasElectricalHazard)
-        {
-            return FireHazardType.Electrical;
-        }
-
-        if (hasGasHazard)
-        {
-            return FireHazardType.GasFed;
-        }
-
-        if (hasElectricalHazard)
-        {
-            return FireHazardType.Electrical;
-        }
-
-        if (hasFuelHazard)
-        {
-            return FireHazardType.FlammableLiquid;
-        }
-
-        return FireHazardType.OrdinaryCombustibles;
-    }
-
-    private float ResolveInitialFireIntensity(
-        string normalizedSeverity,
-        string normalizedSpreadStatus,
-        FireHazardType hazardType,
-        string normalizedLocation)
-    {
-        float intensity = normalizedSeverity.Contains("high")
-            ? 0.78f
-            : normalizedSeverity.Contains("low")
-                ? 0.42f
-                : 0.6f;
-
-        if (normalizedSpreadStatus.Contains("spreading") || normalizedSpreadStatus.Contains("toward"))
-        {
-            intensity += 0.08f;
-        }
-
-        if (hazardType == FireHazardType.GasFed || hazardType == FireHazardType.FlammableLiquid)
-        {
-            intensity += 0.06f;
-        }
-        else if (hazardType == FireHazardType.Electrical)
-        {
-            intensity += 0.04f;
-        }
-
-        if (normalizedLocation.Contains("garage"))
-        {
-            intensity += 0.04f;
-        }
-        else if (normalizedLocation.Contains("kitchen"))
-        {
-            intensity += 0.02f;
-        }
-
-        return Mathf.Clamp(intensity, 0.1f, 1f);
-    }
-
-    private int ResolveInitialFireCount(string normalizedLocation, string normalizedHazard, string normalizedSpreadStatus)
-    {
-        int fireCount = 1;
-
-        if (normalizedSpreadStatus.Contains("spreading") || normalizedSpreadStatus.Contains("toward"))
-        {
-            fireCount++;
-        }
-
-        if (normalizedSpreadStatus.Contains("hallway")
-            || normalizedSpreadStatus.Contains("dining")
-            || normalizedSpreadStatus.Contains("kitchen"))
-        {
-            fireCount++;
-        }
-
-        if (normalizedLocation.Contains("garage") && normalizedHazard.Contains("fuel"))
-        {
-            fireCount = Mathf.Max(fireCount, 2);
-        }
-
-        return Mathf.Clamp(fireCount, 1, 3);
-    }
-
-    private string ResolveFireOrigin(string normalizedLocation, string normalizedHazard, FireHazardType hazardType)
-    {
-        if (normalizedLocation.Contains("kitchen"))
-        {
-            if (hazardType == FireHazardType.GasFed)
-            {
-                return "Kitchen_GasCylinderArea";
-            }
-
-            if (hazardType == FireHazardType.Electrical)
-            {
-                return "Kitchen_ApplianceOutlet";
-            }
-
-            return "Kitchen_MainAppliance";
-        }
-
-        if (normalizedLocation.Contains("laundry"))
-        {
-            if (hazardType == FireHazardType.Electrical)
-            {
-                return "Laundry_WasherOutlet";
-            }
-
-            if (hazardType == FireHazardType.GasFed)
-            {
-                return "Laundry_GasDryerLine";
-            }
-
-            return "Laundry_MainAppliance";
-        }
-
-        if (normalizedLocation.Contains("garage"))
-        {
-            if (hazardType == FireHazardType.FlammableLiquid || normalizedHazard.Contains("fuel"))
-            {
-                return "Garage_FuelShelf";
-            }
-
-            if (hazardType == FireHazardType.Electrical)
-            {
-                return "Garage_WorkbenchOutlet";
-            }
-
-            if (hazardType == FireHazardType.GasFed)
-            {
-                return "Garage_GasLine";
-            }
-
-            return "Garage_MainStorage";
-        }
-
-        return "Interior_MainRoom";
-    }
-
-    private string ResolveFireSpreadPreset(string normalizedSpreadStatus, FireHazardType hazardType, float initialFireIntensity)
-    {
-        if (hazardType == FireHazardType.GasFed || hazardType == FireHazardType.FlammableLiquid)
-        {
-            return normalizedSpreadStatus.Contains("spreading") ? "Aggressive" : "Moderate";
-        }
-
-        if (normalizedSpreadStatus.Contains("spreading") || normalizedSpreadStatus.Contains("toward"))
-        {
-            return initialFireIntensity >= 0.8f ? "Aggressive" : "Moderate";
-        }
-
-        return initialFireIntensity < 0.5f ? "Slow" : "Moderate";
-    }
-
-    private float ResolveStartSmokeDensity(
-        string normalizedLocation,
-        string normalizedHazard,
-        string normalizedSpreadStatus,
-        float initialFireIntensity)
-    {
-        float smokeDensity = normalizedLocation.Contains("garage")
-            ? 0.4f
-            : normalizedLocation.Contains("laundry")
-                ? 0.34f
-                : normalizedLocation.Contains("kitchen")
-                    ? 0.28f
-                    : 0.3f;
-
-        if (normalizedHazard.Contains("smoke everywhere"))
-        {
-            smokeDensity += 0.28f;
-        }
-        else if (normalizedHazard.Contains("smoke spreading"))
-        {
-            smokeDensity += 0.2f;
-        }
-
-        if (normalizedSpreadStatus.Contains("spreading") || normalizedSpreadStatus.Contains("toward"))
-        {
-            smokeDensity += 0.08f;
-        }
-
-        smokeDensity += Mathf.Clamp01(initialFireIntensity) * 0.12f;
-        return Mathf.Clamp01(smokeDensity);
-    }
-
-    private float ResolveSmokeAccumulationMultiplier(
-        string normalizedLocation,
-        FireHazardType hazardType,
-        float initialFireIntensity,
-        int initialFireCount)
-    {
-        float multiplier = 1f + Mathf.Max(0, initialFireCount - 1) * 0.18f;
-        multiplier += Mathf.Clamp01(initialFireIntensity) * 0.2f;
-
-        switch (hazardType)
-        {
-            case FireHazardType.GasFed:
-                multiplier += 0.22f;
-                break;
-            case FireHazardType.FlammableLiquid:
-                multiplier += 0.18f;
-                break;
-            case FireHazardType.Electrical:
-                multiplier += 0.1f;
-                break;
-        }
-
-        if (normalizedLocation.Contains("garage"))
-        {
-            multiplier += 0.1f;
-        }
-        else if (normalizedLocation.Contains("laundry"))
-        {
-            multiplier += 0.06f;
-        }
-
-        return Mathf.Clamp(multiplier, 0.5f, 2f);
-    }
-
-    private string ResolveVentilationPreset(
-        string normalizedLocation,
-        string normalizedCallerSafety,
-        string normalizedSpreadStatus)
-    {
-        if (normalizedCallerSafety.Contains("outside")
-            || normalizedCallerSafety.Contains("front yard")
-            || normalizedCallerSafety.Contains("driveway"))
-        {
-            return normalizedLocation.Contains("garage") ? "SemiVentilated" : "OpenEgress";
-        }
-
-        if (normalizedLocation.Contains("garage"))
-        {
-            return "SemiVentilated";
-        }
-
-        if (normalizedSpreadStatus.Contains("hallway") || normalizedSpreadStatus.Contains("dining"))
-        {
-            return "InteriorAirflow";
-        }
-
-        return "ClosedInterior";
-    }
-
     private int CountConfirmedFacts()
     {
         int confirmedCount = 0;
@@ -3191,46 +2798,6 @@ public class AssessRiskPopupEntryController : MonoBehaviour
             if (text != null)
             {
                 return text;
-            }
-        }
-
-        return null;
-    }
-
-    private TMP_Text FindSceneTextByName(string objectName)
-    {
-        if (string.IsNullOrWhiteSpace(objectName))
-        {
-            return null;
-        }
-
-        TMP_Text[] texts = UnityEngine.Object.FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-        for (int i = 0; i < texts.Length; i++)
-        {
-            TMP_Text text = texts[i];
-            if (text != null && string.Equals(text.name, objectName, StringComparison.Ordinal))
-            {
-                return text;
-            }
-        }
-
-        return null;
-    }
-
-    private GameObject FindSceneObjectByName(string objectName)
-    {
-        if (string.IsNullOrWhiteSpace(objectName))
-        {
-            return null;
-        }
-
-        Transform[] transforms = UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-        for (int i = 0; i < transforms.Length; i++)
-        {
-            Transform candidate = transforms[i];
-            if (candidate != null && string.Equals(candidate.name, objectName, StringComparison.Ordinal))
-            {
-                return candidate.gameObject;
             }
         }
 
