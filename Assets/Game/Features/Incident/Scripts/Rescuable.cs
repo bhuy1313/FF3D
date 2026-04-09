@@ -235,6 +235,11 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
 
     public bool TryStabilize(GameObject rescuer)
     {
+        return TryStabilize(rescuer, 1f);
+    }
+
+    public bool TryStabilize(GameObject rescuer, float durationMultiplier)
+    {
         CacheVictimCondition();
         if (isRescued || isCarried || victimCondition == null || !victimCondition.CanReceiveStabilizationTreatment)
         {
@@ -250,7 +255,8 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
         activeRescuer = rescuer;
         activeCarryAnchor = null;
         AcquirePlayerProgressLock(rescuer, lockPlayerWhileStabilizing);
-        stabilizationRoutine = StartCoroutine(StabilizeAfterDelay(GetAdjustedStabilizeDuration()));
+        float adjustedDurationMultiplier = Mathf.Max(0.05f, durationMultiplier);
+        stabilizationRoutine = StartCoroutine(StabilizeAfterDelay(GetAdjustedStabilizeDuration() * adjustedDurationMultiplier));
         return true;
     }
 

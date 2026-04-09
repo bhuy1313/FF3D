@@ -26,10 +26,18 @@ public class PlayerVitals : MonoBehaviour
     private float lastHealthChangeTime;
     private float lastStaminaUseTime;
     private float lastOxygenUseTime;
+    private IPlayerExternalOxygenSource externalOxygenSource;
 
     public float CurrentHealth => currentHealth;
     public float CurrentStamina => currentStamina;
     public float CurrentOxygen => currentOxygen;
+    public bool HasActiveExternalOxygenSupply => externalOxygenSource != null && externalOxygenSource.IsSupplyingOxygen;
+    public float ExternalOxygenSupplyPercent01 => externalOxygenSource != null
+        ? Mathf.Clamp01(externalOxygenSource.OxygenSupplyPercent01)
+        : 0f;
+    public float DisplayedOxygenPercent => HasActiveExternalOxygenSupply
+        ? ExternalOxygenSupplyPercent01
+        : OxygenPercent;
 
     public float HealthPercent => maxHealth <= 0f ? 0f : currentHealth / maxHealth;
     public float StaminaPercent => maxStamina <= 0f ? 0f : currentStamina / maxStamina;
@@ -114,7 +122,19 @@ public class PlayerVitals : MonoBehaviour
             return;
         }
 
-        SetOxygen(currentOxygen - amount);
+        float remainingAmount = amount;
+        if (externalOxygenSource != null && externalOxygenSource.IsSupplyingOxygen)
+        {
+            float suppliedAmount = Mathf.Clamp(externalOxygenSource.ConsumeSuppliedOxygen(amount), 0f, amount);
+            remainingAmount = Mathf.Max(0f, amount - suppliedAmount);
+        }
+
+        if (remainingAmount <= 0f)
+        {
+            return;
+        }
+
+        SetOxygen(currentOxygen - remainingAmount);
         lastOxygenUseTime = Time.time;
     }
 
@@ -126,6 +146,24 @@ public class PlayerVitals : MonoBehaviour
         }
 
         SetOxygen(currentOxygen + amount);
+    }
+
+    public void BindExternalOxygenSource(IPlayerExternalOxygenSource source)
+    {
+        if (source == null)
+        {
+            return;
+        }
+
+        externalOxygenSource = source;
+    }
+
+    public void UnbindExternalOxygenSource(IPlayerExternalOxygenSource source)
+    {
+        if (source != null && ReferenceEquals(externalOxygenSource, source))
+        {
+            externalOxygenSource = null;
+        }
     }
 
     private void RegenerateHealth()
@@ -175,7 +213,7 @@ public class PlayerVitals : MonoBehaviour
 
     private void ApplyOxygenDamage()
     {
-        if (currentOxygen > 0f || oxygenDamagePerSecond <= 0f || !IsAlive)
+        if (currentOxygen > 0f || HasActiveExternalOxygenSupply || oxygenDamagePerSecond <= 0f || !IsAlive)
         {
             return;
         }

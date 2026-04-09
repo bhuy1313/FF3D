@@ -7,6 +7,7 @@ using UnityEngine.Serialization;
 [RequireComponent(typeof(SphereCollider))]
 [RequireComponent(typeof(NavMeshModifier))]
 public class Fire : MonoBehaviour, IFireTarget
+    , IThermalSignatureSource
 {
     private enum ParticleUpAxis
     {
@@ -103,6 +104,8 @@ public class Fire : MonoBehaviour, IFireTarget
     public float NormalizedHp => GetNormalizedHp();
     public FireHazardType FireType => fireType;
     public bool IsHazardSourceIsolated => hazardSourceIsolated;
+    public bool HasThermalSignature => IsBurning;
+    public ThermalSignatureCategory ThermalSignatureCategory => ThermalSignatureCategory.Fire;
 
     public float CurrentContactDamagePerSecond
     {
@@ -155,6 +158,7 @@ public class Fire : MonoBehaviour, IFireTarget
     private void OnEnable()
     {
         BotRuntimeRegistry.RegisterFireTarget(this);
+        BotRuntimeRegistry.RegisterThermalSignatureSource(this);
 
         if (startLitOnEnable && currentHp <= 0f)
             currentHp = maxHp;
@@ -171,10 +175,26 @@ public class Fire : MonoBehaviour, IFireTarget
     private void OnDisable()
     {
         BotRuntimeRegistry.UnregisterFireTarget(this);
+        BotRuntimeRegistry.UnregisterThermalSignatureSource(this);
         if (navMeshModifier != null)
         {
             navMeshModifier.enabled = false;
         }
+    }
+
+    public Vector3 GetThermalSignatureWorldPosition()
+    {
+        return GetWorldPosition();
+    }
+
+    public float GetThermalSignatureStrength()
+    {
+        if (!IsBurning)
+        {
+            return 0f;
+        }
+
+        return Mathf.Lerp(0.45f, 1f, GetNormalizedHp());
     }
 
     private void Update()

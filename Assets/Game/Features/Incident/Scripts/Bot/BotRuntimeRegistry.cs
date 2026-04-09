@@ -12,6 +12,7 @@ namespace TrueJourney.BotBehavior
         private static readonly HashSet<IRescuableTarget> RescuableTargets = new HashSet<IRescuableTarget>();
         private static readonly HashSet<ISafeZoneTarget> SafeZoneTargets = new HashSet<ISafeZoneTarget>();
         private static readonly HashSet<global::BotCommandAgent> CommandAgents = new HashSet<global::BotCommandAgent>();
+        private static readonly HashSet<IThermalSignatureSource> ThermalSignatureSources = new HashSet<IThermalSignatureSource>();
 
         public static IEnumerable<IBotExtinguisherItem> ActiveExtinguisherItems => ExtinguisherItems;
         public static IEnumerable<IFireTarget> ActiveFireTargets => FireTargets;
@@ -21,6 +22,7 @@ namespace TrueJourney.BotBehavior
         public static IEnumerable<IRescuableTarget> ActiveRescuableTargets => RescuableTargets;
         public static IEnumerable<ISafeZoneTarget> ActiveSafeZones => SafeZoneTargets;
         public static IEnumerable<global::BotCommandAgent> ActiveCommandAgents => CommandAgents;
+        public static IEnumerable<IThermalSignatureSource> ActiveThermalSignatureSources => ThermalSignatureSources;
 
         public static void RegisterCommandAgent(global::BotCommandAgent agent)
         {
@@ -147,6 +149,22 @@ namespace TrueJourney.BotBehavior
             if (target != null)
             {
                 SafeZoneTargets.Remove(target);
+            }
+        }
+
+        public static void RegisterThermalSignatureSource(IThermalSignatureSource source)
+        {
+            if (source != null)
+            {
+                ThermalSignatureSources.Add(source);
+            }
+        }
+
+        public static void UnregisterThermalSignatureSource(IThermalSignatureSource source)
+        {
+            if (source != null)
+            {
+                ThermalSignatureSources.Remove(source);
             }
         }
     }

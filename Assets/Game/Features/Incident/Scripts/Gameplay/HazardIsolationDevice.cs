@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -19,6 +20,25 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable
     [SerializeField] private bool autoCollectChildFires = true;
     [SerializeField] private Fire[] linkedFires = new Fire[0];
 
+    [Header("Interaction")]
+    [SerializeField] private float interactionDuration = 0.65f;
+    [SerializeField] private bool lockPlayerWhileInteracting = true;
+
+    [Header("Presentation")]
+    [SerializeField] private string hazardDisplayName = string.Empty;
+    [SerializeField] private Renderer[] indicatorRenderers = new Renderer[0];
+    [SerializeField] private Light[] indicatorLights = new Light[0];
+    [SerializeField] private GameObject[] activeStateObjects = new GameObject[0];
+    [SerializeField] private GameObject[] isolatedStateObjects = new GameObject[0];
+    [SerializeField] private string indicatorColorProperty = "_BaseColor";
+    [SerializeField] private Color activeIndicatorColor = new Color(1f, 0.32f, 0.18f, 1f);
+    [SerializeField] private Color isolatedIndicatorColor = new Color(0.28f, 1f, 0.42f, 1f);
+    [SerializeField] private float activeLightIntensity = 2.2f;
+    [SerializeField] private float isolatedLightIntensity = 1.25f;
+    [SerializeField] private AudioSource stateAudioSource;
+    [SerializeField] private AudioClip isolatedAudioClip;
+    [SerializeField] private AudioClip reactivatedAudioClip;
+
     [Header("Mission Signals")]
     [SerializeField] private IncidentMissionSystem missionSystem;
     [SerializeField] private string isolatedSignalKey;
@@ -30,8 +50,17 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable
 
     [Header("Runtime")]
     [SerializeField] private bool isIsolated;
+    [SerializeField] private bool isTransitionInProgress;
+    [SerializeField] private string currentStateSummary;
 
     public bool IsIsolated => isIsolated;
+    public bool IsTransitionInProgress => isTransitionInProgress;
+    public bool IsHazardActive => !isIsolated;
+    public string CurrentStateSummary => currentStateSummary;
+    public string HazardDisplayName => ResolveHazardDisplayName();
+
+    private Coroutine transitionRoutine;
+    private PlayerActionLock activePlayerLock;
 
     private void Awake()
     {
@@ -45,20 +74,48 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable
         ApplyIsolationState(startsIsolated, invokeEvents: false);
     }
 
+    private void OnDisable()
+    {
+        if (transitionRoutine != null)
+        {
+            StopCoroutine(transitionRoutine);
+            transitionRoutine = null;
+        }
+
+        isTransitionInProgress = false;
+        ReleasePlayerLock();
+    }
+
     private void OnValidate()
     {
         ResolveLinkedFires();
         ApplyLinkedFireConfiguration();
+        interactionDuration = Mathf.Max(0f, interactionDuration);
+        activeLightIntensity = Mathf.Max(0f, activeLightIntensity);
+        isolatedLightIntensity = Mathf.Max(0f, isolatedLightIntensity);
+        RefreshPresentation();
     }
 
     public void Interact(GameObject interactor)
     {
+        if (isTransitionInProgress)
+        {
+            return;
+        }
+
         if (!allowToggleAfterIsolation && isIsolated)
         {
             return;
         }
 
-        ApplyIsolationState(!isIsolated, invokeEvents: true);
+        bool nextState = !isIsolated;
+        if (interactionDuration <= 0.01f)
+        {
+            ApplyIsolationState(nextState, invokeEvents: true);
+            return;
+        }
+
+        transitionRoutine = StartCoroutine(PerformInteractionAfterDelay(interactor, nextState));
     }
 
     [ContextMenu("Isolate Hazard")]
@@ -80,8 +137,11 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable
 
     private void ApplyIsolationState(bool isolated, bool invokeEvents)
     {
+        transitionRoutine = null;
+        ReleasePlayerLock();
         bool changed = isIsolated != isolated;
         isIsolated = isolated;
+        isTransitionInProgress = false;
         ApplyLinkedFireConfiguration();
 
         if (linkedFires == null)
@@ -98,6 +158,8 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable
             }
         }
 
+        RefreshPresentation();
+
         if (!invokeEvents || !changed)
         {
             return;
@@ -106,13 +168,30 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable
         if (isIsolated)
         {
             RaiseMissionSignal(isolatedSignalKey);
+            PlayStateAudio(isolatedAudioClip);
             onHazardIsolated?.Invoke();
         }
         else
         {
             RaiseMissionSignal(reactivatedSignalKey);
+            PlayStateAudio(reactivatedAudioClip);
             onHazardReactivated?.Invoke();
         }
+    }
+
+    private IEnumerator PerformInteractionAfterDelay(GameObject interactor, bool nextState)
+    {
+        isTransitionInProgress = true;
+        currentStateSummary = BuildTransitionSummary(nextState);
+        RefreshPresentation();
+        AcquirePlayerLock(interactor);
+
+        float waitSeconds = Mathf.Max(0.01f, interactionDuration);
+        yield return new WaitForSeconds(waitSeconds);
+
+        transitionRoutine = null;
+        ReleasePlayerLock();
+        ApplyIsolationState(nextState, invokeEvents: true);
     }
 
     private void ResolveLinkedFires()
@@ -127,6 +206,7 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable
         }
 
         linkedFires = resolvedFires.ToArray();
+        RefreshPresentation();
     }
 
     private void ApplyLinkedFireConfiguration()
@@ -157,6 +237,150 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable
                 return FireHazardType.GasFed;
             default:
                 return FireHazardType.OrdinaryCombustibles;
+        }
+    }
+
+    private void RefreshPresentation()
+    {
+        currentStateSummary = isTransitionInProgress
+            ? currentStateSummary
+            : BuildStateSummary(isIsolated);
+
+        ApplyIndicatorVisuals();
+        SetObjectsActive(activeStateObjects, !isIsolated);
+        SetObjectsActive(isolatedStateObjects, isIsolated);
+    }
+
+    private void ApplyIndicatorVisuals()
+    {
+        Color targetColor = isIsolated ? isolatedIndicatorColor : activeIndicatorColor;
+        float targetIntensity = isIsolated ? isolatedLightIntensity : activeLightIntensity;
+
+        for (int i = 0; i < indicatorLights.Length; i++)
+        {
+            Light indicatorLight = indicatorLights[i];
+            if (indicatorLight == null)
+            {
+                continue;
+            }
+
+            indicatorLight.color = targetColor;
+            indicatorLight.intensity = targetIntensity;
+            indicatorLight.enabled = targetIntensity > 0f;
+        }
+
+        for (int i = 0; i < indicatorRenderers.Length; i++)
+        {
+            Renderer indicatorRenderer = indicatorRenderers[i];
+            if (indicatorRenderer == null)
+            {
+                continue;
+            }
+
+            ApplyRendererColor(indicatorRenderer, targetColor);
+        }
+    }
+
+    private void ApplyRendererColor(Renderer targetRenderer, Color color)
+    {
+        if (targetRenderer == null)
+        {
+            return;
+        }
+
+        Material material = Application.isPlaying ? targetRenderer.material : targetRenderer.sharedMaterial;
+        if (material == null)
+        {
+            return;
+        }
+
+        if (material.HasProperty(indicatorColorProperty))
+        {
+            material.SetColor(indicatorColorProperty, color);
+            return;
+        }
+
+        if (material.HasProperty("_Color"))
+        {
+            material.SetColor("_Color", color);
+        }
+    }
+
+    private void AcquirePlayerLock(GameObject interactor)
+    {
+        if (!lockPlayerWhileInteracting || interactor == null)
+        {
+            return;
+        }
+
+        activePlayerLock = PlayerActionLock.GetOrCreate(interactor);
+        activePlayerLock?.AcquireFullLock();
+    }
+
+    private void ReleasePlayerLock()
+    {
+        if (activePlayerLock == null)
+        {
+            return;
+        }
+
+        activePlayerLock.ReleaseFullLock();
+        activePlayerLock = null;
+    }
+
+    private void PlayStateAudio(AudioClip clip)
+    {
+        if (stateAudioSource == null || clip == null)
+        {
+            return;
+        }
+
+        stateAudioSource.PlayOneShot(clip);
+    }
+
+    private string ResolveHazardDisplayName()
+    {
+        if (!string.IsNullOrWhiteSpace(hazardDisplayName))
+        {
+            return hazardDisplayName.Trim();
+        }
+
+        return hazardType switch
+        {
+            IsolationHazardType.Electrical => "Electrical Panel",
+            IsolationHazardType.Gas => "Gas Shutoff Valve",
+            _ => "Hazard Control"
+        };
+    }
+
+    private string BuildStateSummary(bool isolated)
+    {
+        return isolated
+            ? $"{ResolveHazardDisplayName()}: isolated"
+            : $"{ResolveHazardDisplayName()}: active";
+    }
+
+    private string BuildTransitionSummary(bool isolating)
+    {
+        return isolating
+            ? $"{ResolveHazardDisplayName()}: isolating..."
+            : $"{ResolveHazardDisplayName()}: reactivating...";
+    }
+
+    private static void SetObjectsActive(GameObject[] targets, bool active)
+    {
+        if (targets == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < targets.Length; i++)
+        {
+            GameObject target = targets[i];
+            if (target != null)
+            {
+                target.SetActive(active);
+            }
         }
     }
 

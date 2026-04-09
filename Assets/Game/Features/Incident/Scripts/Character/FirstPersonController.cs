@@ -97,8 +97,26 @@ namespace StarterAssets
 		public float GroundedOffset = -0.14f;
 		[Tooltip("The radius of the grounded check. Should match the radius of the CharacterController")]
 		public float GroundedRadius = 0.5f;
+		[Tooltip("Keeps grounded state briefly after a missed ground probe to smooth steps and thresholds.")]
+		public float GroundedGraceTime = 0.06f;
 		[Tooltip("What layers the character uses as ground")]
 		public LayerMask GroundLayers;
+
+		[Header("Fall Damage")]
+		[Tooltip("Applies landing damage when the player falls from a damaging height.")]
+		public bool EnableFallDamage = true;
+		[Tooltip("Minimum airborne time before a landing can count as a fall impact.")]
+		public float MinimumFallAirborneTime = 0.15f;
+		[Tooltip("Minimum vertical drop before fall damage begins.")]
+		public float MinimumFallDamageDistance = 3.0f;
+		[Tooltip("Vertical drop that reaches maximum configured fall damage.")]
+		public float MaximumFallDamageDistance = 10.0f;
+		[Tooltip("Minimum downward landing speed required before fall damage can apply.")]
+		public float MinimumFallDamageLandingSpeed = 7.5f;
+		[Tooltip("Maximum fall damage applied at or above Maximum Fall Damage Distance.")]
+		public float MaximumFallDamage = 100.0f;
+		[Tooltip("Higher values make damage ramp harder toward the maximum distance.")]
+		public float FallDamageExponent = 1.35f;
 
 		[Header("Cinemachine")]
 		[Tooltip("The follow target set in the Cinemachine Virtual Camera that the camera will follow")]
@@ -185,6 +203,7 @@ namespace StarterAssets
 		private float _standHeight;
 		private Vector3 _standCenter;
 		private float _defaultStepOffset;
+		private float _groundedGraceTimer;
 		private Vector3 _cameraTargetInitialLocalPos;
 		private Vector3 _cameraBaseLocalPosCurrent;
 		private Vector3 _cameraMotionCurrentPosOffset;
@@ -196,8 +215,24 @@ namespace StarterAssets
 		private float _lastCrouchBlockedLogTime = float.NegativeInfinity;
 		private bool _hasLoggedCrouchRequestState;
 		private bool _lastLoggedCrouchRequestState;
+		private bool _wasGroundedLastFrame;
+		private bool _wasClimbingLastFrame;
+		private bool _isTrackingFall;
+		private float _trackedAirborneTime;
+		private float _trackedAirbornePeakY;
+		private float _trackedPeakDownwardSpeed;
+		private float _lastResolvedFallDistance;
+		private float _lastResolvedLandingSpeed;
+		private float _lastResolvedFallDamage;
 
 		public bool IsCrouching => _isCrouching;
+		public bool IsTrackingFall => _isTrackingFall;
+		public float CurrentTrackedFallDistance => _isTrackingFall
+			? Mathf.Max(0f, _trackedAirbornePeakY - transform.position.y)
+			: 0f;
+		public float LastResolvedFallDistance => _lastResolvedFallDistance;
+		public float LastResolvedLandingSpeed => _lastResolvedLandingSpeed;
+		public float LastResolvedFallDamage => _lastResolvedFallDamage;
 
 		private bool IsCurrentDeviceMouse
 		{
@@ -271,10 +306,14 @@ namespace StarterAssets
 			_standHeight = _controller.height;
 			_standCenter = _controller.center;
 			_defaultStepOffset = _controller.stepOffset;
+			_groundedGraceTimer = 0f;
 			_cameraTargetInitialLocalPos = CinemachineCameraTarget != null
 				? CinemachineCameraTarget.transform.localPosition
 				: Vector3.zero;
 			_cameraBaseLocalPosCurrent = _cameraTargetInitialLocalPos;
+			ResetFallTrackingState();
+			_wasGroundedLastFrame = Grounded;
+			_wasClimbingLastFrame = _isClimbing;
 		}
 
 		private void Update()
@@ -284,12 +323,16 @@ namespace StarterAssets
 			{
 				_verticalVelocity = 0f;
 				GroundedCheck();
+				ResetFallTrackingState();
+				_wasGroundedLastFrame = Grounded;
+				_wasClimbingLastFrame = _isClimbing;
 				UpdateCrouch();
 				return;
 			}
 
 			JumpAndGravity();
 			GroundedCheck();
+			UpdateFallDamageTracking();
 			if (_isClimbing && Grounded && _climbGroundedGraceTimer <= 0f)
 			{
 				StopClimb();
@@ -306,6 +349,14 @@ namespace StarterAssets
 			{
 				_climbGroundedGraceTimer -= Time.deltaTime;
 			}
+
+			if (_groundedGraceTimer > 0f)
+			{
+				_groundedGraceTimer -= Time.deltaTime;
+			}
+
+			_wasGroundedLastFrame = Grounded;
+			_wasClimbingLastFrame = _isClimbing;
 		}
 
 		private void LateUpdate()
@@ -331,22 +382,57 @@ namespace StarterAssets
 			Vector3 castOrigin = bottomHemisphereCenter + (Vector3.up * castStartLift);
 			float castDistance = castStartLift + Mathf.Max(0.05f, Mathf.Abs(GroundedOffset));
 
-			if (!Physics.SphereCast(
+			float slopeLimit = Mathf.Clamp(_controller.slopeLimit, 0f, 89f);
+			float minGroundNormalY = Mathf.Cos(slopeLimit * Mathf.Deg2Rad);
+			RaycastHit[] hits = Physics.SphereCastAll(
 				castOrigin,
 				castRadius,
 				Vector3.down,
-				out RaycastHit hit,
 				castDistance,
 				GroundLayers,
-				QueryTriggerInteraction.Ignore))
+				QueryTriggerInteraction.Ignore);
+
+			if (hits == null || hits.Length == 0)
 			{
-				Grounded = false;
+				Grounded = ShouldUseGroundedGrace();
 				return;
 			}
 
-			float slopeLimit = Mathf.Clamp(_controller.slopeLimit, 0f, 89f);
-			float minGroundNormalY = Mathf.Cos(slopeLimit * Mathf.Deg2Rad);
-			Grounded = hit.normal.y >= minGroundNormalY;
+			float bestDistance = float.PositiveInfinity;
+			bool foundGround = false;
+			for (int i = 0; i < hits.Length; i++)
+			{
+				RaycastHit hit = hits[i];
+				if (hit.collider == null)
+				{
+					continue;
+				}
+
+				if (hit.collider.transform == transform || hit.collider.transform.IsChildOf(transform))
+				{
+					continue;
+				}
+
+				if (hit.normal.y < minGroundNormalY)
+				{
+					continue;
+				}
+
+				if (hit.distance < bestDistance)
+				{
+					bestDistance = hit.distance;
+					foundGround = true;
+				}
+			}
+
+			if (foundGround)
+			{
+				Grounded = true;
+				_groundedGraceTimer = Mathf.Max(0f, GroundedGraceTime);
+				return;
+			}
+
+			Grounded = ShouldUseGroundedGrace();
 		}
 
 		private void UpdateStepOffset()
@@ -358,6 +444,246 @@ namespace StarterAssets
 
 			bool allowStepOffset = Grounded && !_isClimbing && _verticalVelocity <= 0f;
 			_controller.stepOffset = allowStepOffset ? _defaultStepOffset : 0f;
+		}
+
+		private bool ShouldUseGroundedGrace()
+		{
+			if (_groundedGraceTimer <= 0f)
+			{
+				return false;
+			}
+
+			if (_isClimbing)
+			{
+				return false;
+			}
+
+			if (_verticalVelocity > 0f)
+			{
+				return false;
+			}
+
+			return true;
+		}
+
+		private void UpdateFallDamageTracking()
+		{
+			if (_controller == null)
+			{
+				ResetFallTrackingState();
+				return;
+			}
+
+			if (_isClimbing || _isClimbStartTransitioning)
+			{
+				ResetFallTrackingState();
+				return;
+			}
+
+			if (!Grounded)
+			{
+				if (!_isTrackingFall)
+				{
+					BeginFallTracking();
+				}
+
+				_trackedAirborneTime += Time.deltaTime;
+				_trackedAirbornePeakY = Mathf.Max(_trackedAirbornePeakY, transform.position.y);
+				if (_verticalVelocity < 0f)
+				{
+					_trackedPeakDownwardSpeed = Mathf.Max(_trackedPeakDownwardSpeed, -_verticalVelocity);
+				}
+
+				return;
+			}
+
+			bool landedThisFrame = !_wasGroundedLastFrame && !_wasClimbingLastFrame;
+			if (_isTrackingFall && landedThisFrame)
+			{
+				ResolveFallLanding();
+			}
+			else if (_isTrackingFall)
+			{
+				ResetFallTrackingState();
+			}
+		}
+
+		private void BeginFallTracking()
+		{
+			_isTrackingFall = true;
+			_trackedAirborneTime = 0f;
+			_trackedAirbornePeakY = transform.position.y;
+			_trackedPeakDownwardSpeed = Mathf.Max(0f, -_verticalVelocity);
+		}
+
+		private void ResolveFallLanding()
+		{
+			_lastResolvedFallDistance = Mathf.Max(0f, _trackedAirbornePeakY - transform.position.y);
+			_lastResolvedLandingSpeed = Mathf.Max(_trackedPeakDownwardSpeed, Mathf.Max(0f, -_verticalVelocity));
+			_lastResolvedFallDamage = 0f;
+
+			if (_trackedAirborneTime < Mathf.Max(0f, MinimumFallAirborneTime))
+			{
+				ResetFallTrackingState();
+				return;
+			}
+
+			if (!EnableFallDamage || _vitals == null || !_vitals.IsAlive)
+			{
+				ResetFallTrackingState();
+				return;
+			}
+
+			if (_lastResolvedFallDistance < Mathf.Max(0f, MinimumFallDamageDistance) ||
+				_lastResolvedLandingSpeed < Mathf.Max(0f, MinimumFallDamageLandingSpeed))
+			{
+				ResetFallTrackingState();
+				return;
+			}
+
+			float maxDamageDistance = Mathf.Max(MinimumFallDamageDistance + 0.01f, MaximumFallDamageDistance);
+			float normalizedDistance = Mathf.InverseLerp(
+				Mathf.Max(0f, MinimumFallDamageDistance),
+				maxDamageDistance,
+				_lastResolvedFallDistance);
+			float damageT = Mathf.Pow(Mathf.Clamp01(normalizedDistance), Mathf.Max(0.01f, FallDamageExponent));
+			_lastResolvedFallDamage = Mathf.Max(0f, MaximumFallDamage) * damageT;
+
+			FallImpactResponse impactResponse = FallImpactResponse.Default;
+			bool handledByResponder = TryResolveFallImpactResponse(out impactResponse);
+			if (handledByResponder)
+			{
+				if (impactResponse.OverrideVerticalVelocity)
+				{
+					_verticalVelocity = impactResponse.VerticalVelocity;
+				}
+
+				if (impactResponse.PreventDamage)
+				{
+					_lastResolvedFallDamage = 0f;
+				}
+				else
+				{
+					_lastResolvedFallDamage *= Mathf.Clamp01(impactResponse.DamageMultiplier);
+				}
+			}
+
+			if (_lastResolvedFallDamage > 0f)
+			{
+				_vitals.TakeDamage(_lastResolvedFallDamage);
+			}
+
+			ResetFallTrackingState();
+		}
+
+		private bool TryResolveFallImpactResponse(out FallImpactResponse response)
+		{
+			response = FallImpactResponse.Default;
+			if (_controller == null)
+			{
+				return false;
+			}
+
+			Vector3 queryCenter = ResolveFallImpactQueryCenter();
+			float queryRadius = Mathf.Max(0.05f, _controller.radius + 0.08f);
+			Collider[] hitColliders = Physics.OverlapSphere(
+				queryCenter,
+				queryRadius,
+				~0,
+				QueryTriggerInteraction.Collide);
+
+			if (hitColliders == null || hitColliders.Length == 0)
+			{
+				return false;
+			}
+
+			FallImpactData impactData = new FallImpactData
+			{
+				Actor = gameObject,
+				ImpactPosition = queryCenter,
+				FallDistance = _lastResolvedFallDistance,
+				LandingSpeed = _lastResolvedLandingSpeed,
+				DownwardVelocity = Mathf.Max(0f, -_verticalVelocity)
+			};
+
+			for (int i = 0; i < hitColliders.Length; i++)
+			{
+				Collider hitCollider = hitColliders[i];
+				IFallImpactResponder responder = FindFallImpactResponder(hitCollider);
+				if (responder == null)
+				{
+					continue;
+				}
+
+				FallImpactResponse candidateResponse = FallImpactResponse.Default;
+				if (!responder.TryHandleFallImpact(impactData, ref candidateResponse))
+				{
+					continue;
+				}
+
+				response = candidateResponse;
+				return true;
+			}
+
+			return false;
+		}
+
+		private Vector3 ResolveFallImpactQueryCenter()
+		{
+			float controllerRadius = Mathf.Max(0.05f, _controller.radius);
+			float bottomHemisphereOffset = Mathf.Max(0f, (_controller.height * 0.5f) - controllerRadius);
+			Vector3 bottomHemisphereCenter = transform.position + _controller.center + (Vector3.down * bottomHemisphereOffset);
+			return bottomHemisphereCenter + (Vector3.up * 0.05f);
+		}
+
+		private IFallImpactResponder FindFallImpactResponder(Collider collider)
+		{
+			if (collider == null)
+			{
+				return null;
+			}
+
+			if (collider.transform == transform || collider.transform.IsChildOf(transform))
+			{
+				return null;
+			}
+
+			if (collider.TryGetComponent(out IFallImpactResponder directResponder))
+			{
+				return directResponder;
+			}
+
+			if (collider.attachedRigidbody != null &&
+				collider.attachedRigidbody.TryGetComponent(out IFallImpactResponder rigidbodyResponder))
+			{
+				return rigidbodyResponder;
+			}
+
+			Transform parent = collider.transform.parent;
+			while (parent != null)
+			{
+				if (parent == transform || parent.IsChildOf(transform))
+				{
+					return null;
+				}
+
+				if (parent.TryGetComponent(out IFallImpactResponder parentResponder))
+				{
+					return parentResponder;
+				}
+
+				parent = parent.parent;
+			}
+
+			return null;
+		}
+
+		private void ResetFallTrackingState()
+		{
+			_isTrackingFall = false;
+			_trackedAirborneTime = 0f;
+			_trackedAirbornePeakY = transform.position.y;
+			_trackedPeakDownwardSpeed = 0f;
 		}
 
 		private void CameraRotation()
@@ -592,7 +918,7 @@ namespace StarterAssets
 					_cameraBobTimer = 0f;
 				}
 
-				if (!Grounded && !_isClimbing)
+				if (ShouldApplyAirborneCameraOffset())
 				{
 					targetMotionOffset.y += FirstPersonCameraMotion.EvaluateAirborneVerticalOffset(
 						_verticalVelocity,
@@ -631,6 +957,22 @@ namespace StarterAssets
 
 			float horizontalSpeed = new Vector3(_controller.velocity.x, 0f, _controller.velocity.z).magnitude;
 			return Mathf.Clamp01(horizontalSpeed / maxMoveSpeed);
+		}
+
+		private bool ShouldApplyAirborneCameraOffset()
+		{
+			if (Grounded || _isClimbing)
+			{
+				return false;
+			}
+
+			if (_verticalVelocity < 0f && _fallTimeoutDelta > 0f)
+			{
+				// Ignore brief grounded flicker on thresholds and stairs.
+				return false;
+			}
+
+			return true;
 		}
 
 		private bool CanStandUp(out string blockerSummary)
@@ -1077,6 +1419,16 @@ namespace StarterAssets
 		private bool IsGrabActionLocked()
 		{
 			return _interactionSystem != null && _interactionSystem.IsGrabActive;
+		}
+
+		private void OnValidate()
+		{
+			MinimumFallAirborneTime = Mathf.Max(0f, MinimumFallAirborneTime);
+			MinimumFallDamageDistance = Mathf.Max(0f, MinimumFallDamageDistance);
+			MaximumFallDamageDistance = Mathf.Max(MinimumFallDamageDistance + 0.01f, MaximumFallDamageDistance);
+			MinimumFallDamageLandingSpeed = Mathf.Max(0f, MinimumFallDamageLandingSpeed);
+			MaximumFallDamage = Mathf.Max(0f, MaximumFallDamage);
+			FallDamageExponent = Mathf.Max(0.01f, FallDamageExponent);
 		}
 
 		private void OnDrawGizmosSelected()

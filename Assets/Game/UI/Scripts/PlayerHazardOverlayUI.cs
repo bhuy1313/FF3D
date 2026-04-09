@@ -14,6 +14,7 @@ public class PlayerHazardOverlayUI : MonoBehaviour
     [SerializeField, Range(0f, 1f)] private float maxFireOverlayOpacity = 1f;
     [SerializeField] private Vector2 fireOverlayBaseSize = new Vector2(420f, 420f);
     [SerializeField] private Vector2 fireOverlayExtraSize = new Vector2(320f, 320f);
+    [SerializeField] private ThermalVisionController thermalVisionController;
 
     private bool hasWarnedMissingSmokeOverlayReferences;
     private bool hasWarnedMissingFireOverlayReferences;
@@ -59,6 +60,11 @@ public class PlayerHazardOverlayUI : MonoBehaviour
         if (exposure == null)
         {
             exposure = FindAnyObjectByType<PlayerHazardExposure>();
+        }
+
+        if (thermalVisionController == null)
+        {
+            thermalVisionController = FindAnyObjectByType<ThermalVisionController>();
         }
     }
 
@@ -116,6 +122,11 @@ public class PlayerHazardOverlayUI : MonoBehaviour
         }
 
         float intensity = exposure != null ? exposure.SmokeDensity01 : 0f;
+        if (thermalVisionController != null && thermalVisionController.IsThermalVisionActive)
+        {
+            intensity *= thermalVisionController.SmokeOverlayMultiplier;
+        }
+
         bool hasTexture = smokeOverlay.texture != null;
         float alpha = hasTexture
             ? Mathf.Clamp01(intensity) * maxSmokeOverlayOpacity

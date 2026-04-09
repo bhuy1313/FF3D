@@ -11,9 +11,11 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
     private const float SameSideTolerance = 0.2f;
     private const float LegacyWoodFireAxeTime = 1.25f;
     private const float LegacyWoodChainSawTime = 0.75f;
+    private const float LegacyWoodCrowbarTime = 1.9f;
     private const float LegacyStoneSledgeHammerTime = 1.5f;
     private const float LegacyGlassFireAxeTime = 0.1f;
     private const float LegacyGlassSledgeHammerTime = 0.1f;
+    private const float LegacyGlassCrowbarTime = 0.18f;
 
     [System.Serializable]
     private class BreakToolRequirement
@@ -445,6 +447,12 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
                     return true;
                 }
 
+                if (toolKind == BreakToolKind.Crowbar)
+                {
+                    requirement = new BreakToolRequirement(toolKind, LegacyWoodCrowbarTime);
+                    return true;
+                }
+
                 return false;
 
             case BreakableType.Stone:
@@ -466,6 +474,12 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
                 if (toolKind == BreakToolKind.SledgeHammer)
                 {
                     requirement = new BreakToolRequirement(toolKind, LegacyGlassSledgeHammerTime);
+                    return true;
+                }
+
+                if (toolKind == BreakToolKind.Crowbar)
+                {
+                    requirement = new BreakToolRequirement(toolKind, LegacyGlassCrowbarTime);
                     return true;
                 }
 

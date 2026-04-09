@@ -1,10 +1,12 @@
 using System;
+using TrueJourney.BotBehavior;
 using UnityEngine;
 using UnityEngine.Events;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Rescuable))]
 public class VictimCondition : MonoBehaviour
+    , IThermalSignatureSource
 {
     public enum TriageState
     {
@@ -63,6 +65,8 @@ public class VictimCondition : MonoBehaviour
         (requireStabilizationBeforeCarryWhenUrgent && triageState == TriageState.Urgent) ||
         (requireStabilizationBeforeCarryWhenCritical && triageState == TriageState.Critical));
     public bool CanBeginCarry => IsAlive && !RequiresStabilization;
+    public bool HasThermalSignature => IsAlive && !isExtracted;
+    public ThermalSignatureCategory ThermalSignatureCategory => ResolveThermalSignatureCategory();
 
     public event Action<TriageState> OnTriageStateChanged;
     public event Action OnConditionContextChanged;
@@ -84,6 +88,7 @@ public class VictimCondition : MonoBehaviour
     private void OnEnable()
     {
         CacheReferences();
+        BotRuntimeRegistry.RegisterThermalSignatureSource(this);
         if (rescuable != null)
             rescuable.RescueCompleted += HandleRescueCompleted;
 
@@ -93,8 +98,29 @@ public class VictimCondition : MonoBehaviour
 
     private void OnDisable()
     {
+        BotRuntimeRegistry.UnregisterThermalSignatureSource(this);
         if (rescuable != null)
             rescuable.RescueCompleted -= HandleRescueCompleted;
+    }
+
+    public Vector3 GetThermalSignatureWorldPosition()
+    {
+        return transform.position + Vector3.up * 1.2f;
+    }
+
+    public float GetThermalSignatureStrength()
+    {
+        if (!HasThermalSignature)
+        {
+            return 0f;
+        }
+
+        return triageState switch
+        {
+            TriageState.Critical => 1f,
+            TriageState.Urgent => 0.82f,
+            _ => isStabilized ? 0.38f : 0.58f
+        };
     }
 
     private void Start()
@@ -248,6 +274,16 @@ public class VictimCondition : MonoBehaviour
             return TriageState.Urgent;
 
         return TriageState.Stable;
+    }
+
+    private ThermalSignatureCategory ResolveThermalSignatureCategory()
+    {
+        return triageState switch
+        {
+            TriageState.Critical => ThermalSignatureCategory.VictimCritical,
+            TriageState.Urgent => ThermalSignatureCategory.VictimUrgent,
+            _ => ThermalSignatureCategory.VictimStable
+        };
     }
 
     private void ClampSettings()

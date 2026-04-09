@@ -111,7 +111,7 @@ public class Tool : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotBrea
         }
     }
 
-    public void Use(GameObject user)
+    public virtual void Use(GameObject user)
     {
         if (toolKind == BreakToolKind.None)
         {
@@ -180,7 +180,7 @@ public class Tool : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotBrea
         damageable.TakeDamage(damagePerUse, source, hit.point, hit.normal);
     }
 
-    private bool TryGetUseHit(GameObject user, out RaycastHit hit)
+    protected bool TryGetUseHit(GameObject user, out RaycastHit hit)
     {
         hit = default;
 
@@ -200,7 +200,7 @@ public class Tool : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotBrea
         return Physics.Raycast(ray, out hit, range, hitMask, QueryTriggerInteraction.Ignore);
     }
 
-    private float GetUseRange(GameObject user)
+    protected float GetUseRange(GameObject user)
     {
         if (user != null && user.TryGetComponent(out StarterAssets.FPSInteractionSystem interaction))
         {
@@ -210,7 +210,7 @@ public class Tool : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotBrea
         return useRange;
     }
 
-    private Transform GetAimTransform(GameObject user)
+    protected Transform GetAimTransform(GameObject user)
     {
         if (user != null)
         {

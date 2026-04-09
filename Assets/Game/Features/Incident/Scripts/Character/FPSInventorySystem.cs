@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 public class FPSInventorySystem : MonoBehaviour
 {
@@ -66,6 +66,7 @@ public class FPSInventorySystem : MonoBehaviour
     private void LateUpdate()
     {
         ApplyRotationLagSettings();
+        TickRuntimeInventoryItems(Time.deltaTime);
     }
 
     public bool TryPickup(GameObject target, GameObject picker)
@@ -203,10 +204,20 @@ public class FPSInventorySystem : MonoBehaviour
         {
             slot.Item.Rigidbody.gameObject.SetActive(true);
         }
+
+        if (slot.Item is IInventoryEquippable equippable)
+        {
+            equippable.OnEquipped(gameObject);
+        }
     }
 
     private void StowSlot(InventorySlot slot)
     {
+        if (slot.Item is IInventoryEquippable equippable)
+        {
+            equippable.OnStowed(gameObject);
+        }
+
         Transform itemTransform = slot.Item.Rigidbody.transform;
         itemTransform.SetParent(inventoryRoot, false);
         itemTransform.localPosition = Vector3.zero;
@@ -226,6 +237,11 @@ public class FPSInventorySystem : MonoBehaviour
 
         InventorySlot slot = slots[index];
         Rigidbody rb = slot.Item != null ? slot.Item.Rigidbody : null;
+
+        if (slot.Item is IInventoryEquippable equippable && index == activeIndex)
+        {
+            equippable.OnStowed(gameObject);
+        }
 
         if (slot.Item != null)
         {
@@ -287,6 +303,25 @@ public class FPSInventorySystem : MonoBehaviour
         }
 
         return null;
+    }
+
+    private void TickRuntimeInventoryItems(float deltaTime)
+    {
+        if (slots.Count <= 0 || deltaTime <= 0f)
+        {
+            return;
+        }
+
+        for (int i = 0; i < slots.Count; i++)
+        {
+            IPickupable item = slots[i].Item;
+            if (item is not IInventoryRuntimeTickable tickable)
+            {
+                continue;
+            }
+
+            tickable.OnInventoryTick(gameObject, i == activeIndex, deltaTime);
+        }
     }
 
     private void ConfigureViewPointRotationLag()
