@@ -18094,6 +18094,23 @@ Mesh:
       - serializedVersion: 1
         m_IndexStart: 0
         m_IndexCount: 0
+--- !u!1 &496157445 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7248673021003010875, guid: e6ccbfefab78bbf4b9817fc43d7f776b, type: 3}
+  m_PrefabInstance: {fileID: 3551746235294357164}
+  m_PrefabAsset: {fileID: 0}
+--- !u!225 &496157449
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 496157445}
+  m_Enabled: 1
+  m_Alpha: 0
+  m_Interactable: 0
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!43 &506992411
 Mesh:
   m_ObjectHideFlags: 0
@@ -101894,7 +101911,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7248673021003010875, guid: e6ccbfefab78bbf4b9817fc43d7f776b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 496157449}
   m_SourcePrefab: {fileID: 100100000, guid: e6ccbfefab78bbf4b9817fc43d7f776b, type: 3}
 --- !u!1 &3567076549650715107
 GameObject:
