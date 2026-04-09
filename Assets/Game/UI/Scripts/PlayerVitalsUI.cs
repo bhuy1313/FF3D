@@ -9,6 +9,7 @@ public class PlayerVitalsUI : MonoBehaviour
     [Header("UI Fills")]
     [SerializeField] private Image hpFill;
     [SerializeField] private Image oxygenFill;
+    [SerializeField] private Image maskOxygenFill;
     [SerializeField] private Image staminaFill;
 
     private void Awake()
@@ -48,8 +49,18 @@ public class PlayerVitalsUI : MonoBehaviour
     private void RefreshAll()
     {
         SetFill(hpFill, vitals.HealthPercent);
-        SetFill(oxygenFill, vitals.OxygenPercent);
+        RefreshOxygenFills();
         SetFill(staminaFill, vitals.StaminaPercent);
+    }
+
+    private void Update()
+    {
+        if (vitals == null)
+        {
+            return;
+        }
+
+        RefreshOxygenFills();
     }
 
     private void HandleHealth(float current, float max)
@@ -59,7 +70,7 @@ public class PlayerVitalsUI : MonoBehaviour
 
     private void HandleOxygen(float current, float max)
     {
-        SetFill(oxygenFill, max <= 0f ? 0f : current / max);
+        RefreshOxygenFills();
     }
 
     private void HandleStamina(float current, float max)
@@ -71,5 +82,31 @@ public class PlayerVitalsUI : MonoBehaviour
     {
         if (img == null) return;
         img.fillAmount = Mathf.Clamp01(percent);
+    }
+
+    private void RefreshOxygenFills()
+    {
+        if (vitals == null)
+        {
+            return;
+        }
+
+        SetFill(oxygenFill, vitals.OxygenPercent);
+
+        if (maskOxygenFill == null)
+        {
+            return;
+        }
+
+        bool showMaskOxygen = vitals.HasActiveExternalOxygenSupply;
+        if (maskOxygenFill.gameObject.activeSelf != showMaskOxygen)
+        {
+            maskOxygenFill.gameObject.SetActive(showMaskOxygen);
+        }
+
+        if (showMaskOxygen)
+        {
+            SetFill(maskOxygenFill, vitals.ExternalOxygenSupplyPercent01);
+        }
     }
 }
