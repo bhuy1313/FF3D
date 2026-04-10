@@ -80,7 +80,7 @@ public static class InputBindingOverridesStore
 
     private static void ApplyOverridesJsonToActivePlayerInputs(string json)
     {
-        PlayerInput[] playerInputs = Object.FindObjectsByType<PlayerInput>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        PlayerInput[] playerInputs = Object.FindObjectsByType<PlayerInput>(FindObjectsInactive.Include);
         for (int i = 0; i < playerInputs.Length; i++)
         {
             PlayerInput playerInput = playerInputs[i];

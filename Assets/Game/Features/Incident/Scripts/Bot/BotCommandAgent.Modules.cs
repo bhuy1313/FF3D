@@ -30,17 +30,32 @@ public partial class BotCommandAgent
                 case BotCommandType.Extinguish:
                     return owner.behaviorContext != null && owner.inventorySystem != null;
                 case BotCommandType.Follow:
-                    return owner.behaviorContext != null;
                 case BotCommandType.Rescue:
+                case BotCommandType.Hold:
+                case BotCommandType.Breach:
+                case BotCommandType.Isolate:
+                case BotCommandType.Search:
+                case BotCommandType.Assist:
+                case BotCommandType.Regroup:
                     return owner.behaviorContext != null;
                 default:
                     return false;
             }
         }
 
+        public bool CanAcceptCommandIntent(BotCommandIntentPayload payload)
+        {
+            return payload.IsValid && CanAcceptCommand(payload.CommandType);
+        }
+
         public bool TryIssueCommand(BotCommandType commandType, Vector3 worldPoint)
         {
-            if (!CanAcceptCommand(commandType))
+            return TryIssueCommandIntent(BotCommandIntentPayload.Create(commandType, worldPoint));
+        }
+
+        public bool TryIssueCommandIntent(BotCommandIntentPayload payload)
+        {
+            if (!CanAcceptCommandIntent(payload))
             {
                 return false;
             }
@@ -50,9 +65,10 @@ public partial class BotCommandAgent
                 return false;
             }
 
-            Vector3 destination = worldPoint;
+            BotCommandType commandType = payload.CommandType;
+            Vector3 destination = payload.HasWorldPoint ? payload.WorldPoint : owner.transform.position;
             if (owner.navMeshSampleDistance > 0f &&
-                NavMesh.SamplePosition(worldPoint, out NavMeshHit navMeshHit, owner.navMeshSampleDistance, owner.navMeshAgent.areaMask))
+                NavMesh.SamplePosition(destination, out NavMeshHit navMeshHit, owner.navMeshSampleDistance, owner.navMeshAgent.areaMask))
             {
                 destination = navMeshHit.position;
             }
@@ -69,12 +85,13 @@ public partial class BotCommandAgent
                     }
                     else
                     {
+                        owner.behaviorContext?.SetCommandIntent(BotCommandIntentPayload.Create(BotCommandType.Move, destination));
                         owner.navMeshAgent.isStopped = false;
                         accepted = owner.navMeshAgent.SetDestination(destination);
                     }
                     break;
                 case BotCommandType.Extinguish:
-                    return TryIssueExtinguishCommand(destination, BotExtinguishCommandMode.Auto);
+                    return TryIssueExtinguishCommand(destination, payload.ExtinguishMode);
                 case BotCommandType.Follow:
                     if (owner.behaviorContext == null)
                     {
@@ -82,7 +99,7 @@ public partial class BotCommandAgent
                     }
 
                     PrepareForIssuedCommand(BotCommandType.Follow);
-                    owner.behaviorContext.SetFollowOrder(owner.CreateFollowOrder());
+                    owner.behaviorContext.SetFollowOrder(owner.CreateFollowOrder(BotCommandType.Follow));
                     accepted = true;
                     break;
                 case BotCommandType.Rescue:
@@ -93,6 +110,66 @@ public partial class BotCommandAgent
 
                     PrepareForIssuedCommand(BotCommandType.Rescue);
                     owner.behaviorContext.SetRescueOrder(destination);
+                    accepted = true;
+                    break;
+                case BotCommandType.Hold:
+                    PrepareForIssuedCommand(BotCommandType.Hold);
+                    owner.behaviorContext.SetHoldOrder(owner.transform.position);
+                    owner.navMeshAgent.ResetPath();
+                    owner.navMeshAgent.isStopped = true;
+                    destination = owner.transform.position;
+                    accepted = true;
+                    break;
+                case BotCommandType.Breach:
+                    PrepareForIssuedCommand(BotCommandType.Breach);
+                    if (owner.behaviorContext.UseMoveOrdersAsBehaviorInput)
+                    {
+                        owner.behaviorContext.SetBreachOrder(destination);
+                        accepted = true;
+                    }
+                    else
+                    {
+                        owner.behaviorContext.SetCommandIntent(BotCommandIntentPayload.Create(BotCommandType.Breach, destination));
+                        owner.navMeshAgent.isStopped = false;
+                        accepted = owner.navMeshAgent.SetDestination(destination);
+                    }
+                    break;
+                case BotCommandType.Isolate:
+                    PrepareForIssuedCommand(BotCommandType.Isolate);
+                    if (owner.behaviorContext.UseMoveOrdersAsBehaviorInput)
+                    {
+                        owner.behaviorContext.SetIsolateOrder(destination);
+                        accepted = true;
+                    }
+                    else
+                    {
+                        owner.behaviorContext.SetCommandIntent(BotCommandIntentPayload.Create(BotCommandType.Isolate, destination));
+                        owner.navMeshAgent.isStopped = false;
+                        accepted = owner.navMeshAgent.SetDestination(destination);
+                    }
+                    break;
+                case BotCommandType.Search:
+                    PrepareForIssuedCommand(BotCommandType.Search);
+                    if (owner.behaviorContext.UseMoveOrdersAsBehaviorInput)
+                    {
+                        owner.behaviorContext.SetSearchOrder(destination);
+                        accepted = true;
+                    }
+                    else
+                    {
+                        owner.behaviorContext.SetCommandIntent(BotCommandIntentPayload.Create(BotCommandType.Search, destination));
+                        owner.navMeshAgent.isStopped = false;
+                        accepted = owner.navMeshAgent.SetDestination(destination);
+                    }
+                    break;
+                case BotCommandType.Assist:
+                    PrepareForIssuedCommand(BotCommandType.Assist);
+                    owner.behaviorContext.SetAssistOrder(owner.CreateFollowOrder(BotCommandType.Assist));
+                    accepted = true;
+                    break;
+                case BotCommandType.Regroup:
+                    PrepareForIssuedCommand(BotCommandType.Regroup);
+                    owner.behaviorContext.SetRegroupOrder(owner.CreateFollowOrder(BotCommandType.Regroup));
                     accepted = true;
                     break;
                 default:
@@ -160,12 +237,22 @@ public partial class BotCommandAgent
                 owner.ClearRescueRuntimeState();
             }
 
-            if (commandType != BotCommandType.Move)
+            if (commandType != BotCommandType.Breach)
+            {
+                owner.ClearBreachRuntimeState();
+            }
+
+            if (commandType != BotCommandType.Isolate)
+            {
+                owner.ClearHazardIsolationRuntimeState();
+            }
+
+            if (!BotCommandTypeUtility.UsesMoveOrder(commandType))
             {
                 owner.ResetMoveActivityDebug();
             }
 
-            if (commandType != BotCommandType.Follow)
+            if (!BotCommandTypeUtility.UsesFollowOrder(commandType))
             {
                 owner.followTarget = null;
                 owner.lastFollowDestination = Vector3.zero;
@@ -421,7 +508,7 @@ public partial class BotCommandAgent
                     continue;
                 }
 
-                owner.currentRescueTarget = candidate;
+                owner.SetCurrentRescueTarget(candidate);
                 return candidate;
             }
 

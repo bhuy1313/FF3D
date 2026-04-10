@@ -4,6 +4,7 @@ using UnityEngine.AI;
 namespace TrueJourney.BotBehavior
 {
     [RequireComponent(typeof(NavMeshAgent))]
+    [RequireComponent(typeof(BotPerceptionMemory))]
     public class BotInteractionSensor : MonoBehaviour
     {
         [Header("Sensor Settings")]
@@ -25,6 +26,7 @@ namespace TrueJourney.BotBehavior
 
         private NavMeshAgent agent;
         private BotInventorySystem inventory;
+        private BotPerceptionMemory perceptionMemory;
         private float lastInteractTime;
         private bool pickupWindowEnabled;
         private IPickupable pickupTarget;
@@ -35,6 +37,7 @@ namespace TrueJourney.BotBehavior
         {
             agent = GetComponent<NavMeshAgent>();
             inventory = GetComponent<BotInventorySystem>();
+            perceptionMemory = GetComponent<BotPerceptionMemory>();
             EnsureFireBuffer();
         }
 
@@ -67,6 +70,22 @@ namespace TrueJourney.BotBehavior
                 IPickupable pickupable = FindPickupable(hit.collider);
                 if (pickupable != null)
                 {
+                    if (pickupable is IBotExtinguisherItem extinguisherItem)
+                    {
+                        RememberExtinguisher(extinguisherItem);
+                    }
+
+                    if (pickupable is IBotBreakTool breakTool)
+                    {
+                        RememberBreakTool(breakTool);
+                    }
+
+                    IRescuableTarget pickupRescuable = FindRescuableTarget(hit.collider);
+                    if (pickupRescuable != null)
+                    {
+                        RememberRescuable(pickupRescuable);
+                    }
+
                     if (pickupWindowEnabled &&
                         inventory != null &&
                         !inventory.IsFull &&
@@ -86,9 +105,17 @@ namespace TrueJourney.BotBehavior
                 
                 if (interactable != null)
                 {
-                    // Rescue pickup is handled explicitly by the rescue controller.
-                    if (FindRescuableTarget(hit.collider) != null)
+                    IBotHazardIsolationTarget hazardIsolationTarget = FindHazardIsolationTarget(hit.collider);
+                    if (hazardIsolationTarget != null)
                     {
+                        RememberHazardIsolationTarget(hazardIsolationTarget);
+                    }
+
+                    // Rescue pickup is handled explicitly by the rescue controller.
+                    IRescuableTarget rescueTarget = FindRescuableTarget(hit.collider);
+                    if (rescueTarget != null)
+                    {
+                        RememberRescuable(rescueTarget);
                         return;
                     }
 
@@ -163,6 +190,7 @@ namespace TrueJourney.BotBehavior
             LogBreakableSensor(
                 $"ahead:blocker:{GetBreakableDebugName(breakable)}",
                 $"Ahead: detected blocker '{GetBreakableDebugName(breakable)}'.");
+            RememberBreakable(breakable);
             breakableTarget = breakable;
             return true;
         }
@@ -213,6 +241,7 @@ namespace TrueJourney.BotBehavior
             LogBreakableSensor(
                 $"towards:blocker:{GetBreakableDebugName(breakable)}:{FormatVectorKey(worldPosition)}",
                 $"Towards {worldPosition}: detected blocker '{GetBreakableDebugName(breakable)}'.");
+            RememberBreakable(breakable);
             breakableTarget = breakable;
             return true;
         }
@@ -266,6 +295,7 @@ namespace TrueJourney.BotBehavior
             LogBreakableSensor(
                 $"between:blocker:{GetBreakableDebugName(breakable)}:{FormatVectorKey(worldStart)}:{FormatVectorKey(worldEnd)}",
                 $"Between {worldStart} -> {worldEnd}: detected blocker '{GetBreakableDebugName(breakable)}'.");
+            RememberBreakable(breakable);
             breakableTarget = breakable;
             return true;
         }
@@ -356,7 +386,78 @@ namespace TrueJourney.BotBehavior
                 fireTarget = candidate;
             }
 
+            if (fireTarget != null)
+            {
+                RememberFire(fireTarget);
+            }
+
             return fireTarget != null;
+        }
+
+        public void RememberRescuable(IRescuableTarget target)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            perceptionMemory?.RememberRescuable(target);
+            BotRuntimeRegistry.SharedIncidentBlackboard.RememberRescuable(target);
+        }
+
+        public void RememberFire(IFireTarget target)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            perceptionMemory?.RememberFire(target);
+            BotRuntimeRegistry.SharedIncidentBlackboard.RememberFire(target);
+        }
+
+        public void RememberBreakable(IBotBreakableTarget target)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            perceptionMemory?.RememberBreakable(target);
+            BotRuntimeRegistry.SharedIncidentBlackboard.RememberBreakable(target);
+        }
+
+        public void RememberExtinguisher(IBotExtinguisherItem target)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            perceptionMemory?.RememberExtinguisher(target);
+            BotRuntimeRegistry.SharedIncidentBlackboard.RememberExtinguisher(target);
+        }
+
+        public void RememberBreakTool(IBotBreakTool target)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            perceptionMemory?.RememberBreakTool(target);
+            BotRuntimeRegistry.SharedIncidentBlackboard.RememberBreakTool(target);
+        }
+
+        public void RememberHazardIsolationTarget(IBotHazardIsolationTarget target)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            perceptionMemory?.RememberHazardIsolationTarget(target);
+            BotRuntimeRegistry.SharedIncidentBlackboard.RememberHazardIsolationTarget(target);
         }
 
         private void EnsureFireBuffer()
@@ -503,6 +604,38 @@ namespace TrueJourney.BotBehavior
                 if (parent.TryGetComponent(out IRescuableTarget parentRescuable))
                 {
                     return parentRescuable;
+                }
+
+                parent = parent.parent;
+            }
+
+            return null;
+        }
+
+        private static IBotHazardIsolationTarget FindHazardIsolationTarget(Collider collider)
+        {
+            if (collider == null)
+            {
+                return null;
+            }
+
+            if (collider.TryGetComponent(out IBotHazardIsolationTarget direct))
+            {
+                return direct;
+            }
+
+            if (collider.attachedRigidbody != null &&
+                collider.attachedRigidbody.TryGetComponent(out IBotHazardIsolationTarget rigidbodyOwner))
+            {
+                return rigidbodyOwner;
+            }
+
+            Transform parent = collider.transform.parent;
+            while (parent != null)
+            {
+                if (parent.TryGetComponent(out IBotHazardIsolationTarget parentTarget))
+                {
+                    return parentTarget;
                 }
 
                 parent = parent.parent;

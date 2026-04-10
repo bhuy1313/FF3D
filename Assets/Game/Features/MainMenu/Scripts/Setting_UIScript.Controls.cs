@@ -493,7 +493,7 @@ public partial class Setting_UIScript
         tmpText.fontSize = fontSize;
         tmpText.fontStyle = fontStyle;
         tmpText.alignment = alignment;
-        tmpText.enableWordWrapping = false;
+        tmpText.textWrappingMode = TextWrappingModes.NoWrap;
         tmpText.overflowMode = TextOverflowModes.Ellipsis;
         tmpText.raycastTarget = false;
 

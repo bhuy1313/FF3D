@@ -1,25 +1,31 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class MenuItemS : MonoBehaviour
 {
-    public Image itemImage; // Hình ảnh của item
+    [SerializeField] private Image itemImage;
+    [SerializeField] private TMP_Text itemLabel;
 
     private void Awake()
     {
-        // Tìm GameObject con tên "background" và lấy Image component từ nó
-        Transform backgroundTransform = transform.Find("BgW");
-        if (backgroundTransform != null)
+        if (itemImage == null)
         {
-            itemImage = backgroundTransform.GetComponent<Image>();
+            Transform backgroundTransform = transform.Find("BgW");
+            if (backgroundTransform != null)
+            {
+                itemImage = backgroundTransform.GetComponent<Image>();
+            }
+
             if (itemImage == null)
             {
-                Debug.LogError("No Image component found on 'background' GameObject!");
+                Debug.LogError("No Image component found on 'BgW' GameObject!");
             }
         }
-        else
+
+        if (itemLabel == null)
         {
-            Debug.LogError("No child GameObject named 'background' found!");
+            itemLabel = GetComponentInChildren<TMP_Text>(true);
         }
     }
 
@@ -28,7 +34,7 @@ public class MenuItemS : MonoBehaviour
         if (itemImage != null)
         {
             Color color = itemImage.color;
-            color.a = 1f; // Đặt mức độ trong suốt cao nhất (alpha = 1)
+            color.a = 1f;
             itemImage.color = color;
         }
     }
@@ -38,8 +44,21 @@ public class MenuItemS : MonoBehaviour
         if (itemImage != null)
         {
             Color color = itemImage.color;
-            color.a = 0.5f; // Đặt mức độ trong suốt thấp hơn (alpha = 0.5)
+            color.a = 0.5f;
             itemImage.color = color;
+        }
+    }
+
+    public void SetDisplayLabel(string label)
+    {
+        if (itemLabel == null)
+        {
+            itemLabel = GetComponentInChildren<TMP_Text>(true);
+        }
+
+        if (itemLabel != null)
+        {
+            itemLabel.text = string.IsNullOrWhiteSpace(label) ? "-" : label;
         }
     }
 }

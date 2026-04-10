@@ -5,10 +5,11 @@ using UnityEngine;
 public sealed class BotRuntimeDecisionService
 {
     private readonly List<EntityId> escortFollowerIds = new List<EntityId>(8);
-    public Transform ResolveFollowTarget(Transform currentTarget, string followTargetTag)
+    public Transform ResolveFollowTarget(Transform currentTarget, string followTargetTag, BotPerceptionMemory memory = null)
     {
         if (currentTarget != null && currentTarget.gameObject.activeInHierarchy)
         {
+            RememberFollowTarget(followTargetTag, currentTarget, memory);
             return currentTarget;
         }
 
@@ -17,8 +18,22 @@ public sealed class BotRuntimeDecisionService
             return null;
         }
 
+        if (memory != null && memory.TryGetRecentFollowTarget(followTargetTag, out Transform rememberedTarget))
+        {
+            RememberFollowTarget(followTargetTag, rememberedTarget, memory);
+            return rememberedTarget;
+        }
+
+        if (BotRuntimeRegistry.SharedIncidentBlackboard.TryGetRecentFollowTarget(followTargetTag, out Transform sharedTarget))
+        {
+            RememberFollowTarget(followTargetTag, sharedTarget, memory);
+            return sharedTarget;
+        }
+
         GameObject targetObject = GameObject.FindGameObjectWithTag(followTargetTag);
-        return targetObject != null ? targetObject.transform : null;
+        Transform resolvedTarget = targetObject != null ? targetObject.transform : null;
+        RememberFollowTarget(followTargetTag, resolvedTarget, memory);
+        return resolvedTarget;
     }
 
     public int ResolveEscortFormationRank(BotCommandAgent owner, Transform target)
@@ -106,12 +121,30 @@ public sealed class BotRuntimeDecisionService
         IRescuableTarget committedTarget = GetCommittedRescueTarget(currentTarget, requester);
         if (committedTarget != null)
         {
+            RememberRescueTarget(requester, committedTarget);
             return committedTarget;
         }
 
+        BotPerceptionMemory requesterMemory = requester != null ? requester.GetComponent<BotPerceptionMemory>() : null;
         IRescuableTarget bestTarget = null;
         float bestDistance = float.MaxValue;
         float bestPriority = float.NegativeInfinity;
+
+        if (requesterMemory != null &&
+            requesterMemory.TryGetBestRecentRescuable(orderPoint, rescueSearchRadius, requester, out IRescuableTarget rememberedTarget))
+        {
+            bestTarget = rememberedTarget;
+            bestDistance = GetHorizontalDistance(orderPoint, rememberedTarget.GetWorldPosition());
+            bestPriority = rememberedTarget.RescuePriority;
+        }
+
+        if (bestTarget == null &&
+            BotRuntimeRegistry.SharedIncidentBlackboard.TryGetBestRecentRescueTarget(orderPoint, rescueSearchRadius, requester, out IRescuableTarget sharedTarget))
+        {
+            bestTarget = sharedTarget;
+            bestDistance = GetHorizontalDistance(orderPoint, sharedTarget.GetWorldPosition());
+            bestPriority = sharedTarget.RescuePriority;
+        }
 
         if (IsEligibleRescueTarget(currentTarget, requester, orderPoint, rescueSearchRadius))
         {
@@ -141,6 +174,7 @@ public sealed class BotRuntimeDecisionService
             bestTarget = candidate;
         }
 
+        RememberRescueTarget(requester, bestTarget);
         return bestTarget;
     }
 
@@ -168,6 +202,114 @@ public sealed class BotRuntimeDecisionService
             }
 
             bestDistance = distance;
+            bestTarget = candidate;
+        }
+
+        return bestTarget;
+    }
+
+    public IBotHazardIsolationTarget ResolveNearestHazardIsolationTarget(Vector3 fromPosition, GameObject requester, FireHazardType hazardType, float searchRadius)
+    {
+        BotPerceptionMemory requesterMemory = requester != null ? requester.GetComponent<BotPerceptionMemory>() : null;
+        if (requesterMemory != null &&
+            requesterMemory.TryGetNearestRecentHazardIsolationTarget(fromPosition, searchRadius, hazardType, out IBotHazardIsolationTarget rememberedTarget))
+        {
+            RememberHazardIsolationTarget(requesterMemory, rememberedTarget);
+            return rememberedTarget;
+        }
+
+        if (BotRuntimeRegistry.SharedIncidentBlackboard.TryGetNearestRecentHazardIsolationTarget(fromPosition, searchRadius, hazardType, out IBotHazardIsolationTarget sharedTarget))
+        {
+            RememberHazardIsolationTarget(requesterMemory, sharedTarget);
+            return sharedTarget;
+        }
+
+        IBotHazardIsolationTarget bestTarget = null;
+        float bestDistanceSq = float.PositiveInfinity;
+        float searchRadiusSq = Mathf.Max(0.05f, searchRadius) * Mathf.Max(0.05f, searchRadius);
+
+        foreach (IBotHazardIsolationTarget candidate in BotRuntimeRegistry.ActiveHazardIsolationTargets)
+        {
+            if (!IsEligibleHazardIsolationTarget(candidate, requester, hazardType))
+            {
+                continue;
+            }
+
+            float distanceSq = (candidate.GetWorldPosition() - fromPosition).sqrMagnitude;
+            if (distanceSq > searchRadiusSq || distanceSq >= bestDistanceSq)
+            {
+                continue;
+            }
+
+            bestDistanceSq = distanceSq;
+            bestTarget = candidate;
+        }
+
+        RememberHazardIsolationTarget(requesterMemory, bestTarget);
+        return bestTarget;
+    }
+
+    public IBotHazardIsolationTarget ResolveNearestHazardIsolationTarget(Vector3 fromPosition, GameObject requester, float searchRadius)
+    {
+        BotPerceptionMemory requesterMemory = requester != null ? requester.GetComponent<BotPerceptionMemory>() : null;
+        if (requesterMemory != null &&
+            requesterMemory.TryGetNearestRecentHazardIsolationTarget(fromPosition, searchRadius, out IBotHazardIsolationTarget rememberedTarget))
+        {
+            RememberHazardIsolationTarget(requesterMemory, rememberedTarget);
+            return rememberedTarget;
+        }
+
+        if (BotRuntimeRegistry.SharedIncidentBlackboard.TryGetNearestRecentHazardIsolationTarget(fromPosition, searchRadius, out IBotHazardIsolationTarget sharedTarget))
+        {
+            RememberHazardIsolationTarget(requesterMemory, sharedTarget);
+            return sharedTarget;
+        }
+
+        IBotHazardIsolationTarget bestTarget = null;
+        float bestDistanceSq = float.PositiveInfinity;
+        float searchRadiusSq = Mathf.Max(0.05f, searchRadius) * Mathf.Max(0.05f, searchRadius);
+
+        foreach (IBotHazardIsolationTarget candidate in BotRuntimeRegistry.ActiveHazardIsolationTargets)
+        {
+            if (!IsEligibleHazardIsolationTarget(candidate, requester))
+            {
+                continue;
+            }
+
+            float distanceSq = (candidate.GetWorldPosition() - fromPosition).sqrMagnitude;
+            if (distanceSq > searchRadiusSq || distanceSq >= bestDistanceSq)
+            {
+                continue;
+            }
+
+            bestDistanceSq = distanceSq;
+            bestTarget = candidate;
+        }
+
+        RememberHazardIsolationTarget(requesterMemory, bestTarget);
+        return bestTarget;
+    }
+
+    public IBotPryTarget ResolveNearestPryTarget(Vector3 fromPosition, GameObject requester, float searchRadius)
+    {
+        IBotPryTarget bestTarget = null;
+        float bestDistanceSq = float.PositiveInfinity;
+        float searchRadiusSq = Mathf.Max(0.05f, searchRadius) * Mathf.Max(0.05f, searchRadius);
+
+        foreach (IBotPryTarget candidate in BotRuntimeRegistry.ActivePryTargets)
+        {
+            if (!IsEligiblePryTarget(candidate, requester))
+            {
+                continue;
+            }
+
+            float distanceSq = (candidate.GetWorldPosition() - fromPosition).sqrMagnitude;
+            if (distanceSq > searchRadiusSq || distanceSq >= bestDistanceSq)
+            {
+                continue;
+            }
+
+            bestDistanceSq = distanceSq;
             bestTarget = candidate;
         }
 
@@ -206,7 +348,82 @@ public sealed class BotRuntimeDecisionService
             return false;
         }
 
+        if (BotRuntimeRegistry.Reservations.IsReservedByOther(candidate, requester))
+        {
+            return false;
+        }
+
         return GetHorizontalDistance(orderPoint, candidate.GetWorldPosition()) <= rescueSearchRadius;
+    }
+
+    private static void RememberFollowTarget(string followTargetTag, Transform target, BotPerceptionMemory memory)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        memory?.RememberFollowTarget(followTargetTag, target);
+        BotRuntimeRegistry.SharedIncidentBlackboard.RememberFollowTarget(followTargetTag, target);
+    }
+
+    private static void RememberRescueTarget(GameObject requester, IRescuableTarget target)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        if (requester != null && requester.TryGetComponent(out BotPerceptionMemory memory))
+        {
+            memory.RememberRescuable(target);
+        }
+
+        BotRuntimeRegistry.SharedIncidentBlackboard.RememberRescuable(target);
+    }
+
+    private static void RememberHazardIsolationTarget(BotPerceptionMemory memory, IBotHazardIsolationTarget target)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        memory?.RememberHazardIsolationTarget(target);
+        BotRuntimeRegistry.SharedIncidentBlackboard.RememberHazardIsolationTarget(target);
+    }
+
+    private static bool IsEligibleHazardIsolationTarget(
+        IBotHazardIsolationTarget candidate,
+        GameObject requester,
+        FireHazardType? hazardType = null)
+    {
+        if (candidate == null || !candidate.IsHazardActive || !candidate.IsInteractionAvailable)
+        {
+            return false;
+        }
+
+        if (hazardType.HasValue && candidate.HazardType != hazardType.Value)
+        {
+            return false;
+        }
+
+        return !BotRuntimeRegistry.Reservations.IsReservedByOther(candidate, requester);
+    }
+
+    private static bool IsEligiblePryTarget(IBotPryTarget candidate, GameObject requester)
+    {
+        if (candidate == null || candidate.IsBreached)
+        {
+            return false;
+        }
+
+        if (!candidate.CanBePriedOpen && !candidate.IsPryInProgress)
+        {
+            return false;
+        }
+
+        return !BotRuntimeRegistry.Reservations.IsReservedByOther(candidate, requester);
     }
 
     private static float GetHorizontalDistance(Vector3 a, Vector3 b)

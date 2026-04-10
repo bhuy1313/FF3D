@@ -642,6 +642,11 @@ public partial class BotCommandAgent
                 continue;
             }
 
+            if (BotRuntimeRegistry.Reservations.IsReservedByOther(candidate, gameObject))
+            {
+                continue;
+            }
+
             float distanceSq = (candidate.GetWorldPosition() - orderPoint).sqrMagnitude;
             if (distanceSq < nearestDistanceSq)
             {
@@ -666,16 +671,29 @@ public partial class BotCommandAgent
         IFireTarget lockedTarget = GetLockedExtinguisherFireTarget();
         if (lockedTarget != null)
         {
-            currentFireTarget = lockedTarget;
+            SetCurrentFireTarget(lockedTarget);
             return currentFireTarget;
         }
 
         if (currentFireTarget != null && currentFireTarget.IsBurning)
         {
+            perceptionMemory?.RememberFire(currentFireTarget);
+            BotRuntimeRegistry.SharedIncidentBlackboard.RememberFire(currentFireTarget);
             return currentFireTarget;
         }
 
-        currentFireTarget = FindClosestActiveFire(orderPoint);
+        SetCurrentFireTarget(FindClosestActiveFire(orderPoint));
+        if (currentFireTarget == null && perceptionMemory != null && perceptionMemory.TryGetNearestRecentFire(orderPoint, fireSearchRadius, out IFireTarget rememberedFire))
+        {
+            SetCurrentFireTarget(rememberedFire);
+        }
+
+        if (currentFireTarget == null &&
+            BotRuntimeRegistry.SharedIncidentBlackboard.TryGetNearestRecentFire(orderPoint, fireSearchRadius, out IFireTarget sharedFire))
+        {
+            SetCurrentFireTarget(sharedFire);
+        }
+
         return currentFireTarget;
     }
 
@@ -684,7 +702,7 @@ public partial class BotCommandAgent
         IFireTarget lockedTarget = GetLockedExtinguisherFireTarget();
         if (lockedTarget != null)
         {
-            currentFireTarget = lockedTarget;
+            SetCurrentFireTarget(lockedTarget);
             return currentFireTarget;
         }
 
@@ -694,6 +712,8 @@ public partial class BotCommandAgent
             float currentDistance = GetHorizontalDistance(transform.position, currentFireTarget.GetWorldPosition());
             if (currentDistance <= keepRange)
             {
+                perceptionMemory?.RememberFire(currentFireTarget);
+                BotRuntimeRegistry.SharedIncidentBlackboard.RememberFire(currentFireTarget);
                 return currentFireTarget;
             }
         }
@@ -701,18 +721,31 @@ public partial class BotCommandAgent
         if (interactionSensor != null &&
             interactionSensor.TryFindNearbyFire(keepRange, out IFireTarget nearbyFire))
         {
-            currentFireTarget = nearbyFire;
+            SetCurrentFireTarget(nearbyFire);
             return currentFireTarget;
         }
 
         if (interactionSensor != null &&
             interactionSensor.TryFindFireNearPoint(scanOrigin, fireSearchRadius, out IFireTarget scanOriginFire))
         {
-            currentFireTarget = scanOriginFire;
+            SetCurrentFireTarget(scanOriginFire);
             return currentFireTarget;
         }
 
-        currentFireTarget = null;
+        if (perceptionMemory != null &&
+            perceptionMemory.TryGetNearestRecentFire(scanOrigin, fireSearchRadius, out IFireTarget rememberedFire))
+        {
+            SetCurrentFireTarget(rememberedFire);
+            return currentFireTarget;
+        }
+
+        if (BotRuntimeRegistry.SharedIncidentBlackboard.TryGetNearestRecentFire(scanOrigin, fireSearchRadius, out IFireTarget sharedFire))
+        {
+            SetCurrentFireTarget(sharedFire);
+            return currentFireTarget;
+        }
+
+        SetCurrentFireTarget(null);
         return currentFireTarget;
     }
 
@@ -721,7 +754,7 @@ public partial class BotCommandAgent
         IFireTarget lockedTarget = GetLockedExtinguisherFireTarget();
         if (lockedTarget != null)
         {
-            currentFireTarget = lockedTarget;
+            SetCurrentFireTarget(lockedTarget);
             return currentFireTarget;
         }
 
@@ -737,7 +770,7 @@ public partial class BotCommandAgent
 
         if (IsNearOrderPoint(orderPoint))
         {
-            currentFireTarget = FindClosestActiveFireAroundOrderPoint(orderPoint, transform.position, GetExtinguisherOrderAreaRadius());
+            SetCurrentFireTarget(FindClosestActiveFireAroundOrderPoint(orderPoint, transform.position, GetExtinguisherOrderAreaRadius()));
             return currentFireTarget;
         }
 
@@ -754,6 +787,11 @@ public partial class BotCommandAgent
         foreach (IFireTarget candidate in BotRuntimeRegistry.ActiveFireTargets)
         {
             if (candidate == null || !candidate.IsBurning)
+            {
+                continue;
+            }
+
+            if (BotRuntimeRegistry.Reservations.IsReservedByOther(candidate, gameObject))
             {
                 continue;
             }
@@ -787,11 +825,11 @@ public partial class BotCommandAgent
             }
         }
 
-        currentFireTarget = corridorFire != null
+        SetCurrentFireTarget(corridorFire != null
             ? corridorFire
             : bestFire != null
                 ? bestFire
-                : fallbackFire;
+                : fallbackFire);
         return currentFireTarget;
     }
 
@@ -806,6 +844,11 @@ public partial class BotCommandAgent
         foreach (IFireTarget candidate in BotRuntimeRegistry.ActiveFireTargets)
         {
             if (candidate == null || !candidate.IsBurning)
+            {
+                continue;
+            }
+
+            if (BotRuntimeRegistry.Reservations.IsReservedByOther(candidate, gameObject))
             {
                 continue;
             }
@@ -862,6 +905,7 @@ public partial class BotCommandAgent
 
     private void CompleteExtinguishOrder(string detail)
     {
+        CompleteCurrentTask(detail);
         UpdateExtinguishDebugStage(ExtinguishDebugStage.Completed, detail);
         ClearExtinguishRuntimeState();
         behaviorContext.ClearExtinguishOrder();
@@ -878,7 +922,7 @@ public partial class BotCommandAgent
         SetPickupWindow(false);
         ReleaseCommittedTool();
         preferredExtinguishTool = null;
-        currentFireTarget = null;
+        SetCurrentFireTarget(null);
         commandedPointFireTarget = null;
         commandedFireGroupTarget = null;
         currentExtinguishTargetPosition = default;

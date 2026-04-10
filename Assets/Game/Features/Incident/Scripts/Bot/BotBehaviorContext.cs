@@ -47,6 +47,7 @@ public class BotBehaviorContext : MonoBehaviour
     private readonly BotExtinguishOrderState extinguishOrderState = new BotExtinguishOrderState();
     private readonly BotFollowOrderState followOrderState = new BotFollowOrderState();
     private readonly BotRescueOrderState rescueOrderState = new BotRescueOrderState();
+    [SerializeField] private BotCommandIntentPayload activeCommandIntent;
     private int moveAnimationParameterHash;
     private int crouchAnimationParameterHash;
     private int crouchAnimationLayerIndex = -1;
@@ -60,6 +61,9 @@ public class BotBehaviorContext : MonoBehaviour
     public bool HasExtinguishOrder => extinguishOrderState.HasExtinguishOrder;
     public bool HasFollowOrder => followOrderState.HasFollowOrder;
     public bool HasRescueOrder => rescueOrderState.HasRescueOrder;
+    public bool HasCommandIntent => activeCommandIntent.IsValid;
+    public BotCommandType ActiveCommandType => activeCommandIntent.CommandType;
+    public BotCommandIntent ActiveCommandIntent => activeCommandIntent.Intent;
     public float ArrivalDistance => Mathf.Max(0.05f, arrivalDistance);
     public float PatrolWaitSeconds => Mathf.Max(0f, patrolWaitSeconds);
     public bool PatrolMovementEnabled => enablePatrolMovement;
@@ -110,6 +114,7 @@ public class BotBehaviorContext : MonoBehaviour
     public void SetMoveOrder(Vector3 destination)
     {
         moveOrderState.SetDestination(destination);
+        activeCommandIntent = BotCommandIntentPayload.Create(BotCommandType.Move, destination);
     }
 
     public bool TryGetMoveOrder(out Vector3 destination)
@@ -120,16 +125,22 @@ public class BotBehaviorContext : MonoBehaviour
     public void ClearMoveOrder()
     {
         moveOrderState.Clear();
+        if (BotCommandTypeUtility.UsesMoveOrder(activeCommandIntent.CommandType))
+        {
+            ClearCommandIntent();
+        }
     }
 
     public void SetExtinguishOrder(Vector3 destination)
     {
         extinguishOrderState.SetDestination(destination);
+        activeCommandIntent = BotCommandIntentPayload.CreateExtinguish(destination, destination, BotExtinguishCommandMode.Auto);
     }
 
     public void SetExtinguishOrder(Vector3 destination, Vector3 scanOrigin, BotExtinguishCommandMode mode)
     {
         extinguishOrderState.SetDestination(destination, scanOrigin, mode);
+        activeCommandIntent = BotCommandIntentPayload.CreateExtinguish(destination, scanOrigin, mode);
     }
 
     public bool TryGetExtinguishOrder(out Vector3 destination)
@@ -145,16 +156,37 @@ public class BotBehaviorContext : MonoBehaviour
     public void ClearExtinguishOrder()
     {
         extinguishOrderState.Clear();
+        if (activeCommandIntent.CommandType == BotCommandType.Extinguish)
+        {
+            ClearCommandIntent();
+        }
     }
 
     public void SetFollowOrder(BotFollowOrder order)
     {
         followOrderState.SetActive(order);
+        activeCommandIntent = BotCommandIntentPayload.CreateFollow(BotCommandType.Follow, order);
+    }
+
+    public void SetAssistOrder(BotFollowOrder order)
+    {
+        followOrderState.SetActive(order);
+        activeCommandIntent = BotCommandIntentPayload.CreateFollow(BotCommandType.Assist, order);
+    }
+
+    public void SetRegroupOrder(BotFollowOrder order)
+    {
+        followOrderState.SetActive(order);
+        activeCommandIntent = BotCommandIntentPayload.CreateFollow(BotCommandType.Regroup, order);
     }
 
     public void ClearFollowOrder()
     {
         followOrderState.Clear();
+        if (BotCommandTypeUtility.UsesFollowOrder(activeCommandIntent.CommandType))
+        {
+            ClearCommandIntent();
+        }
     }
 
     public bool TryGetFollowOrder(out BotFollowOrder order)
@@ -165,6 +197,30 @@ public class BotBehaviorContext : MonoBehaviour
     public void SetRescueOrder(Vector3 destination)
     {
         rescueOrderState.SetDestination(destination);
+        activeCommandIntent = BotCommandIntentPayload.Create(BotCommandType.Rescue, destination);
+    }
+
+    public void SetHoldOrder(Vector3 anchorPoint)
+    {
+        activeCommandIntent = BotCommandIntentPayload.Create(BotCommandType.Hold, anchorPoint);
+    }
+
+    public void SetSearchOrder(Vector3 destination)
+    {
+        moveOrderState.SetDestination(destination);
+        activeCommandIntent = BotCommandIntentPayload.Create(BotCommandType.Search, destination);
+    }
+
+    public void SetBreachOrder(Vector3 destination)
+    {
+        moveOrderState.SetDestination(destination);
+        activeCommandIntent = BotCommandIntentPayload.Create(BotCommandType.Breach, destination);
+    }
+
+    public void SetIsolateOrder(Vector3 destination)
+    {
+        moveOrderState.SetDestination(destination);
+        activeCommandIntent = BotCommandIntentPayload.Create(BotCommandType.Isolate, destination);
     }
 
     public bool TryGetRescueOrder(out Vector3 destination)
@@ -175,6 +231,10 @@ public class BotBehaviorContext : MonoBehaviour
     public void ClearRescueOrder()
     {
         rescueOrderState.Clear();
+        if (activeCommandIntent.CommandType == BotCommandType.Rescue)
+        {
+            ClearCommandIntent();
+        }
     }
 
     public void ClearAllOrders()
@@ -183,11 +243,12 @@ public class BotBehaviorContext : MonoBehaviour
         extinguishOrderState.Clear();
         followOrderState.Clear();
         rescueOrderState.Clear();
+        ClearCommandIntent();
     }
 
     public void ClearOrdersExcept(BotCommandType commandType)
     {
-        if (commandType != BotCommandType.Move)
+        if (!BotCommandTypeUtility.UsesMoveOrder(commandType))
         {
             moveOrderState.Clear();
         }
@@ -197,7 +258,7 @@ public class BotBehaviorContext : MonoBehaviour
             extinguishOrderState.Clear();
         }
 
-        if (commandType != BotCommandType.Follow)
+        if (!BotCommandTypeUtility.UsesFollowOrder(commandType))
         {
             followOrderState.Clear();
         }
@@ -206,6 +267,33 @@ public class BotBehaviorContext : MonoBehaviour
         {
             rescueOrderState.Clear();
         }
+
+        if (activeCommandIntent.CommandType != commandType)
+        {
+            ClearCommandIntent();
+        }
+    }
+
+    public bool TryGetCommandIntentSnapshot(out BotCommandIntentPayload payload)
+    {
+        if (!activeCommandIntent.IsValid)
+        {
+            payload = default;
+            return false;
+        }
+
+        payload = activeCommandIntent;
+        return true;
+    }
+
+    public void SetCommandIntent(BotCommandIntentPayload payload)
+    {
+        activeCommandIntent = payload;
+    }
+
+    public void ClearCommandIntent()
+    {
+        activeCommandIntent = default;
     }
 
     public int GetPatrolPointCount()

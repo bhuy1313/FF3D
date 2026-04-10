@@ -6,6 +6,7 @@ public partial class BotCommandAgent
 {
     internal void AbortActiveRescueOrder()
     {
+        FailCurrentTask("Rescue order aborted.", BotTaskStatus.Blocked);
         if (behaviorContext != null)
         {
             behaviorContext.ClearRescueOrder();
@@ -22,6 +23,7 @@ public partial class BotCommandAgent
 
     internal void CompleteActiveRescueOrder()
     {
+        CompleteCurrentTask("Rescue order completed.");
         if (behaviorContext != null)
         {
             behaviorContext.ClearRescueOrder();
@@ -57,7 +59,7 @@ public partial class BotCommandAgent
 
     private void ClearRescueRuntimeState()
     {
-        currentRescueTarget = null;
+        SetCurrentRescueTarget(null);
         currentSafeZoneTarget = null;
         activityDebug?.ResetRescue();
     }

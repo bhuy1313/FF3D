@@ -291,7 +291,7 @@ public partial class BotCommandAgent
             {
                 StopExtinguisher();
                 sprayReadyTime = -1f;
-                currentFireTarget = ResolveExtinguisherRouteTarget(orderPoint);
+                SetCurrentFireTarget(ResolveExtinguisherRouteTarget(orderPoint));
                 LogVerboseExtinguish(
                     VerboseExtinguishLogCategory.Targeting,
                     $"nextfire:{GetDebugTargetName(currentFireTarget)}",
@@ -359,6 +359,25 @@ public partial class BotCommandAgent
         foreach (IBotExtinguisherItem extinguisher in BotRuntimeRegistry.ActiveExtinguisherItems)
         {
             EvaluateWorldToolCandidate(extinguisher, orderPoint, firePosition, fireGroup, fireTarget, orderMode, searchRadiusSq, ref bestTool, ref bestScore);
+        }
+
+        if (bestTool == null &&
+            perceptionMemory != null &&
+            perceptionMemory.TryGetNearestRecentExtinguisher(transform.position, toolSearchRadius, gameObject, out IBotExtinguisherItem rememberedTool))
+        {
+            EvaluateWorldToolCandidate(rememberedTool, orderPoint, firePosition, fireGroup, fireTarget, orderMode, searchRadiusSq, ref bestTool, ref bestScore);
+        }
+
+        if (bestTool == null &&
+            BotRuntimeRegistry.SharedIncidentBlackboard.TryGetNearestRecentExtinguisher(transform.position, toolSearchRadius, gameObject, out IBotExtinguisherItem sharedTool))
+        {
+            EvaluateWorldToolCandidate(sharedTool, orderPoint, firePosition, fireGroup, fireTarget, orderMode, searchRadiusSq, ref bestTool, ref bestScore);
+        }
+
+        if (bestTool != null)
+        {
+            perceptionMemory?.RememberExtinguisher(bestTool);
+            BotRuntimeRegistry.SharedIncidentBlackboard.RememberExtinguisher(bestTool);
         }
 
         return bestTool;
@@ -491,17 +510,17 @@ public partial class BotCommandAgent
                 commandedPointFireTarget = null;
             }
 
-            currentFireTarget = localTarget;
+            SetCurrentFireTarget(localTarget);
             return currentFireTarget;
         }
 
         if (commandedPointFireTarget != null && commandedPointFireTarget.IsBurning)
         {
-            currentFireTarget = commandedPointFireTarget;
+            SetCurrentFireTarget(commandedPointFireTarget);
             return currentFireTarget;
         }
 
-        currentFireTarget = null;
+        SetCurrentFireTarget(null);
         commandedPointFireTarget = null;
         return currentFireTarget;
     }

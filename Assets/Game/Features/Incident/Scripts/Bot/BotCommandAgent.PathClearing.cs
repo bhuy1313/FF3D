@@ -75,7 +75,7 @@ public partial class BotCommandAgent
             return false;
         }
 
-        currentBlockedBreakable = blockedTarget;
+        SetCurrentBlockedBreakable(blockedTarget);
         UpdatePathClearingDebugStage(PathClearingDebugStage.BlockedByBreakable, $"Detected blocking breakable '{GetDebugTargetName(blockedTarget)}' at {blockedTarget.GetWorldPosition()}.");
         RefreshPathClearingResumeGrace();
         IBotBreakTool breakTool = ResolveCommittedBreakTool();
@@ -259,6 +259,11 @@ public partial class BotCommandAgent
                 continue;
             }
 
+            if (BotRuntimeRegistry.Reservations.IsReservedByOther(candidate, gameObject))
+            {
+                continue;
+            }
+
             Vector3 candidatePosition = candidate.GetWorldPosition();
             Vector3 toCandidate = candidatePosition - origin;
             float forwardDistance = Vector3.Dot(forwardDirection, toCandidate);
@@ -280,6 +285,20 @@ public partial class BotCommandAgent
                 bestDistance = forwardDistance;
                 breakableTarget = candidate;
             }
+        }
+
+        if (breakableTarget == null &&
+            perceptionMemory != null &&
+            perceptionMemory.TryGetNearestRecentBreakable(origin, breakableLookAheadDistance, out IBotBreakableTarget rememberedBreakable) &&
+            !BotRuntimeRegistry.Reservations.IsReservedByOther(rememberedBreakable, gameObject))
+        {
+            breakableTarget = rememberedBreakable;
+        }
+
+        if (breakableTarget == null &&
+            BotRuntimeRegistry.SharedIncidentBlackboard.TryGetNearestRecentBreakable(origin, breakableLookAheadDistance, gameObject, out IBotBreakableTarget sharedBreakable))
+        {
+            breakableTarget = sharedBreakable;
         }
 
         return breakableTarget != null;
@@ -439,12 +458,33 @@ public partial class BotCommandAgent
             }
         }
 
+        if (bestTool == null &&
+            perceptionMemory != null &&
+            perceptionMemory.TryGetNearestRecentBreakTool(transform.position, toolSearchRadius, gameObject, out IBotBreakTool rememberedTool) &&
+            (currentBlockedBreakable == null || currentBlockedBreakable.SupportsBreakTool(rememberedTool.ToolKind)) &&
+            !IsBreakToolBlockedByCurrentBreakable(rememberedTool) &&
+            !IsBreakToolTemporarilyRejected(rememberedTool))
+        {
+            bestTool = rememberedTool;
+        }
+
+        if (bestTool == null &&
+            BotRuntimeRegistry.SharedIncidentBlackboard.TryGetNearestRecentBreakTool(transform.position, toolSearchRadius, gameObject, out IBotBreakTool sharedTool) &&
+            (currentBlockedBreakable == null || currentBlockedBreakable.SupportsBreakTool(sharedTool.ToolKind)) &&
+            !IsBreakToolBlockedByCurrentBreakable(sharedTool) &&
+            !IsBreakToolTemporarilyRejected(sharedTool))
+        {
+            bestTool = sharedTool;
+        }
+
         if (bestTool == null || !bestTool.TryClaim(gameObject))
         {
             return null;
         }
 
         committedBreakTool = bestTool;
+        perceptionMemory?.RememberBreakTool(committedBreakTool);
+        BotRuntimeRegistry.SharedIncidentBlackboard.RememberBreakTool(committedBreakTool);
         LogVerbosePathClearing(
             VerbosePathClearingLogCategory.Tooling,
             $"claimbreaktool:{GetBreakToolName(committedBreakTool)}",
@@ -658,7 +698,7 @@ public partial class BotCommandAgent
     {
         SetPickupWindow(false);
         activeBreakTool = null;
-        currentBlockedBreakable = null;
+        SetCurrentBlockedBreakable(null);
         temporarilyRejectedBreakTool = null;
         temporarilyRejectedBreakable = null;
         nextBreakUseTime = 0f;

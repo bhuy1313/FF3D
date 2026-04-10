@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 public class WheelSelector : MonoBehaviour
 {
@@ -19,8 +20,20 @@ public class WheelSelector : MonoBehaviour
     [SerializeField] private GameObject menuItemPrefab;
     [SerializeField][Range(1, 16)] private int menuItemCount = 4;
     [SerializeField] private float menuItemRadius = 130f;
+    [SerializeField] private TMP_Text pageIndicatorLabel;
+    [SerializeField] private Image pageIndicatorBackground;
+    [SerializeField] private Vector2 pageIndicatorAnchoredPosition = new Vector2(0f, 154f);
+    [SerializeField] private Vector2 pageIndicatorSize = new Vector2(180f, 34f);
+    [SerializeField] private Color defaultWheelColor = new Color(0f, 1f, 0.63f, 0.5f);
+    [SerializeField] private Color defaultLabelColor = Color.white;
+    [SerializeField] private Color defaultIndicatorBackgroundColor = new Color(0f, 0f, 0f, 0.72f);
 
     private bool isSelectionWheelActive = false;
+    private string currentPageLabel = "Core";
+    private Color currentWheelColor;
+    private Color currentLabelColor;
+    private Color currentIndicatorBackgroundColor;
+    private string[] currentSlotLabels;
 
     public bool IsSelectionWheelActive => isSelectionWheelActive;
     public System.Action<int> OnOptionSelected;
@@ -56,7 +69,14 @@ public class WheelSelector : MonoBehaviour
     {
         player = GameObject.Find("Player");
         previousSelection = -1;
+        currentWheelColor = defaultWheelColor;
+        currentLabelColor = defaultLabelColor;
+        currentIndicatorBackgroundColor = defaultIndicatorBackgroundColor;
         InitializeMenuItems();
+        EnsurePageIndicator();
+        RefreshPageIndicator();
+        ApplyWheelTheme();
+        ApplySlotLabels();
         if (selectionWheelCanvasGroup != null)
         {
             selectionWheelCanvasGroup.alpha = 0f;
@@ -154,6 +174,171 @@ public class WheelSelector : MonoBehaviour
             }
         }
         menuItemsParent.GetComponent<RectTransform>().localRotation = Quaternion.Euler(0f, 0f, -360f / menuItemCount);
+        ApplySlotLabels();
+    }
+
+    public void SetPageTheme(string pageLabel, Color wheelColor)
+    {
+        SetPageTheme(pageLabel, wheelColor, defaultLabelColor, defaultIndicatorBackgroundColor);
+    }
+
+    public void SetPageTheme(string pageLabel, Color wheelColor, Color labelColor, Color indicatorBackgroundColor)
+    {
+        currentPageLabel = string.IsNullOrWhiteSpace(pageLabel) ? "Commands" : pageLabel;
+        currentWheelColor = wheelColor;
+        currentLabelColor = labelColor;
+        currentIndicatorBackgroundColor = indicatorBackgroundColor;
+        RefreshPageIndicator();
+        ApplyWheelTheme();
+    }
+
+    public void SetSlotLabels(string[] labels)
+    {
+        currentSlotLabels = labels;
+        ApplySlotLabels();
+    }
+
+    private void ApplyWheelTheme()
+    {
+        if (menuItems == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < menuItems.Length; i++)
+        {
+            GameObject menuItem = menuItems[i];
+            if (menuItem == null)
+            {
+                continue;
+            }
+
+            Transform bgTransform = menuItem.transform.Find("BgW");
+            if (bgTransform == null)
+            {
+                continue;
+            }
+
+            Image bgImage = bgTransform.GetComponent<Image>();
+            if (bgImage != null)
+            {
+                bgImage.color = currentWheelColor;
+            }
+        }
+    }
+
+    private void ApplySlotLabels()
+    {
+        if (menuItems == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < menuItems.Length; i++)
+        {
+            GameObject menuItem = menuItems[i];
+            if (menuItem == null)
+            {
+                continue;
+            }
+
+            MenuItemS item = menuItem.GetComponent<MenuItemS>();
+            if (item == null)
+            {
+                continue;
+            }
+
+            string label = currentSlotLabels != null && i < currentSlotLabels.Length
+                ? currentSlotLabels[i]
+                : (i + 1).ToString();
+            item.SetDisplayLabel(label);
+        }
+    }
+
+    private void EnsurePageIndicator()
+    {
+        if (selectionWheelCanvas == null)
+        {
+            return;
+        }
+
+        RectTransform canvasRect = selectionWheelCanvas.GetComponent<RectTransform>();
+        if (canvasRect == null)
+        {
+            return;
+        }
+
+        if (pageIndicatorBackground == null)
+        {
+            Transform existing = canvasRect.Find("PageIndicatorBackground");
+            if (existing != null)
+            {
+                pageIndicatorBackground = existing.GetComponent<Image>();
+            }
+        }
+
+        if (pageIndicatorBackground == null)
+        {
+            GameObject backgroundObject = new GameObject("PageIndicatorBackground", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            RectTransform backgroundRect = backgroundObject.GetComponent<RectTransform>();
+            backgroundRect.SetParent(canvasRect, false);
+            backgroundRect.anchorMin = new Vector2(0.5f, 0.5f);
+            backgroundRect.anchorMax = new Vector2(0.5f, 0.5f);
+            backgroundRect.pivot = new Vector2(0.5f, 0.5f);
+            backgroundRect.anchoredPosition = pageIndicatorAnchoredPosition;
+            backgroundRect.sizeDelta = pageIndicatorSize;
+
+            pageIndicatorBackground = backgroundObject.GetComponent<Image>();
+            pageIndicatorBackground.raycastTarget = false;
+        }
+
+        if (pageIndicatorLabel == null)
+        {
+            Transform existing = pageIndicatorBackground.transform.Find("PageIndicatorLabel");
+            if (existing != null)
+            {
+                pageIndicatorLabel = existing.GetComponent<TMP_Text>();
+            }
+        }
+
+        if (pageIndicatorLabel == null)
+        {
+            GameObject textObject = new GameObject("PageIndicatorLabel", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+            RectTransform textRect = textObject.GetComponent<RectTransform>();
+            textRect.SetParent(pageIndicatorBackground.transform, false);
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
+
+            TextMeshProUGUI text = textObject.GetComponent<TextMeshProUGUI>();
+            text.alignment = TextAlignmentOptions.Center;
+            text.fontSize = 20f;
+            text.fontStyle = FontStyles.Bold;
+            text.enableAutoSizing = false;
+            text.raycastTarget = false;
+            text.textWrappingMode = TextWrappingModes.NoWrap;
+            pageIndicatorLabel = text;
+        }
+    }
+
+    private void RefreshPageIndicator()
+    {
+        EnsurePageIndicator();
+
+        if (pageIndicatorBackground != null)
+        {
+            pageIndicatorBackground.color = currentIndicatorBackgroundColor;
+            RectTransform backgroundRect = pageIndicatorBackground.rectTransform;
+            backgroundRect.anchoredPosition = pageIndicatorAnchoredPosition;
+            backgroundRect.sizeDelta = pageIndicatorSize;
+        }
+
+        if (pageIndicatorLabel != null)
+        {
+            pageIndicatorLabel.text = currentPageLabel;
+            pageIndicatorLabel.color = currentLabelColor;
+        }
     }
 
     private void Update()

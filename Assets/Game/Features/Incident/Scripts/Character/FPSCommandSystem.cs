@@ -11,6 +11,32 @@ namespace StarterAssets
 {
     public class FPSCommandSystem : MonoBehaviour
     {
+        private readonly struct CommandWheelPage
+        {
+            public CommandWheelPage(string label, BotCommandType slot0, BotCommandType slot1, BotCommandType slot2, BotCommandType slot3)
+            {
+                Label = label;
+                Commands = new[] { slot0, slot1, slot2, slot3 };
+            }
+
+            public string Label { get; }
+            public BotCommandType[] Commands { get; }
+        }
+
+        private static readonly CommandWheelPage[] CommandWheelPages =
+        {
+            new CommandWheelPage("Core", BotCommandType.Move, BotCommandType.Extinguish, BotCommandType.Follow, BotCommandType.Rescue),
+            new CommandWheelPage("Squad", BotCommandType.Hold, BotCommandType.Assist, BotCommandType.Regroup, BotCommandType.Search),
+            new CommandWheelPage("Ops", BotCommandType.Breach, BotCommandType.Isolate, BotCommandType.Move, BotCommandType.Follow)
+        };
+
+        private static readonly Color[] CommandWheelPageColors =
+        {
+            new Color(0f, 1f, 0.63f, 0.5f),
+            new Color(0.16f, 0.64f, 1f, 0.5f),
+            new Color(1f, 0.54f, 0.12f, 0.5f)
+        };
+
         [Header("References")]
         [SerializeField] private Camera viewCamera;
         [SerializeField] private FPSInteractionSystem interactionSystem;
@@ -26,6 +52,7 @@ namespace StarterAssets
         [SerializeField] private KeyCode cancelCommandKey = KeyCode.Escape;
         [SerializeField] private KeyCode cancelAllFollowKey = KeyCode.X;
         [SerializeField] private KeyCode toggleBotOutlineKey = KeyCode.Z;
+        [SerializeField] private KeyCode cycleCommandPageKey = KeyCode.Tab;
         [SerializeField] private float destinationRayDistance = 200f;
         [SerializeField] private LayerMask destinationMask = ~0;
 
@@ -71,6 +98,7 @@ namespace StarterAssets
         private bool isAwaitingCommandSelection;
         private ICommandable pendingCommandable;
         private GameObject pendingCommandTarget;
+        [SerializeField] private int activeCommandPageIndex;
 
         public GameObject HoveredCommandTarget => hoveredCommandTarget;
         public GameObject SelectedCommandTarget => selectedCommandTarget;
@@ -96,6 +124,7 @@ namespace StarterAssets
             if (wheelSelector != null)
             {
                 wheelSelector.OnOptionSelected += OnWheelOptionSelected;
+                ApplyActiveCommandPageTheme();
             }
 
             BotOutlineVisibilityManager.ConfigureRenderingLayer(botOutlineRenderingLayer);
@@ -148,6 +177,7 @@ namespace StarterAssets
 
             if (isAwaitingCommandSelection)
             {
+                UpdateCommandSelectionPageInput();
                 // waiting for the wheel command choice
                 return;
             }
@@ -216,6 +246,7 @@ namespace StarterAssets
 
             if (wheelSelector != null)
             {
+                ApplyActiveCommandPageTheme();
                 wheelSelector.OpenWheel();
             }
 
@@ -259,7 +290,7 @@ namespace StarterAssets
             pendingCommandable = null;
             pendingCommandTarget = null;
 
-            if (commandType == BotCommandType.Follow)
+            if (BotCommandTypeUtility.UsesImmediateConfirmation(commandType))
             {
                 destinationConfirmClickGate.Reset();
                 TryConfirmImmediateCommand(commandType);
@@ -277,19 +308,19 @@ namespace StarterAssets
 
         private BotCommandType MapWheelIndexToCommand(int selectedIndex)
         {
-            switch (selectedIndex)
+            if (selectedIndex < 0 || selectedIndex >= 4 || CommandWheelPages.Length == 0)
             {
-                case 0:
-                    return BotCommandType.Move;
-                case 1:
-                    return BotCommandType.Extinguish;
-                case 2:
-                    return BotCommandType.Follow;
-                case 3:
-                    return BotCommandType.Rescue;
-                default:
-                    return BotCommandType.None;
+                return BotCommandType.None;
             }
+
+            int pageIndex = Mathf.Clamp(activeCommandPageIndex, 0, CommandWheelPages.Length - 1);
+            BotCommandType[] commands = CommandWheelPages[pageIndex].Commands;
+            if (commands == null || selectedIndex >= commands.Length)
+            {
+                return BotCommandType.None;
+            }
+
+            return commands[selectedIndex];
         }
 
         private void TryConfirmImmediateCommand(BotCommandType commandType)
@@ -324,6 +355,48 @@ namespace StarterAssets
             selectedCommandTarget = null;
             UpdateTargetOutline(null);
             hasPreviewPoint = false;
+        }
+
+        private void UpdateCommandSelectionPageInput()
+        {
+            if (CommandWheelPages.Length <= 1)
+            {
+                return;
+            }
+
+            bool cycleForward = Input.GetKeyDown(cycleCommandPageKey);
+            float scroll = Input.mouseScrollDelta.y;
+            if (!cycleForward && Mathf.Abs(scroll) < 0.01f)
+            {
+                return;
+            }
+
+            int direction = cycleForward
+                ? 1
+                : (scroll > 0f ? 1 : -1);
+            CycleCommandPage(direction);
+        }
+
+        private void CycleCommandPage(int direction)
+        {
+            if (CommandWheelPages.Length == 0 || direction == 0)
+            {
+                return;
+            }
+
+            int pageCount = CommandWheelPages.Length;
+            activeCommandPageIndex = (activeCommandPageIndex + direction) % pageCount;
+            if (activeCommandPageIndex < 0)
+            {
+                activeCommandPageIndex += pageCount;
+            }
+
+            if (logCommandSelection)
+            {
+                Debug.Log($"[FPSCommandSystem] Command page -> {GetActiveCommandPageLabel()}.", this);
+            }
+
+            ApplyActiveCommandPageTheme();
         }
 
         private void TryConfirmPendingCommand()
@@ -1140,11 +1213,15 @@ namespace StarterAssets
 
             string hoveredName = GetTargetName(hoveredCommandTarget);
             string selectedName = GetTargetName(selectedCommandTarget);
-            string status = IsAwaitingDestination ? "Awaiting destination" : "Idle";
+            string status = isAwaitingCommandSelection
+                ? "Awaiting command"
+                : (IsAwaitingDestination ? "Awaiting destination" : "Idle");
             string debugText =
                 $"Bot Hovered: {hoveredName}\n" +
                 $"Bot Selected: {selectedName}\n" +
-                $"Command State: {status}";
+                $"Command State: {status}\n" +
+                $"Command Page: {GetActiveCommandPageLabel()}\n" +
+                GetCommandPageLegend();
 
             Vector2 size = debugGuiStyle.CalcSize(new GUIContent(debugText));
             Rect rect = new Rect(
@@ -1186,6 +1263,125 @@ namespace StarterAssets
         private static string GetTargetName(GameObject target)
         {
             return target != null ? target.name : "(none)";
+        }
+
+        private string GetActiveCommandPageLabel()
+        {
+            if (CommandWheelPages.Length == 0)
+            {
+                return "(none)";
+            }
+
+            int pageIndex = Mathf.Clamp(activeCommandPageIndex, 0, CommandWheelPages.Length - 1);
+            return CommandWheelPages[pageIndex].Label;
+        }
+
+        private void ApplyActiveCommandPageTheme()
+        {
+            if (wheelSelector == null || CommandWheelPages.Length == 0)
+            {
+                return;
+            }
+
+            int pageIndex = Mathf.Clamp(activeCommandPageIndex, 0, CommandWheelPages.Length - 1);
+            Color pageColor = pageIndex < CommandWheelPageColors.Length
+                ? CommandWheelPageColors[pageIndex]
+                : CommandWheelPageColors[0];
+            Color indicatorColor = new Color(pageColor.r * 0.45f, pageColor.g * 0.45f, pageColor.b * 0.45f, 0.88f);
+            wheelSelector.SetPageTheme(CommandWheelPages[pageIndex].Label, pageColor, Color.white, indicatorColor);
+            wheelSelector.SetSlotLabels(BuildCommandPageSlotLabels(CommandWheelPages[pageIndex].Commands));
+        }
+
+        private static string[] BuildCommandPageSlotLabels(BotCommandType[] commands)
+        {
+            if (commands == null || commands.Length == 0)
+            {
+                return new[] { "1", "2", "3", "4" };
+            }
+
+            string[] labels = new string[commands.Length];
+            for (int i = 0; i < commands.Length; i++)
+            {
+                labels[i] = GetCommandWheelLabel(commands[i]);
+            }
+
+            return labels;
+        }
+
+        private static string GetCommandWheelLabel(BotCommandType commandType)
+        {
+            switch (commandType)
+            {
+                case BotCommandType.Extinguish:
+                    return "Ext";
+                case BotCommandType.Follow:
+                    return "Follow";
+                case BotCommandType.Rescue:
+                    return "Rescue";
+                case BotCommandType.Hold:
+                    return "Hold";
+                case BotCommandType.Breach:
+                    return "Breach";
+                case BotCommandType.Isolate:
+                    return "Iso";
+                case BotCommandType.Search:
+                    return "Search";
+                case BotCommandType.Assist:
+                    return "Assist";
+                case BotCommandType.Regroup:
+                    return "Group";
+                case BotCommandType.Move:
+                    return "Move";
+                default:
+                    return "-";
+            }
+        }
+
+        private string GetCommandPageLegend()
+        {
+            if (CommandWheelPages.Length == 0)
+            {
+                return "Slots: (none)";
+            }
+
+            int pageIndex = Mathf.Clamp(activeCommandPageIndex, 0, CommandWheelPages.Length - 1);
+            BotCommandType[] commands = CommandWheelPages[pageIndex].Commands;
+            if (commands == null || commands.Length == 0)
+            {
+                return "Slots: (none)";
+            }
+
+            return
+                $"Slots: 1={GetCommandLabel(commands[0])}, 2={GetCommandLabel(commands[1])}, 3={GetCommandLabel(commands[2])}, 4={GetCommandLabel(commands[3])}";
+        }
+
+        private static string GetCommandLabel(BotCommandType commandType)
+        {
+            switch (commandType)
+            {
+                case BotCommandType.Extinguish:
+                    return "Extinguish";
+                case BotCommandType.Follow:
+                    return "Follow";
+                case BotCommandType.Rescue:
+                    return "Rescue";
+                case BotCommandType.Hold:
+                    return "Hold";
+                case BotCommandType.Breach:
+                    return "Breach";
+                case BotCommandType.Isolate:
+                    return "Isolate";
+                case BotCommandType.Search:
+                    return "Search";
+                case BotCommandType.Assist:
+                    return "Assist";
+                case BotCommandType.Regroup:
+                    return "Regroup";
+                case BotCommandType.Move:
+                    return "Move";
+                default:
+                    return "None";
+            }
         }
 
         private bool WasCommandActionPressedThisFrame(string actionName, KeyCode fallbackKey)

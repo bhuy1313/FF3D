@@ -9,20 +9,28 @@ namespace TrueJourney.BotBehavior
         private static readonly HashSet<IFireGroupTarget> FireGroupTargets = new HashSet<IFireGroupTarget>();
         private static readonly HashSet<IBotBreakTool> BreakTools = new HashSet<IBotBreakTool>();
         private static readonly HashSet<IBotBreakableTarget> BreakableTargets = new HashSet<IBotBreakableTarget>();
+        private static readonly HashSet<IBotPryTarget> PryTargets = new HashSet<IBotPryTarget>();
         private static readonly HashSet<IRescuableTarget> RescuableTargets = new HashSet<IRescuableTarget>();
         private static readonly HashSet<ISafeZoneTarget> SafeZoneTargets = new HashSet<ISafeZoneTarget>();
+        private static readonly HashSet<IBotHazardIsolationTarget> HazardIsolationTargets = new HashSet<IBotHazardIsolationTarget>();
         private static readonly HashSet<global::BotCommandAgent> CommandAgents = new HashSet<global::BotCommandAgent>();
         private static readonly HashSet<IThermalSignatureSource> ThermalSignatureSources = new HashSet<IThermalSignatureSource>();
+        private static readonly global::BotReservationSystem ReservationState = new global::BotReservationSystem();
+        private static readonly BotSharedIncidentBlackboard SharedIncidentState = new BotSharedIncidentBlackboard();
 
         public static IEnumerable<IBotExtinguisherItem> ActiveExtinguisherItems => ExtinguisherItems;
         public static IEnumerable<IFireTarget> ActiveFireTargets => FireTargets;
         public static IEnumerable<IFireGroupTarget> ActiveFireGroups => FireGroupTargets;
         public static IEnumerable<IBotBreakTool> ActiveBreakTools => BreakTools;
         public static IEnumerable<IBotBreakableTarget> ActiveBreakableTargets => BreakableTargets;
+        public static IEnumerable<IBotPryTarget> ActivePryTargets => PryTargets;
         public static IEnumerable<IRescuableTarget> ActiveRescuableTargets => RescuableTargets;
         public static IEnumerable<ISafeZoneTarget> ActiveSafeZones => SafeZoneTargets;
+        public static IEnumerable<IBotHazardIsolationTarget> ActiveHazardIsolationTargets => HazardIsolationTargets;
         public static IEnumerable<global::BotCommandAgent> ActiveCommandAgents => CommandAgents;
         public static IEnumerable<IThermalSignatureSource> ActiveThermalSignatureSources => ThermalSignatureSources;
+        public static global::BotReservationSystem Reservations => ReservationState;
+        public static BotSharedIncidentBlackboard SharedIncidentBlackboard => SharedIncidentState;
 
         public static void RegisterCommandAgent(global::BotCommandAgent agent)
         {
@@ -112,11 +120,27 @@ namespace TrueJourney.BotBehavior
             }
         }
 
+        public static void RegisterPryTarget(IBotPryTarget target)
+        {
+            if (target != null)
+            {
+                PryTargets.Add(target);
+            }
+        }
+
         public static void UnregisterBreakableTarget(IBotBreakableTarget target)
         {
             if (target != null)
             {
                 BreakableTargets.Remove(target);
+            }
+        }
+
+        public static void UnregisterPryTarget(IBotPryTarget target)
+        {
+            if (target != null)
+            {
+                PryTargets.Remove(target);
             }
         }
 
@@ -149,6 +173,22 @@ namespace TrueJourney.BotBehavior
             if (target != null)
             {
                 SafeZoneTargets.Remove(target);
+            }
+        }
+
+        public static void RegisterHazardIsolationTarget(IBotHazardIsolationTarget target)
+        {
+            if (target != null)
+            {
+                HazardIsolationTargets.Add(target);
+            }
+        }
+
+        public static void UnregisterHazardIsolationTarget(IBotHazardIsolationTarget target)
+        {
+            if (target != null)
+            {
+                HazardIsolationTargets.Remove(target);
             }
         }
 

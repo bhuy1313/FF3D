@@ -7,7 +7,7 @@ using TrueJourney.BotBehavior;
 [DisallowMultipleComponent]
 [RequireComponent(typeof(NavMeshAgent))]
 [RequireComponent(typeof(BotEquippedItemPoseDriver))]
-public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractable
+public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInteractable
 {
     private const float MinExtinguisherStandOffDistance = 0.25f;
     private const float ExtinguisherRangeSlack = 0.1f;
@@ -138,6 +138,14 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
     [SerializeField] private Vector3 rescueCarryLocalPosition = new Vector3(0f, 1.1f, 0.6f);
     [SerializeField] private Vector3 rescueDropOffset = new Vector3(0.75f, 0f, 0f);
 
+    [Header("Hazard Isolation")]
+    [SerializeField] private float hazardIsolationSearchRadius = 6f;
+    [SerializeField] private float hazardIsolationInteractionDistance = 1.75f;
+
+    [Header("Breach")]
+    [SerializeField] private float breachSearchRadius = 6f;
+    [SerializeField] private float breachInteractionDistance = 1.75f;
+
     [Header("Gizmos")]
     [SerializeField] private bool drawDestinationGizmo = true;
     [SerializeField] private bool drawAimGizmo = true;
@@ -150,6 +158,7 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
     private bool hasIssuedDestination;
     private BotInventorySystem inventorySystem;
     private BotInteractionSensor interactionSensor;
+    private BotPerceptionMemory perceptionMemory;
     private IBotExtinguisherItem activeExtinguisher;
     private IBotExtinguisherItem preferredExtinguishTool;
     private IBotExtinguisherItem committedExtinguishTool;
@@ -168,6 +177,9 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
     private bool lockedExtinguisherHasConfirmedLineOfSight;
     private IRescuableTarget currentRescueTarget;
     private ISafeZoneTarget currentSafeZoneTarget;
+    private IBotPryTarget currentBreachPryTarget;
+    private IBotHazardIsolationTarget currentHazardIsolationTarget;
+    private float cachedHazardIsolationStoppingDistance = -1f;
     private Vector3 currentExtinguishTargetPosition;
     private Vector3 currentExtinguishAimPoint;
     private Vector3 currentExtinguishLaunchDirection;
@@ -225,6 +237,7 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
     public bool IsUsingEquippedItemPose => IsExtinguisherUsePoseActive();
     public float CurrentCarryWeightKg => ResolveCurrentCarryWeightKg();
     public bool IsCarryingRescueTarget => ResolveCarriedRescueTarget() != null;
+    internal BotPerceptionMemory PerceptionMemory => perceptionMemory;
 
     private void Awake()
     {
@@ -240,6 +253,7 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
 
         inventorySystem = GetComponent<BotInventorySystem>();
         interactionSensor = GetComponent<BotInteractionSensor>();
+        perceptionMemory = GetComponent<BotPerceptionMemory>();
         runtimeDecisionService = new BotRuntimeDecisionService();
         navigationModule = new BotCommandNavigationModule(this);
         commandExecutionModule = new BotCommandExecutionModule(this);
@@ -267,6 +281,8 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
     private void OnDisable()
     {
         RestoreMovementSpeedDefaults();
+        ReleaseAllTaskReservations();
+        ClearCurrentTask();
         BotRuntimeRegistry.UnregisterCommandAgent(this);
     }
 
@@ -293,11 +309,13 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
 
         if (behaviorContext == null)
         {
+            RefreshTaskState();
             return;
         }
 
         if (behaviorContext.HasExtinguishOrder)
         {
+            RefreshTaskState();
             RunExtinguishController();
             return;
         }
@@ -305,6 +323,7 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
         if (behaviorContext.HasRescueOrder)
         {
             PrepareNonExtinguishCommandRuntime();
+            RefreshTaskState();
             RunRescueController();
             return;
         }
@@ -318,7 +337,24 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
         if (behaviorContext.HasFollowOrder)
         {
             PrepareNonExtinguishCommandRuntime();
+            RefreshTaskState();
             ProcessFollowOrder();
+            return;
+        }
+
+        if (IsBreachCommandActive())
+        {
+            PrepareNonExtinguishCommandRuntime();
+            RefreshTaskState();
+            RunBreachController();
+            return;
+        }
+
+        if (IsHazardIsolationCommandActive())
+        {
+            PrepareNonExtinguishCommandRuntime();
+            RefreshTaskState();
+            RunHazardIsolationController();
             return;
         }
 
@@ -327,6 +363,7 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
         if (HasMovePickupTarget &&
             (behaviorContext == null || !behaviorContext.UseMoveOrdersAsBehaviorInput))
         {
+            RefreshTaskState();
             if (TryCompleteMovePickupTarget())
             {
                 if (navMeshAgent != null && navMeshAgent.enabled && navMeshAgent.isOnNavMesh)
@@ -339,6 +376,8 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
 
             return;
         }
+
+        RefreshTaskState();
 
         if (!behaviorContext.HasMoveOrder)
         {
@@ -393,6 +432,16 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
         return commandExecutionModule != null && commandExecutionModule.TryIssueCommand(commandType, worldPoint);
     }
 
+    public bool CanAcceptCommandIntent(BotCommandIntentPayload payload)
+    {
+        return commandExecutionModule != null && commandExecutionModule.CanAcceptCommandIntent(payload);
+    }
+
+    public bool TryIssueCommandIntent(BotCommandIntentPayload payload)
+    {
+        return commandExecutionModule != null && commandExecutionModule.TryIssueCommandIntent(payload);
+    }
+
     public bool TryIssueExtinguishCommand(
         Vector3 scanOrigin,
         BotExtinguishCommandMode mode,
@@ -442,15 +491,39 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
             rescueDropOffset);
     }
 
+    private void RunHazardIsolationController()
+    {
+        ProcessHazardIsolationCommand();
+    }
+
+    private void RunBreachController()
+    {
+        ProcessBreachCommand();
+    }
+
     private void PrepareNonExtinguishCommandRuntime()
     {
         ClearHandAimFocus();
+        ClearInactiveTacticalCommandRuntime();
         if (activityDebug == null || !activityDebug.HasExtinguishDebugStage)
         {
             return;
         }
 
         ClearExtinguishRuntimeState();
+    }
+
+    private void ClearInactiveTacticalCommandRuntime()
+    {
+        if (!IsBreachCommandActive())
+        {
+            SetCurrentBreachPryTarget(null);
+        }
+
+        if (!IsHazardIsolationCommandActive())
+        {
+            ClearHazardIsolationRuntimeState();
+        }
     }
 
     private void PrepareForIssuedCommand(BotCommandType commandType)
@@ -482,7 +555,7 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
     internal IRescuableTarget CurrentRescueTarget
     {
         get => currentRescueTarget;
-        set => currentRescueTarget = value;
+        set => SetCurrentRescueTarget(value);
     }
 
     internal IRescuableTarget CurrentCarriedRescueTarget => ResolveCarriedRescueTarget();
@@ -628,21 +701,25 @@ public partial class BotCommandAgent : MonoBehaviour, ICommandable, IInteractabl
         return true;
     }
 
-    private BotFollowOrder CreateFollowOrder()
+    private BotFollowOrder CreateFollowOrder(BotCommandType commandType = BotCommandType.Follow)
     {
         Transform initialTarget = runtimeDecisionService != null
-            ? runtimeDecisionService.ResolveFollowTarget(null, followTargetTag)
+            ? runtimeDecisionService.ResolveFollowTarget(null, followTargetTag, perceptionMemory)
             : null;
-        Vector3 localOffset = defaultFollowMode == BotFollowMode.Escort
+        BotFollowMode followMode = commandType == BotCommandType.Regroup
+            ? BotFollowMode.Escort
+            : defaultFollowMode;
+        bool allowAssist = commandType == BotCommandType.Assist || commandType == BotCommandType.Regroup || followAllowAssist;
+        Vector3 localOffset = followMode == BotFollowMode.Escort
             ? escortFollowOffset
             : Vector3.zero;
         return new BotFollowOrder(
             initialTarget,
             followTargetTag,
-            defaultFollowMode,
+            followMode,
             followDistance,
             localOffset,
-            followAllowAssist);
+            allowAssist);
     }
 
 }

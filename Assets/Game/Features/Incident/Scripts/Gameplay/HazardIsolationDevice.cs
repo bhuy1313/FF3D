@@ -1,9 +1,10 @@
 using System.Collections;
+using TrueJourney.BotBehavior;
 using UnityEngine;
 using UnityEngine.Events;
 
 [DisallowMultipleComponent]
-public class HazardIsolationDevice : MonoBehaviour, IInteractable
+public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIsolationTarget
 {
     private enum IsolationHazardType
     {
@@ -56,8 +57,10 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable
     public bool IsIsolated => isIsolated;
     public bool IsTransitionInProgress => isTransitionInProgress;
     public bool IsHazardActive => !isIsolated;
+    public bool IsInteractionAvailable => !isTransitionInProgress;
     public string CurrentStateSummary => currentStateSummary;
     public string HazardDisplayName => ResolveHazardDisplayName();
+    public FireHazardType HazardType => ResolveFireHazardType();
 
     private Coroutine transitionRoutine;
     private PlayerActionLock activePlayerLock;
@@ -70,6 +73,7 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable
 
     private void OnEnable()
     {
+        BotRuntimeRegistry.RegisterHazardIsolationTarget(this);
         ResolveLinkedFires();
         ApplyIsolationState(startsIsolated, invokeEvents: false);
     }
@@ -84,6 +88,7 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable
 
         isTransitionInProgress = false;
         ReleasePlayerLock();
+        BotRuntimeRegistry.UnregisterHazardIsolationTarget(this);
     }
 
     private void OnValidate()
@@ -133,6 +138,11 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable
         }
 
         ApplyIsolationState(false, invokeEvents: true);
+    }
+
+    public Vector3 GetWorldPosition()
+    {
+        return transform.position;
     }
 
     private void ApplyIsolationState(bool isolated, bool invokeEvents)

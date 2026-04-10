@@ -1,9 +1,10 @@
 using System.Collections;
+using TrueJourney.BotBehavior;
 using UnityEngine;
 using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
-public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmokeVentPoint
+public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmokeVentPoint, IBotPryTarget
 {
     public enum DoorLockMode
     {
@@ -47,12 +48,19 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
     public bool IsLocked => isLocked;
     public DoorLockMode LockMode => lockMode;
     public bool CanBePriedOpen => !isOpen && isLocked && lockMode == DoorLockMode.SoftLockedCrowbar && !isPryInProgress;
+    public bool IsPryInProgress => isPryInProgress;
+    public bool IsBreached => isOpen || !isLocked || lockMode != DoorLockMode.SoftLockedCrowbar;
     public float SmokeVentilationRelief => isOpen ? smokeVentilationReliefWhenOpen : 0f;
     public float FireDraftRisk => isOpen ? fireDraftRiskWhenOpen : 0f;
 
     private void Awake()
     {
         InitializeDoorState();
+    }
+
+    private void OnEnable()
+    {
+        BotRuntimeRegistry.RegisterPryTarget(this);
     }
 
     private void OnValidate()
@@ -70,6 +78,7 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
     private void OnDisable()
     {
         CancelActivePry();
+        BotRuntimeRegistry.UnregisterPryTarget(this);
     }
 
     private void Update()
@@ -136,6 +145,11 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
         AcquirePryLock(interactor);
         pryRoutine = StartCoroutine(PryOpenAfterDelay(Mathf.Max(0.01f, pryOpenDuration), interactor));
         return true;
+    }
+
+    public Vector3 GetWorldPosition()
+    {
+        return transform.position;
     }
 
     private void InitializeDoorState()

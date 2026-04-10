@@ -21,7 +21,7 @@ public sealed class BotFollowController
         float escortSlotPreferenceBias)
     {
         Transform seededTarget = followOrder.Target != null ? followOrder.Target : owner.CurrentFollowTarget;
-        Transform target = decisionService.ResolveFollowTarget(seededTarget, followOrder.TargetTag);
+        Transform target = decisionService.ResolveFollowTarget(seededTarget, followOrder.TargetTag, owner.PerceptionMemory);
         if (target == null)
         {
             owner.CurrentFollowTarget = null;
