@@ -22,6 +22,7 @@ public partial class BotCommandAgent
         Vector3 orderPoint = intent.HasWorldPoint
             ? intent.WorldPoint
             : hasIssuedDestination ? lastIssuedDestination : transform.position;
+        SetBreakSubtask(BotBreakSubtask.AcquireTarget, "Acquiring breach target.");
 
         if (currentBreachPryTarget != null && currentBreachPryTarget.IsBreached && !currentBreachPryTarget.IsPryInProgress)
         {
@@ -160,6 +161,7 @@ public partial class BotCommandAgent
         float interactionDistance = Mathf.Max(0.5f, breachInteractionDistance);
         if ((targetPosition - transform.position).sqrMagnitude > interactionDistance * interactionDistance)
         {
+            SetBreakSubtask(BotBreakSubtask.MoveToObstacle, $"Moving to pry target '{GetDebugTargetName(target)}'.");
             TryNavigateTo(targetPosition);
             return;
         }
@@ -179,6 +181,7 @@ public partial class BotCommandAgent
 
         if (target.IsPryInProgress)
         {
+            SetBreakSubtask(BotBreakSubtask.Pry, $"Prying '{GetDebugTargetName(target)}'.");
             return;
         }
 
@@ -199,6 +202,8 @@ public partial class BotCommandAgent
             AbortBreachOrder("Failed to start prying the assigned breach target.");
             return;
         }
+
+        SetBreakSubtask(BotBreakSubtask.Pry, $"Prying '{GetDebugTargetName(target)}'.");
 
         if (target.IsBreached && !target.IsPryInProgress)
         {
@@ -309,6 +314,8 @@ public partial class BotCommandAgent
 
     private void CompleteBreachOrder(string detail)
     {
+        lastBreakFailureReason = string.Empty;
+        SetBreakSubtask(BotBreakSubtask.Complete, detail);
         CompleteCurrentTask(detail);
         if (behaviorContext != null)
         {
@@ -334,6 +341,7 @@ public partial class BotCommandAgent
 
     private void AbortBreachOrder(string detail)
     {
+        SetBreakFailureReason(detail);
         FailCurrentTask(detail, BotTaskStatus.Blocked);
         if (behaviorContext != null)
         {
@@ -361,5 +369,9 @@ public partial class BotCommandAgent
     {
         SetCurrentBreachPryTarget(null);
         SetCurrentBlockedBreakable(null);
+        currentBreakSubtask = BotBreakSubtask.None;
+        breakTaskDetail = "Awaiting break assignment.";
+        lastBreakFailureReason = string.Empty;
+        breakSubtaskStartedAtTime = 0f;
     }
 }

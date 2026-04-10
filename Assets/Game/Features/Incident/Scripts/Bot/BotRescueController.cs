@@ -5,6 +5,7 @@ using UnityEngine.AI;
 public sealed class BotRescueController
 {
     private readonly BotRuntimeDecisionService decisionService;
+    private const float ReacquireTargetDistanceSlack = 0.35f;
 
     public BotRescueController(BotRuntimeDecisionService decisionService)
     {
@@ -33,15 +34,17 @@ public sealed class BotRescueController
             $"rescue-order:{owner.FormatFlowVectorKeyForLog(orderPoint)}",
             $"Received Rescue order to {orderPoint}.");
 
+        owner.SetRescueSubtask(BotRescueSubtask.AcquireTarget, "Acquiring rescue target.");
         IRescuableTarget rescueTarget = decisionService.ResolveRescueTarget(orderPoint, owner.CurrentRescueTarget, owner.gameObject, rescueSearchRadius);
         if (rescueTarget == null)
         {
             owner.LogRescueActivityMessage("rescue-notfound", "No rescue target found.");
-            owner.AbortActiveRescueOrder();
+            owner.FailActiveRescueOrder("No rescue target found.", BotTaskStatus.Blocked);
             return;
         }
 
         owner.CurrentRescueTarget = rescueTarget;
+        owner.SetRescueSubtask(BotRescueSubtask.AcquireSafeZone, "Acquiring safe zone.");
         owner.CurrentSafeZoneTarget = decisionService.ResolveNearestSafeZone(rescueTarget.GetWorldPosition(), owner.CurrentSafeZoneTarget);
 
         if (!rescueTarget.NeedsRescue)
@@ -54,12 +57,13 @@ public sealed class BotRescueController
         if (owner.CurrentSafeZoneTarget == null)
         {
             owner.LogRescueActivityMessage("rescue-no-safezone", "No safe zone found.");
-            owner.AbortActiveRescueOrder();
+            owner.FailActiveRescueOrder("No safe zone found for rescue.", BotTaskStatus.Blocked);
             return;
         }
 
         if (rescueTarget.IsCarried && rescueTarget.ActiveRescuer == owner.gameObject)
         {
+            owner.SetRescueSubtask(BotRescueSubtask.CarryToSafeZone, "Carrying casualty to safe zone.");
             owner.PrepareCarryRescueCommand();
 
             Vector3 safeZonePosition = owner.CurrentSafeZoneTarget.GetWorldPosition();
@@ -71,7 +75,10 @@ public sealed class BotRescueController
             if (!hasReachedSafeZone)
             {
                 owner.LogRescueActivityMessage("rescue-carry", "Carrying casualty to safe zone.");
-                owner.MoveToRescueCarrySafeZoneCommand(safeZonePosition);
+                if (!owner.MoveToRescueCarrySafeZoneCommand(safeZonePosition))
+                {
+                    owner.FailActiveRescueOrder("Failed to path to rescue safe zone.", BotTaskStatus.Blocked);
+                }
                 return;
             }
 
@@ -79,9 +86,17 @@ public sealed class BotRescueController
             navMeshAgent.isStopped = true;
             Vector3 fallbackDropPosition = owner.transform.position + owner.transform.TransformDirection(rescueDropOffset);
             Vector3 dropPosition = owner.CurrentSafeZoneTarget.GetDropPoint(fallbackDropPosition);
+            owner.SetRescueSubtask(BotRescueSubtask.CompleteRescue, "Completing rescue at safe zone.");
             rescueTarget.CompleteRescueAt(dropPosition);
             owner.LogRescueActivityMessage("rescue-complete", "Rescue completed.");
             owner.CompleteActiveRescueOrder();
+            return;
+        }
+
+        if (rescueTarget.IsCarried && rescueTarget.ActiveRescuer != owner.gameObject)
+        {
+            owner.LogRescueActivityMessage("rescue-reacquire", "Assigned casualty is already being carried by another rescuer.");
+            owner.ReacquireRescueTarget("Recovering after losing assigned casualty.");
             return;
         }
 
@@ -89,8 +104,12 @@ public sealed class BotRescueController
         float horizontalDistance = GetHorizontalDistance(owner.transform.position, targetPosition);
         if (horizontalDistance > rescueInteractionDistance)
         {
+            owner.SetRescueSubtask(BotRescueSubtask.MoveToTarget, "Moving to casualty.");
             owner.LogRescueActivityMessage("rescue-move", "Moving to casualty.");
-            owner.MoveToCommand(targetPosition);
+            if (!owner.MoveToCommand(targetPosition))
+            {
+                owner.FailActiveRescueOrder("Failed to path to casualty.", BotTaskStatus.Blocked);
+            }
             return;
         }
 
@@ -100,9 +119,16 @@ public sealed class BotRescueController
 
         if (rescueTarget.RequiresStabilization)
         {
+            owner.SetRescueSubtask(BotRescueSubtask.StabilizeTarget, "Stabilizing casualty.");
             if (rescueTarget.IsRescueInProgress && rescueTarget.ActiveRescuer == owner.gameObject)
             {
                 owner.LogRescueActivityMessage("rescue-stabilize", "Stabilizing casualty.");
+                return;
+            }
+
+            if (rescueTarget.IsRescueInProgress && rescueTarget.ActiveRescuer != owner.gameObject)
+            {
+                owner.ReacquireRescueTarget("Assigned casualty is being stabilized by another rescuer.");
                 return;
             }
 
@@ -112,13 +138,26 @@ public sealed class BotRescueController
                 return;
             }
 
-            owner.CurrentRescueTarget = null;
+            if (GetHorizontalDistance(owner.transform.position, targetPosition) <= rescueInteractionDistance + ReacquireTargetDistanceSlack)
+            {
+                owner.FailActiveRescueOrder("Failed to start casualty stabilization.", BotTaskStatus.Failed);
+                return;
+            }
+
+            owner.ReacquireRescueTarget("Recovering after failed stabilization attempt.");
             return;
         }
 
+        owner.SetRescueSubtask(BotRescueSubtask.BeginCarry, "Beginning casualty carry.");
         if (rescueTarget.IsRescueInProgress && rescueTarget.ActiveRescuer == owner.gameObject)
         {
             owner.LogRescueActivityMessage("rescue-start", "Starting rescue.");
+            return;
+        }
+
+        if (rescueTarget.IsRescueInProgress && rescueTarget.ActiveRescuer != owner.gameObject)
+        {
+            owner.ReacquireRescueTarget("Assigned casualty is being handled by another rescuer.");
             return;
         }
 
@@ -131,7 +170,7 @@ public sealed class BotRescueController
             return;
         }
 
-        owner.CurrentRescueTarget = null;
+        owner.FailActiveRescueOrder("Failed to begin carrying casualty.", BotTaskStatus.Failed);
     }
 
     private static float GetHorizontalDistance(Vector3 a, Vector3 b)

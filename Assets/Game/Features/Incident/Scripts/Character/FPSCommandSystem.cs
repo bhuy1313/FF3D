@@ -26,14 +26,12 @@ namespace StarterAssets
         private static readonly CommandWheelPage[] CommandWheelPages =
         {
             new CommandWheelPage("Core", BotCommandType.Move, BotCommandType.Extinguish, BotCommandType.Follow, BotCommandType.Rescue),
-            new CommandWheelPage("Squad", BotCommandType.Hold, BotCommandType.Assist, BotCommandType.Regroup, BotCommandType.Search),
-            new CommandWheelPage("Ops", BotCommandType.Breach, BotCommandType.Isolate, BotCommandType.Move, BotCommandType.Follow)
+            new CommandWheelPage("Ops", BotCommandType.Hold, BotCommandType.Breach, BotCommandType.Isolate, BotCommandType.Regroup)
         };
 
         private static readonly Color[] CommandWheelPageColors =
         {
             new Color(0f, 1f, 0.63f, 0.5f),
-            new Color(0.16f, 0.64f, 1f, 0.5f),
             new Color(1f, 0.54f, 0.12f, 0.5f)
         };
 
@@ -325,6 +323,12 @@ namespace StarterAssets
 
         private void TryConfirmImmediateCommand(BotCommandType commandType)
         {
+            if (commandType == BotCommandType.Regroup)
+            {
+                TryConfirmRegroupAllCommand();
+                return;
+            }
+
             if (commandState.TryConfirm(transform.position))
             {
                 if (logCommandSelection)
@@ -339,6 +343,41 @@ namespace StarterAssets
             else if (logCommandSelection)
             {
                 Debug.LogWarning($"[FPSCommandSystem] Immediate command '{commandType}' failed for '{GetTargetName(selectedCommandTarget)}'.", this);
+            }
+        }
+
+        private void TryConfirmRegroupAllCommand()
+        {
+            bool issuedAny = false;
+            foreach (global::BotCommandAgent agent in BotRuntimeRegistry.ActiveCommandAgents)
+            {
+                if (agent == null || !agent.isActiveAndEnabled || !agent.CanAcceptCommand(BotCommandType.Regroup))
+                {
+                    continue;
+                }
+
+                issuedAny |= agent.TryIssueCommand(BotCommandType.Regroup, transform.position);
+            }
+
+            commandState.Cancel();
+            destinationConfirmClickGate.Reset();
+            selectedCommandTarget = null;
+            UpdateTargetOutline(null);
+            hasPreviewPoint = false;
+
+            if (issuedAny)
+            {
+                if (logCommandSelection)
+                {
+                    Debug.Log("[FPSCommandSystem] Issued 'Regroup' to all active bots.", this);
+                }
+
+                return;
+            }
+
+            if (logCommandSelection)
+            {
+                Debug.LogWarning("[FPSCommandSystem] Regroup-all command failed. No active bot accepted the order.", this);
             }
         }
 
@@ -1327,7 +1366,7 @@ namespace StarterAssets
                 case BotCommandType.Search:
                     return "Search";
                 case BotCommandType.Assist:
-                    return "Assist";
+                    return "Follow";
                 case BotCommandType.Regroup:
                     return "Group";
                 case BotCommandType.Move:
@@ -1374,7 +1413,7 @@ namespace StarterAssets
                 case BotCommandType.Search:
                     return "Search";
                 case BotCommandType.Assist:
-                    return "Assist";
+                    return "Follow";
                 case BotCommandType.Regroup:
                     return "Regroup";
                 case BotCommandType.Move:

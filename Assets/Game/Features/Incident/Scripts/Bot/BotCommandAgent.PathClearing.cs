@@ -4,6 +4,12 @@ using TrueJourney.BotBehavior;
 
 public partial class BotCommandAgent
 {
+    [Header("Break Task Flow")]
+    [SerializeField] private BotBreakSubtask currentBreakSubtask;
+    [SerializeField] private string breakTaskDetail = "Awaiting break assignment.";
+    [SerializeField] private string lastBreakFailureReason;
+    [SerializeField] private float breakSubtaskStartedAtTime;
+
     private bool TryHandleBlockedPath(Vector3 destination)
     {
         if (!enablePathClearing || navMeshAgent == null || !navMeshAgent.enabled || !navMeshAgent.isOnNavMesh)
@@ -51,6 +57,7 @@ public partial class BotCommandAgent
                 return true;
             }
 
+            SetBreakSubtask(BotBreakSubtask.AcquireTool, $"Acquiring break tool '{GetBreakToolName(committedBreakTool)}'.");
             UpdatePathClearingDebugStage(PathClearingDebugStage.SearchingBreakTool, $"Continuing acquisition of break tool '{GetBreakToolName(committedBreakTool)}'.");
             RefreshPathClearingResumeGrace();
             return !TryEnsureBreakToolEquipped(committedBreakTool) || activeBreakTool != null;
@@ -68,6 +75,7 @@ public partial class BotCommandAgent
         }
 
         UpdatePathClearingDebugStage(PathClearingDebugStage.SearchingBlocker, $"Checking route to {destination} for blocking breakables.");
+        SetBreakSubtask(BotBreakSubtask.AcquireTarget, "Checking route for blocking obstacle.");
         if (!TryResolveBlockedBreakable(destination, out IBotBreakableTarget blockedTarget))
         {
             UpdatePathClearingDebugStage(PathClearingDebugStage.Cleared, $"No blocking breakable detected toward {destination}.");
@@ -76,6 +84,7 @@ public partial class BotCommandAgent
         }
 
         SetCurrentBlockedBreakable(blockedTarget);
+        SetBreakSubtask(BotBreakSubtask.AcquireTool, $"Preparing tool for '{GetDebugTargetName(blockedTarget)}'.");
         UpdatePathClearingDebugStage(PathClearingDebugStage.BlockedByBreakable, $"Detected blocking breakable '{GetDebugTargetName(blockedTarget)}' at {blockedTarget.GetWorldPosition()}.");
         RefreshPathClearingResumeGrace();
         IBotBreakTool breakTool = ResolveCommittedBreakTool();
@@ -141,6 +150,7 @@ public partial class BotCommandAgent
 
         if (distanceToDesiredPosition > breakStandDistanceTolerance)
         {
+            SetBreakSubtask(BotBreakSubtask.MoveToObstacle, $"Moving into range of '{GetDebugTargetName(blockedTarget)}'.");
             UpdatePathClearingDebugStage(PathClearingDebugStage.MovingToBreakable, $"Moving into break range of '{GetDebugTargetName(blockedTarget)}'.");
             LogVerbosePathClearing(
                 VerbosePathClearingLogCategory.Movement,
@@ -165,6 +175,7 @@ public partial class BotCommandAgent
             bool startedBreak = equippedBreakTool.UseOnTarget(gameObject, blockedTarget);
             if (startedBreak)
             {
+                SetBreakSubtask(BotBreakSubtask.Break, $"Breaking '{GetDebugTargetName(blockedTarget)}'.");
                 UpdatePathClearingDebugStage(PathClearingDebugStage.Breaking, $"Breaking '{GetDebugTargetName(blockedTarget)}' with '{GetBreakToolName(equippedBreakTool)}'.");
                 LogPathClearingFlow(
                     $"break-breakable:{GetDebugTargetName(blockedTarget)}",
@@ -503,13 +514,22 @@ public partial class BotCommandAgent
             IsHeldByBot = tool => tool.IsHeldBy(gameObject),
             SetActiveTool = tool => activeBreakTool = tool,
             OnUnavailable = ReleaseCommittedBreakTool,
-            ReportSearching = toolName => UpdatePathClearingDebugStage(PathClearingDebugStage.SearchingBreakTool, $"Acquiring break tool '{toolName}'."),
+            ReportSearching = toolName =>
+            {
+                SetBreakSubtask(BotBreakSubtask.AcquireTool, $"Acquiring break tool '{toolName}'.");
+                UpdatePathClearingDebugStage(PathClearingDebugStage.SearchingBreakTool, $"Acquiring break tool '{toolName}'.");
+            },
             ReportPickingUp = toolName =>
             {
                 LogPathClearingFlow($"pickup-breaktool:{toolName}", $"Picked up {toolName}.");
+                SetBreakSubtask(BotBreakSubtask.AcquireTool, $"Picking up break tool '{toolName}'.");
                 UpdatePathClearingDebugStage(PathClearingDebugStage.PickingUpBreakTool, $"Picking up break tool '{toolName}'.");
             },
-            ReportMovingToTool = (toolName, toolPosition) => UpdatePathClearingDebugStage(PathClearingDebugStage.MovingToBreakTool, $"Moving to break tool '{toolName}' at {toolPosition}."),
+            ReportMovingToTool = (toolName, toolPosition) =>
+            {
+                SetBreakSubtask(BotBreakSubtask.MoveToTool, $"Moving to break tool '{toolName}'.");
+                UpdatePathClearingDebugStage(PathClearingDebugStage.MovingToBreakTool, $"Moving to break tool '{toolName}' at {toolPosition}.");
+            },
             LogHeld = toolName => LogVerbosePathClearing(
                 VerbosePathClearingLogCategory.Tooling,
                 $"heldbreaktool:{toolName}",
@@ -705,8 +725,40 @@ public partial class BotCommandAgent
         nextPathClearingRefreshTime = 0f;
         RefreshPathClearingResumeGrace();
         temporarilyRejectedBreakToolUntilTime = 0f;
+        currentBreakSubtask = BotBreakSubtask.None;
+        breakTaskDetail = "Awaiting break assignment.";
+        lastBreakFailureReason = string.Empty;
+        breakSubtaskStartedAtTime = 0f;
         activityDebug?.ResetPathClearing();
         ReleaseCommittedBreakTool();
+    }
+
+    internal void SetBreakSubtask(BotBreakSubtask subtask, string detail)
+    {
+        if (currentBreakSubtask != subtask)
+        {
+            breakSubtaskStartedAtTime = Application.isPlaying ? Time.time : 0f;
+        }
+
+        currentBreakSubtask = subtask;
+        breakTaskDetail = string.IsNullOrWhiteSpace(detail) ? "Executing break task." : detail;
+    }
+
+    internal void SetBreakFailureReason(string detail)
+    {
+        lastBreakFailureReason = string.IsNullOrWhiteSpace(detail) ? string.Empty : detail;
+    }
+
+    internal string GetActiveBreakTaskDetail()
+    {
+        if (!string.IsNullOrWhiteSpace(lastBreakFailureReason))
+        {
+            return lastBreakFailureReason;
+        }
+
+        return string.IsNullOrWhiteSpace(breakTaskDetail)
+            ? "Executing break task."
+            : breakTaskDetail;
     }
 
     public void ResetMoveActivityDebug()

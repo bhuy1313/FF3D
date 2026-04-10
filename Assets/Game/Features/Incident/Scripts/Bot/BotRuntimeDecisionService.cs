@@ -4,7 +4,15 @@ using UnityEngine;
 
 public sealed class BotRuntimeDecisionService
 {
+    private sealed class FollowTargetLookupRecord
+    {
+        public int Frame;
+        public Transform Target;
+    }
+
     private readonly List<EntityId> escortFollowerIds = new List<EntityId>(8);
+    private readonly Dictionary<string, FollowTargetLookupRecord> followTargetLookupCache = new Dictionary<string, FollowTargetLookupRecord>();
+
     public Transform ResolveFollowTarget(Transform currentTarget, string followTargetTag, BotPerceptionMemory memory = null)
     {
         if (currentTarget != null && currentTarget.gameObject.activeInHierarchy)
@@ -30,9 +38,46 @@ public sealed class BotRuntimeDecisionService
             return sharedTarget;
         }
 
-        GameObject targetObject = GameObject.FindGameObjectWithTag(followTargetTag);
-        Transform resolvedTarget = targetObject != null ? targetObject.transform : null;
+        Transform resolvedTarget = ResolveSceneFollowTarget(followTargetTag);
         RememberFollowTarget(followTargetTag, resolvedTarget, memory);
+        return resolvedTarget;
+    }
+
+    private Transform ResolveSceneFollowTarget(string followTargetTag)
+    {
+        if (string.IsNullOrWhiteSpace(followTargetTag))
+        {
+            return null;
+        }
+
+        if (followTargetLookupCache.TryGetValue(followTargetTag, out FollowTargetLookupRecord cachedRecord) &&
+            cachedRecord != null &&
+            cachedRecord.Frame == Time.frameCount)
+        {
+            return cachedRecord.Target != null && cachedRecord.Target.gameObject.activeInHierarchy
+                ? cachedRecord.Target
+                : null;
+        }
+
+        Transform resolvedTarget = null;
+        try
+        {
+            GameObject targetObject = GameObject.FindGameObjectWithTag(followTargetTag);
+            resolvedTarget = targetObject != null && targetObject.activeInHierarchy
+                ? targetObject.transform
+                : null;
+        }
+        catch (UnityException)
+        {
+            resolvedTarget = null;
+        }
+
+        followTargetLookupCache[followTargetTag] = new FollowTargetLookupRecord
+        {
+            Frame = Time.frameCount,
+            Target = resolvedTarget
+        };
+
         return resolvedTarget;
     }
 

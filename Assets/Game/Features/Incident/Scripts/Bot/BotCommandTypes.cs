@@ -48,7 +48,6 @@ public static class BotCommandTypeUtility
         switch (commandType)
         {
             case BotCommandType.Follow:
-            case BotCommandType.Assist:
             case BotCommandType.Regroup:
                 return true;
             default:
@@ -82,7 +81,7 @@ public static class BotCommandTypeUtility
             case BotCommandType.Search:
                 return BotCommandIntent.Search;
             case BotCommandType.Assist:
-                return BotCommandIntent.Assist;
+                return BotCommandIntent.Follow;
             case BotCommandType.Regroup:
                 return BotCommandIntent.Regroup;
             default:

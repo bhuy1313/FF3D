@@ -4,6 +4,12 @@ using TrueJourney.BotBehavior;
 
 public partial class BotCommandAgent
 {
+    [Header("Extinguish Task Flow")]
+    [SerializeField] private BotExtinguishSubtask currentExtinguishSubtask;
+    [SerializeField] private string extinguishTaskDetail = "Awaiting extinguish assignment.";
+    [SerializeField] private string lastExtinguishFailureReason;
+    [SerializeField] private float extinguishSubtaskStartedAtTime;
+
     private void StopExtinguisher()
     {
         if (activeExtinguisher != null)
@@ -905,11 +911,55 @@ public partial class BotCommandAgent
 
     private void CompleteExtinguishOrder(string detail)
     {
+        lastExtinguishFailureReason = string.Empty;
+        SetExtinguishSubtask(BotExtinguishSubtask.Complete, detail);
         CompleteCurrentTask(detail);
         UpdateExtinguishDebugStage(ExtinguishDebugStage.Completed, detail);
         ClearExtinguishRuntimeState();
         behaviorContext.ClearExtinguishOrder();
         navMeshAgent.isStopped = false;
+    }
+
+    private void FailActiveExtinguishOrder(string detail, BotTaskStatus failureStatus = BotTaskStatus.Failed)
+    {
+        SetExtinguishFailureReason(detail);
+        FailCurrentTask(detail, failureStatus);
+        UpdateExtinguishDebugStage(ExtinguishDebugStage.NoReachableTool, detail);
+        ClearExtinguishRuntimeState();
+        behaviorContext.ClearExtinguishOrder();
+        if (navMeshAgent != null && navMeshAgent.enabled && navMeshAgent.isOnNavMesh)
+        {
+            navMeshAgent.ResetPath();
+            navMeshAgent.isStopped = false;
+        }
+    }
+
+    internal void SetExtinguishSubtask(BotExtinguishSubtask subtask, string detail)
+    {
+        if (currentExtinguishSubtask != subtask)
+        {
+            extinguishSubtaskStartedAtTime = Application.isPlaying ? Time.time : 0f;
+        }
+
+        currentExtinguishSubtask = subtask;
+        extinguishTaskDetail = string.IsNullOrWhiteSpace(detail) ? "Executing extinguish order." : detail;
+    }
+
+    internal void SetExtinguishFailureReason(string detail)
+    {
+        lastExtinguishFailureReason = string.IsNullOrWhiteSpace(detail) ? string.Empty : detail;
+    }
+
+    internal string GetActiveExtinguishTaskDetail()
+    {
+        if (!string.IsNullOrWhiteSpace(lastExtinguishFailureReason))
+        {
+            return lastExtinguishFailureReason;
+        }
+
+        return string.IsNullOrWhiteSpace(extinguishTaskDetail)
+            ? "Executing extinguish order."
+            : extinguishTaskDetail;
     }
 
     private void ClearExtinguishRuntimeState()
@@ -934,6 +984,10 @@ public partial class BotCommandAgent
         currentExtinguishTrajectoryPointCount = 0;
         extinguishStartupPending = false;
         sprayReadyTime = -1f;
+        currentExtinguishSubtask = BotExtinguishSubtask.None;
+        extinguishTaskDetail = "Awaiting extinguish assignment.";
+        lastExtinguishFailureReason = string.Empty;
+        extinguishSubtaskStartedAtTime = 0f;
         activityDebug?.ResetExtinguish();
     }
 }

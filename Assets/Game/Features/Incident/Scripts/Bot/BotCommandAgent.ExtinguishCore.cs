@@ -15,6 +15,7 @@ public partial class BotCommandAgent
         }
 
         Vector3 targetSearchPoint = orderMode == BotExtinguishCommandMode.PointFire ? scanOrigin : orderPoint;
+        SetExtinguishSubtask(BotExtinguishSubtask.AcquireTarget, "Acquiring fire target.");
         IFireGroupTarget fireGroup = orderMode == BotExtinguishCommandMode.PointFire ? null : ResolveIssuedFireGroupTarget(targetSearchPoint);
         IFireTarget fireTarget = orderMode == BotExtinguishCommandMode.PointFire
             ? ResolveIssuedPointFireTarget(targetSearchPoint)
@@ -25,11 +26,7 @@ public partial class BotCommandAgent
             $"Order={targetSearchPoint}, fireTarget={GetDebugTargetName(fireTarget)}, fireGroup={GetDebugTargetName(fireGroup)}, mode={orderMode}.");
         if ((fireGroup == null || !fireGroup.HasActiveFires) && (fireTarget == null || !fireTarget.IsBurning))
         {
-            UpdateExtinguishDebugStage(ExtinguishDebugStage.NoFireGroupFound, $"No active FireGroup found near {orderPoint}. Clearing order.");
-            ClearExtinguishRuntimeState();
-            behaviorContext.ClearExtinguishOrder();
-            navMeshAgent.ResetPath();
-            navMeshAgent.isStopped = false;
+            CompleteExtinguishOrder("No active fire target remained near the assigned point.");
             return;
         }
 
@@ -39,6 +36,7 @@ public partial class BotCommandAgent
         Vector3 firePosition = fireTarget != null && fireTarget.IsBurning
             ? fireTarget.GetWorldPosition()
             : fireGroup.GetClosestActiveFirePosition(botPosition);
+        SetExtinguishSubtask(BotExtinguishSubtask.AcquireTool, "Acquiring suppression tool.");
         preferredExtinguishTool = ResolveCommittedExtinguishTool(orderPoint, firePosition, fireGroup, fireTarget, orderMode);
         LogVerboseExtinguish(
             VerboseExtinguishLogCategory.Tooling,
@@ -57,10 +55,7 @@ public partial class BotCommandAgent
             }
 
             UpdateExtinguishDebugStage(ExtinguishDebugStage.NoReachableTool, $"No available suppression tool can reach fire near {firePosition}.");
-            ClearExtinguishRuntimeState();
-            behaviorContext.ClearExtinguishOrder();
-            navMeshAgent.ResetPath();
-            navMeshAgent.isStopped = false;
+            FailActiveExtinguishOrder("No available suppression tool can reach the assigned fire.", BotTaskStatus.Blocked);
             return;
         }
 
@@ -74,6 +69,7 @@ public partial class BotCommandAgent
 
         if (extinguishStartupPending)
         {
+            SetExtinguishSubtask(BotExtinguishSubtask.Recover, "Recovering extinguish order.");
             ClearHeadAimFocus();
             ClearHandAimFocus();
             extinguishStartupPending = false;
@@ -121,8 +117,7 @@ public partial class BotCommandAgent
         {
             ResetExtinguishCrouchState();
             UpdateExtinguishDebugStage(ExtinguishDebugStage.OutOfCharge, "Extinguisher is out of charge.");
-            ClearExtinguishRuntimeState();
-            behaviorContext.ClearExtinguishOrder();
+            FailActiveExtinguishOrder("Active suppression tool is out of charge.", BotTaskStatus.Failed);
             return;
         }
 
@@ -166,6 +161,7 @@ public partial class BotCommandAgent
 
         if (shouldReposition)
         {
+            SetExtinguishSubtask(BotExtinguishSubtask.MoveToFire, "Moving to extinguish position.");
             desiredPosition = UsesPreciseAim(activeExtinguisher)
                 ? ResolveExtinguishPosition(targetSearchPoint, firePosition, desiredHorizontalDistance)
                 : ResolveExtinguisherApproachPosition(orderPoint, firePosition, desiredHorizontalDistance);
@@ -193,13 +189,14 @@ public partial class BotCommandAgent
         hasCurrentExtinguishAimPoint = true;
         if (hasCurrentExtinguishLaunchDirection)
         {
-            activeExtinguisher.SetExternalAimDirection(currentExtinguishLaunchDirection, gameObject);
+        activeExtinguisher.SetExternalAimDirection(currentExtinguishLaunchDirection, gameObject);
         }
         else
         {
             activeExtinguisher.ClearExternalAimDirection(gameObject);
         }
 
+        SetExtinguishSubtask(BotExtinguishSubtask.AimAtFire, "Aiming at fire.");
         AimTowards(aimPoint);
         SetHandAimFocus(aimPoint);
         SetHeadAimFocus(firePosition);
@@ -263,6 +260,7 @@ public partial class BotCommandAgent
             $"dist:{GetDebugTargetName(fireTarget)}:{horizontalDistanceToFire:F2}:{desiredHorizontalDistance:F2}",
             $"Distance to target. horizontal={horizontalDistanceToFire:F2}, desired={desiredHorizontalDistance:F2}, max={activeExtinguisher.MaxSprayDistance:F2}, vertical={Mathf.Abs(firePosition.y - botPosition.y):F2}.");
 
+        SetExtinguishSubtask(BotExtinguishSubtask.Spray, "Spraying fire.");
         UpdateExtinguishDebugStage(ExtinguishDebugStage.Spraying, $"Spraying fire at {firePosition}.");
         if (!UsesPreciseAim(activeExtinguisher))
         {
@@ -316,9 +314,21 @@ public partial class BotCommandAgent
             SetActiveTool = tool => activeExtinguisher = tool,
             OnUnavailable = () => ReleaseCommittedToolIfMatches(desiredTool),
             OnBeforeAcquire = StopExtinguisher,
-            ReportSearching = toolName => UpdateExtinguishDebugStage(ExtinguishDebugStage.SearchingExtinguisher, $"Acquiring tool '{toolName}'."),
-            ReportPickingUp = toolName => UpdateExtinguishDebugStage(ExtinguishDebugStage.PickingUpExtinguisher, $"Picking up extinguisher '{toolName}'."),
-            ReportMovingToTool = (toolName, toolPosition) => UpdateExtinguishDebugStage(ExtinguishDebugStage.MovingToExtinguisher, $"Moving to tool '{toolName}' at {toolPosition}."),
+            ReportSearching = toolName =>
+            {
+                SetExtinguishSubtask(BotExtinguishSubtask.AcquireTool, $"Acquiring tool '{toolName}'.");
+                UpdateExtinguishDebugStage(ExtinguishDebugStage.SearchingExtinguisher, $"Acquiring tool '{toolName}'.");
+            },
+            ReportPickingUp = toolName =>
+            {
+                SetExtinguishSubtask(BotExtinguishSubtask.AcquireTool, $"Picking up extinguisher '{toolName}'.");
+                UpdateExtinguishDebugStage(ExtinguishDebugStage.PickingUpExtinguisher, $"Picking up extinguisher '{toolName}'.");
+            },
+            ReportMovingToTool = (toolName, toolPosition) =>
+            {
+                SetExtinguishSubtask(BotExtinguishSubtask.MoveToTool, $"Moving to tool '{toolName}'.");
+                UpdateExtinguishDebugStage(ExtinguishDebugStage.MovingToExtinguisher, $"Moving to tool '{toolName}' at {toolPosition}.");
+            },
             SetPickupWindow = SetPickupWindow,
             MoveToTool = toolPosition => TrySetDestinationDirect(toolPosition)
         };

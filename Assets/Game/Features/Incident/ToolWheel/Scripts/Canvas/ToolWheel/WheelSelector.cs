@@ -1,25 +1,24 @@
-using UnityEngine;
-using UnityEngine.UI;
+using System.Collections.Generic;
 using TMPro;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 public class WheelSelector : MonoBehaviour
 {
-    [Header("Wheel Data")]
+    [Header("Wheel State")]
     public Vector2 mousePosition;
     public float currentAngle;
-    public int selection;
-    private int previousSelection;
-    [HideInInspector]
-    public GameObject[] menuItems;
-    private GameObject player;
+    public int selection = -1;
 
     [Header("Selection Wheel Settings")]
     [SerializeField] private GameObject selectionWheelCanvas;
     [SerializeField] private CanvasGroup selectionWheelCanvasGroup;
+    [SerializeField] private GraphicRaycaster graphicRaycaster;
     [SerializeField] private RectTransform menuItemsParent;
     [SerializeField] private GameObject menuItemPrefab;
-    [SerializeField][Range(1, 16)] private int menuItemCount = 4;
-    [SerializeField] private float menuItemRadius = 130f;
+    [SerializeField, Range(1, 16)] private int menuItemCount = 4;
+    [SerializeField] private Vector2 slotSize = new Vector2(400f, 400f);
     [SerializeField] private TMP_Text pageIndicatorLabel;
     [SerializeField] private Image pageIndicatorBackground;
     [SerializeField] private Vector2 pageIndicatorAnchoredPosition = new Vector2(0f, 154f);
@@ -28,153 +27,78 @@ public class WheelSelector : MonoBehaviour
     [SerializeField] private Color defaultLabelColor = Color.white;
     [SerializeField] private Color defaultIndicatorBackgroundColor = new Color(0f, 0f, 0f, 0.72f);
 
-    private bool isSelectionWheelActive = false;
+    [Header("Debug")]
+    [SerializeField] private bool showDebugOverlay;
+    [SerializeField] private Vector2 debugOverlayOffset = new Vector2(16f, 16f);
+
+    [HideInInspector] public GameObject[] menuItems;
+
+    private MenuItemS[] menuItemComponents;
     private string currentPageLabel = "Core";
     private Color currentWheelColor;
     private Color currentLabelColor;
     private Color currentIndicatorBackgroundColor;
     private string[] currentSlotLabels;
+    private bool isSelectionWheelActive;
+    private PointerEventData pointerEventData;
+    private readonly List<RaycastResult> raycastResults = new List<RaycastResult>(16);
+    private GUIStyle debugGuiStyle;
+    private string hoveredTargetName = "(none)";
+    private string hoveredSlotLabel = "-";
+    private int hoveredSlotIndex = -1;
+    private string hoverSource = "(none)";
 
     public bool IsSelectionWheelActive => isSelectionWheelActive;
     public System.Action<int> OnOptionSelected;
 
+    private void Awake()
+    {
+        currentWheelColor = defaultWheelColor;
+        currentLabelColor = defaultLabelColor;
+        currentIndicatorBackgroundColor = defaultIndicatorBackgroundColor;
+
+        ResolveReferences();
+        RebuildMenuItems();
+        EnsurePageIndicator();
+        RefreshPageIndicator();
+        RefreshAllVisuals();
+        SetCanvasVisible(false);
+    }
+
+    private void OnValidate()
+    {
+        menuItemCount = Mathf.Max(1, menuItemCount);
+        slotSize.x = Mathf.Max(1f, slotSize.x);
+        slotSize.y = Mathf.Max(1f, slotSize.y);
+        ResolveReferences();
+    }
+
     public void OpenWheel()
     {
         isSelectionWheelActive = true;
+        hoveredTargetName = "(none)";
+        hoveredSlotLabel = "-";
+        hoveredSlotIndex = -1;
+        hoverSource = "None";
+        selection = -1;
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
-        previousSelection = -1;
-        if (selectionWheelCanvasGroup != null)
-        {
-            selectionWheelCanvasGroup.alpha = 1f;
-            selectionWheelCanvasGroup.interactable = true;
-            selectionWheelCanvasGroup.blocksRaycasts = true;
-        }
+        RefreshSelectionVisuals();
+        SetCanvasVisible(true);
     }
 
     public void CloseWheel()
     {
         isSelectionWheelActive = false;
+        hoveredTargetName = "(none)";
+        hoveredSlotLabel = "-";
+        hoveredSlotIndex = -1;
+        hoverSource = "None";
+        selection = -1;
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
-        if (selectionWheelCanvasGroup != null)
-        {
-            selectionWheelCanvasGroup.alpha = 0f;
-            selectionWheelCanvasGroup.interactable = false;
-            selectionWheelCanvasGroup.blocksRaycasts = false;
-        }
-    }
-
-    private void Awake()
-    {
-        player = GameObject.Find("Player");
-        previousSelection = -1;
-        currentWheelColor = defaultWheelColor;
-        currentLabelColor = defaultLabelColor;
-        currentIndicatorBackgroundColor = defaultIndicatorBackgroundColor;
-        InitializeMenuItems();
-        EnsurePageIndicator();
-        RefreshPageIndicator();
-        ApplyWheelTheme();
-        ApplySlotLabels();
-        if (selectionWheelCanvasGroup != null)
-        {
-            selectionWheelCanvasGroup.alpha = 0f;
-            selectionWheelCanvasGroup.interactable = false;
-            selectionWheelCanvasGroup.blocksRaycasts = false;
-        }
-    }
-
-    private void InitializeMenuItems()
-    {
-        if (menuItemCount <= 0)
-        {
-            Debug.LogWarning("WheelSelector: menuItemCount must be at least 1.");
-            menuItems = new GameObject[0];
-            return;
-        }
-
-        if (menuItemPrefab == null)
-        {
-            Debug.LogError("WheelSelector: menuItemPrefab is not assigned. Cannot auto-create menu items.");
-            return;
-        }
-
-        if (menuItemsParent == null)
-        {
-            if (selectionWheelCanvas != null)
-            {
-                menuItemsParent = selectionWheelCanvas.GetComponent<RectTransform>();
-            }
-
-            if (menuItemsParent == null)
-            {
-                Debug.LogError("WheelSelector: menuItemsParent is not assigned and selectionWheelCanvas has no RectTransform.");
-                return;
-            }
-        }
-
-        // Remove existing auto-created children with MenuItemS
-        for (int i = menuItemsParent.childCount - 1; i >= 0; i--)
-        {
-            Transform child = menuItemsParent.GetChild(i);
-            if (child.GetComponent<MenuItemS>() != null)
-            {
-                Destroy(child.gameObject);
-            }
-        }
-
-        menuItems = new GameObject[menuItemCount];
-
-        for (int i = 0; i < menuItemCount; i++)
-        {
-            GameObject instance = Instantiate(menuItemPrefab, menuItemsParent);
-            instance.name = $"MenuItem_{i}";
-            RectTransform itemRect = instance.GetComponent<RectTransform>();
-            float stepAngle = 360f / menuItemCount;
-            float angle = 90 + stepAngle * i; // start at 12 o'clock and go counter-clockwise
-            if (itemRect != null)
-            {
-                itemRect.anchorMin = Vector2.one * 0.5f;
-                itemRect.anchorMax = Vector2.one * 0.5f;
-                itemRect.pivot = Vector2.one * 0.5f;
-                float rad = angle * Mathf.Deg2Rad;
-                itemRect.anchoredPosition = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad)) * menuItemRadius;
-                itemRect.localEulerAngles = new Vector3(0, 0, -angle + 90f);
-            }
-
-            menuItems[i] = instance;
-
-            MenuItemS item = instance.GetComponent<MenuItemS>();
-            if (item != null)
-            {
-                item.Deselect();
-            }
-
-            Transform bgW = instance.transform.Find("BgW");
-            if (bgW != null)
-            {
-                Image bgImage = bgW.GetComponent<Image>();
-                if (bgImage != null)
-                {
-                    bgImage.type = Image.Type.Filled;
-                    bgImage.fillMethod = Image.FillMethod.Radial360;
-                    bgImage.fillOrigin = (int)Image.Origin360.Top;
-                    bgImage.fillAmount = 1f / menuItemCount;
-                    bgImage.fillClockwise = false;
-                }
-                else
-                {
-                    Debug.LogWarning("WheelSelector: 'BgW' exists but has no Image component.");
-                }
-            }
-            else
-            {
-                Debug.LogWarning("WheelSelector: menu item prefab does not contain child 'BgW'.");
-            }
-        }
-        menuItemsParent.GetComponent<RectTransform>().localRotation = Quaternion.Euler(0f, 0f, -360f / menuItemCount);
-        ApplySlotLabels();
+        RefreshSelectionVisuals();
+        SetCanvasVisible(false);
     }
 
     public void SetPageTheme(string pageLabel, Color wheelColor)
@@ -189,7 +113,7 @@ public class WheelSelector : MonoBehaviour
         currentLabelColor = labelColor;
         currentIndicatorBackgroundColor = indicatorBackgroundColor;
         RefreshPageIndicator();
-        ApplyWheelTheme();
+        RefreshAllVisuals();
     }
 
     public void SetSlotLabels(string[] labels)
@@ -198,60 +122,276 @@ public class WheelSelector : MonoBehaviour
         ApplySlotLabels();
     }
 
-    private void ApplyWheelTheme()
+    private void Update()
     {
-        if (menuItems == null)
+        if (!isSelectionWheelActive)
         {
             return;
         }
 
-        for (int i = 0; i < menuItems.Length; i++)
+        UpdateHoveredSlotFromUi();
+        ProcessPointerConfirm();
+    }
+
+    private void ResolveReferences()
+    {
+        if (selectionWheelCanvasGroup == null && selectionWheelCanvas != null)
         {
-            GameObject menuItem = menuItems[i];
-            if (menuItem == null)
-            {
-                continue;
-            }
+            selectionWheelCanvasGroup = selectionWheelCanvas.GetComponent<CanvasGroup>();
+        }
 
-            Transform bgTransform = menuItem.transform.Find("BgW");
-            if (bgTransform == null)
-            {
-                continue;
-            }
+        if (graphicRaycaster == null && selectionWheelCanvas != null)
+        {
+            graphicRaycaster = selectionWheelCanvas.GetComponent<GraphicRaycaster>();
+        }
 
-            Image bgImage = bgTransform.GetComponent<Image>();
-            if (bgImage != null)
+        if (menuItemsParent == null && selectionWheelCanvas != null)
+        {
+            RectTransform canvasRect = selectionWheelCanvas.GetComponent<RectTransform>();
+            if (canvasRect != null)
             {
-                bgImage.color = currentWheelColor;
+                Transform pieMenu = canvasRect.Find("PieMenu");
+                menuItemsParent = pieMenu as RectTransform;
             }
         }
     }
 
-    private void ApplySlotLabels()
+    private void RebuildMenuItems()
     {
-        if (menuItems == null)
+        if (menuItemsParent == null || menuItemPrefab == null)
         {
             return;
         }
 
-        for (int i = 0; i < menuItems.Length; i++)
-        {
-            GameObject menuItem = menuItems[i];
-            if (menuItem == null)
-            {
-                continue;
-            }
+        DestroyExistingMenuItems();
 
-            MenuItemS item = menuItem.GetComponent<MenuItemS>();
+        menuItems = new GameObject[menuItemCount];
+        menuItemComponents = new MenuItemS[menuItemCount];
+        Vector2 resolvedSlotSize = ResolveSlotSize();
+
+        for (int i = 0; i < menuItemCount; i++)
+        {
+            GameObject instance = Instantiate(menuItemPrefab, menuItemsParent);
+            instance.name = $"MenuItem_{i}";
+
+            MenuItemS item = instance.GetComponent<MenuItemS>();
             if (item == null)
             {
                 continue;
             }
 
-            string label = currentSlotLabels != null && i < currentSlotLabels.Length
-                ? currentSlotLabels[i]
-                : (i + 1).ToString();
-            item.SetDisplayLabel(label);
+            item.ConfigureSlotLayout(i, menuItemCount, resolvedSlotSize);
+            if (item.Button != null)
+            {
+                int capturedIndex = i;
+                item.Button.onClick.RemoveAllListeners();
+                item.Button.onClick.AddListener(() => HandleItemClicked(capturedIndex));
+            }
+
+            menuItems[i] = instance;
+            menuItemComponents[i] = item;
+        }
+    }
+
+    private void DestroyExistingMenuItems()
+    {
+        if (menuItemsParent == null)
+        {
+            return;
+        }
+
+        for (int i = menuItemsParent.childCount - 1; i >= 0; i--)
+        {
+            Transform child = menuItemsParent.GetChild(i);
+            if (child.GetComponent<MenuItemS>() == null)
+            {
+                continue;
+            }
+
+            if (Application.isPlaying)
+            {
+                Destroy(child.gameObject);
+            }
+            else
+            {
+                DestroyImmediate(child.gameObject);
+            }
+        }
+    }
+
+    private Vector2 ResolveSlotSize()
+    {
+        if (menuItemsParent != null && menuItemsParent.rect.width > 1f && menuItemsParent.rect.height > 1f)
+        {
+            return menuItemsParent.rect.size;
+        }
+
+        return slotSize;
+    }
+
+    private void UpdateHoveredSlotFromUi()
+    {
+        if (graphicRaycaster == null || EventSystem.current == null)
+        {
+            hoveredTargetName = "(no raycaster)";
+            hoveredSlotLabel = "-";
+            hoveredSlotIndex = -1;
+            hoverSource = "Unavailable";
+            SetSelection(-1);
+            return;
+        }
+
+        if (pointerEventData == null)
+        {
+            pointerEventData = new PointerEventData(EventSystem.current);
+        }
+
+        pointerEventData.position = Input.mousePosition;
+        mousePosition = (Vector2)Input.mousePosition - new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+        currentAngle = Mathf.Atan2(mousePosition.y, mousePosition.x) * Mathf.Rad2Deg;
+
+        raycastResults.Clear();
+        graphicRaycaster.Raycast(pointerEventData, raycastResults);
+
+        for (int i = 0; i < raycastResults.Count; i++)
+        {
+            GameObject hitObject = raycastResults[i].gameObject;
+            if (hitObject == null)
+            {
+                continue;
+            }
+
+            MenuItemS item = hitObject.GetComponentInParent<MenuItemS>();
+            if (item == null || item.SlotIndex < 0)
+            {
+                continue;
+            }
+
+            hoveredTargetName = hitObject.name;
+            hoveredSlotIndex = item.SlotIndex;
+            hoveredSlotLabel = GetSlotLabel(item.SlotIndex);
+            hoverSource = "UI Raycast";
+            SetSelection(item.SlotIndex);
+            return;
+        }
+
+        hoveredTargetName = "(none)";
+        hoveredSlotLabel = "-";
+        hoveredSlotIndex = -1;
+        hoverSource = "UI Raycast Miss";
+        SetSelection(-1);
+    }
+
+    private void HandleItemClicked(int slotIndex)
+    {
+        if (!isSelectionWheelActive || slotIndex < 0)
+        {
+            return;
+        }
+
+        hoveredTargetName = $"MenuItem_{slotIndex}";
+        hoveredSlotIndex = slotIndex;
+        hoveredSlotLabel = GetSlotLabel(slotIndex);
+        hoverSource = "Button Click";
+        SetSelection(slotIndex);
+        OnOptionSelected?.Invoke(slotIndex);
+        CloseWheel();
+    }
+
+    private void ProcessPointerConfirm()
+    {
+        if (hoveredSlotIndex < 0)
+        {
+            return;
+        }
+
+        if (!Input.GetMouseButtonDown(0))
+        {
+            return;
+        }
+
+        HandleItemClicked(hoveredSlotIndex);
+    }
+
+    private void SetSelection(int nextSelection)
+    {
+        if (selection == nextSelection)
+        {
+            return;
+        }
+
+        selection = nextSelection;
+        RefreshSelectionVisuals();
+    }
+
+    private void RefreshSelectionVisuals()
+    {
+        if (menuItemComponents == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < menuItemComponents.Length; i++)
+        {
+            MenuItemS item = menuItemComponents[i];
+            if (item == null)
+            {
+                continue;
+            }
+
+            if (i == selection)
+            {
+                item.Select();
+            }
+            else
+            {
+                item.Deselect();
+            }
+        }
+    }
+
+    private void RefreshAllVisuals()
+    {
+        ApplyWheelTheme();
+        ApplySlotLabels();
+        RefreshSelectionVisuals();
+    }
+
+    private void ApplyWheelTheme()
+    {
+        if (menuItemComponents == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < menuItemComponents.Length; i++)
+        {
+            MenuItemS item = menuItemComponents[i];
+            if (item == null)
+            {
+                continue;
+            }
+
+            item.SetTheme(currentWheelColor, currentLabelColor, currentLabelColor);
+        }
+    }
+
+    private void ApplySlotLabels()
+    {
+        if (menuItemComponents == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < menuItemComponents.Length; i++)
+        {
+            MenuItemS item = menuItemComponents[i];
+            if (item == null)
+            {
+                continue;
+            }
+
+            item.SetDisplay(GetSlotLabel(i));
         }
     }
 
@@ -285,9 +425,6 @@ public class WheelSelector : MonoBehaviour
             backgroundRect.anchorMin = new Vector2(0.5f, 0.5f);
             backgroundRect.anchorMax = new Vector2(0.5f, 0.5f);
             backgroundRect.pivot = new Vector2(0.5f, 0.5f);
-            backgroundRect.anchoredPosition = pageIndicatorAnchoredPosition;
-            backgroundRect.sizeDelta = pageIndicatorSize;
-
             pageIndicatorBackground = backgroundObject.GetComponent<Image>();
             pageIndicatorBackground.raycastTarget = false;
         }
@@ -341,67 +478,77 @@ public class WheelSelector : MonoBehaviour
         }
     }
 
-    private void Update()
+    private void SetCanvasVisible(bool visible)
     {
-        if (!isSelectionWheelActive)
+        if (selectionWheelCanvasGroup == null)
         {
             return;
         }
 
-        if (menuItems == null || menuItems.Length == 0)
+        selectionWheelCanvasGroup.alpha = visible ? 1f : 0f;
+        selectionWheelCanvasGroup.interactable = visible;
+        selectionWheelCanvasGroup.blocksRaycasts = visible;
+    }
+
+    private string GetSlotLabel(int slotIndex)
+    {
+        if (slotIndex < 0)
+        {
+            return "-";
+        }
+
+        if (currentSlotLabels != null && slotIndex < currentSlotLabels.Length)
+        {
+            return currentSlotLabels[slotIndex];
+        }
+
+        return (slotIndex + 1).ToString();
+    }
+
+    private void OnGUI()
+    {
+        if (!showDebugOverlay)
         {
             return;
         }
 
-        // Tính toán góc và xác định mục được chọn khi selection wheel đang mở
-        mousePosition = new Vector2(
-            Input.mousePosition.x - Screen.width / 2,
-            Input.mousePosition.y - Screen.height / 2
-        );
+        EnsureDebugGuiStyle();
 
-        float rawAngle = Mathf.Atan2(mousePosition.y, mousePosition.x) * Mathf.Rad2Deg;
-        if (rawAngle < 0)
+        string debugText =
+            $"Wheel Active: {isSelectionWheelActive}\n" +
+            $"Page: {currentPageLabel}\n" +
+            $"Selection: {selection}\n" +
+            $"Hover Slot: {hoveredSlotIndex}\n" +
+            $"Hover Label: {hoveredSlotLabel}\n" +
+            $"Hover Target: {hoveredTargetName}\n" +
+            $"Hover Source: {hoverSource}";
+
+        Vector2 size = debugGuiStyle.CalcSize(new GUIContent(debugText));
+        Rect rect = new Rect(
+            debugOverlayOffset.x,
+            debugOverlayOffset.y,
+            Mathf.Max(280f, size.x + 16f),
+            size.y + 12f);
+
+        Color previousColor = GUI.color;
+        GUI.color = new Color(0f, 0f, 0f, 0.75f);
+        GUI.Box(rect, GUIContent.none);
+        GUI.color = Color.white;
+        GUI.Label(new Rect(rect.x + 8f, rect.y + 6f, rect.width - 16f, rect.height - 12f), debugText, debugGuiStyle);
+        GUI.color = previousColor;
+    }
+
+    private void EnsureDebugGuiStyle()
+    {
+        if (debugGuiStyle != null)
         {
-            rawAngle += 360f;
+            return;
         }
 
-        // Convert from Atan2's 3h-origin CCW to 12h-origin CW
-        currentAngle = (90f - rawAngle + 360f) % 360f;
-
-        float stepAngle = 360f / menuItems.Length;
-        selection = Mathf.FloorToInt(currentAngle / stepAngle);
-        if (selection >= menuItems.Length)
+        debugGuiStyle = new GUIStyle(GUI.skin.label)
         {
-            selection = 0;
-        }
-
-
-        if (selection != previousSelection)
-        {
-            if (previousSelection >= 0 && previousSelection < menuItems.Length)
-            {
-                var previousItemScript = menuItems[previousSelection].GetComponent<MenuItemS>();
-                if (previousItemScript != null)
-                {
-                    previousItemScript.Deselect();
-                }
-            }
-
-            previousSelection = selection;
-            if (selection >= 0 && selection < menuItems.Length)
-            {
-                var currentItemScript = menuItems[selection].GetComponent<MenuItemS>();
-                if (currentItemScript != null)
-                {
-                    currentItemScript.Select();
-                }
-            }
-        }
-
-        if (Input.GetMouseButtonDown(0))
-        {
-            OnOptionSelected?.Invoke(selection);
-            CloseWheel();
-        }
+            fontSize = 14
+        };
+        debugGuiStyle.normal.textColor = Color.white;
     }
 }

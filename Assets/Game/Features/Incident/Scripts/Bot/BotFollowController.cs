@@ -28,9 +28,16 @@ public sealed class BotFollowController
             owner.CurrentEscortSlotIndex = -1;
             navMeshAgent.ResetPath();
             navMeshAgent.isStopped = true;
+
+            if (owner.ShouldCancelFollowAfterTargetLoss())
+            {
+                owner.TryCancelFollowCommand();
+            }
+
             return;
         }
 
+        owner.ClearFollowTargetLossState();
         owner.CurrentFollowTarget = target;
         Vector3 targetPosition = target.position;
         float followDistance = Mathf.Max(0.1f, followOrder.FollowDistance);

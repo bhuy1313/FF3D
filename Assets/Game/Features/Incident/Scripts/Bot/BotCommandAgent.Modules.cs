@@ -35,7 +35,6 @@ public partial class BotCommandAgent
                 case BotCommandType.Breach:
                 case BotCommandType.Isolate:
                 case BotCommandType.Search:
-                case BotCommandType.Assist:
                 case BotCommandType.Regroup:
                     return owner.behaviorContext != null;
                 default:
@@ -161,11 +160,6 @@ public partial class BotCommandAgent
                         owner.navMeshAgent.isStopped = false;
                         accepted = owner.navMeshAgent.SetDestination(destination);
                     }
-                    break;
-                case BotCommandType.Assist:
-                    PrepareForIssuedCommand(BotCommandType.Assist);
-                    owner.behaviorContext.SetAssistOrder(owner.CreateFollowOrder(BotCommandType.Assist));
-                    accepted = true;
                     break;
                 case BotCommandType.Regroup:
                     PrepareForIssuedCommand(BotCommandType.Regroup);

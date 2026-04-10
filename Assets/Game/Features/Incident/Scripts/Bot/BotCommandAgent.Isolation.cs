@@ -31,6 +31,12 @@ public partial class BotCommandAgent
         if (!TryResolveHazardIsolationTarget(orderPoint, out IBotHazardIsolationTarget target))
         {
             SetCurrentHazardIsolationTarget(null);
+            if (hazardIsolationUnavailableRetryCount > 0 && IsNearHazardIsolationPoint(orderPoint))
+            {
+                AbortHazardIsolationOrder("No interactable hazard device is currently available near the isolate point.");
+                return;
+            }
+
             if (IsNearHazardIsolationPoint(orderPoint))
             {
                 CompleteHazardIsolationOrder("No active hazard device found near the isolate point.");
@@ -58,8 +64,15 @@ public partial class BotCommandAgent
 
             if (!target.IsInteractionAvailable)
             {
+                if (HandleUnavailableHazardIsolationTarget())
+                {
+                    return;
+                }
+
                 return;
             }
+
+            ResetHazardIsolationUnavailableState();
 
             if (!TryGetHazardIsolationInteractable(targetComponent, out IInteractable interactable))
             {
@@ -97,6 +110,43 @@ public partial class BotCommandAgent
 
         navMeshAgent.stoppingDistance = Mathf.Max(navMeshAgent.stoppingDistance, interactionDistance * 0.85f);
         TryNavigateTo(targetPosition);
+    }
+
+    private bool HandleUnavailableHazardIsolationTarget()
+    {
+        if (hazardIsolationUnavailableSinceTime < 0f)
+        {
+            hazardIsolationUnavailableSinceTime = Time.time;
+        }
+
+        if (Time.time - hazardIsolationUnavailableSinceTime < Mathf.Max(0f, hazardIsolationUnavailableTimeout))
+        {
+            return false;
+        }
+
+        if (hazardIsolationUnavailableRetryCount < Mathf.Max(0, hazardIsolationMaxUnavailableRetries))
+        {
+            hazardIsolationUnavailableRetryCount++;
+            hazardIsolationUnavailableSinceTime = -1f;
+            SetCurrentHazardIsolationTarget(null);
+
+            if (navMeshAgent != null && navMeshAgent.enabled && navMeshAgent.isOnNavMesh)
+            {
+                navMeshAgent.ResetPath();
+                navMeshAgent.isStopped = true;
+            }
+
+            return false;
+        }
+
+        AbortHazardIsolationOrder("Hazard isolation target remained unavailable for interaction.");
+        return true;
+    }
+
+    private void ResetHazardIsolationUnavailableState()
+    {
+        hazardIsolationUnavailableSinceTime = -1f;
+        hazardIsolationUnavailableRetryCount = 0;
     }
 
     private bool TryResolveHazardIsolationTarget(Vector3 orderPoint, out IBotHazardIsolationTarget target)
@@ -231,6 +281,7 @@ public partial class BotCommandAgent
     private void ClearHazardIsolationRuntimeState()
     {
         SetCurrentHazardIsolationTarget(null);
+        ResetHazardIsolationUnavailableState();
 
         if (cachedHazardIsolationStoppingDistance >= 0f &&
             navMeshAgent != null &&

@@ -32,26 +32,40 @@ public partial class BotCommandAgent
                 activeIntent.CommandType == BotCommandType.Breach)
             {
                 RefreshReservation(currentBlockedBreakable);
-                BeginOrRefreshTask(BotTaskType.Breach, "Breaching assigned obstacle.", currentBlockedBreakable as Component);
+                BeginOrRefreshTask(BotTaskType.Breach, GetActiveBreakTaskDetail(), currentBlockedBreakable as Component);
                 return;
             }
 
             RefreshReservation(currentBlockedBreakable);
-            BeginOrRefreshTask(BotTaskType.PathClear, "Clearing blocked route.", currentBlockedBreakable as Component);
+            BeginOrRefreshTask(BotTaskType.PathClear, GetActiveBreakTaskDetail(), currentBlockedBreakable as Component);
             return;
         }
 
         if (behaviorContext.HasExtinguishOrder)
         {
             RefreshReservation(currentFireTarget);
-            BeginOrRefreshTask(BotTaskType.Extinguish, "Executing extinguish order.", currentFireTarget as Component);
+            BeginOrRefreshTask(
+                BotTaskType.Extinguish,
+                GetActiveExtinguishTaskDetail(),
+                currentFireTarget as Component,
+                currentFireTarget != null
+                    ? (Vector3?)currentFireTarget.GetWorldPosition()
+                    : hasIssuedDestination ? lastIssuedDestination : (Vector3?)null);
             return;
         }
 
         if (behaviorContext.HasRescueOrder)
         {
             RefreshReservation(currentRescueTarget);
-            BeginOrRefreshTask(BotTaskType.Rescue, "Executing rescue order.", currentRescueTarget as Component);
+            BeginOrRefreshTask(
+                BotTaskType.Rescue,
+                GetActiveRescueTaskDetail(),
+                currentRescueTarget as Component,
+                currentRescueTarget != null
+                    ? (Vector3?)currentRescueTarget.GetWorldPosition()
+                    : currentSafeZoneTarget != null
+                        ? (Vector3?)currentSafeZoneTarget.GetWorldPosition()
+                        : hasIssuedDestination ? lastIssuedDestination : (Vector3?)null);
             return;
         }
 
@@ -62,14 +76,6 @@ public partial class BotCommandAgent
                 case BotCommandType.Hold:
                     BeginOrRefreshTask(BotTaskType.Hold, "Holding assigned position.", null, commandIntent.HasWorldPoint ? commandIntent.WorldPoint : (Vector3?)transform.position);
                     return;
-                case BotCommandType.Assist:
-                    if (behaviorContext.HasFollowOrder)
-                    {
-                        BeginOrRefreshTask(BotTaskType.Assist, "Assisting assigned target.", followTarget);
-                        return;
-                    }
-
-                    break;
                 case BotCommandType.Regroup:
                     if (behaviorContext.HasFollowOrder)
                     {
@@ -92,7 +98,7 @@ public partial class BotCommandAgent
                         RefreshReservation(currentBreachPryTarget);
                         BeginOrRefreshTask(
                             BotTaskType.Breach,
-                            currentBreachPryTarget != null ? "Breaching assigned entry point." : "Moving to breach point.",
+                            GetActiveBreakTaskDetail(),
                             currentBreachPryTarget as Component,
                             currentBreachPryTarget != null
                                 ? (Vector3?)currentBreachPryTarget.GetWorldPosition()

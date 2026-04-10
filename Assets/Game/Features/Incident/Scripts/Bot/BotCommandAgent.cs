@@ -126,6 +126,8 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     [SerializeField] private float followRepathDistance = 0.75f;
     [SerializeField] private float followCatchupDistance = 4f;
     [SerializeField] private float followResumeDistanceBuffer = 0.5f;
+    [SerializeField] private float followTargetLossTimeout = 1.5f;
+    [SerializeField] private bool cancelFollowWhenTargetIsLost = true;
     [SerializeField] private Vector3 escortFollowOffset = new Vector3(1.25f, 0f, -1.5f);
     [SerializeField] private float escortSlotPreferenceBias = 0.9f;
     [SerializeField] private bool followAllowAssist;
@@ -141,6 +143,8 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     [Header("Hazard Isolation")]
     [SerializeField] private float hazardIsolationSearchRadius = 6f;
     [SerializeField] private float hazardIsolationInteractionDistance = 1.75f;
+    [SerializeField] private float hazardIsolationUnavailableTimeout = 1.5f;
+    [SerializeField] private int hazardIsolationMaxUnavailableRetries = 1;
 
     [Header("Breach")]
     [SerializeField] private float breachSearchRadius = 6f;
@@ -180,6 +184,8 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     private IBotPryTarget currentBreachPryTarget;
     private IBotHazardIsolationTarget currentHazardIsolationTarget;
     private float cachedHazardIsolationStoppingDistance = -1f;
+    private float hazardIsolationUnavailableSinceTime = -1f;
+    private int hazardIsolationUnavailableRetryCount;
     private Vector3 currentExtinguishTargetPosition;
     private Vector3 currentExtinguishAimPoint;
     private Vector3 currentExtinguishLaunchDirection;
@@ -191,6 +197,7 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     private Transform followTarget;
     private Vector3 lastFollowDestination;
     private int currentEscortSlotIndex = -1;
+    private float followTargetLostSinceTime = -1f;
     private readonly Vector3[] escortSlotOffsets = new Vector3[5];
     private readonly int[] occupiedEscortSlotIndices = new int[5];
     private BotActivityDebug activityDebug;
@@ -601,6 +608,26 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
         AimTowards(worldPoint);
     }
 
+    internal void ClearFollowTargetLossState()
+    {
+        followTargetLostSinceTime = -1f;
+    }
+
+    internal bool ShouldCancelFollowAfterTargetLoss()
+    {
+        if (followTargetLostSinceTime < 0f)
+        {
+            followTargetLostSinceTime = Time.time;
+        }
+
+        if (!cancelFollowWhenTargetIsLost)
+        {
+            return false;
+        }
+
+        return Time.time - followTargetLostSinceTime >= Mathf.Max(0f, followTargetLossTimeout);
+    }
+
     internal Transform EnsureRescueCarryAnchor()
     {
         return GetRescueCarryAnchor();
@@ -676,6 +703,7 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
         }
 
         behaviorContext.ClearFollowOrder();
+        ClearFollowTargetLossState();
         followTarget = null;
         lastFollowDestination = Vector3.zero;
         currentEscortSlotIndex = -1;
@@ -703,13 +731,16 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
 
     private BotFollowOrder CreateFollowOrder(BotCommandType commandType = BotCommandType.Follow)
     {
+        ClearFollowTargetLossState();
         Transform initialTarget = runtimeDecisionService != null
             ? runtimeDecisionService.ResolveFollowTarget(null, followTargetTag, perceptionMemory)
             : null;
         BotFollowMode followMode = commandType == BotCommandType.Regroup
             ? BotFollowMode.Escort
             : defaultFollowMode;
-        bool allowAssist = commandType == BotCommandType.Assist || commandType == BotCommandType.Regroup || followAllowAssist;
+        bool allowAssist = commandType == BotCommandType.Follow ||
+                           commandType == BotCommandType.Regroup ||
+                           followAllowAssist;
         Vector3 localOffset = followMode == BotFollowMode.Escort
             ? escortFollowOffset
             : Vector3.zero;
