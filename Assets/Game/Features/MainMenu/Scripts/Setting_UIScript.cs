@@ -99,6 +99,7 @@ public partial class Setting_UIScript : MonoBehaviour
         }
 
         ResolveRuntimeReferences();
+        InitializeControlsSettings();
         ConfigureResolutionDropdown(useSavedSelection: false);
         ConfigureFovSlider();
         ConfigureMouseSensitivitySlider();
