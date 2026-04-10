@@ -105,179 +105,6 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 1
   m_ReverseArrangement: 0
---- !u!1 &1076706018474258110
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 3617109096246974504}
-  - component: {fileID: 866900415439244661}
-  - component: {fileID: 1413480143273400624}
-  - component: {fileID: 4512242375624333451}
-  - component: {fileID: 6767709991349982837}
-  - component: {fileID: 1348497278694869052}
-  - component: {fileID: 9021445500191133776}
-  - component: {fileID: 6753428359166668339}
-  - component: {fileID: 1740163296038258652}
-  m_Layer: 5
-  m_Name: Canvas
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &3617109096246974504
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1076706018474258110}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0, y: 0, z: 0}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 2790925206180237020}
-  - {fileID: 208378172609307859}
-  - {fileID: 632224204594673684}
-  - {fileID: 9149610306748471958}
-  - {fileID: 2426734227480055205}
-  - {fileID: 700000000000000002}
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
-  m_Pivot: {x: 0, y: 0}
---- !u!223 &866900415439244661
-Canvas:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1076706018474258110}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_RenderMode: 0
-  m_Camera: {fileID: 0}
-  m_PlaneDistance: 100
-  m_PixelPerfect: 0
-  m_ReceivesEvents: 1
-  m_OverrideSorting: 0
-  m_OverridePixelPerfect: 0
-  m_SortingBucketNormalizedSize: 0
-  m_VertexColorAlwaysGammaSpace: 1
-  m_AdditionalShaderChannelsFlag: 25
-  m_UpdateRectTransformForStandalone: 0
-  m_SortingLayerID: 0
-  m_SortingOrder: 0
-  m_TargetDisplay: 0
---- !u!114 &1413480143273400624
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1076706018474258110}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.CanvasScaler
-  m_UiScaleMode: 0
-  m_ReferencePixelsPerUnit: 100
-  m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 800, y: 600}
-  m_ScreenMatchMode: 0
-  m_MatchWidthOrHeight: 0
-  m_PhysicalUnit: 3
-  m_FallbackScreenDPI: 96
-  m_DefaultSpriteDPI: 96
-  m_DynamicPixelsPerUnit: 1
-  m_PresetInfoIsWorld: 0
---- !u!114 &4512242375624333451
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1076706018474258110}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: dc42784cf147c0c48a680349fa168899, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.GraphicRaycaster
-  m_IgnoreReversedGraphics: 1
-  m_BlockingObjects: 0
-  m_BlockingMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
---- !u!114 &6767709991349982837
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1076706018474258110}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3cf53632897fc7742aedcbe4fcfc6cec, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TargetToggleUI
-  interactionSystem: {fileID: 0}
-  targetOverride: {fileID: 0}
-  uiOnTarget: {fileID: 1440449949263866585}
-  uiOnNoTarget: {fileID: 8928289840328931111}
---- !u!114 &1348497278694869052
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1076706018474258110}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: db68072dbd4bb544a804cbcdb25cbc4b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerVitalsUI
-  vitals: {fileID: 0}
-  hpFill: {fileID: 8613779883783256222}
-  oxygenFill: {fileID: 4161459167207647125}
-  staminaFill: {fileID: 6610825867476562462}
---- !u!114 &9021445500191133776
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1076706018474258110}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f2f4c7a4b4d94174b6cb9b7f3f8e1a22, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerHazardOverlayUI
-  exposure: {fileID: 0}
-  smokeOverlay: {fileID: 700000000000000013}
-  smokeCanvasGroup: {fileID: 700000000000000014}
-  fireOverlays:
-  - {fileID: 700000000000000023}
-  - {fileID: 700000000000000033}
-  - {fileID: 700000000000000043}
-  - {fileID: 700000000000000053}
-  fireCanvasGroups:
-  - {fileID: 700000000000000024}
-  - {fileID: 700000000000000034}
-  - {fileID: 700000000000000044}
-  - {fileID: 700000000000000054}
-  maxSmokeOverlayOpacity: 1
-  maxFireOverlayOpacity: 1
-  fireOverlayBaseSize: {x: 420, y: 420}
-  fireOverlayExtraSize: {x: 320, y: 320}
 --- !u!1 &700000000000000001
 GameObject:
   m_ObjectHideFlags: 0
@@ -374,7 +201,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1344c3c82d62a2a41a3576d8abb8e3ea, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RawImage
   m_Material: {fileID: 0}
   m_Color: {r: 0.36, g: 0.37, b: 0.38, a: 1}
@@ -459,7 +286,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1344c3c82d62a2a41a3576d8abb8e3ea, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RawImage
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 0.55, b: 0.2, a: 1}
@@ -544,7 +371,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1344c3c82d62a2a41a3576d8abb8e3ea, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RawImage
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 0.55, b: 0.2, a: 1}
@@ -629,7 +456,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1344c3c82d62a2a41a3576d8abb8e3ea, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RawImage
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 0.55, b: 0.2, a: 1}
@@ -714,7 +541,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1344c3c82d62a2a41a3576d8abb8e3ea, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RawImage
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 0.55, b: 0.2, a: 1}
@@ -743,6 +570,182 @@ CanvasGroup:
   m_Interactable: 0
   m_BlocksRaycasts: 0
   m_IgnoreParentGroups: 0
+--- !u!1 &1076706018474258110
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3617109096246974504}
+  - component: {fileID: 866900415439244661}
+  - component: {fileID: 1413480143273400624}
+  - component: {fileID: 4512242375624333451}
+  - component: {fileID: 6767709991349982837}
+  - component: {fileID: 1348497278694869052}
+  - component: {fileID: 9021445500191133776}
+  - component: {fileID: 6753428359166668339}
+  - component: {fileID: 1740163296038258652}
+  m_Layer: 5
+  m_Name: Canvas
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &3617109096246974504
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1076706018474258110}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 0, y: 0, z: 0}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 2790925206180237020}
+  - {fileID: 208378172609307859}
+  - {fileID: 632224204594673684}
+  - {fileID: 9149610306748471958}
+  - {fileID: 2426734227480055205}
+  - {fileID: 700000000000000002}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0, y: 0}
+--- !u!223 &866900415439244661
+Canvas:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1076706018474258110}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_RenderMode: 0
+  m_Camera: {fileID: 0}
+  m_PlaneDistance: 100
+  m_PixelPerfect: 0
+  m_ReceivesEvents: 1
+  m_OverrideSorting: 0
+  m_OverridePixelPerfect: 0
+  m_SortingBucketNormalizedSize: 0
+  m_VertexColorAlwaysGammaSpace: 1
+  m_UseReflectionProbes: 0
+  m_AdditionalShaderChannelsFlag: 25
+  m_UpdateRectTransformForStandalone: 0
+  m_SortingLayerID: 0
+  m_SortingOrder: 0
+  m_TargetDisplay: 0
+--- !u!114 &1413480143273400624
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1076706018474258110}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.CanvasScaler
+  m_UiScaleMode: 0
+  m_ReferencePixelsPerUnit: 100
+  m_ScaleFactor: 1
+  m_ReferenceResolution: {x: 800, y: 600}
+  m_ScreenMatchMode: 0
+  m_MatchWidthOrHeight: 0
+  m_PhysicalUnit: 3
+  m_FallbackScreenDPI: 96
+  m_DefaultSpriteDPI: 96
+  m_DynamicPixelsPerUnit: 1
+  m_PresetInfoIsWorld: 0
+--- !u!114 &4512242375624333451
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1076706018474258110}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc42784cf147c0c48a680349fa168899, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.GraphicRaycaster
+  m_IgnoreReversedGraphics: 1
+  m_BlockingObjects: 0
+  m_BlockingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &6767709991349982837
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1076706018474258110}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3cf53632897fc7742aedcbe4fcfc6cec, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TargetToggleUI
+  interactionSystem: {fileID: 0}
+  targetOverride: {fileID: 0}
+  uiOnTarget: {fileID: 1440449949263866585}
+  uiOnNoTarget: {fileID: 8928289840328931111}
+--- !u!114 &1348497278694869052
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1076706018474258110}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db68072dbd4bb544a804cbcdb25cbc4b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerVitalsUI
+  vitals: {fileID: 0}
+  hpFill: {fileID: 8613779883783256222}
+  oxygenFill: {fileID: 4161459167207647125}
+  maskOxygenFill: {fileID: 0}
+  staminaFill: {fileID: 6610825867476562462}
+--- !u!114 &9021445500191133776
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1076706018474258110}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f2f4c7a4b4d94174b6cb9b7f3f8e1a22, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerHazardOverlayUI
+  exposure: {fileID: 0}
+  smokeOverlay: {fileID: 700000000000000013}
+  smokeCanvasGroup: {fileID: 700000000000000014}
+  fireOverlays:
+  - {fileID: 700000000000000023}
+  - {fileID: 700000000000000033}
+  - {fileID: 700000000000000043}
+  - {fileID: 700000000000000053}
+  fireCanvasGroups:
+  - {fileID: 700000000000000024}
+  - {fileID: 700000000000000034}
+  - {fileID: 700000000000000044}
+  - {fileID: 700000000000000054}
+  maxSmokeOverlayOpacity: 1
+  maxFireOverlayOpacity: 1
+  fireOverlayBaseSize: {x: 420, y: 420}
+  fireOverlayExtraSize: {x: 320, y: 320}
+  thermalVisionController: {fileID: 0}
 --- !u!114 &6753428359166668339
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -756,10 +759,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::KeyHintPanelController_All
   playerInput: {fileID: 0}
+  missionSystem: {fileID: 0}
+  interactionSystem: {fileID: 0}
+  inventorySystem: {fileID: 0}
+  commandSystem: {fileID: 0}
   container: {fileID: 632224204594673684}
   itemPrefab: {fileID: 1463810949976334004, guid: 8b2be651b4740524395a49f1ae5d0e00, type: 3}
   actionMapName: Player
   includeValueActions: 1
+  hideLookAction: 1
+  useContextualMissionHints: 1
+  hideHintsOutsideRunningMission: 1
+  fallbackToAllActionsWhenNoContextMatch: 1
+  useBuiltInTutorialProfiles: 1
+  defaultContextActionNames: []
+  contextualHintProfiles: []
 --- !u!114 &1740163296038258652
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1067,22 +1081,65 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MissionHudPresenter
   missionSystem: {fileID: 0}
+  playerHazardExposure: {fileID: 0}
   rootCanvasGroup: {fileID: 3654352083869361689}
   missionTitleText: {fileID: 6413725964571898357}
   missionDescriptionText: {fileID: 6904688946498575}
   stageText: {fileID: 2423543673962327140}
   stateText: {fileID: 1895582742623169921}
   timerText: {fileID: 1339542705017730930}
+  scoreText: {fileID: 0}
   objectivesText: {fileID: 439118851934759001}
+  missionHeaderText: {fileID: 0}
+  missionTimerText: {fileID: 0}
+  missionSummaryText: {fileID: 0}
+  stageCounterText: {fileID: 0}
+  stageHeadlineText: {fileID: 0}
+  stageProgressFillImage: {fileID: 0}
+  stageProgressText: {fileID: 0}
+  objectivesHeaderText: {fileID: 0}
+  objectivesListRoot: {fileID: 0}
+  objectiveItemPrefab: {fileID: 0}
+  pendingObjectiveIcon: {fileID: 0}
+  activeObjectiveIcon: {fileID: 0}
+  completedObjectiveIcon: {fileID: 0}
+  failedObjectiveIcon: {fileID: 0}
+  objectiveDoneToastRoot: {fileID: 0}
+  objectiveDoneToastText: {fileID: 0}
+  objectiveUpdateToastRoot: {fileID: 0}
+  objectiveUpdateToastTitleText: {fileID: 0}
+  objectiveUpdateToastBodyText: {fileID: 0}
   hideWhenMissionMissing: 1
   hideWhenMissionIdle: 0
   showMissionDescription: 1
   showCompletedObjectives: 1
+  showObjectiveScores: 1
   pendingPrefix: '[ ]'
   completedPrefix: '[DONE]'
   failedPrefix: '[FAILED]'
   timerRemainingFormat: '{0:F1}s left'
   timerElapsedFormat: '{0:F1}s elapsed'
+  scoreFormat: 'Score: {0}/{1}{2}'
+  stageCounterFormat: Stage {0} / {1}
+  objectivesHeaderFormat: OBJECTIVES - {0}
+  progressPercentFormat: '{0:0}%'
+  progressWithScoreFormat: '{0:0}% | {1}'
+  pendingObjectiveColor: {r: 1, g: 1, b: 1, a: 0.65}
+  activeObjectiveColor: {r: 1, g: 1, b: 1, a: 1}
+  completedObjectiveColor: {r: 0.59, g: 1, b: 0.77, a: 0.9}
+  failedObjectiveColor: {r: 1, g: 0.62, b: 0.62, a: 0.95}
+  showSituationAdvisories: 1
+  smokeWarningThreshold: 0.2
+  heavySmokeWarningThreshold: 0.55
+  showInitialObjectiveUpdateToast: 1
+  objectiveDoneToastDuration: 1.1
+  objectiveUpdateToastDuration: 1.45
+  toastGapSeconds: 0.15
+  objectiveDoneToastFormat: '{0} done'
+  objectiveUpdateToastTitle: OBJECTIVE UPDATED
+  hudCanvasGroup: {fileID: 0}
+  allowHudToggleHotkey: 1
+  toggleHudKey: 110
 --- !u!225 &3654352083869361689
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -1251,8 +1308,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: RESOLVE INCIDENT
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: a14230f6adbce6642b2a625b814a40c1, type: 2}
+  m_sharedMaterial: {fileID: 341636555560621800, guid: a14230f6adbce6642b2a625b814a40c1, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1506,8 +1563,8 @@ MonoBehaviour:
   m_text: "      - [ ] Extinguish Fires: 2/5\r\n      - [DONE] Rescue Targets: 1/1\r\n     
     - [FAILED] Victim Outcome: U 0 | C 1 | S 2 | X 1 | D 1"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: a14230f6adbce6642b2a625b814a40c1, type: 2}
+  m_sharedMaterial: {fileID: 341636555560621800, guid: a14230f6adbce6642b2a625b814a40c1, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1643,8 +1700,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 'State: Running'
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: a14230f6adbce6642b2a625b814a40c1, type: 2}
+  m_sharedMaterial: {fileID: 341636555560621800, guid: a14230f6adbce6642b2a625b814a40c1, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1780,8 +1837,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 04:32 left
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: a14230f6adbce6642b2a625b814a40c1, type: 2}
+  m_sharedMaterial: {fileID: 341636555560621800, guid: a14230f6adbce6642b2a625b814a40c1, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -2191,8 +2248,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 'STAGE 2/3: EXTRACT VICTIMS'
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: a14230f6adbce6642b2a625b814a40c1, type: 2}
+  m_sharedMaterial: {fileID: 341636555560621800, guid: a14230f6adbce6642b2a625b814a40c1, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -2385,8 +2442,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Extinguish fires and rescue civilians.
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: a14230f6adbce6642b2a625b814a40c1, type: 2}
+  m_sharedMaterial: {fileID: 341636555560621800, guid: a14230f6adbce6642b2a625b814a40c1, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -2904,6 +2961,7 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 0
+  m_UseReflectionProbes: 0
   m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
