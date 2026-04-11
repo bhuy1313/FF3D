@@ -9,9 +9,9 @@ using UnityEngine.UI;
 public partial class Setting_UIScript
 {
     private const string KeyboardMouseSchemeName = "KeyboardMouse";
-    private const string ControlsWaitingVietnamese = "Nhan phim...";
+    private const string ControlsWaitingVietnamese = "Nhấn phím...";
     private const string ControlsWaitingEnglish = "Press a key...";
-    private const string ControlsUnboundVietnamese = "Chua gan";
+    private const string ControlsUnboundVietnamese = "Chưa gán";
     private const string ControlsUnboundEnglish = "Unbound";
     private const string ControlsKeyboardVietnamese = "Phim";
     private const string ControlsKeyboardEnglish = "Keyboard";
@@ -95,34 +95,34 @@ public partial class Setting_UIScript
     private static readonly ControlBindingSection[] ControlBindingSections =
     {
         new ControlBindingSection(
+            "Giai đoạn hiện trường",
             "Onsite Phase",
-            "Onsite Phase",
-            new ControlBindingDefinition("Move", "Tien thang", "Move Forward", "2063a8b5-6a45-43de-851b-65f3d46e7b58"),
-            new ControlBindingDefinition("Move", "Lui lai", "Move Backward", "64e4d037-32e1-4fb9-80e4-fc7330404dfe"),
-            new ControlBindingDefinition("Move", "Qua trai", "Move Left", "0fce8b11-5eab-4e4e-a741-b732e7b20873"),
-            new ControlBindingDefinition("Move", "Qua phai", "Move Right", "7bdda0d6-57a8-47c8-8238-8aecf3110e47"),
-            new ControlBindingDefinition("Jump", "Nhay", "Jump"),
-            new ControlBindingDefinition("Sprint", "Chay", "Sprint"),
-            new ControlBindingDefinition("Crouch", "Cui", "Crouch"),
-            new ControlBindingDefinition("Interact", "Tuong tac", "Interact"),
-            new ControlBindingDefinition("Pickup", "Nhat vat", "Pickup"),
-            new ControlBindingDefinition("Use", "Su dung vat", "Use Item"),
-            new ControlBindingDefinition("Drop", "Tha vat", "Drop Item"),
-            new ControlBindingDefinition("Grab", "Giu keo vat", "Grab Object")),
+            new ControlBindingDefinition("Move", "Tiến thẳng", "Move Forward", "2063a8b5-6a45-43de-851b-65f3d46e7b58"),
+            new ControlBindingDefinition("Move", "Lùi lại", "Move Backward", "64e4d037-32e1-4fb9-80e4-fc7330404dfe"),
+            new ControlBindingDefinition("Move", "Qua trái", "Move Left", "0fce8b11-5eab-4e4e-a741-b732e7b20873"),
+            new ControlBindingDefinition("Move", "Qua phải", "Move Right", "7bdda0d6-57a8-47c8-8238-8aecf3110e47"),
+            new ControlBindingDefinition("Jump", "Nhảy", "Jump"),
+            new ControlBindingDefinition("Sprint", "Chạy", "Sprint"),
+            new ControlBindingDefinition("Crouch", "Cúi", "Crouch"),
+            new ControlBindingDefinition("Interact", "Tương tác", "Interact"),
+            new ControlBindingDefinition("Pickup", "Nhặt vật", "Pickup"),
+            new ControlBindingDefinition("Use", "Sử dụng vật", "Use Item"),
+            new ControlBindingDefinition("Drop", "Thả vật", "Drop Item"),
+            new ControlBindingDefinition("Grab", "Giữ kéo vật", "Grab Object")),
         new ControlBindingSection(
-            "Chi huy",
+            "Chỉ huy",
             "Command",
-            new ControlBindingDefinition("ToolWheel", "Vong cong cu", "Tool Wheel"),
-            new ControlBindingDefinition("CommandMove", "Lenh di chuyen", "Move Command"),
-            new ControlBindingDefinition("CommandCancel", "Huy lenh", "Cancel Command"),
-            new ControlBindingDefinition("CommandCancelAllFollow", "Dung tat ca follow", "Cancel All Follow"),
-            new ControlBindingDefinition("ToggleBotOutline", "Bat tat vien bot", "Toggle Bot Outline")),
+            new ControlBindingDefinition("ToolWheel", "Vòng công cụ", "Tool Wheel"),
+            new ControlBindingDefinition("CommandMove", "Lệnh di chuyển", "Move Command"),
+            new ControlBindingDefinition("CommandCancel", "Hủy lệnh", "Cancel Command"),
+            new ControlBindingDefinition("CommandCancelAllFollow", "Dừng tất cả follow", "Cancel All Follow"),
+            new ControlBindingDefinition("ToggleBotOutline", "Bật tắt viền bot", "Toggle Bot Outline")),
         new ControlBindingSection(
-            "Thiet bi",
+            "Thiết bị",
             "Equipment",
-            new ControlBindingDefinition("ToggleSprayPattern", "Doi kieu phun", "Toggle Spray Pattern"),
-            new ControlBindingDefinition("IncreasePressure", "Tang ap luc", "Increase Pressure"),
-            new ControlBindingDefinition("DecreasePressure", "Giam ap luc", "Decrease Pressure"))
+            new ControlBindingDefinition("ToggleSprayPattern", "Đổi kiểu phun", "Toggle Spray Pattern"),
+            new ControlBindingDefinition("IncreasePressure", "Tăng áp lực", "Increase Pressure"),
+            new ControlBindingDefinition("DecreasePressure", "Giảm áp lực", "Decrease Pressure"))
     };
 
     private void InitializeControlsSettings()

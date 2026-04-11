@@ -25,10 +25,13 @@ public class LangSegmentToggleStyler : MonoBehaviour
     [SerializeField] private bool useFixedLabelFontSizes = false;
     [SerializeField] private float selectedLabelFontSize = 18f;
     [SerializeField] private float unselectedLabelFontSize = 14f;
+    [SerializeField] private bool useBoldForSelected = false;
 
     private readonly List<ToggleVisual> runtimeToggles = new List<ToggleVisual>();
     private readonly List<Toggle> registeredToggles = new List<Toggle>();
     private readonly Dictionary<Graphic, float> baseLabelFontSizes = new Dictionary<Graphic, float>();
+    private readonly Dictionary<TMP_Text, FontStyles> baseTmpFontStyles = new Dictionary<TMP_Text, FontStyles>();
+    private readonly Dictionary<Text, FontStyle> baseLegacyFontStyles = new Dictionary<Text, FontStyle>();
 
     private void OnEnable()
     {
@@ -88,6 +91,8 @@ public class LangSegmentToggleStyler : MonoBehaviour
     {
         runtimeToggles.Clear();
         baseLabelFontSizes.Clear();
+        baseTmpFontStyles.Clear();
+        baseLegacyFontStyles.Clear();
 
         if (toggles != null)
         {
@@ -124,6 +129,7 @@ public class LangSegmentToggleStyler : MonoBehaviour
 
         Graphic label = ResolveLabel(toggle);
         CacheBaseFontSize(label);
+        CacheBaseFontStyle(label);
 
         runtimeToggles.Add(new ToggleVisual
         {
@@ -274,6 +280,7 @@ public class LangSegmentToggleStyler : MonoBehaviour
         {
             label.color = isSelected ? selectedText : unselectedText;
             ApplyLabelFontSize(label, isSelected);
+            ApplyLabelFontStyle(label, isSelected);
         }
     }
 
@@ -290,6 +297,24 @@ public class LangSegmentToggleStyler : MonoBehaviour
         }
 
         baseLabelFontSizes.Add(label, size);
+    }
+
+    private void CacheBaseFontStyle(Graphic label)
+    {
+        if (label is TMP_Text tmpText)
+        {
+            if (!baseTmpFontStyles.ContainsKey(tmpText))
+            {
+                baseTmpFontStyles.Add(tmpText, tmpText.fontStyle);
+            }
+
+            return;
+        }
+
+        if (label is Text legacyText && !baseLegacyFontStyles.ContainsKey(legacyText))
+        {
+            baseLegacyFontStyles.Add(legacyText, legacyText.fontStyle);
+        }
     }
 
     private void ApplyLabelFontSize(Graphic label, bool isSelected)
@@ -316,6 +341,47 @@ public class LangSegmentToggleStyler : MonoBehaviour
         }
 
         SetLabelFontSize(label, baseSize);
+    }
+
+    private void ApplyLabelFontStyle(Graphic label, bool isSelected)
+    {
+        if (label == null)
+        {
+            return;
+        }
+
+        if (label is TMP_Text tmpText)
+        {
+            if (!baseTmpFontStyles.TryGetValue(tmpText, out FontStyles baseStyle))
+            {
+                CacheBaseFontStyle(label);
+                if (!baseTmpFontStyles.TryGetValue(tmpText, out baseStyle))
+                {
+                    return;
+                }
+            }
+
+            tmpText.fontStyle = useBoldForSelected && isSelected
+                ? baseStyle | FontStyles.Bold
+                : baseStyle;
+            return;
+        }
+
+        if (label is Text legacyText)
+        {
+            if (!baseLegacyFontStyles.TryGetValue(legacyText, out FontStyle baseStyle))
+            {
+                CacheBaseFontStyle(label);
+                if (!baseLegacyFontStyles.TryGetValue(legacyText, out baseStyle))
+                {
+                    return;
+                }
+            }
+
+            legacyText.fontStyle = useBoldForSelected && isSelected
+                ? CombineWithBold(baseStyle)
+                : baseStyle;
+        }
     }
 
     private bool TryGetLabelFontSize(Graphic label, out float size)
@@ -349,5 +415,16 @@ public class LangSegmentToggleStyler : MonoBehaviour
         {
             legacyText.fontSize = Mathf.RoundToInt(size);
         }
+    }
+
+    private static FontStyle CombineWithBold(FontStyle baseStyle)
+    {
+        return baseStyle switch
+        {
+            FontStyle.Italic => FontStyle.BoldAndItalic,
+            FontStyle.BoldAndItalic => FontStyle.BoldAndItalic,
+            FontStyle.Bold => FontStyle.Bold,
+            _ => FontStyle.Bold
+        };
     }
 }
