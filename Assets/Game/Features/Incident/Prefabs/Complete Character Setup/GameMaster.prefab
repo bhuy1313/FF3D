@@ -190,6 +190,7 @@ GameObject:
   - component: {fileID: 6783775267924060584}
   - component: {fileID: 7857196384671778857}
   - component: {fileID: 6149454474236452101}
+  - component: {fileID: 8672952808920530006}
   m_Layer: 0
   m_Name: GameMaster
   m_TagString: Untagged
@@ -211,6 +212,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 5532361893115815269}
+  - {fileID: 4490921490145338205}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &3447858380073853657
@@ -236,7 +238,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5174fb168e7044cea41ec0ad13b14a9f, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LanguageManager
   defaultLanguage: 0
   localizationTable: {fileID: 11400000, guid: 1d7332cf891b3294ea373abb22fcfb31, type: 2}
@@ -260,8 +262,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cda909ff7cfb4c1e8f7f530ec4d2f176, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IncidentMissionSystem
-  missionDefinition: {fileID: 11400000, guid: 4b4f115e368e4d2ab8664aab5872a8b1, type: 2}
-  sceneObjectRegistry: {fileID: 0}
+  missionDefinition: {fileID: 11400000, guid: ff520bc3a0234e22b9c1a643cae89635, type: 2}
+  sceneObjectRegistry: {fileID: 7857196384671778857}
   missionId: incident
   missionTitle: Resolve Incident
   missionDescription: Extinguish fires and rescue civilians.
@@ -314,9 +316,30 @@ MonoBehaviour:
   totalStageCount: 0
   currentStageTitle: 
   currentStageDescription: 
+  isStageTransitionPending: 0
+  pendingStageIndex: -1
+  pendingStageStartTime: -1
   lastStartedStageEventIndex: -1
   lastCompletedStageEventIndex: -1
   objectiveStatuses: []
+  completedObjectiveRecords: []
+  completedStageScoreRecords: []
+  currentScore: 0
+  maximumScore: 0
+  currentScoreRank: 
+  finalScore: 0
+  finalMaximumScore: 0
+  finalScoreRank: 
+  finalTotalTrackedFires: 0
+  finalExtinguishedFireCount: 0
+  finalTotalTrackedRescuables: 0
+  finalRescuedCount: 0
+  finalTotalTrackedVictims: 0
+  finalUrgentVictimCount: 0
+  finalCriticalVictimCount: 0
+  finalStabilizedVictimCount: 0
+  finalExtractedVictimCount: 0
+  finalDeceasedVictimCount: 0
   progressDirty: 1
   activatedSignalKeys: []
 --- !u!114 &7857196384671778857
@@ -333,6 +356,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MissionSceneObjectRegistry
   entries:
   - key: event-1
+    targetObject: {fileID: 0}
+  - key: explosive-1
     targetObject: {fileID: 0}
 --- !u!114 &6149454474236452101
 MonoBehaviour:
@@ -353,12 +378,43 @@ MonoBehaviour:
   showRetryButton: 1
   showMainMenuButton: 1
   mainMenuSceneName: MainMenu
+  resultLabel: RESULT
   completedTitle: Mission Complete
   failedTitle: Mission Failed
   retryButtonLabel: Retry
   mainMenuButtonLabel: Main Menu
-  statsHeader: Summary
+  performanceHeader: PERFORMANCE
   objectivesHeader: Objectives
+  noObjectivesLabel: No tracked objectives.
+  timeLabel: Time
+  firesLabel: Fires
+  rescuesLabel: Rescues
+  victimsLabel: Victims
+  scoreLabel: Score
+  victimsValueFormat: U:{0} C:{1} S:{2} X:{3} D:{4}
+  resultPopupObjectName: ResultPopup
+--- !u!114 &8672952808920530006
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1056660501349176053}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4b92466b524949d9a8a3be3a0ee35cd3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SceneStartupFlow
+  runOnStart: 1
+  collectTasksFromChildren: 1
+  includeInactiveTasks: 1
+  lockPlayerUntilReady: 1
+  clearInputsWhileLocked: 1
+  explicitTasks:
+  - {fileID: 8257045420443869963}
+  playerControllerOverride: {fileID: 0}
+  playerActionLock: {fileID: 0}
+  playerInputs: {fileID: 0}
 --- !u!1 &2935035556544931113
 GameObject:
   m_ObjectHideFlags: 0
@@ -504,6 +560,110 @@ Transform:
   - {fileID: 1841373860614710744}
   m_Father: {fileID: 5532361893115815269}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &5942125578591603775
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4490921490145338205}
+  - component: {fileID: 4687050247040898487}
+  - component: {fileID: 8257045420443869963}
+  m_Layer: 0
+  m_Name: Startup - Entrance Camera
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4490921490145338205
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5942125578591603775}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8916907086897807096}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4687050247040898487
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5942125578591603775}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1a6d4956e1e48f0a4a0d7de56fa1021, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EntranceCameraIntro
+  playOnStart: 0
+  onlyOncePerSceneLoad: 1
+  resolveTargetTimeout: 2
+  startDelay: 0.15
+  duration: 2.6
+  blendInTime: 0.35
+  blendOutTime: 0.45
+  motionCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  introPriority: 100
+  pivot: {fileID: 0}
+  lookAtTarget: {fileID: 0}
+  flattenPivotYaw: 1
+  startOffset: {x: -3.25, y: 1.7, z: -5.5}
+  endOffset: {x: 0.85, y: 1.75, z: -1.2}
+  lookAtOffset: {x: 0, y: 0, z: 0}
+  fieldOfView: 34
+  lockPlayerDuringIntro: 1
+  playerControllerOverride: {fileID: 0}
+  playerActionLock: {fileID: 0}
+  playerInputs: {fileID: 0}
+--- !u!114 &8257045420443869963
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5942125578591603775}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fa3810b4d47418d9538878e81cbc36b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EntranceCameraStartupTask
+  runTask: 1
+  order: 0
+  taskNameOverride: 
+  entranceCameraIntro: {fileID: 4687050247040898487}
 --- !u!1 &8537030249781691465
 GameObject:
   m_ObjectHideFlags: 0
@@ -520,7 +680,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &5532361893115815269
 Transform:
   m_ObjectHideFlags: 0
