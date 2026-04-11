@@ -16,6 +16,18 @@ public class KeyHintPanelController_All : MonoBehaviour
         public string DisplayNameOverride { get; }
     }
 
+    private readonly struct RenderedHint
+    {
+        public RenderedHint(string key, string label)
+        {
+            Key = key;
+            Label = label;
+        }
+
+        public string Key { get; }
+        public string Label { get; }
+    }
+
     [System.Serializable]
     private sealed class ContextualHintProfile
     {
@@ -39,6 +51,7 @@ public class KeyHintPanelController_All : MonoBehaviour
     [SerializeField] private StarterAssets.FPSInteractionSystem interactionSystem;
     [SerializeField] private FPSInventorySystem inventorySystem;
     [SerializeField] private StarterAssets.FPSCommandSystem commandSystem;
+    [SerializeField] private KeyHintService keyHintService;
 
     [Header("UI")]
     [SerializeField] private Transform container;        // Panel with VerticalLayoutGroup
@@ -46,6 +59,8 @@ public class KeyHintPanelController_All : MonoBehaviour
 
     [Header("Config")]
     [SerializeField] private string actionMapName = "Player";
+    [SerializeField] private bool preferServiceDrivenHints = true;
+    [SerializeField] private bool fallbackToLegacyWhenServiceReturnsEmpty = true;
     [SerializeField] private bool includeValueActions = true; // Include Move/Look value actions
     [SerializeField] private bool hideLookAction = true;
     [SerializeField] private bool useContextualMissionHints = true;
@@ -69,6 +84,7 @@ public class KeyHintPanelController_All : MonoBehaviour
             playerInput.onControlsChanged += OnControlsChanged;
 
         InputSystem.onActionChange += OnActionChange;
+        LanguageManager.LanguageChanged += OnLanguageChanged;
 
         Rebuild();
     }
@@ -93,6 +109,7 @@ public class KeyHintPanelController_All : MonoBehaviour
             playerInput.onControlsChanged -= OnControlsChanged;
 
         InputSystem.onActionChange -= OnActionChange;
+        LanguageManager.LanguageChanged -= OnLanguageChanged;
     }
 
     private void OnControlsChanged(PlayerInput _)
@@ -106,10 +123,14 @@ public class KeyHintPanelController_All : MonoBehaviour
             Rebuild();
     }
 
+    private void OnLanguageChanged(AppLanguage _)
+    {
+        Rebuild();
+    }
+
     [ContextMenu("Rebuild Now")]
     public void Rebuild()
     {
-        ClearAll();
         ResolveReferences();
 
         if (playerInput == null || playerInput.actions == null || itemPrefab == null) return;
@@ -119,6 +140,14 @@ public class KeyHintPanelController_All : MonoBehaviour
         if (map == null) return;
 
         string scheme = playerInput.currentControlScheme ?? "";
+        var renderedHints = new List<RenderedHint>();
+        if (TryRebuildFromService(map, scheme, renderedHints))
+        {
+            ApplyRenderedHints(renderedHints);
+            lastContextSignature = BuildContextSignature();
+            return;
+        }
+
         var hintEntries = new List<ActionHint>();
         AppendLiveContextHints(hintEntries);
 
@@ -129,7 +158,8 @@ public class KeyHintPanelController_All : MonoBehaviour
                 AddUniqueHint(hintEntries, contextualActionNames[i]);
             }
 
-            AddHintEntries(map, hintEntries, scheme);
+            AddHintEntries(map, hintEntries, scheme, renderedHints);
+            ApplyRenderedHints(renderedHints);
             lastContextSignature = BuildContextSignature();
             return;
         }
@@ -145,19 +175,14 @@ public class KeyHintPanelController_All : MonoBehaviour
             AddUniqueHint(hintEntries, action.name);
         }
 
-        AddHintEntries(map, hintEntries, scheme);
+        AddHintEntries(map, hintEntries, scheme, renderedHints);
+        ApplyRenderedHints(renderedHints);
         lastContextSignature = BuildContextSignature();
     }
 
-    private void ClearAll()
+    private void OnDestroy()
     {
-        for (int i = 0; i < spawned.Count; i++)
-        {
-            if (spawned[i] != null)
-                Destroy(spawned[i].gameObject);
-        }
-
-        spawned.Clear();
+        DestroySpawnedItems();
     }
 
     private void ResolveReferences()
@@ -185,7 +210,66 @@ public class KeyHintPanelController_All : MonoBehaviour
                 : FindAnyObjectByType<StarterAssets.FPSCommandSystem>();
         }
 
+        if (keyHintService == null)
+        {
+            keyHintService = GetComponent<KeyHintService>();
+        }
+
+        if (keyHintService == null)
+        {
+            keyHintService = FindAnyObjectByType<KeyHintService>();
+        }
+
         if (container == null) container = transform;
+    }
+
+    private bool TryRebuildFromService(InputActionMap map, string scheme, List<RenderedHint> renderedHints)
+    {
+        if (!preferServiceDrivenHints || keyHintService == null || map == null || itemPrefab == null || renderedHints == null)
+        {
+            return false;
+        }
+
+        IReadOnlyList<KeyHintRequest> requests = keyHintService.RebuildHints();
+        if (requests == null)
+        {
+            return false;
+        }
+
+        bool addedAny = false;
+        for (int index = 0; index < requests.Count; index++)
+        {
+            KeyHintRequest request = requests[index];
+            if (TryAddServiceHint(map, request, scheme, renderedHints))
+            {
+                addedAny = true;
+            }
+        }
+
+        return addedAny || !fallbackToLegacyWhenServiceReturnsEmpty;
+    }
+
+    private bool TryAddServiceHint(InputActionMap map, KeyHintRequest request, string scheme, List<RenderedHint> renderedHints)
+    {
+        if (map == null || !request.IsValid || renderedHints == null)
+        {
+            return false;
+        }
+
+        InputAction action = map.FindAction(request.ActionName, throwIfNotFound: false);
+        if (action == null)
+        {
+            return false;
+        }
+
+        string key = KeyHintBindingUtil.GetKeyDisplay(action, scheme);
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return false;
+        }
+
+        renderedHints.Add(new RenderedHint(key, KeyHintGameplayUtility.ResolveLocalizedLabel(request)));
+        return true;
     }
 
     private bool TryResolveCurrentContextActionNames(out List<string> actionNames)
@@ -273,22 +357,22 @@ public class KeyHintPanelController_All : MonoBehaviour
         return actionNames != null;
     }
 
-    private void AddHintEntries(InputActionMap map, List<ActionHint> hints, string scheme)
+    private void AddHintEntries(InputActionMap map, List<ActionHint> hints, string scheme, List<RenderedHint> renderedHints)
     {
-        if (map == null || hints == null)
+        if (map == null || hints == null || renderedHints == null)
         {
             return;
         }
 
         for (int i = 0; i < hints.Count; i++)
         {
-            TryAddActionHint(map, hints[i], scheme);
+            TryAddActionHint(map, hints[i], scheme, renderedHints);
         }
     }
 
-    private bool TryAddActionHint(InputActionMap map, ActionHint hint, string scheme)
+    private bool TryAddActionHint(InputActionMap map, ActionHint hint, string scheme, List<RenderedHint> renderedHints)
     {
-        if (map == null || string.IsNullOrWhiteSpace(hint.ActionName))
+        if (map == null || string.IsNullOrWhiteSpace(hint.ActionName) || renderedHints == null)
         {
             return false;
         }
@@ -299,13 +383,13 @@ public class KeyHintPanelController_All : MonoBehaviour
             return false;
         }
 
-        AddActionHint(action, scheme, hint.DisplayNameOverride);
+        AddActionHint(action, scheme, renderedHints, hint.DisplayNameOverride);
         return true;
     }
 
-    private void AddActionHint(InputAction action, string scheme, string displayNameOverride = null)
+    private void AddActionHint(InputAction action, string scheme, List<RenderedHint> renderedHints, string displayNameOverride = null)
     {
-        if (action == null)
+        if (action == null || renderedHints == null)
         {
             return;
         }
@@ -316,9 +400,71 @@ public class KeyHintPanelController_All : MonoBehaviour
             return;
         }
 
-        var item = Instantiate(itemPrefab, container);
-        item.Set(key, string.IsNullOrWhiteSpace(displayNameOverride) ? GetActionDisplayName(action.name) : displayNameOverride);
-        spawned.Add(item);
+        renderedHints.Add(new RenderedHint(
+            key,
+            string.IsNullOrWhiteSpace(displayNameOverride) ? GetActionDisplayName(action.name) : displayNameOverride));
+    }
+
+    private void ApplyRenderedHints(List<RenderedHint> renderedHints)
+    {
+        if (renderedHints == null)
+        {
+            DeactivateUnusedItems(0);
+            return;
+        }
+
+        for (int i = 0; i < renderedHints.Count; i++)
+        {
+            KeyHintItemView item = GetOrCreateItem(i);
+            if (item == null)
+            {
+                continue;
+            }
+
+            if (!item.gameObject.activeSelf)
+            {
+                item.gameObject.SetActive(true);
+            }
+
+            item.Set(renderedHints[i].Key, renderedHints[i].Label);
+        }
+
+        DeactivateUnusedItems(renderedHints.Count);
+    }
+
+    private KeyHintItemView GetOrCreateItem(int index)
+    {
+        while (spawned.Count <= index)
+        {
+            KeyHintItemView item = Instantiate(itemPrefab, container);
+            spawned.Add(item);
+        }
+
+        return spawned[index];
+    }
+
+    private void DeactivateUnusedItems(int usedCount)
+    {
+        for (int i = usedCount; i < spawned.Count; i++)
+        {
+            if (spawned[i] != null && spawned[i].gameObject.activeSelf)
+            {
+                spawned[i].gameObject.SetActive(false);
+            }
+        }
+    }
+
+    private void DestroySpawnedItems()
+    {
+        for (int i = 0; i < spawned.Count; i++)
+        {
+            if (spawned[i] != null)
+            {
+                Destroy(spawned[i].gameObject);
+            }
+        }
+
+        spawned.Clear();
     }
 
     private void AppendLiveContextHints(List<ActionHint> hints)

@@ -100212,6 +100212,128 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &700100000000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1623142915498136429}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 46644d951f9d44b79c80a4bfa67d4585, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KeyHintService
+  playerInput: {fileID: 0}
+  missionSystem: {fileID: 0}
+  interactionSystem: {fileID: 0}
+  inventorySystem: {fileID: 0}
+  commandSystem: {fileID: 0}
+  actionMapName: Player
+  autoDiscoverSources: 1
+  sources:
+  - {fileID: 700100000000000002}
+  - {fileID: 700100000000000003}
+  - {fileID: 700100000000000004}
+  - {fileID: 700100000000000005}
+  - {fileID: 700100000000000006}
+  - {fileID: 700100000000000007}
+--- !u!114 &700100000000000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1623142915498136429}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0df7f5270ef4457cab1cab095cfe6ab3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KeyHintMovementSource
+  sourceEnabled: 1
+  basePriority: 0
+  showOnlyDuringRunningMission: 1
+  includeMove: 1
+  includeSprint: 1
+  includeJump: 1
+  includeCrouch: 1
+--- !u!114 &700100000000000003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1623142915498136429}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ffbcc5fd1c1f464f8cbfe4f8dcbf7891, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KeyHintCommandSource
+  sourceEnabled: 1
+  basePriority: 300
+  showOnlyDuringRunningMission: 1
+--- !u!114 &700100000000000004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1623142915498136429}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 39c8730fb546489a9dd8e92d80f35a74, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KeyHintInteractionSource
+  sourceEnabled: 1
+  basePriority: 400
+  showOnlyDuringRunningMission: 1
+--- !u!114 &700100000000000005
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1623142915498136429}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0dc1c63def0c46a0a08f61f6935b68f4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KeyHintHeldItemSource
+  sourceEnabled: 1
+  basePriority: 500
+  showOnlyDuringRunningMission: 1
+--- !u!114 &700100000000000006
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1623142915498136429}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c0cb6d4247fd42298b9ca1fd84c7b6cd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KeyHintInventorySource
+  sourceEnabled: 1
+  basePriority: 200
+  showOnlyDuringRunningMission: 1
+  maxVisibleSlots: 6
+--- !u!114 &700100000000000007
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1623142915498136429}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9bb39eb77e43447385484d7518928ae3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KeyHintTutorialOverrideSource
+  sourceEnabled: 1
+  basePriority: 1000
+  showOnlyDuringRunningMission: 1
+  overrides: []
 --- !u!1 &720000000000000001
 GameObject:
   m_ObjectHideFlags: 0
@@ -102523,6 +102645,13 @@ GameObject:
   - component: {fileID: 2519288850841828178}
   - component: {fileID: 4790545133508935843}
   - component: {fileID: 3315500019142668023}
+  - component: {fileID: 700100000000000001}
+  - component: {fileID: 700100000000000002}
+  - component: {fileID: 700100000000000003}
+  - component: {fileID: 700100000000000004}
+  - component: {fileID: 700100000000000005}
+  - component: {fileID: 700100000000000006}
+  - component: {fileID: 700100000000000007}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -109474,9 +109603,12 @@ MonoBehaviour:
   interactionSystem: {fileID: 0}
   inventorySystem: {fileID: 0}
   commandSystem: {fileID: 0}
+  keyHintService: {fileID: 700100000000000001}
   container: {fileID: 8986721525779891251}
   itemPrefab: {fileID: 1463810949976334004, guid: 8b2be651b4740524395a49f1ae5d0e00, type: 3}
   actionMapName: Player
+  preferServiceDrivenHints: 1
+  fallbackToLegacyWhenServiceReturnsEmpty: 1
   includeValueActions: 1
   hideLookAction: 1
   useContextualMissionHints: 1
@@ -118812,7 +118944,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0.5}
   m_AnchorMax: {x: 1, y: 0.5}
-  m_AnchoredPosition: {x: -20, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 1, y: 0.5}
 --- !u!1 &9007329817900660574
