@@ -41,30 +41,32 @@ public class MainMenuScript : MonoBehaviour
     [SerializeField] private string nextSceneAfterNewGameName = "LevelSelectScene";
     [SerializeField] private string defaultPlayerName = "Player";
     [SerializeField] private int playerNameCharacterLimit = DefaultPlayerNameCharacterLimit;
+    [SerializeField] private TMP_Text newGameNameLabelText;
+    [SerializeField] private TMP_Text newGameHintText;
+    [SerializeField] private TMP_Text newGameCounterText;
+    [SerializeField] private TMP_Text newGameErrorText;
+
+    [Header("Continue Popup")]
+    [SerializeField] private CanvasGroup continuePopupPanel;
+    [SerializeField] private RectTransform continuePopupListRoot;
+    [SerializeField] private TMP_Text continuePopupTitleText;
+    [SerializeField] private TMP_Text continuePopupSubtitleText;
+    [SerializeField] private TMP_Text continuePopupEmptyText;
+    [SerializeField] private Button continuePopupCloseButton;
+    [SerializeField] private Button continuePopupConfirmButton;
+    [SerializeField] private Button continuePopupTemplateButton;
+    [SerializeField] private GameObject continuePopupEmptyRoot;
 
     // Add any extra panels here if they should be hidden on load.
     [SerializeField] private CanvasGroup[] otherPanelsToHideOnLoad;
     private Setting_UIScript settingUI;
     private bool isStartingNewGame;
     private bool isStartingContinue;
-    private CanvasGroup continuePopupPanel;
-    private RectTransform continuePopupListRoot;
-    private TMP_Text continuePopupTitleText;
-    private TMP_Text continuePopupSubtitleText;
-    private TMP_Text continuePopupEmptyText;
-    private Button continuePopupCloseButton;
-    private Button continuePopupConfirmButton;
-    private Button continuePopupTemplateButton;
-    private GameObject continuePopupEmptyRoot;
     private readonly List<Button> continueProfileButtons = new List<Button>();
     private readonly Dictionary<Button, PlayerProgressProfileStore.ProfileSummary> continueProfileSummariesByButton = new Dictionary<Button, PlayerProgressProfileStore.ProfileSummary>();
     private string selectedContinueProfileName = string.Empty;
     private Button selectedContinueProfileButton;
     private ToastContainerController toastContainer;
-    private TMP_Text newGameNameLabelText;
-    private TMP_Text newGameHintText;
-    private TMP_Text newGameCounterText;
-    private TMP_Text newGameErrorText;
     private GameObject newGameErrorRoot;
     private bool showNewGameNameError;
 
@@ -447,10 +449,11 @@ public class MainMenuScript : MonoBehaviour
         if (newGameErrorText == null)
         {
             newGameErrorText = FindComponentByName<TMP_Text>(popupRoot, "ErrorText");
-            if (newGameErrorText != null && newGameErrorRoot == null && newGameErrorText.transform.parent != null)
-            {
-                newGameErrorRoot = newGameErrorText.transform.parent.gameObject;
-            }
+        }
+
+        if (newGameErrorText != null && newGameErrorRoot == null && newGameErrorText.transform.parent != null)
+        {
+            newGameErrorRoot = newGameErrorText.transform.parent.gameObject;
         }
 
         ApplyPopupFont(newGameNameLabelText);

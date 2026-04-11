@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -36,6 +37,8 @@ public class TranscriptExtractionController : MonoBehaviour
     [Header("Behavior")]
     [SerializeField] private bool clearSelectionOnConfirm = true;
     [SerializeField] private bool exitExtractModeOnConfirm = false;
+    [SerializeField] private bool enableTabSelectionShortcut = true;
+    [SerializeField] private bool wrapTabSelection = true;
     [SerializeField] private bool enableDebugLogs = false;
 
     private SelectableSpan currentSpan;
@@ -84,6 +87,7 @@ public class TranscriptExtractionController : MonoBehaviour
 
     private void Update()
     {
+        HandleTabSelectionShortcut();
         HandleConfirmShortcut();
         TryAutoConfirmActiveConfirmationSpan();
     }
@@ -246,6 +250,32 @@ public class TranscriptExtractionController : MonoBehaviour
         ConfirmExtraction();
     }
 
+    private void HandleTabSelectionShortcut()
+    {
+        if (!enableTabSelectionShortcut || !WasTabSelectionShortcutPressed())
+        {
+            return;
+        }
+
+        if (FollowUpPopupController.AnyPopupOpen)
+        {
+            return;
+        }
+
+        if (stateController != null && stateController.CurrentState != TranscriptPanelState.ExtractMode)
+        {
+            return;
+        }
+
+        SelectableSpan nextSpan = FindNextSelectableSpan();
+        if (nextSpan == null)
+        {
+            return;
+        }
+
+        OnSelectableSpanClicked(nextSpan);
+    }
+
     private void TryAutoConfirmActiveConfirmationSpan()
     {
         TryAutoConfirmPendingConfirmationSpan(requireExtractMode: true);
@@ -380,9 +410,76 @@ public class TranscriptExtractionController : MonoBehaviour
         return null;
     }
 
+    private SelectableSpan FindNextSelectableSpan()
+    {
+        List<SelectableSpan> orderedSpans = CollectOrderedVisibleSpans();
+        if (orderedSpans.Count == 0)
+        {
+            return null;
+        }
+
+        if (currentSpan == null)
+        {
+            return orderedSpans[0];
+        }
+
+        int currentIndex = orderedSpans.IndexOf(currentSpan);
+        if (currentIndex < 0)
+        {
+            return orderedSpans[0];
+        }
+
+        int nextIndex = currentIndex + 1;
+        if (nextIndex >= orderedSpans.Count)
+        {
+            nextIndex = wrapTabSelection ? 0 : orderedSpans.Count - 1;
+        }
+
+        return orderedSpans[nextIndex];
+    }
+
+    private List<SelectableSpan> CollectOrderedVisibleSpans()
+    {
+        List<SelectableSpan> orderedSpans = new List<SelectableSpan>();
+
+        TranscriptLogItem[] logItems = GetComponentsInChildren<TranscriptLogItem>(true);
+        for (int index = 0; index < logItems.Length; index++)
+        {
+            TranscriptLogItem logItem = logItems[index];
+            if (logItem == null)
+            {
+                continue;
+            }
+
+            logItem.AppendOrderedVisibleSpans(orderedSpans);
+        }
+
+        if (orderedSpans.Count > 0)
+        {
+            return orderedSpans;
+        }
+
+        SelectableSpan[] spans = GetComponentsInChildren<SelectableSpan>(true);
+        for (int index = 0; index < spans.Length; index++)
+        {
+            SelectableSpan span = spans[index];
+            if (span != null && span.gameObject.activeSelf && !orderedSpans.Contains(span))
+            {
+                orderedSpans.Add(span);
+            }
+        }
+
+        return orderedSpans;
+    }
+
     private static bool WasConfirmShortcutPressed()
     {
         return Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter);
+    }
+
+    private static bool WasTabSelectionShortcutPressed()
+    {
+        return Input.GetKeyDown(KeyCode.Tab);
     }
 
     private void HandleLanguageChanged(AppLanguage _)

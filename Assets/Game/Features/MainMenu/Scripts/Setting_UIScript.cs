@@ -58,17 +58,31 @@ public partial class Setting_UIScript : MonoBehaviour
     [SerializeField] private Toggle autoQuestionToggle;
     [SerializeField] private Toggle autoValidateToggle;
 
-    [Header("Active Visual")]
-    [Range(1f, 1.5f)] [SerializeField] private float activeBrightness = 1.12f;
-    [Range(0.6f, 1f)] [SerializeField] private float inactiveBrightness = 0.95f;
+    [Header("Tab Visual")]
+    [SerializeField] private Color hoverTabBackgroundColor = new Color32(0x34, 0x34, 0x34, 0xFF);
+    [SerializeField] private Color selectedTabBackgroundColor = new Color32(0x4C, 0x4C, 0x4C, 0xFF);
+    [SerializeField] private Color hoverTabAccentColor = new Color32(0xFF, 0xB0, 0x4A, 0xFF);
+    [SerializeField] private Color selectedTabAccentColor = new Color32(0xFF, 0x8A, 0x00, 0xFF);
+    [SerializeField] private Color hoverTabLabelColor = new Color32(0xFF, 0xB0, 0x4A, 0xFF);
+    [SerializeField] private Color selectedTabLabelColor = new Color32(0xFF, 0x8A, 0x00, 0xFF);
+
+    [Header("Action Button Hover")]
+    [SerializeField] private Color hoverActionButtonBackgroundColor = new Color32(0x66, 0x66, 0x66, 0xFF);
+    [SerializeField] private Color hoverActionButtonAccentColor = new Color32(0xFF, 0xB0, 0x4A, 0xFF);
+    [SerializeField] private Color hoverActionButtonLabelColor = Color.white;
+    [SerializeField] private Vector3 hoverActionButtonScale = new Vector3(1.02f, 1.02f, 1f);
 
     [Header("Default Settings")]
     [SerializeField] private AppLanguage defaultLanguage = AppLanguage.Vietnamese;
 
     private CanvasGroup cgGen, cgGrap, cgAudio, cgCont;
-    private Image btnGenImage, btnGrapImage, btnAudImage, btnContImage;
-    private Image panelGenImage, panelGrapImage, panelAudioImage, panelContImage;
-    private readonly Dictionary<Image, Color> baseImageColors = new Dictionary<Image, Color>();
+    private SettingTabButtonVisual btnGenVisual;
+    private SettingTabButtonVisual btnGrapVisual;
+    private SettingTabButtonVisual btnAudVisual;
+    private SettingTabButtonVisual btnContVisual;
+    private SettingActionButtonHoverVisual btnRestoreDefaultHoverVisual;
+    private SettingActionButtonHoverVisual btnSaveHoverVisual;
+    private SettingActionButtonHoverVisual btnExitHoverVisual;
     private bool hasUnsavedChanges;
     private bool dirtyTrackingBound;
     private bool isRestoringSnapshot;
@@ -90,7 +104,6 @@ public partial class Setting_UIScript : MonoBehaviour
     private readonly List<DisplaySettingsService.ResolutionOption> supportedResolutions = new List<DisplaySettingsService.ResolutionOption>();
     private Coroutine saveFinalizeCoroutine;
     private bool isFinalizingSave;
-
     private void Awake()
     {
         if (TryDisableIfContainerDuplicate())
@@ -116,30 +129,18 @@ public partial class Setting_UIScript : MonoBehaviour
         cgGrap = GetOrAddCanvasGroup(panelGrap);
         cgAudio = GetOrAddCanvasGroup(panelAudio);
         cgCont = GetOrAddCanvasGroup(panelCont);
+        btnGenVisual = ConfigureTabVisual(btnGen);
+        btnGrapVisual = ConfigureTabVisual(btnGrap);
+        btnAudVisual = ConfigureTabVisual(btnAud);
+        btnContVisual = ConfigureTabVisual(btnCont);
+        btnRestoreDefaultHoverVisual = ConfigureActionButtonHoverVisual(btnRestoreDefault);
+        btnSaveHoverVisual = ConfigureActionButtonHoverVisual(btnSave);
+        btnExitHoverVisual = ConfigureActionButtonHoverVisual(btnExit);
 
-        btnGenImage = GetButtonImage(btnGen);
-        btnGrapImage = GetButtonImage(btnGrap);
-        btnAudImage = GetButtonImage(btnAud);
-        btnContImage = GetButtonImage(btnCont);
-
-        panelGenImage = GetPanelImage(panelGen);
-        panelGrapImage = GetPanelImage(panelGrap);
-        panelAudioImage = GetPanelImage(panelAudio);
-        panelContImage = GetPanelImage(panelCont);
-
-        CacheBaseColor(btnGenImage);
-        CacheBaseColor(btnGrapImage);
-        CacheBaseColor(btnAudImage);
-        CacheBaseColor(btnContImage);
-        CacheBaseColor(panelGenImage);
-        CacheBaseColor(panelGrapImage);
-        CacheBaseColor(panelAudioImage);
-        CacheBaseColor(panelContImage);
-
-        if (btnGen != null) btnGen.onClick.AddListener(() => SelectOnly(cgGen, btnGenImage, panelGenImage));
-        if (btnGrap != null) btnGrap.onClick.AddListener(() => SelectOnly(cgGrap, btnGrapImage, panelGrapImage));
-        if (btnAud != null) btnAud.onClick.AddListener(() => SelectOnly(cgAudio, btnAudImage, panelAudioImage));
-        if (btnCont != null) btnCont.onClick.AddListener(() => SelectOnly(cgCont, btnContImage, panelContImage));
+        if (btnGen != null) btnGen.onClick.AddListener(() => SelectOnly(cgGen));
+        if (btnGrap != null) btnGrap.onClick.AddListener(() => SelectOnly(cgGrap));
+        if (btnAud != null) btnAud.onClick.AddListener(() => SelectOnly(cgAudio));
+        if (btnCont != null) btnCont.onClick.AddListener(() => SelectOnly(cgCont));
         if (btnRestoreDefault != null) btnRestoreDefault.onClick.AddListener(OnRestoreDefaultsClicked);
         if (btnSave != null) btnSave.onClick.AddListener(OnSaveButtonClicked);
         if (btnExit != null) btnExit.onClick.AddListener(OnExitButtonClicked);
@@ -171,10 +172,10 @@ public partial class Setting_UIScript : MonoBehaviour
     private void Start()
     {
         // Keep exactly one panel open at all times. Prefer General as default.
-        if (cgGen != null) SelectOnly(cgGen, btnGenImage, panelGenImage);
-        else if (cgGrap != null) SelectOnly(cgGrap, btnGrapImage, panelGrapImage);
-        else if (cgAudio != null) SelectOnly(cgAudio, btnAudImage, panelAudioImage);
-        else if (cgCont != null) SelectOnly(cgCont, btnContImage, panelContImage);
+        if (cgGen != null) SelectOnly(cgGen);
+        else if (cgGrap != null) SelectOnly(cgGrap);
+        else if (cgAudio != null) SelectOnly(cgAudio);
+        else if (cgCont != null) SelectOnly(cgCont);
 
         LoadSavedResolutionSelection();
         LoadSavedVSyncSelection();
@@ -189,37 +190,24 @@ public partial class Setting_UIScript : MonoBehaviour
         BeginEditSession();
     }
 
-    private void SelectOnly(CanvasGroup target, Image activeButtonImage, Image activePanelImage)
+    private void SelectOnly(CanvasGroup target)
     {
         if (target == null) return;
 
-        SetTabState(cgGen, btnGenImage, panelGenImage, target == cgGen, activeButtonImage, activePanelImage);
-        SetTabState(cgGrap, btnGrapImage, panelGrapImage, target == cgGrap, activeButtonImage, activePanelImage);
-        SetTabState(cgAudio, btnAudImage, panelAudioImage, target == cgAudio, activeButtonImage, activePanelImage);
-        SetTabState(cgCont, btnContImage, panelContImage, target == cgCont, activeButtonImage, activePanelImage);
+        SetTabState(cgGen, btnGenVisual, target == cgGen);
+        SetTabState(cgGrap, btnGrapVisual, target == cgGrap);
+        SetTabState(cgAudio, btnAudVisual, target == cgAudio);
+        SetTabState(cgCont, btnContVisual, target == cgCont);
     }
 
-    private void SetTabState(
-        CanvasGroup cg,
-        Image buttonImage,
-        Image panelImage,
-        bool isActive,
-        Image activeButtonImage,
-        Image activePanelImage)
+    private void SetTabState(CanvasGroup cg, SettingTabButtonVisual visual, bool isActive)
     {
         if (isActive) Show(cg);
         else Hide(cg);
 
-        if (buttonImage != null)
+        if (visual != null)
         {
-            float brightness = buttonImage == activeButtonImage ? activeBrightness : inactiveBrightness;
-            ApplyBrightness(buttonImage, brightness);
-        }
-
-        if (panelImage != null)
-        {
-            float brightness = panelImage == activePanelImage ? activeBrightness : inactiveBrightness;
-            ApplyBrightness(panelImage, brightness);
+            visual.SetSelected(isActive);
         }
     }
 
@@ -247,41 +235,43 @@ public partial class Setting_UIScript : MonoBehaviour
         return cg;
     }
 
-    private Image GetButtonImage(Button button)
+    private SettingTabButtonVisual ConfigureTabVisual(Button button)
     {
-        if (button == null) return null;
-        var image = button.targetGraphic as Image;
-        if (image != null) return image;
-        return button.GetComponent<Image>();
-    }
-
-    private Image GetPanelImage(GameObject panel)
-    {
-        if (panel == null) return null;
-        return panel.GetComponent<Image>();
-    }
-
-    private void CacheBaseColor(Image image)
-    {
-        if (image == null || baseImageColors.ContainsKey(image)) return;
-        baseImageColors.Add(image, image.color);
-    }
-
-    private void ApplyBrightness(Image image, float brightness)
-    {
-        if (image == null) return;
-
-        if (!baseImageColors.TryGetValue(image, out Color baseColor))
+        if (button == null)
         {
-            baseColor = image.color;
-            baseImageColors[image] = baseColor;
+            return null;
         }
 
-        image.color = new Color(
-            Mathf.Clamp01(baseColor.r * brightness),
-            Mathf.Clamp01(baseColor.g * brightness),
-            Mathf.Clamp01(baseColor.b * brightness),
-            baseColor.a);
+        SettingTabButtonVisual visual = button.GetComponent<SettingTabButtonVisual>();
+        if (visual == null)
+        {
+            return null;
+        }
+
+        visual.RefreshBindings();
+        return visual;
+    }
+
+    private SettingActionButtonHoverVisual ConfigureActionButtonHoverVisual(Button button)
+    {
+        if (button == null)
+        {
+            return null;
+        }
+
+        SettingActionButtonHoverVisual visual = button.GetComponent<SettingActionButtonHoverVisual>();
+        if (visual == null)
+        {
+            return null;
+        }
+
+        visual.Configure(
+            hoverActionButtonBackgroundColor,
+            hoverActionButtonAccentColor,
+            hoverActionButtonLabelColor,
+            hoverActionButtonScale);
+        visual.RefreshBindings();
+        return visual;
     }
 
     public bool HandleBackRequest(Action continueBackAction)

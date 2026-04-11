@@ -757,6 +757,44 @@ public class TranscriptLogItem : MonoBehaviour
         return span != null && span.gameObject.activeSelf ? span : null;
     }
 
+    public void AppendOrderedVisibleSpans(List<SelectableSpan> results)
+    {
+        if (results == null
+            || boundEntry == null
+            || selectableSpans == null
+            || selectableSpans.Length == 0
+            || boundEntry.speaker != TranscriptSpeakerType.Caller
+            || !boundEntry.isActiveExtractableChunk
+            || !IsExtractModeActive())
+        {
+            return;
+        }
+
+        List<InlineSpanBinding> bindings = BuildInlineSpanBindings(boundEntry.text);
+        if (bindings.Count > 0)
+        {
+            for (int index = 0; index < bindings.Count; index++)
+            {
+                SelectableSpan span = bindings[index].span;
+                if (span != null && span.gameObject.activeSelf && !results.Contains(span))
+                {
+                    results.Add(span);
+                }
+            }
+
+            return;
+        }
+
+        for (int index = 0; index < selectableSpans.Length; index++)
+        {
+            SelectableSpan span = selectableSpans[index];
+            if (span != null && span.gameObject.activeSelf && !results.Contains(span))
+            {
+                results.Add(span);
+            }
+        }
+    }
+
     private static string EscapeRichText(string value)
     {
         if (string.IsNullOrEmpty(value))
