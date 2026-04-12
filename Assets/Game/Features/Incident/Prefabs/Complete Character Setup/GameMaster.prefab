@@ -190,7 +190,7 @@ GameObject:
   - component: {fileID: 6783775267924060584}
   - component: {fileID: 7857196384671778857}
   - component: {fileID: 6149454474236452101}
-  - component: {fileID: 8672952808920530006}
+  - component: {fileID: 5546122349495465332}
   m_Layer: 0
   m_Name: GameMaster
   m_TagString: Untagged
@@ -393,7 +393,7 @@ MonoBehaviour:
   scoreLabel: Score
   victimsValueFormat: U:{0} C:{1} S:{2} X:{3} D:{4}
   resultPopupObjectName: ResultPopup
---- !u!114 &8672952808920530006
+--- !u!114 &5546122349495465332
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -411,7 +411,7 @@ MonoBehaviour:
   lockPlayerUntilReady: 1
   clearInputsWhileLocked: 1
   explicitTasks:
-  - {fileID: 8257045420443869963}
+  - {fileID: 0}
   playerControllerOverride: {fileID: 0}
   playerActionLock: {fileID: 0}
   playerInputs: {fileID: 0}
