@@ -262,6 +262,12 @@ public class Fire : MonoBehaviour, IFireTarget
         allowRegrowFromZero = allow;
     }
 
+    public void SetRequiresIsolationToFullyExtinguish(bool required)
+    {
+        requiresIsolationToFullyExtinguish = required;
+        ApplyHazardDefaults();
+    }
+
     public void SetHazardSourceIsolated(bool isolated)
     {
         hazardSourceIsolated = isolated;
@@ -271,6 +277,36 @@ public class Fire : MonoBehaviour, IFireTarget
     {
         fireType = type;
         ApplyHazardDefaults();
+    }
+
+    public void SetSpreadEnabled(bool enabled)
+    {
+        enableSpread = enabled;
+        spreadTimer = 0f;
+    }
+
+    public void ConfigureSpreadProfile(float intervalSeconds, float igniteAmount, float minNormalizedHp)
+    {
+        spreadInterval = Mathf.Max(0.05f, intervalSeconds);
+        spreadIgniteAmount = Mathf.Max(0f, igniteAmount);
+        spreadMinNormalizedHp = Mathf.Clamp01(minNormalizedHp);
+        spreadTimer = 0f;
+    }
+
+    public void SetBurningLevel01(float intensity01)
+    {
+        bool wasBurning = IsBurning;
+
+        if (!gameObject.activeSelf)
+        {
+            gameObject.SetActive(true);
+        }
+
+        currentHp = Mathf.Clamp01(intensity01) * Mathf.Max(0f, maxHp);
+        NotifyBurningStateChangeIfNeeded(wasBurning);
+        SyncRadiusAndCollider();
+        SyncNavMeshModifier();
+        ApplyVisuals(forcePlayState: true);
     }
 
     public void ToggleHazardSourceIsolation()

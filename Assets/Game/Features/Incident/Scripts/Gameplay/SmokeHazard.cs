@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using StarterAssets;
 using UnityEngine;
@@ -32,6 +33,7 @@ public class SmokeHazard : MonoBehaviour
     [SerializeField] private bool forceMaximumSmokeDensity;
     [Range(0f, 1f)]
     [SerializeField] private float startSmokeDensity;
+    [SerializeField] private float runtimeSmokeAccumulationMultiplier = 1f;
     [SerializeField] private float smokePerBurningFire = 0.3f;
     [SerializeField] private float smokePerFireIntensity = 0.7f;
     [SerializeField] private float passiveVentilationRelief = 0.05f;
@@ -107,6 +109,32 @@ public class SmokeHazard : MonoBehaviour
     public float CurrentVisibilityPenalty => currentSmokeDensity * maxVisibilityPenalty;
     public Collider TriggerZone => triggerZone;
 
+    public void SetStartSmokeDensity(float density01, bool applyImmediately)
+    {
+        startSmokeDensity = Mathf.Clamp01(density01);
+        if (forceMaximumSmokeDensity)
+        {
+            currentSmokeDensity = 1f;
+        }
+        else if (applyImmediately)
+        {
+            currentSmokeDensity = startSmokeDensity;
+        }
+
+        ApplySmokeVfxParticleDensity();
+        UpdateSmokeVfxActiveState();
+    }
+
+    public void SetSmokeAccumulationMultiplier(float multiplier)
+    {
+        runtimeSmokeAccumulationMultiplier = Mathf.Max(0f, multiplier);
+    }
+
+    public void SetLinkedFires(Fire[] fires)
+    {
+        linkedFires = fires ?? Array.Empty<Fire>();
+    }
+
     private void Awake()
     {
         ResolveSupportComponents();
@@ -140,6 +168,7 @@ public class SmokeHazard : MonoBehaviour
         passiveVentilationRelief = Mathf.Max(0f, passiveVentilationRelief);
         smokeAccumulationRate = Mathf.Max(0f, smokeAccumulationRate);
         smokeDissipationRate = Mathf.Max(0f, smokeDissipationRate);
+        runtimeSmokeAccumulationMultiplier = Mathf.Max(0f, runtimeSmokeAccumulationMultiplier);
         fireDraftBoostPerSecond = Mathf.Max(0f, fireDraftBoostPerSecond);
         crouchReliefUntilDensity = Mathf.Clamp01(crouchReliefUntilDensity);
         crouchedExposureMultiplier = Mathf.Clamp01(crouchedExposureMultiplier);
@@ -210,7 +239,8 @@ public class SmokeHazard : MonoBehaviour
         }
 
         float targetDensity = CalculateTargetSmokeDensity();
-        float rate = targetDensity >= currentSmokeDensity ? smokeAccumulationRate : smokeDissipationRate;
+        float riseRate = smokeAccumulationRate * Mathf.Max(0f, runtimeSmokeAccumulationMultiplier);
+        float rate = targetDensity >= currentSmokeDensity ? riseRate : smokeDissipationRate;
         currentSmokeDensity = Mathf.MoveTowards(
             currentSmokeDensity,
             targetDensity,

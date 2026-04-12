@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using TrueJourney.BotBehavior;
 using UnityEngine;
@@ -143,6 +144,36 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
     public Vector3 GetWorldPosition()
     {
         return transform.position;
+    }
+
+    public void SetLinkedFires(Fire[] fires)
+    {
+        linkedFires = fires ?? Array.Empty<Fire>();
+        ApplyLinkedFireConfiguration();
+    }
+
+    public void SetRuntimeHazardType(FireHazardType fireHazardType)
+    {
+        switch (fireHazardType)
+        {
+            case FireHazardType.Electrical:
+                hazardType = IsolationHazardType.Electrical;
+                break;
+            case FireHazardType.GasFed:
+                hazardType = IsolationHazardType.Gas;
+                break;
+            default:
+                hazardType = IsolationHazardType.None;
+                break;
+        }
+
+        ApplyLinkedFireConfiguration();
+        RefreshPresentation();
+    }
+
+    public void SetRuntimeIsolationState(bool isolated, bool invokeEvents)
+    {
+        ApplyIsolationState(isolated, invokeEvents);
     }
 
     private void ApplyIsolationState(bool isolated, bool invokeEvents)

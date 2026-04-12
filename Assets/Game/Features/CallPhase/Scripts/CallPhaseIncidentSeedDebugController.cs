@@ -168,7 +168,7 @@ public class CallPhaseIncidentSeedDebugController : MonoBehaviour
             return null;
         }
 
-        Transform[] transforms = Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        Transform[] transforms = Object.FindObjectsByType<Transform>(FindObjectsInactive.Include);
         for (int i = 0; i < transforms.Length; i++)
         {
             Transform candidate = transforms[i];
