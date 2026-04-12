@@ -49,6 +49,18 @@ public partial class LevelSelectSceneController
             LoadingFlowState.ClearPendingCaseId();
         }
 
+        string onsiteSceneName = ResolveOnsiteSceneName(selectedLevelDefinition, scenario);
+        if (!string.IsNullOrWhiteSpace(onsiteSceneName))
+        {
+            LoadingFlowState.SetPendingOnsiteScene(onsiteSceneName);
+        }
+        else
+        {
+            LoadingFlowState.ClearPendingOnsiteScene();
+        }
+
+        LoadingFlowState.ClearPendingIncidentPayload();
+
         CloseLevelInfo();
         SceneManager.LoadScene(LoadingSceneName);
     }
@@ -178,6 +190,18 @@ public partial class LevelSelectSceneController
 
         return definition != null && !string.IsNullOrWhiteSpace(definition.caseId)
             ? definition.caseId.Trim()
+            : string.Empty;
+    }
+
+    private static string ResolveOnsiteSceneName(LevelDefinition definition, ScenarioDefinition scenario)
+    {
+        if (scenario != null && !string.IsNullOrWhiteSpace(scenario.onsiteSceneName))
+        {
+            return scenario.onsiteSceneName.Trim();
+        }
+
+        return definition != null && !string.IsNullOrWhiteSpace(definition.onsiteSceneName)
+            ? definition.onsiteSceneName.Trim()
             : string.Empty;
     }
 }

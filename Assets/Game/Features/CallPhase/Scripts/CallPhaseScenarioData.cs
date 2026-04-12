@@ -27,6 +27,9 @@ public class CallPhaseScenarioData : ScriptableObject
     public List<CallPhaseScenarioStepData> followUpSteps = new List<CallPhaseScenarioStepData>();
     public List<CallPhaseFollowUpQuestionOptionData> followUpQuestionPool = new List<CallPhaseFollowUpQuestionOptionData>();
 
+    [Header("Incident Seed")]
+    public CallPhaseScenarioIncidentSeedData incidentSeed = new CallPhaseScenarioIncidentSeedData();
+
     [Header("Scenario Expectations")]
     public CallPhaseScenarioExpectedReportData expectedReport = new CallPhaseScenarioExpectedReportData();
     public CallPhaseScenarioAssessRiskData assessRisk = new CallPhaseScenarioAssessRiskData();
@@ -376,6 +379,20 @@ public class CallPhaseScenarioExpectedReportData
     public string spreadStatus;
     public string callerSafety;
     public string severity;
+}
+
+[Serializable]
+public class CallPhaseScenarioIncidentSeedData
+{
+    public string fireOrigin = "Unknown";
+    public string hazardType = "OrdinaryCombustibles";
+    public bool requiresIsolation;
+    [Range(0f, 1f)] public float initialFireIntensity = 0.65f;
+    public int initialFireCount = 1;
+    public string fireSpreadPreset = "Moderate";
+    [Range(0f, 1f)] public float startSmokeDensity = 0.2f;
+    public float smokeAccumulationMultiplier = 1f;
+    public string ventilationPreset = "Neutral";
 }
 
 [Serializable]

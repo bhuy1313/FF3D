@@ -271,6 +271,8 @@ public class MainMenuScript : MonoBehaviour
         LoadingFlowState.ClearCurrentLevelId();
         LoadingFlowState.ClearPendingScenarioResourcePath();
         LoadingFlowState.ClearPendingCaseId();
+        LoadingFlowState.ClearPendingIncidentPayload();
+        LoadingFlowState.ClearPendingOnsiteScene();
         LoadingFlowState.SetPendingTargetScene(nextSceneAfterNewGameName);
 
         SceneManager.LoadScene(loadingSceneName);
@@ -650,6 +652,8 @@ public class MainMenuScript : MonoBehaviour
         LoadingFlowState.ClearCurrentLevelId();
         LoadingFlowState.ClearPendingScenarioResourcePath();
         LoadingFlowState.ClearPendingCaseId();
+        LoadingFlowState.ClearPendingIncidentPayload();
+        LoadingFlowState.ClearPendingOnsiteScene();
         LoadingFlowState.SetPendingTargetScene(nextSceneAfterNewGameName);
         PlayerProgressProfileStore.TouchProfile(resolvedName);
 

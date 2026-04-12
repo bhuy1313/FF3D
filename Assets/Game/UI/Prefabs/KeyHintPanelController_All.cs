@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 public class KeyHintPanelController_All : MonoBehaviour
 {
@@ -410,6 +411,7 @@ public class KeyHintPanelController_All : MonoBehaviour
         if (renderedHints == null)
         {
             DeactivateUnusedItems(0);
+            ForceContainerLayoutRebuild();
             return;
         }
 
@@ -430,6 +432,7 @@ public class KeyHintPanelController_All : MonoBehaviour
         }
 
         DeactivateUnusedItems(renderedHints.Count);
+        ForceContainerLayoutRebuild();
     }
 
     private KeyHintItemView GetOrCreateItem(int index)
@@ -465,6 +468,21 @@ public class KeyHintPanelController_All : MonoBehaviour
         }
 
         spawned.Clear();
+    }
+
+    private void ForceContainerLayoutRebuild()
+    {
+        Canvas.ForceUpdateCanvases();
+
+        if (container is RectTransform containerRect)
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(containerRect);
+
+            if (containerRect.parent is RectTransform parentRect)
+            {
+                LayoutRebuilder.ForceRebuildLayoutImmediate(parentRect);
+            }
+        }
     }
 
     private void AppendLiveContextHints(List<ActionHint> hints)

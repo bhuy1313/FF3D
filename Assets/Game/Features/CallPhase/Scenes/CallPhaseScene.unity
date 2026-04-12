@@ -1891,6 +1891,7 @@ GameObject:
   - component: {fileID: 66942564}
   - component: {fileID: 66942565}
   - component: {fileID: 66942566}
+  - component: {fileID: 66942567}
   m_Layer: 5
   m_Name: MainCallPhaseRoot
   m_TagString: Untagged
@@ -2077,6 +2078,8 @@ MonoBehaviour:
   - CallerSafety
   minimumRecommendedCount: 1
   scenarioData: {fileID: 0}
+  loadingSceneName: LoadingScene
+  nextPhaseSceneName: 
   assessRiskButtonObject: {fileID: 1609755401}
   submitReportButtonObject: {fileID: 715719595}
   assessRiskPopupRootObject: {fileID: 52125852}
@@ -2130,6 +2133,25 @@ MonoBehaviour:
   questionListRoot: {fileID: 475415554}
   questionOptionPrefab: {fileID: 5689678137211975209, guid: 472e6d6b6751de74fb3b8a5038ffdca8, type: 3}
   enableDebugLogs: 0
+--- !u!114 &66942567
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 66942557}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4a7db50359d14e329c1af03ab7f480d1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CallPhaseIncidentSeedDebugController
+  scenarioContext: {fileID: 66942565}
+  incidentReportController: {fileID: 66942562}
+  debugPanel: {fileID: 0}
+  debugText: {fileID: 0}
+  debugPanelName: IncidentSeedDebugPanel
+  debugTextName: IncidentSeedDebugText
+  hidePanelWhenUnavailable: 0
 --- !u!1 &70380796
 GameObject:
   m_ObjectHideFlags: 0
@@ -5875,7 +5897,7 @@ PrefabInstance:
     - target: {fileID: 4903044288736343, guid: a2324dcc5bd37d34194d2f2efb321985, type: 3}
       propertyPath: m_sharedMaterial
       value: 
-      objectReference: {fileID: -8620393713839515716, guid: 23246311d87716b4abafb0cb0219dcfc, type: 2}
+      objectReference: {fileID: 4518009891993428389, guid: 23246311d87716b4abafb0cb0219dcfc, type: 2}
     - target: {fileID: 1213283680117894867, guid: a2324dcc5bd37d34194d2f2efb321985, type: 3}
       propertyPath: m_Name
       value: SubMenuPanel
@@ -5891,7 +5913,7 @@ PrefabInstance:
     - target: {fileID: 1769301508421889961, guid: a2324dcc5bd37d34194d2f2efb321985, type: 3}
       propertyPath: m_sharedMaterial
       value: 
-      objectReference: {fileID: -8620393713839515716, guid: 23246311d87716b4abafb0cb0219dcfc, type: 2}
+      objectReference: {fileID: 4518009891993428389, guid: 23246311d87716b4abafb0cb0219dcfc, type: 2}
     - target: {fileID: 3121809775285954375, guid: a2324dcc5bd37d34194d2f2efb321985, type: 3}
       propertyPath: m_text
       value: Resume
@@ -5899,7 +5921,7 @@ PrefabInstance:
     - target: {fileID: 3121809775285954375, guid: a2324dcc5bd37d34194d2f2efb321985, type: 3}
       propertyPath: m_sharedMaterial
       value: 
-      objectReference: {fileID: -8620393713839515716, guid: 23246311d87716b4abafb0cb0219dcfc, type: 2}
+      objectReference: {fileID: 4518009891993428389, guid: 23246311d87716b4abafb0cb0219dcfc, type: 2}
     - target: {fileID: 3248186500218761510, guid: a2324dcc5bd37d34194d2f2efb321985, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -5955,7 +5977,7 @@ PrefabInstance:
     - target: {fileID: 4209309926300783761, guid: a2324dcc5bd37d34194d2f2efb321985, type: 3}
       propertyPath: m_sharedMaterial
       value: 
-      objectReference: {fileID: -8620393713839515716, guid: 23246311d87716b4abafb0cb0219dcfc, type: 2}
+      objectReference: {fileID: 4518009891993428389, guid: 23246311d87716b4abafb0cb0219dcfc, type: 2}
     - target: {fileID: 4808942613745591323, guid: a2324dcc5bd37d34194d2f2efb321985, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -11695,7 +11717,7 @@ MonoBehaviour:
   m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 23246311d87716b4abafb0cb0219dcfc, type: 2}
-  m_sharedMaterial: {fileID: -8620393713839515716, guid: 23246311d87716b4abafb0cb0219dcfc, type: 2}
+  m_sharedMaterial: {fileID: 4518009891993428389, guid: 23246311d87716b4abafb0cb0219dcfc, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -25668,9 +25690,12 @@ MonoBehaviour:
   interactionSystem: {fileID: 0}
   inventorySystem: {fileID: 0}
   commandSystem: {fileID: 0}
+  keyHintService: {fileID: 0}
   container: {fileID: 0}
   itemPrefab: {fileID: 1463810949976334004, guid: 8b2be651b4740524395a49f1ae5d0e00, type: 3}
   actionMapName: Player
+  preferServiceDrivenHints: 1
+  fallbackToLegacyWhenServiceReturnsEmpty: 1
   includeValueActions: 1
   hideLookAction: 1
   useContextualMissionHints: 1

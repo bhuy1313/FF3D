@@ -359,6 +359,16 @@ MonoBehaviour:
     distractorCallerReplyText: I was just making dinner, but the fire is what matters right now!
     isDistractorQuestion: 1
     authorNote: Low-priority cause question for this phase.
+  incidentSeed:
+    fireOrigin: Kitchen_StoveTop
+    hazardType: Gas
+    requiresIsolation: 1
+    initialFireIntensity: 0.78
+    initialFireCount: 2
+    fireSpreadPreset: Moderate
+    startSmokeDensity: 0.34
+    smokeAccumulationMultiplier: 1.25
+    ventilationPreset: OpenKitchen
   expectedReport:
     address: 27 Maple Street
     fireLocation: Kitchen
