@@ -49,6 +49,7 @@ public partial class LevelSelectSceneController : MonoBehaviour
         public string difficultyLocalizationKey;
         public string caseId;
         public string targetSceneName;
+        public string onsiteSceneName;
         public string scenarioResourcePath;
         public ScenarioDefinition[] scenarioDefinitions = Array.Empty<ScenarioDefinition>();
 
@@ -62,6 +63,7 @@ public partial class LevelSelectSceneController : MonoBehaviour
         public string displayName;
         public string caseId;
         public string targetSceneName;
+        public string onsiteSceneName;
         public string scenarioResourcePath;
     }
 

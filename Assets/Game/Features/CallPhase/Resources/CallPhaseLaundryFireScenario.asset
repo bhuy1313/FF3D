@@ -390,6 +390,16 @@ MonoBehaviour:
     distractorCallerReplyText: I don't know, I'm outside now and there's smoke pushing toward the kitchen!
     isDistractorQuestion: 1
     authorNote: Lower-priority contextual distractor.
+  incidentSeed:
+    fireOrigin: Laundry_WasherOutlet
+    hazardType: Electrical
+    requiresIsolation: 1
+    initialFireIntensity: 0.9
+    initialFireCount: 3
+    fireSpreadPreset: Aggressive
+    startSmokeDensity: 0.53
+    smokeAccumulationMultiplier: 1.7
+    ventilationPreset: OpenEgress
   expectedReport:
     address: 52 Pine Street
     fireLocation: Laundry Room

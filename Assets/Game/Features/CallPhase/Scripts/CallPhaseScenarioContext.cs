@@ -28,6 +28,7 @@ public class CallPhaseScenarioContext : MonoBehaviour
     private int finalizedCallDurationSeconds = -1;
 
     public CallPhaseScenarioData ScenarioData => scenarioData;
+    public string CurrentCaseId => currentCaseId;
     public int CurrentCallDurationSeconds => finalizedCallDurationSeconds >= 0
         ? finalizedCallDurationSeconds
         : GetCurrentElapsedCallSeconds();

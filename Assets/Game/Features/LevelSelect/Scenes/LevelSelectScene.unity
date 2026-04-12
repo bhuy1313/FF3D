@@ -2238,7 +2238,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 257516650}
   m_Direction: 0
   m_Value: 1
-  m_Size: 0.99999946
+  m_Size: 0.9999997
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -9045,12 +9045,14 @@ MonoBehaviour:
       difficultyLocalizationKey: 
       caseId: 
       targetSceneName: 
+      onsiteSceneName: 
       scenarioResourcePath: 
       scenarioDefinitions:
       - scenarioId: training_map_tutorial
         displayName: Tutorial
         caseId: TR-TU-01
         targetSceneName: Tutorial
+        onsiteSceneName: 
         scenarioResourcePath: 
     - buttonName: LevelButton_02
       levelId: suburban_map_01
@@ -9065,17 +9067,20 @@ MonoBehaviour:
       difficultyLocalizationKey: 
       caseId: 
       targetSceneName: 
+      onsiteSceneName: OnsitePhase_Suburban
       scenarioResourcePath: 
       scenarioDefinitions:
       - scenarioId: suburban_map_01_kitchen_fire
         displayName: Kitchen Fire
         caseId: SH-HK-01
         targetSceneName: CallPhaseScene
+        onsiteSceneName: 
         scenarioResourcePath: CallPhaseKitchenFireScenario
       - scenarioId: suburban_map_01_laundry_room_fire
         displayName: Laundry Room Fire
         caseId: SH-LD-01
         targetSceneName: CallPhaseScene
+        onsiteSceneName: 
         scenarioResourcePath: CallPhaseLaundryFireScenario
     - buttonName: LevelButton_03
       levelId: suburban_map_02
@@ -9089,12 +9094,14 @@ MonoBehaviour:
       difficultyLocalizationKey: 
       caseId: 
       targetSceneName: 
+      onsiteSceneName: 
       scenarioResourcePath: 
       scenarioDefinitions:
       - scenarioId: suburban_map_02_garage_fire
         displayName: Garage Fire
         caseId: SH-GR-01
         targetSceneName: CallPhaseScene
+        onsiteSceneName: 
         scenarioResourcePath: CallPhaseGarageFireScenario
   cityCard:
     name: City
@@ -9116,10 +9123,11 @@ MonoBehaviour:
       descriptionLocalizationKey: 
       objective: Assign scenarios to enable this map.
       objectiveLocalizationKey: 
-      difficulty: TBD
+      difficulty: Normal
       difficultyLocalizationKey: 
       caseId: 
       targetSceneName: 
+      onsiteSceneName: 
       scenarioResourcePath: 
       scenarioDefinitions: []
     - buttonName: LevelButton_02
@@ -9130,10 +9138,11 @@ MonoBehaviour:
       descriptionLocalizationKey: 
       objective: Assign scenarios to enable this map.
       objectiveLocalizationKey: 
-      difficulty: TBD
+      difficulty: Normal
       difficultyLocalizationKey: 
       caseId: 
       targetSceneName: 
+      onsiteSceneName: 
       scenarioResourcePath: 
       scenarioDefinitions: []
     - buttonName: LevelButton_03
@@ -9144,10 +9153,11 @@ MonoBehaviour:
       descriptionLocalizationKey: 
       objective: Assign scenarios to enable this map.
       objectiveLocalizationKey: 
-      difficulty: TBD
+      difficulty: Normal
       difficultyLocalizationKey: 
       caseId: 
       targetSceneName: 
+      onsiteSceneName: 
       scenarioResourcePath: 
       scenarioDefinitions: []
   levelInfoPopup:

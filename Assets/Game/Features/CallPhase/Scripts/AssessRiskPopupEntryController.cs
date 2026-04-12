@@ -4,6 +4,7 @@ using System.Text;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
@@ -75,6 +76,10 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
     [Header("Scenario")]
     [SerializeField] private CallPhaseScenarioData scenarioData;
+
+    [Header("Next Phase Flow")]
+    [SerializeField] private string loadingSceneName = "LoadingScene";
+    [SerializeField] private string nextPhaseSceneName = "";
 
     [Header("UI References")]
     [SerializeField] private GameObject assessRiskButtonObject;
@@ -572,8 +577,8 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
         if (resultPopupNextPhaseButton != null)
         {
-            resultPopupNextPhaseButton.onClick.RemoveListener(CloseResultPopup);
-            resultPopupNextPhaseButton.onClick.AddListener(CloseResultPopup);
+            resultPopupNextPhaseButton.onClick.RemoveListener(ProceedToNextPhase);
+            resultPopupNextPhaseButton.onClick.AddListener(ProceedToNextPhase);
         }
 
         if (lowSeverityButton != null)
@@ -646,7 +651,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
         if (resultPopupNextPhaseButton != null)
         {
-            resultPopupNextPhaseButton.onClick.RemoveListener(CloseResultPopup);
+            resultPopupNextPhaseButton.onClick.RemoveListener(ProceedToNextPhase);
         }
 
         if (lowSeverityButton != null)
@@ -1082,6 +1087,8 @@ public class AssessRiskPopupEntryController : MonoBehaviour
             scenarioContext.FinalizeCallSession();
         }
 
+        PersistIncidentWorldSetupPayload();
+
         string playerName = LoadingFlowState.GetPlayerName();
         string currentLevelId = LoadingFlowState.GetCurrentLevelId();
         if (!string.IsNullOrWhiteSpace(playerName) && !string.IsNullOrWhiteSpace(currentLevelId))
@@ -1091,6 +1098,14 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
         CloseSubmitPopup();
         OpenResultPopup();
+    }
+
+    private void PersistIncidentWorldSetupPayload()
+    {
+        CallPhaseScenarioData activeScenarioData = scenarioContext != null ? scenarioContext.ScenarioData : scenarioData;
+        string caseId = scenarioContext != null ? scenarioContext.CurrentCaseId : string.Empty;
+        IncidentWorldSetupPayload payload = IncidentWorldSetupPayloadBuilder.Build(activeScenarioData, incidentReportController, caseId);
+        LoadingFlowState.SetPendingIncidentPayload(payload);
     }
 
     private void OpenResultPopup()
@@ -1138,6 +1153,24 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         ClearCurrentSelection();
         RefreshAssessRiskButtonState();
         RefreshSubmitReportButtonState();
+    }
+
+    private void ProceedToNextPhase()
+    {
+        string resolvedNextPhaseSceneName = nextPhaseSceneName;
+        if (LoadingFlowState.TryGetPendingOnsiteScene(out string pendingOnsiteSceneName))
+        {
+            resolvedNextPhaseSceneName = pendingOnsiteSceneName;
+        }
+
+        if (string.IsNullOrWhiteSpace(loadingSceneName) || string.IsNullOrWhiteSpace(resolvedNextPhaseSceneName))
+        {
+            Debug.LogWarning($"{nameof(AssessRiskPopupEntryController)}: Missing next-phase scene configuration.", this);
+            return;
+        }
+
+        LoadingFlowState.SetPendingTargetScene(resolvedNextPhaseSceneName.Trim());
+        SceneManager.LoadScene(loadingSceneName.Trim());
     }
 
     private void ResetPopupSelectionState()

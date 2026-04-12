@@ -5,6 +5,8 @@ public static class LoadingFlowState
     private const string PendingTargetSceneKey = "flow.pending_target_scene";
     private const string PendingScenarioResourcePathKey = "flow.pending_scenario_resource_path";
     private const string PendingCaseIdKey = "flow.pending_case_id";
+    private const string PendingIncidentPayloadKey = "flow.pending_incident_payload";
+    private const string PendingOnsiteSceneKey = "flow.pending_onsite_scene";
     private const string CurrentLevelIdKey = "flow.current_level_id";
     private const string PlayerNameKey = "profile.player_name";
 
@@ -89,6 +91,76 @@ public static class LoadingFlowState
         }
 
         PlayerPrefs.DeleteKey(PendingCaseIdKey);
+        PlayerPrefs.Save();
+    }
+
+    public static void SetPendingIncidentPayload(IncidentWorldSetupPayload payload)
+    {
+        if (payload == null)
+        {
+            return;
+        }
+
+        string json = JsonUtility.ToJson(payload);
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return;
+        }
+
+        PlayerPrefs.SetString(PendingIncidentPayloadKey, json);
+        PlayerPrefs.Save();
+    }
+
+    public static bool TryGetPendingIncidentPayload(out IncidentWorldSetupPayload payload)
+    {
+        payload = null;
+
+        string json = PlayerPrefs.GetString(PendingIncidentPayloadKey, string.Empty);
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return false;
+        }
+
+        payload = JsonUtility.FromJson<IncidentWorldSetupPayload>(json);
+        return payload != null;
+    }
+
+    public static void ClearPendingIncidentPayload()
+    {
+        if (!PlayerPrefs.HasKey(PendingIncidentPayloadKey))
+        {
+            return;
+        }
+
+        PlayerPrefs.DeleteKey(PendingIncidentPayloadKey);
+        PlayerPrefs.Save();
+    }
+
+    public static void SetPendingOnsiteScene(string sceneName)
+    {
+        if (string.IsNullOrWhiteSpace(sceneName))
+        {
+            return;
+        }
+
+        PlayerPrefs.SetString(PendingOnsiteSceneKey, sceneName.Trim());
+        PlayerPrefs.Save();
+    }
+
+    public static bool TryGetPendingOnsiteScene(out string sceneName)
+    {
+        sceneName = PlayerPrefs.GetString(PendingOnsiteSceneKey, string.Empty);
+        return !string.IsNullOrWhiteSpace(sceneName);
+    }
+
+    public static void ClearPendingOnsiteScene()
+    {
+        if (!PlayerPrefs.HasKey(PendingOnsiteSceneKey))
+        {
+            return;
+        }
+
+        PlayerPrefs.DeleteKey(PendingOnsiteSceneKey);
         PlayerPrefs.Save();
     }
 
