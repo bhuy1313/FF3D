@@ -82,6 +82,7 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
 
     public event Action RescueStarted;
     public event Action RescueCompleted;
+    public event Action<bool> CarryStateChanged;
 
     private Coroutine rescueRoutine;
     private Coroutine stabilizationRoutine;
@@ -105,7 +106,7 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
         ResolveCarryHoldPoints();
         BotRuntimeRegistry.RegisterRescuableTarget(this);
         isRescueInProgress = false;
-        isCarried = false;
+        SetCarryState(false);
         activeRescuer = null;
         rescueRoutine = null;
         stabilizationRoutine = null;
@@ -148,7 +149,7 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
         }
 
         isRescueInProgress = false;
-        isCarried = false;
+        SetCarryState(false);
         isExtractionInProgress = false;
         activeRescuer = null;
         activeCarryAnchor = null;
@@ -288,7 +289,7 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
         transform.SetParent(originalParent, true);
         transform.position = dropPosition;
         transform.rotation = originalRotation;
-        isCarried = false;
+        SetCarryState(false);
         activeCarryAnchor = null;
         ReleasePlayerLocks();
 
@@ -322,7 +323,7 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
 
         ReleasePlayerProgressLock();
         isRescueInProgress = false;
-        isCarried = true;
+        SetCarryState(true);
         PrepareRigidbodyForCarry();
         transform.SetParent(activeCarryAnchor, false);
         transform.localPosition = ResolveCarryLocalPosition();
@@ -604,6 +605,17 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
         return rescuer != null && rescuer.GetComponent<BotCommandAgent>() == null;
     }
 
+    private void SetCarryState(bool carried)
+    {
+        if (isCarried == carried)
+        {
+            return;
+        }
+
+        isCarried = carried;
+        CarryStateChanged?.Invoke(isCarried);
+    }
+
     private float GetAdjustedStabilizeDuration()
     {
         CacheVictimCondition();
@@ -652,7 +664,7 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
     {
         isRescued = true;
         isRescueInProgress = false;
-        isCarried = false;
+        SetCarryState(false);
         isExtractionInProgress = false;
         activeRescuer = null;
         activeCarryAnchor = null;

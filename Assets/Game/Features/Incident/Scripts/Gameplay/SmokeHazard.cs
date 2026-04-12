@@ -68,12 +68,28 @@ public class SmokeHazard : MonoBehaviour
     [Range(0f, 1f)]
     [SerializeField] private float maxVisibilityPenalty = 0.8f;
 
+    [Header("Smoke VFX")]
+    [SerializeField] private bool autoConfigureSmokeVfx = true;
+    [SerializeField] private ParticleSystem smokeParticleSystem;
+    [SerializeField] private Vector3 particleShapePadding = new Vector3(0.15f, 0.05f, 0.15f);
+    [SerializeField] private float minimumParticleShapeSize = 0.25f;
+    [SerializeField] private float smokeVfxActiveThreshold = 0.0001f;
+    [SerializeField] private float smokeVfxDensityExponent = 0.5f;
+    [SerializeField] private float smokeVfxMinDensityScaleWhenActive = 0.18f;
+    [SerializeField] private int smokeVfxMinMaxParticles = 12;
+    [SerializeField] private float smokeVfxMinRateOverTime = 1.5f;
+
     [Header("Runtime")]
     [Range(0f, 1f)]
     [SerializeField] private float currentSmokeDensity;
 
     private readonly HashSet<Component> processedTargets = new HashSet<Component>();
     private int processedFrame = -1;
+    private bool lastSmokeVfxActiveState;
+    private bool smokeVfxParticleBaselineCaptured;
+    private int smokeVfxBaseMaxParticles;
+    private ParticleSystem.MinMaxCurve smokeVfxBaseRateOverTime;
+    private ParticleSystem.MinMaxCurve smokeVfxBaseRateOverDistance;
 
     private readonly struct VentilationResponse
     {
@@ -95,6 +111,8 @@ public class SmokeHazard : MonoBehaviour
     {
         ResolveSupportComponents();
         ResolveTriggerZone();
+        ResolveSmokeVfxReferences();
+        ApplySmokeVfxConfiguration();
     }
 
     private void Start()
@@ -106,13 +124,16 @@ public class SmokeHazard : MonoBehaviour
     {
         ResolveSupportComponents();
         ResolveTriggerZone();
+        ResolveSmokeVfxReferences();
         currentSmokeDensity = startSmokeDensity;
+        ApplySmokeVfxConfiguration();
     }
 
     private void OnValidate()
     {
         ResolveSupportComponents();
         ResolveTriggerZone();
+        ResolveSmokeVfxReferences();
         startSmokeDensity = Mathf.Clamp01(startSmokeDensity);
         smokePerBurningFire = Mathf.Max(0f, smokePerBurningFire);
         smokePerFireIntensity = Mathf.Max(0f, smokePerFireIntensity);
@@ -135,12 +156,21 @@ public class SmokeHazard : MonoBehaviour
         oxygenDrainPerSecond = Mathf.Max(0f, oxygenDrainPerSecond);
         victimConditionDamagePerSecond = Mathf.Max(0f, victimConditionDamagePerSecond);
         maxVisibilityPenalty = Mathf.Clamp01(maxVisibilityPenalty);
+        particleShapePadding = Vector3.Max(Vector3.zero, particleShapePadding);
+        minimumParticleShapeSize = Mathf.Max(0.01f, minimumParticleShapeSize);
         currentSmokeDensity = Mathf.Clamp01(currentSmokeDensity);
+        smokeVfxDensityExponent = Mathf.Max(0.01f, smokeVfxDensityExponent);
+        smokeVfxMinDensityScaleWhenActive = Mathf.Clamp01(smokeVfxMinDensityScaleWhenActive);
+        smokeVfxMinRateOverTime = Mathf.Max(0f, smokeVfxMinRateOverTime);
 
         if (forceMaximumSmokeDensity)
         {
             currentSmokeDensity = 1f;
         }
+
+        smokeVfxActiveThreshold = Mathf.Max(0f, smokeVfxActiveThreshold);
+        smokeVfxMinMaxParticles = Mathf.Max(1, smokeVfxMinMaxParticles);
+        ApplySmokeVfxConfiguration();
     }
 
     private void OnEnable()
@@ -148,12 +178,18 @@ public class SmokeHazard : MonoBehaviour
         currentSmokeDensity = forceMaximumSmokeDensity
             ? 1f
             : Mathf.Clamp01(startSmokeDensity);
+
+        ApplySmokeVfxConfiguration();
+        ApplySmokeVfxParticleDensity();
+        UpdateSmokeVfxActiveState();
     }
 
     private void Update()
     {
         ApplyVentilationDraftToLinkedFires(Time.deltaTime);
         UpdateSmokeDensity(Time.deltaTime);
+        ApplySmokeVfxParticleDensity();
+        UpdateSmokeVfxActiveState();
     }
 
     private void OnTriggerStay(Collider other)
@@ -209,7 +245,7 @@ public class SmokeHazard : MonoBehaviour
         float effectScale = CalculateLocalSmokeEffectScale(other);
 
         PlayerHazardExposure exposure = other.GetComponentInParent<PlayerHazardExposure>();
-        if (exposure != null && processedTargets.Add(exposure))
+        if (exposure != null && effectScale > 0f && processedTargets.Add(exposure))
         {
             exposure.ReportSmokeExposure(effectScale);
         }
@@ -259,6 +295,7 @@ public class SmokeHazard : MonoBehaviour
         triggerZone = newTriggerZone;
         ResolveTriggerZone();
         ResolveSupportComponents();
+        ApplySmokeVfxConfiguration();
     }
 
     private void ResolveSupportComponents()
@@ -271,6 +308,14 @@ public class SmokeHazard : MonoBehaviour
 
         triggerBody.isKinematic = true;
         triggerBody.useGravity = false;
+    }
+
+    [ContextMenu("Refresh Smoke VFX")]
+    private void RefreshSmokeVfx()
+    {
+        ResolveTriggerZone();
+        ResolveSmokeVfxReferences();
+        ApplySmokeVfxConfiguration();
     }
 
     [ContextMenu("Refresh Linked Smoke Objects")]
@@ -506,4 +551,176 @@ public class SmokeHazard : MonoBehaviour
         Vector3 closestPoint = triggerZone.ClosestPoint(point);
         return (closestPoint - point).sqrMagnitude <= 0.0001f;
     }
+
+    private void ResolveSmokeVfxReferences()
+    {
+        if (smokeParticleSystem == null)
+        {
+            smokeParticleSystem = GetComponentInChildren<ParticleSystem>(true);
+        }
+
+        CaptureSmokeVfxParticleBaseline();
+    }
+
+    private void ApplySmokeVfxConfiguration()
+    {
+        if (!autoConfigureSmokeVfx)
+            return;
+
+        ResolveTriggerZone();
+        ResolveSmokeVfxReferences();
+
+        if (triggerZone == null || smokeParticleSystem == null)
+            return;
+
+        if (!(triggerZone is BoxCollider boxCollider))
+            return;
+
+        ConfigureSmokeShape(boxCollider);
+    }
+
+    private void UpdateSmokeVfxActiveState()
+    {
+        if (!Application.isPlaying)
+            return;
+
+        ResolveSmokeVfxReferences();
+        if (smokeParticleSystem == null)
+            return;
+
+        bool shouldBeActive = forceMaximumSmokeDensity || currentSmokeDensity > smokeVfxActiveThreshold;
+        if (lastSmokeVfxActiveState == shouldBeActive && smokeParticleSystem.isPlaying == shouldBeActive)
+            return;
+
+        lastSmokeVfxActiveState = shouldBeActive;
+
+        if (shouldBeActive)
+        {
+            if (!smokeParticleSystem.isPlaying)
+            {
+                smokeParticleSystem.Play(true);
+            }
+
+            return;
+        }
+
+        smokeParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+    }
+
+    private void ApplySmokeVfxParticleDensity()
+    {
+        if (!Application.isPlaying)
+            return;
+
+        ResolveSmokeVfxReferences();
+        if (smokeParticleSystem == null || !smokeVfxParticleBaselineCaptured)
+            return;
+
+        bool isActive = forceMaximumSmokeDensity || currentSmokeDensity > smokeVfxActiveThreshold;
+        float normalizedDensity = forceMaximumSmokeDensity
+            ? 1f
+            : Mathf.Pow(Mathf.Clamp01(currentSmokeDensity), smokeVfxDensityExponent);
+        if (isActive)
+        {
+            normalizedDensity = Mathf.Max(smokeVfxMinDensityScaleWhenActive, normalizedDensity);
+        }
+
+        ParticleSystem.MainModule main = smokeParticleSystem.main;
+        ParticleSystem.EmissionModule emission = smokeParticleSystem.emission;
+        int targetMaxParticles = forceMaximumSmokeDensity
+            ? smokeVfxBaseMaxParticles
+            : Mathf.RoundToInt(Mathf.Lerp(smokeVfxMinMaxParticles, smokeVfxBaseMaxParticles, normalizedDensity));
+        main.maxParticles = Mathf.Max(smokeVfxMinMaxParticles, targetMaxParticles);
+
+        float targetRateOverTime = forceMaximumSmokeDensity
+            ? GetRepresentativeCurveValue(smokeVfxBaseRateOverTime)
+            : Mathf.Lerp(smokeVfxMinRateOverTime, GetRepresentativeCurveValue(smokeVfxBaseRateOverTime), normalizedDensity);
+        float baseRateOverTime = Mathf.Max(0.0001f, GetRepresentativeCurveValue(smokeVfxBaseRateOverTime));
+        float emissionScale = targetRateOverTime / baseRateOverTime;
+        emission.rateOverTime = ScaleMinMaxCurve(smokeVfxBaseRateOverTime, emissionScale);
+        emission.rateOverDistance = ScaleMinMaxCurve(smokeVfxBaseRateOverDistance, emissionScale);
+    }
+
+    private void CaptureSmokeVfxParticleBaseline()
+    {
+        if (smokeVfxParticleBaselineCaptured || smokeParticleSystem == null)
+            return;
+
+        ParticleSystem.MainModule main = smokeParticleSystem.main;
+        ParticleSystem.EmissionModule emission = smokeParticleSystem.emission;
+        smokeVfxBaseMaxParticles = Mathf.Max(smokeVfxMinMaxParticles, main.maxParticles);
+        smokeVfxBaseRateOverTime = emission.rateOverTime;
+        smokeVfxBaseRateOverDistance = emission.rateOverDistance;
+        smokeVfxParticleBaselineCaptured = true;
+    }
+
+    private static float GetRepresentativeCurveValue(ParticleSystem.MinMaxCurve curve)
+    {
+        return curve.mode switch
+        {
+            ParticleSystemCurveMode.Constant => curve.constant,
+            ParticleSystemCurveMode.TwoConstants => (curve.constantMin + curve.constantMax) * 0.5f,
+            ParticleSystemCurveMode.Curve => curve.curveMultiplier,
+            ParticleSystemCurveMode.TwoCurves => curve.curveMultiplier,
+            _ => curve.constant
+        };
+    }
+
+    private static ParticleSystem.MinMaxCurve ScaleMinMaxCurve(ParticleSystem.MinMaxCurve source, float multiplier)
+    {
+        source.constant *= multiplier;
+        source.constantMin *= multiplier;
+        source.constantMax *= multiplier;
+        source.curveMultiplier *= multiplier;
+        return source;
+    }
+
+    private void ConfigureSmokeShape(BoxCollider boxCollider)
+    {
+        ParticleSystem.ShapeModule shape = smokeParticleSystem.shape;
+        shape.enabled = true;
+        shape.shapeType = ParticleSystemShapeType.Box;
+
+        Bounds particleLocalBounds = GetColliderBoundsInParticleLocalSpace(boxCollider, smokeParticleSystem.transform);
+        Vector3 paddedSize = Vector3.Max(
+            particleLocalBounds.size + particleShapePadding,
+            Vector3.one * minimumParticleShapeSize);
+
+        shape.position = particleLocalBounds.center;
+        shape.scale = paddedSize;
+    }
+
+    private static Bounds GetColliderBoundsInParticleLocalSpace(BoxCollider boxCollider, Transform particleTransform)
+    {
+        Vector3[] corners = GetBoxColliderWorldCorners(boxCollider);
+        Vector3 firstPoint = particleTransform.InverseTransformPoint(corners[0]);
+        Bounds localBounds = new Bounds(firstPoint, Vector3.zero);
+
+        for (int i = 1; i < corners.Length; i++)
+        {
+            localBounds.Encapsulate(particleTransform.InverseTransformPoint(corners[i]));
+        }
+
+        return localBounds;
+    }
+
+    private static Vector3[] GetBoxColliderWorldCorners(BoxCollider boxCollider)
+    {
+        Vector3 center = boxCollider.center;
+        Vector3 extents = boxCollider.size * 0.5f;
+        Transform boxTransform = boxCollider.transform;
+
+        return new[]
+        {
+            boxTransform.TransformPoint(center + new Vector3(-extents.x, -extents.y, -extents.z)),
+            boxTransform.TransformPoint(center + new Vector3(extents.x, -extents.y, -extents.z)),
+            boxTransform.TransformPoint(center + new Vector3(-extents.x, extents.y, -extents.z)),
+            boxTransform.TransformPoint(center + new Vector3(extents.x, extents.y, -extents.z)),
+            boxTransform.TransformPoint(center + new Vector3(-extents.x, -extents.y, extents.z)),
+            boxTransform.TransformPoint(center + new Vector3(extents.x, -extents.y, extents.z)),
+            boxTransform.TransformPoint(center + new Vector3(-extents.x, extents.y, extents.z)),
+            boxTransform.TransformPoint(center + new Vector3(extents.x, extents.y, extents.z))
+        };
+    }
+
 }
