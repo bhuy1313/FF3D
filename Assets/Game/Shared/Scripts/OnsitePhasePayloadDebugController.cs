@@ -27,7 +27,7 @@ public class OnsitePhasePayloadDebugController : MonoBehaviour
             return;
         }
 
-        TMP_Text[] sceneTexts = Object.FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        TMP_Text[] sceneTexts = Object.FindObjectsByType<TMP_Text>(FindObjectsInactive.Include);
         for (int i = 0; i < sceneTexts.Length; i++)
         {
             TMP_Text candidate = sceneTexts[i];

@@ -57,6 +57,7 @@ public partial class Setting_UIScript : MonoBehaviour
     [SerializeField] private ThreeStepSlider responseSpeedSlider;
     [SerializeField] private Toggle autoQuestionToggle;
     [SerializeField] private Toggle autoValidateToggle;
+    [SerializeField] private TMP_Dropdown minimapTypeDropdown;
 
     [Header("Tab Visual")]
     [SerializeField] private Color hoverTabBackgroundColor = new Color32(0x34, 0x34, 0x34, 0xFF);
@@ -121,6 +122,7 @@ public partial class Setting_UIScript : MonoBehaviour
         InitializeMouseSensitivityDefaultSelection();
         InitializeAutoQuestionDefaultSelection();
         InitializeAutoValidateDefaultSelection();
+        InitializeMinimapTypeDefaultSelection();
         ValidateResolvedReferences();
         CaptureDefaultState();
         Debug.Log($"Setting_UIScript[{GetInstanceLabel()}]: Awake", this);
@@ -147,6 +149,7 @@ public partial class Setting_UIScript : MonoBehaviour
         if (fpsToggle != null) fpsToggle.onValueChanged.AddListener(OnFpsToggleValueChanged);
         if (fovSlider != null) fovSlider.onValueChanged.AddListener(OnFovSliderValueChanged);
         if (mouseSensitivitySlider != null) mouseSensitivitySlider.onValueChanged.AddListener(OnMouseSensitivitySliderValueChanged);
+        if (minimapTypeDropdown != null) minimapTypeDropdown.onValueChanged.AddListener(OnMinimapTypeDropdownValueChanged);
 
     }
 
@@ -185,6 +188,7 @@ public partial class Setting_UIScript : MonoBehaviour
         LoadSavedResponseSpeedSelection();
         LoadSavedAutoQuestionSelection();
         LoadSavedAutoValidateSelection();
+        LoadSavedMinimapTypeSelection();
         ApplyFpsTogglePreview();
         BindDirtyTracking();
         BeginEditSession();
@@ -457,6 +461,11 @@ public partial class Setting_UIScript : MonoBehaviour
             responseSpeedSlider = FindResponseSpeedSlider();
         }
 
+        if (minimapTypeDropdown == null)
+        {
+            minimapTypeDropdown = FindMinimapTypeDropdown();
+        }
+
         autoQuestionToggle = FindFirstToggleInNamedPanelChild("AutoQuestion");
         autoValidateToggle = FindFirstToggleInNamedPanelChild("AutoConfirm");
     }
@@ -512,6 +521,11 @@ public partial class Setting_UIScript : MonoBehaviour
         {
             Debug.LogWarning("Setting_UIScript: Call Phase auto-validate toggle could not be resolved from the general panel.", this);
         }
+
+        if (panelGen != null && minimapTypeDropdown == null)
+        {
+            Debug.LogWarning("Setting_UIScript: Minimap type dropdown could not be resolved from the general panel.", this);
+        }
     }
 
     private Button FindButtonByName(string buttonName)
@@ -545,6 +559,22 @@ public partial class Setting_UIScript : MonoBehaviour
         }
 
         return null;
+    }
+
+    private TMP_Dropdown FindMinimapTypeDropdown()
+    {
+        if (panelGen == null)
+        {
+            return null;
+        }
+
+        Transform minimapTypeRoot = FindNamedPanelChild(panelGen, "MinimapType");
+        if (minimapTypeRoot == null)
+        {
+            return null;
+        }
+
+        return minimapTypeRoot.GetComponentInChildren<TMP_Dropdown>(true);
     }
 
     private Toggle FindToggleByName(string toggleName)

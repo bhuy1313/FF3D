@@ -6,6 +6,9 @@ using UnityEngine.UI;
 
 public partial class Setting_UIScript
 {
+    private const string MinimapTypeSquareLocalizationKey = "setting.general.minimap.square";
+    private const string MinimapTypeCircleLocalizationKey = "setting.general.minimap.circle";
+
     private void SaveChanges()
     {
         isFinalizingSave = true;
@@ -19,6 +22,7 @@ public partial class Setting_UIScript
         SaveResponseSpeedSelection();
         SaveAutoQuestionSelection();
         SaveAutoValidateSelection();
+        SaveMinimapTypeSelection();
         SaveControlBindingOverrides();
         SaveLanguageSelection();
 
@@ -361,6 +365,28 @@ public partial class Setting_UIScript
         autoValidateToggle.isOn = CallPhaseAutoValidateSettings.DefaultEnabled;
     }
 
+    private void LoadSavedMinimapTypeSelection()
+    {
+        if (minimapTypeDropdown == null)
+        {
+            return;
+        }
+
+        SetMinimapTypeDropdownValue((int)MinimapDisplaySettings.GetSavedOrDefaultType());
+        ApplyMinimapTypePreview();
+    }
+
+    private void InitializeMinimapTypeDefaultSelection()
+    {
+        if (minimapTypeDropdown == null)
+        {
+            return;
+        }
+
+        RefreshMinimapTypeDropdownOptions();
+        SetMinimapTypeDropdownValue((int)MinimapDisplaySettings.DefaultType);
+    }
+
     private void SaveFpsSelection()
     {
         if (fpsToggle == null)
@@ -457,6 +483,23 @@ public partial class Setting_UIScript
         }
     }
 
+    private void SaveMinimapTypeSelection()
+    {
+        if (minimapTypeDropdown == null)
+        {
+            return;
+        }
+
+        MinimapDisplayType selectedType = GetSelectedMinimapDisplayType();
+        bool hasSavedValue = MinimapDisplaySettings.TryGetSavedType(out MinimapDisplayType savedType);
+        if (!hasSavedValue || savedType != selectedType)
+        {
+            MinimapDisplaySettings.SaveType(selectedType);
+        }
+
+        MinimapDisplayRuntime.ApplyType(selectedType);
+    }
+
     private void SaveLanguageSelection()
     {
         if (LanguageManager.Instance == null)
@@ -492,6 +535,11 @@ public partial class Setting_UIScript
         ApplyMouseSensitivitySliderPreview();
     }
 
+    private void OnMinimapTypeDropdownValueChanged(int _)
+    {
+        ApplyMinimapTypePreview();
+    }
+
     private void ApplyFpsTogglePreview()
     {
         if (fpsToggle == null)
@@ -524,6 +572,16 @@ public partial class Setting_UIScript
             GameplayMouseSensitivitySettings.SliderValueToSensitivity(mouseSensitivitySlider.value));
     }
 
+    private void ApplyMinimapTypePreview()
+    {
+        if (minimapTypeDropdown == null)
+        {
+            return;
+        }
+
+        MinimapDisplayRuntime.ApplyType(GetSelectedMinimapDisplayType());
+    }
+
     private void RefreshFovValueText()
     {
         if (fovValueText == null || fovSlider == null)
@@ -544,5 +602,47 @@ public partial class Setting_UIScript
         int clampedIndex = Mathf.Clamp(index, 0, supportedResolutions.Count - 1);
         resolutionDropdown.SetValueWithoutNotify(clampedIndex);
         resolutionDropdown.RefreshShownValue();
+    }
+
+    private void RefreshMinimapTypeDropdownOptions()
+    {
+        if (minimapTypeDropdown == null)
+        {
+            return;
+        }
+
+        int currentValue = minimapTypeDropdown.value;
+        minimapTypeDropdown.ClearOptions();
+        minimapTypeDropdown.AddOptions(new List<TMP_Dropdown.OptionData>
+        {
+            new TMP_Dropdown.OptionData(LanguageManager.Tr(MinimapTypeSquareLocalizationKey, "Hình vuông")),
+            new TMP_Dropdown.OptionData(LanguageManager.Tr(MinimapTypeCircleLocalizationKey, "Hình tròn"))
+        });
+        minimapTypeDropdown.SetValueWithoutNotify(Mathf.Clamp(currentValue, 0, 1));
+        minimapTypeDropdown.RefreshShownValue();
+    }
+
+    private void SetMinimapTypeDropdownValue(int index)
+    {
+        if (minimapTypeDropdown == null)
+        {
+            return;
+        }
+
+        RefreshMinimapTypeDropdownOptions();
+        int optionCount = Mathf.Max(1, minimapTypeDropdown.options.Count);
+        int clampedIndex = Mathf.Clamp(index, 0, optionCount - 1);
+        minimapTypeDropdown.SetValueWithoutNotify(clampedIndex);
+        minimapTypeDropdown.RefreshShownValue();
+    }
+
+    private MinimapDisplayType GetSelectedMinimapDisplayType()
+    {
+        if (minimapTypeDropdown == null)
+        {
+            return MinimapDisplaySettings.DefaultType;
+        }
+
+        return MinimapDisplaySettings.ClampType(minimapTypeDropdown.value);
     }
 }
