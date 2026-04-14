@@ -22,6 +22,8 @@ public class MinimapCameraFollow : MonoBehaviour
     private Quaternion initialRotation;
     private Vector3 followVelocity;
 
+    public bool FollowTargetYaw => followTargetYaw;
+
     private void Awake()
     {
         initialRotation = transform.rotation;
@@ -77,6 +79,15 @@ public class MinimapCameraFollow : MonoBehaviour
     {
         target = nextTarget;
         SnapToTarget();
+    }
+
+    public void SetFollowTargetYaw(bool shouldFollowTargetYaw, bool snapImmediately = true)
+    {
+        followTargetYaw = shouldFollowTargetYaw;
+        if (snapImmediately)
+        {
+            SnapToTarget();
+        }
     }
 
     private void ResolveTarget()

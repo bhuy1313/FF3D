@@ -1,4 +1,5 @@
 using System.Collections;
+using ProceduralUIEffects.Lite;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -219,7 +220,18 @@ public class CallInScheduler : MonoBehaviour
         if (callInText != null)
         {
             CallPhaseUiChromeText.ApplyCurrentFont(callInText);
-            callInText.text = CallPhaseUiChromeText.Tr("callphase.value.connecting_call", "CONNECTING CALL...");
+            string connectingCallText = CallPhaseUiChromeText.Tr("callphase.value.connecting_call", "CONNECTING CALL...");
+            PUAP_Core proceduralTextAnimator = callInText.GetComponent<PUAP_Core>();
+            if (proceduralTextAnimator != null)
+            {
+                proceduralTextAnimator.SetText(connectingCallText);
+            }
+            else
+            {
+                callInText.text = connectingCallText;
+            }
+
+            callInText.ForceMeshUpdate();
         }
 
         if (skipButtonRoot != null)

@@ -1,4 +1,5 @@
 using TMPro;
+using ProceduralUIEffects.Lite;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -75,8 +76,8 @@ public class LocalizedText : MonoBehaviour
             : AppLanguage.Vietnamese;
 
         string resolvedText = ResolveText(language);
-        ApplyText(resolvedText);
         ApplyFont(language);
+        ApplyText(resolvedText);
     }
 
     private void OnLanguageChanged(AppLanguage _)
@@ -140,9 +141,20 @@ public class LocalizedText : MonoBehaviour
 
     private void ApplyText(string value)
     {
-        if (tmpText != null)
+        PUAP_Core proceduralTextAnimator = tmpText != null ? tmpText.GetComponent<PUAP_Core>() : null;
+        if (proceduralTextAnimator != null)
+        {
+            proceduralTextAnimator.SetText(value);
+        }
+        else if (tmpText != null)
         {
             tmpText.text = value;
+        }
+
+        if (tmpText != null)
+        {
+            // Force TMP to refresh after procedural parsing or direct assignment.
+            tmpText.ForceMeshUpdate();
         }
 
         if (legacyText != null)

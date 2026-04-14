@@ -843,6 +843,7 @@ public partial class Setting_UIScript
     private void OnControlsLanguageChanged(AppLanguage _)
     {
         RefreshControlBindingTexts();
+        RefreshMinimapTypeDropdownOptions();
     }
 
     private void SaveControlBindingOverrides()

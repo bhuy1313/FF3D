@@ -31,10 +31,10 @@ Transform:
   m_Children:
   - {fileID: 6649738444416923539}
   - {fileID: 8092174591577163824}
-  - {fileID: 2398446505667434334}
+  - {fileID: 8448557170747303481}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &8704063899499914063
+--- !u!1 &6794626528649328394
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -42,11 +42,11 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 2398446505667434334}
-  - component: {fileID: 1089349601524636423}
-  - component: {fileID: 381568880422113904}
-  - component: {fileID: 8658949535335315032}
-  - component: {fileID: 8391584432875396536}
+  - component: {fileID: 8448557170747303481}
+  - component: {fileID: 491375381040295545}
+  - component: {fileID: 3537741201188091348}
+  - component: {fileID: 9184185304905763566}
+  - component: {fileID: 1085225477119021106}
   m_Layer: 0
   m_Name: MinimapCamera
   m_TagString: Untagged
@@ -54,28 +54,28 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &2398446505667434334
+--- !u!4 &8448557170747303481
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8704063899499914063}
+  m_GameObject: {fileID: 6794626528649328394}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 3757762486302945437}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!20 &1089349601524636423
+  m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
+--- !u!20 &491375381040295545
 Camera:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8704063899499914063}
+  m_GameObject: {fileID: 6794626528649328394}
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 1
@@ -120,27 +120,27 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
---- !u!81 &381568880422113904
+--- !u!81 &3537741201188091348
 AudioListener:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8704063899499914063}
-  m_Enabled: 1
---- !u!114 &8658949535335315032
+  m_GameObject: {fileID: 6794626528649328394}
+  m_Enabled: 0
+--- !u!114 &9184185304905763566
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8704063899499914063}
+  m_GameObject: {fileID: 6794626528649328394}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a79441f348de89743a2939f4d699eac1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalCameraData
-  m_RenderShadows: 1
+  m_RenderShadows: 0
   m_RequiresDepthTextureOption: 2
   m_RequiresOpaqueTextureOption: 2
   m_CameraType: 0
@@ -172,13 +172,13 @@ MonoBehaviour:
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
   m_Version: 2
---- !u!114 &8391584432875396536
+--- !u!114 &1085225477119021106
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8704063899499914063}
+  m_GameObject: {fileID: 6794626528649328394}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e4d3bf790d5d4d0ba35bbaf0c3fd403d, type: 3}
@@ -186,9 +186,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MinimapCameraFollow
   target: {fileID: 0}
   autoResolvePlayerOnStart: 1
-  worldOffset: {x: 0, y: 30, z: 0}
+  worldOffset: {x: 0, y: 25, z: 0}
   lockHeight: 1
-  fixedHeight: 30
+  fixedHeight: 25
   smoothFollow: 1
   followSmoothTime: 0.01
   followTargetYaw: 1
