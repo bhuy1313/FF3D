@@ -1606,7 +1606,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2417621908518722932}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.82815653, y: -0.3967111, z: 0.3354603, w: 0.21034124}
+  m_LocalRotation: {x: 0.863941, y: -0.4922798, z: -0.022975516, w: 0.103627026}
   m_LocalPosition: {x: 0.1954, y: 1.179, z: 0.3054}
   m_LocalScale: {x: 0.1, y: 0.1, z: 0.1}
   m_ConstrainProportionsScale: 0
@@ -3890,6 +3890,7 @@ GameObject:
   - component: {fileID: 3249606646814837407}
   - component: {fileID: 6169907213170882658}
   - component: {fileID: 5816684741572102670}
+  - component: {fileID: 5580254689201413862}
   m_Layer: 3
   m_Name: Bot A
   m_TagString: Untagged
@@ -3973,6 +3974,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bcd5f4e04eed4a55be0903a0e3a02e18, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TrueJourney.BotCommands::BotCommandAgent
+  currentExtinguishSubtask: 0
+  extinguishTaskDetail: Awaiting extinguish assignment.
+  lastExtinguishFailureReason: 
+  extinguishSubtaskStartedAtTime: 0
+  currentBreakSubtask: 0
+  breakTaskDetail: Awaiting break assignment.
+  lastBreakFailureReason: 
+  breakSubtaskStartedAtTime: 0
+  currentRescueSubtask: 0
+  rescueTaskDetail: Awaiting rescue assignment.
+  lastRescueFailureReason: 
+  rescueSubtaskStartedAtTime: 0
+  taskReservationDuration: 1.5
+  currentTask:
+    taskType: 0
+    status: 0
+    detail: 
+    targetName: 
+    targetPosition: {x: 0, y: 0, z: 0}
+    hasTargetPosition: 0
+    startedAtTime: 0
+    lastUpdatedAtTime: 0
   navMeshAgent: {fileID: 0}
   behaviorContext: {fileID: 0}
   viewPoint: {fileID: 0}
@@ -4027,6 +4050,8 @@ MonoBehaviour:
   followRepathDistance: 0.9
   followCatchupDistance: 5.5
   followResumeDistanceBuffer: 0.7
+  followTargetLossTimeout: 1.5
+  cancelFollowWhenTargetIsLost: 1
   escortFollowOffset: {x: 1.4, y: 0, z: -2.2}
   escortSlotPreferenceBias: 1.1
   followAllowAssist: 0
@@ -4034,8 +4059,14 @@ MonoBehaviour:
   rescueInteractionDistance: 1.5
   rescueSafeZoneArrivalDistance: 2
   rescueCarryAnchor: {fileID: 1529739470311647419}
-  rescueCarryLocalPosition: {x: 0, y: 1.1, z: 0.6}
+  rescueCarryLocalPosition: {x: 0, y: 0, z: 0}
   rescueDropOffset: {x: 0.75, y: 0, z: 0}
+  hazardIsolationSearchRadius: 6
+  hazardIsolationInteractionDistance: 1.75
+  hazardIsolationUnavailableTimeout: 1.5
+  hazardIsolationMaxUnavailableRetries: 1
+  breachSearchRadius: 6
+  breachInteractionDistance: 1.75
   drawDestinationGizmo: 0
   drawAimGizmo: 0
   aimGizmoLength: 2.5
@@ -4074,12 +4105,23 @@ MonoBehaviour:
   crouchAnimationState: Idle Crouching
   uncrouchAnimationState: None
   crouchAnimationActive: 0
+  extinguishStanceParameter: ExtinguishStance
+  extinguishStance: 0
   driveLoadedLowerBodyLayer: 1
   loadedLowerBodyLayer: Lower Body Layer
   loadedLowerBodyLayerWeightLerpSpeed: 10
   loadedLowerBodyOnlyWhileMoving: 1
   loadedLowerBodyMinCarryWeight: 1
   loadedLowerBodyLayerActive: 0
+  activeCommandIntent:
+    commandType: 0
+    intent: 0
+    worldPoint: {x: 0, y: 0, z: 0}
+    hasWorldPoint: 0
+    targetTransform: {fileID: 0}
+    targetTag: 
+    allowAssist: 0
+    extinguishMode: 0
 --- !u!114 &7589112556218404922
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4200,6 +4242,25 @@ MonoBehaviour:
   isMoving: 0
   isCarryingVictim: 0
   resolvedPoseKey: 0
+--- !u!114 &5580254689201413862
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7933330459082302272}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e5f3a56d4524030a3ef9cae5fbeffaf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TrueJourney.BotCommands::TrueJourney.BotBehavior.BotPerceptionMemory
+  rescueMemorySeconds: 12
+  fireMemorySeconds: 8
+  breakableMemorySeconds: 10
+  extinguisherMemorySeconds: 12
+  breakToolMemorySeconds: 12
+  hazardIsolationMemorySeconds: 15
+  followTargetMemorySeconds: 15
 --- !u!1 &8080815507665081034
 GameObject:
   m_ObjectHideFlags: 0
