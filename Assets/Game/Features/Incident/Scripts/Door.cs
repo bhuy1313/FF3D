@@ -147,6 +147,34 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
         return true;
     }
 
+    public void SetOpenState(bool open, bool forceUnlockWhenOpening = true)
+    {
+        if (!initialized)
+        {
+            InitializeDoorState();
+        }
+
+        if (doorTransform == null)
+        {
+            return;
+        }
+
+        CancelActivePry();
+
+        if (open)
+        {
+            if (forceUnlockWhenOpening)
+            {
+                isLocked = false;
+            }
+
+            OpenDoor(null);
+            return;
+        }
+
+        CloseDoor();
+    }
+
     public Vector3 GetWorldPosition()
     {
         return transform.position;

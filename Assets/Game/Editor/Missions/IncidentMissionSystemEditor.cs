@@ -213,7 +213,7 @@ public class IncidentMissionSystemEditor : Editor
 
         SerializedObject serializedMission = new SerializedObject(missionDefinition);
         SerializedProperty stages = serializedMission.FindProperty("stages");
-        SerializedProperty objectives = serializedMission.FindProperty("objectives");
+        SerializedProperty objectives = serializedMission.FindProperty("persistentObjectives");
         SerializedProperty failConditions = serializedMission.FindProperty("failConditions");
 
         if (stages != null && stages.arraySize > 0)
@@ -230,10 +230,17 @@ public class IncidentMissionSystemEditor : Editor
                 EditorGUILayout.LabelField($"{i + 1}. {stage.StageTitle} [{stage.StageId}]");
                 DrawStagePreview(stage);
             }
+
+            if (objectives != null && objectives.arraySize > 0)
+            {
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField("Persistent Objectives", EditorStyles.miniBoldLabel);
+                DrawObjectiveList(objectives);
+            }
         }
         else if (objectives != null)
         {
-            EditorGUILayout.LabelField("Objectives", EditorStyles.miniBoldLabel);
+            EditorGUILayout.LabelField("Persistent Objectives", EditorStyles.miniBoldLabel);
             DrawObjectiveList(objectives);
         }
 
@@ -656,7 +663,7 @@ public class IncidentMissionSystemEditor : Editor
 
         HashSet<string> sceneSignalKeys = CollectSceneSignalKeys();
         SerializedObject serializedMission = new SerializedObject(missionDefinition);
-        SerializedProperty objectives = serializedMission.FindProperty("objectives");
+        SerializedProperty objectives = serializedMission.FindProperty("persistentObjectives");
         SerializedProperty stages = serializedMission.FindProperty("stages");
 
         ValidateObjectiveSignalKeys(objectives, sceneSignalKeys, entries);

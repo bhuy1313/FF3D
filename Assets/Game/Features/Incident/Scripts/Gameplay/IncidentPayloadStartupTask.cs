@@ -11,6 +11,7 @@ public class IncidentPayloadStartupTask : SceneStartupTask
 
     [Header("Scene Bindings")]
     [SerializeField] private Fire defaultFirePrefab;
+    [SerializeField] private IncidentMapSetupRoot explicitMapSetupRoot;
     [SerializeField] private IncidentPayloadAnchor[] explicitAnchors = Array.Empty<IncidentPayloadAnchor>();
 
     protected override IEnumerator Execute(SceneStartupFlow startupFlow)
@@ -20,17 +21,33 @@ public class IncidentPayloadStartupTask : SceneStartupTask
             yield break;
         }
 
-        IncidentPayloadAnchor anchor = ResolveAnchor(payload);
-        if (anchor == null)
+        IncidentPayloadAnchor resolvedAnchor = null;
+        IncidentMapSetupRoot setupRoot = ResolveMapSetupRoot(startupFlow);
+        if (setupRoot != null)
         {
-            Debug.LogWarning(
-                $"{nameof(IncidentPayloadStartupTask)}: No scene anchor matched payload origin '{payload.fireOrigin}' " +
-                $"or location '{payload.logicalFireLocation}'.",
-                this);
-            yield break;
+            yield return setupRoot.ApplyPayload(startupFlow, payload, defaultFirePrefab);
+            resolvedAnchor = setupRoot.LastResolvedAnchor;
+        }
+        else
+        {
+            IncidentPayloadAnchor anchor = ResolveAnchor(payload);
+            if (anchor == null)
+            {
+                Debug.LogWarning(
+                    $"{nameof(IncidentPayloadStartupTask)}: No scene anchor matched payload origin '{payload.fireOrigin}' " +
+                    $"or location '{payload.logicalFireLocation}'.",
+                    this);
+                yield break;
+            }
+
+            anchor.ApplyPayload(payload, defaultFirePrefab);
+            resolvedAnchor = anchor;
         }
 
-        anchor.ApplyPayload(payload, defaultFirePrefab);
+        if (resolvedAnchor == null)
+        {
+            yield break;
+        }
 
         if (logResolvedPayload)
         {
@@ -40,7 +57,7 @@ public class IncidentPayloadStartupTask : SceneStartupTask
                 $"logicalFireLocation='{payload.logicalFireLocation}', hazardType='{payload.hazardType}', " +
                 $"fireCount={payload.initialFireCount}, intensity={payload.initialFireIntensity:0.00}, " +
                 $"smoke={payload.startSmokeDensity:0.00}, smokeMul={payload.smokeAccumulationMultiplier:0.00}.",
-                anchor);
+                resolvedAnchor);
         }
 
         if (clearPendingPayloadAfterApply)
@@ -53,35 +70,7 @@ public class IncidentPayloadStartupTask : SceneStartupTask
 
     private IncidentPayloadAnchor ResolveAnchor(IncidentWorldSetupPayload payload)
     {
-        IncidentPayloadAnchor[] anchors = ResolveAnchors();
-        IncidentPayloadAnchor locationFallback = null;
-        IncidentPayloadAnchor defaultAnchor = null;
-
-        for (int i = 0; i < anchors.Length; i++)
-        {
-            IncidentPayloadAnchor anchor = anchors[i];
-            if (anchor == null)
-            {
-                continue;
-            }
-
-            if (anchor.MatchesFireOrigin(payload.fireOrigin))
-            {
-                return anchor;
-            }
-
-            if (locationFallback == null && anchor.MatchesLogicalLocation(payload.logicalFireLocation))
-            {
-                locationFallback = anchor;
-            }
-
-            if (defaultAnchor == null && anchor.IsDefaultAnchor)
-            {
-                defaultAnchor = anchor;
-            }
-        }
-
-        return locationFallback ?? defaultAnchor;
+        return IncidentAnchorHazardSetupStep.ResolveBestAnchor(payload, ResolveAnchors());
     }
 
     private IncidentPayloadAnchor[] ResolveAnchors()
@@ -92,6 +81,31 @@ public class IncidentPayloadStartupTask : SceneStartupTask
         }
 
         return FindObjectsByType<IncidentPayloadAnchor>(FindObjectsInactive.Include);
+    }
+
+    private IncidentMapSetupRoot ResolveMapSetupRoot(SceneStartupFlow startupFlow)
+    {
+        if (explicitMapSetupRoot != null)
+        {
+            return explicitMapSetupRoot;
+        }
+
+        IncidentMapSetupRoot localRoot = GetComponent<IncidentMapSetupRoot>();
+        if (localRoot != null)
+        {
+            return localRoot;
+        }
+
+        if (startupFlow != null)
+        {
+            localRoot = startupFlow.GetComponentInChildren<IncidentMapSetupRoot>(true);
+            if (localRoot != null)
+            {
+                return localRoot;
+            }
+        }
+
+        return FindAnyObjectByType<IncidentMapSetupRoot>(FindObjectsInactive.Include);
     }
 
     public static FireHazardType ResolveFireHazardType(string hazardType)

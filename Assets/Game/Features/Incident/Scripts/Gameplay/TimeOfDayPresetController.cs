@@ -164,7 +164,7 @@ public class TimeOfDayPresetController : MonoBehaviour
                     ambientGroundColor = new Color(0.21f, 0.25f, 0.27f),
                     ambientIntensity = 1f,
                     reflectionIntensity = 0.24f,
-                    sunColor = new Color(1f, 0.97f, 0.91f),
+                    sunColor = new Color(0.91f, 0.82f, 0.64f),
                     sunIntensity = 1.35f,
                     sunEulerAngles = new Vector3(70f, -10f, 0f)
                 };

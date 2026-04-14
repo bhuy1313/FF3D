@@ -58,6 +58,12 @@ public class Vent : MonoBehaviour, IInteractable, IGrabbable, IOpenable, ISmokeV
         ApplyVentState();
     }
 
+    public void SetOpenState(bool open)
+    {
+        isOpen = open;
+        ApplyVentState();
+    }
+
     private void ApplyVentState()
     {
         if (rb == null)

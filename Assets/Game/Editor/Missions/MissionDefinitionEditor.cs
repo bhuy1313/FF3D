@@ -55,9 +55,9 @@ public class MissionDefinitionEditor : Editor
             MissionEditorAssetCreationUtility.ShowCreateAssetMenu<MissionStageDefinition>(serializedObject, "stages", "Create Stage");
         }
 
-        if (GUILayout.Button("Create Objective Asset"))
+        if (GUILayout.Button("Create Persistent Objective Asset"))
         {
-            MissionEditorAssetCreationUtility.ShowCreateAssetMenu<MissionObjectiveDefinition>(serializedObject, "objectives", "Create Objective");
+            MissionEditorAssetCreationUtility.ShowCreateAssetMenu<MissionObjectiveDefinition>(serializedObject, "persistentObjectives", "Create Persistent Objective");
         }
 
         if (GUILayout.Button("Create Fail Condition Asset"))

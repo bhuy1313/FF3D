@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [CreateAssetMenu(
     fileName = "MissionDefinition",
@@ -16,7 +17,7 @@ public class MissionDefinition : ScriptableObject
     [SerializeField] private MissionScoreConfig scoreConfig = new MissionScoreConfig();
 
     [Header("Objectives")]
-    [SerializeField] private List<MissionObjectiveDefinition> objectives = new List<MissionObjectiveDefinition>();
+    [SerializeField, FormerlySerializedAs("objectives")] private List<MissionObjectiveDefinition> persistentObjectives = new List<MissionObjectiveDefinition>();
 
     [Header("Fail Conditions")]
     [SerializeField] private List<MissionFailConditionDefinition> failConditions = new List<MissionFailConditionDefinition>();
@@ -63,10 +64,44 @@ public class MissionDefinition : ScriptableObject
 
     public void CollectObjectives(List<MissionObjectiveDefinition> results)
     {
-        CollectObjectives(results, -1);
+        CollectPersistentObjectives(results);
     }
 
     public void CollectObjectives(List<MissionObjectiveDefinition> results, int stageIndex)
+    {
+        if (stageIndex >= 0)
+        {
+            CollectStageObjectives(results, stageIndex);
+            return;
+        }
+
+        CollectPersistentObjectives(results);
+    }
+
+    public void CollectPersistentObjectives(List<MissionObjectiveDefinition> results)
+    {
+        if (results == null)
+        {
+            return;
+        }
+
+        results.Clear();
+        if (persistentObjectives == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < persistentObjectives.Count; i++)
+        {
+            MissionObjectiveDefinition objective = persistentObjectives[i];
+            if (objective != null)
+            {
+                results.Add(objective);
+            }
+        }
+    }
+
+    public void CollectStageObjectives(List<MissionObjectiveDefinition> results, int stageIndex)
     {
         if (results == null)
         {
@@ -77,21 +112,6 @@ public class MissionDefinition : ScriptableObject
         if (HasStages && TryGetStage(stageIndex, out MissionStageDefinition stage))
         {
             stage.CollectObjectives(results);
-            return;
-        }
-
-        if (objectives == null)
-        {
-            return;
-        }
-
-        for (int i = 0; i < objectives.Count; i++)
-        {
-            MissionObjectiveDefinition objective = objectives[i];
-            if (objective != null)
-            {
-                results.Add(objective);
-            }
         }
     }
 

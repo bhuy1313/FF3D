@@ -426,6 +426,7 @@ GameObject:
   m_Component:
   - component: {fileID: 642135791357913580}
   - component: {fileID: 642135791357913581}
+  - component: {fileID: 642135791357913582}
   m_Layer: 0
   m_Name: IncidentPayloadStartup
   m_TagString: Untagged
@@ -445,7 +446,9 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 642135791357913584}
+  - {fileID: 642135791357913587}
   m_Father: {fileID: 8916907086897807096}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &642135791357913581
@@ -467,6 +470,124 @@ MonoBehaviour:
   logResolvedPayload: 1
   defaultFirePrefab: {fileID: 1736551855387302899, guid: 1bd6c9fbfcc1b854496830093395e69a, type: 3}
   explicitAnchors: []
+--- !u!114 &642135791357913582
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 642135791357913579}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 246728361db84eef8fd115f8a61752e3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IncidentMapSetupRoot
+  collectStepsFromChildren: 1
+  includeInactiveSteps: 1
+  explicitSteps: []
+  logSetupSteps: 1
+--- !u!1 &642135791357913583
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 642135791357913584}
+  - component: {fileID: 642135791357913585}
+  m_Layer: 0
+  m_Name: AnchorHazardSetup
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &642135791357913584
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 642135791357913583}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 642135791357913580}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &642135791357913585
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 642135791357913583}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f8384b17db44f3798165a0ce2fd7358, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IncidentAnchorHazardSetupStep
+  runStep: 1
+  order: 0
+  stepNameOverride: Apply Anchor Hazard
+  explicitAnchors: []
+  includeInactiveAnchors: 1
+  warnWhenIsolationDeviceMissing: 1
+--- !u!1 &642135791357913586
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 642135791357913587}
+  - component: {fileID: 642135791357913588}
+  m_Layer: 0
+  m_Name: VentilationPresetSetup
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &642135791357913587
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 642135791357913586}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 642135791357913580}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &642135791357913588
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 642135791357913586}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b06b19d7b7e24ca1b3ed3314d2907db2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IncidentVentilationPresetSetupStep
+  runStep: 1
+  order: -50
+  stepNameOverride: Apply Ventilation Preset
+  explicitBindings: []
+  collectBindingsFromScene: 1
+  includeInactiveBindings: 1
+  stopAfterFirstAppliedBinding: 0
+  warnWhenPresetUnmapped: 0
 --- !u!1 &2935035556544931113
 GameObject:
   m_ObjectHideFlags: 0

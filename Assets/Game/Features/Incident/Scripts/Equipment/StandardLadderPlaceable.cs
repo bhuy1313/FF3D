@@ -10,45 +10,45 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement, I
 {
     [Header("Placement")]
     [SerializeField] private LayerMask placementMask = ~0;
-    [SerializeField] private bool useAimBasedCardinalDirection = true;
-    [SerializeField] private Vector3 fallbackPlacementDirection = Vector3.forward;
-    [SerializeField] private float wallSearchDistance = 2.5f;
-    [SerializeField, Range(0f, 1f)] private float minimumPlatformLookUpDot = 0.2f;
-    [SerializeField] private float bottomGroundProbeHeight = 1.5f;
-    [SerializeField] private float bottomGroundSearchDistance = 4f;
-    [SerializeField] private float bottomOffsetFromWall = 0.35f;
-    [SerializeField] private float bottomGroundClearance = 0.03f;
-    [SerializeField] private float topSearchDepth = 2f;
-    [SerializeField] private float topSearchStep = 0.1f;
-    [SerializeField] private float topAnchorOutwardOffset = 0.35f;
-    [SerializeField] private float platformTopSurfaceInset = 0.1f;
-    [SerializeField, Range(0f, 1f)] private float minimumSurfaceUpDot = 0.65f;
+    [Tooltip("Distance the ladder top sits away from the wall/platform edge.")]
+    [SerializeField] private float topAnchorOutwardOffset = 0f;
 
-    [Header("Grid Snap")]
-    [SerializeField] private bool enableEdgeGridSnap = true;
-    [SerializeField] private float edgeGridStep = 0.5f;
-
-    [Header("Shape")]
+    [Header("Ladder")]
     [SerializeField] private float topExitOffset = 0.15f;
-    [SerializeField] private float placementPitchOffsetDegrees = 8f;
     [SerializeField] private float movementWeightKg = 18f;
 
     [Header("Navigation")]
     [SerializeField] private bool enableNavMeshLink = true;
-    [SerializeField] private float navMeshLinkWidthPadding = 0.2f;
-    [SerializeField] private float navMeshLinkBottomOffset = 0.15f;
-    [SerializeField] private float navMeshLinkTopPlatformOffset = 0.6f;
-    [SerializeField] private bool autoSnapLinkEndpointsToNavMesh = true;
-    [SerializeField] private float navMeshEndpointSnapDistance = 1f;
-    [SerializeField] private float navMeshEndpointVerticalTolerance = 1f;
 
     [Header("Debug")]
     [SerializeField] private bool drawPlacementDebug;
 
-    [Header("Runtime")]
-    [SerializeField] private Vector3 bottomAnchorWorld;
-    [SerializeField] private Vector3 topAnchorWorld;
-    [SerializeField] private float ladderHeight;
+    private bool useAimBasedCardinalDirection = true;
+    private Vector3 fallbackPlacementDirection = Vector3.forward;
+    private float wallSearchDistance = 2.5f;
+    private float minimumPlatformLookUpDot = 0.2f;
+    private float bottomGroundProbeHeight = 1.5f;
+    private float bottomGroundSearchDistance = 3f;
+    private float bottomOffsetFromWall = 0.35f;
+    private float bottomGroundClearance = 0f;
+    private float topSearchDepth = 4f;
+    private float topSearchStep = 0.1f;
+    private float platformTopSurfaceInset = 0.1f;
+    private float minimumSurfaceUpDot = 0.65f;
+    private bool enableEdgeGridSnap = true;
+    private float edgeGridStep = 0.5f;
+    private float navMeshLinkWidthPadding = 0.2f;
+    private float navMeshLinkBottomOffset = 0.15f;
+    private float navMeshLinkTopPlatformOffset = 0.6f;
+    private float navMeshLinkTopPlatformSearchDistance = 1.2f;
+    private float navMeshLinkTopPlatformSearchStep = 0.1f;
+    private bool autoSnapLinkEndpointsToNavMesh = true;
+    private float navMeshEndpointSnapDistance = 1f;
+    private float navMeshEndpointVerticalTolerance = 1f;
+
+    private Vector3 bottomAnchorWorld;
+    private Vector3 topAnchorWorld;
+    private float ladderHeight;
 
     private Rigidbody cachedRigidbody;
     private BoxCollider climbCollider;
@@ -59,6 +59,9 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement, I
     private Vector3 baseVisualLocalPosition;
     private Quaternion baseVisualLocalRotation = Quaternion.identity;
     private Vector3 baseVisualLocalScale = Vector3.one;
+    private bool capturedAuthoredRigidbodyState;
+    private bool authoredUseGravity;
+    private bool authoredIsKinematic;
     private bool hasPlacedConfiguration;
     private bool isGrabbed;
     private bool hasPendingPlacement;
@@ -66,6 +69,9 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement, I
     private Vector3 pendingTopAnchor;
     private Vector3 pendingTopSurfacePoint;
     private Vector3 pendingOutward;
+    private bool pendingNavMeshLinkRefresh;
+    private Vector3 pendingNavMeshTopSurfacePoint;
+    private Vector3 pendingNavMeshOutward;
 
     public Rigidbody Rigidbody => cachedRigidbody;
     public float LadderHeight => ladderHeight;
@@ -77,14 +83,22 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement, I
         ApplyPlacedState(hasPlacedConfiguration);
     }
 
+    private void LateUpdate()
+    {
+        if (!pendingNavMeshLinkRefresh || isGrabbed || !hasPlacedConfiguration)
+        {
+            return;
+        }
+
+        pendingNavMeshLinkRefresh = false;
+        RefreshNavMeshLinkPlacement();
+    }
+
     private void OnValidate()
     {
+        topAnchorOutwardOffset = Mathf.Max(0f, topAnchorOutwardOffset);
         topExitOffset = Mathf.Max(0f, topExitOffset);
         movementWeightKg = Mathf.Max(0f, movementWeightKg);
-        minimumPlatformLookUpDot = Mathf.Clamp01(minimumPlatformLookUpDot);
-        platformTopSurfaceInset = Mathf.Max(0.01f, platformTopSurfaceInset);
-        edgeGridStep = Mathf.Max(0.05f, edgeGridStep);
-        bottomGroundClearance = Mathf.Max(0f, bottomGroundClearance);
     }
 
     public bool TryGetGrabPlacementPose(Transform aimTransform, LayerMask ignoredPlacementMask, float ignoredMaxDistance, out Vector3 position, out Quaternion rotation)
@@ -109,8 +123,8 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement, I
         pendingOutward = outward;
         hasPendingPlacement = true;
 
-        position = Vector3.Lerp(topAnchor, bottomPoint, 0.5f);
-        rotation = BuildPlacementRotation(outward);
+        rotation = BuildPlacementRotation(bottomPoint, topAnchor, outward);
+        position = CalculatePlacementWorldPosition(bottomPoint, rotation);
         return true;
     }
 
@@ -119,6 +133,7 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement, I
         EnsureReferences();
         isGrabbed = true;
         hasPendingPlacement = false;
+        pendingNavMeshLinkRefresh = false;
         pendingTopSurfacePoint = default;
         ApplyPlacedState(hasPlacedConfiguration);
     }
@@ -164,7 +179,7 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement, I
         }
 
         flatOutward.Normalize();
-        Quaternion placementRotation = BuildPlacementRotation(flatOutward);
+        Quaternion placementRotation = BuildPlacementRotation(bottomPoint, topAnchor, flatOutward);
 
         AlignColliderToPlacement(bottomPoint, placementRotation);
         LiftPlacedColliderAboveGround(bottomPoint.y);
@@ -174,16 +189,14 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement, I
         ladderHeight = GetTargetPlacementHeight();
 
         ladder.SetTopHeightOffset(topExitOffset);
-        Vector3 resolvedTopSurfacePoint = ResolveTopSurfacePoint(topAnchorWorld, topSurfacePoint);
-        ConfigureNavMeshLink(resolvedTopSurfacePoint, bottomAnchorWorld, flatOutward);
         ApplyVisualLayout();
         hasPlacedConfiguration = true;
         ApplyPlacedState(true);
+        QueueNavMeshLinkRefresh(topSurfacePoint, flatOutward);
 
         if (cachedRigidbody != null)
         {
-            cachedRigidbody.linearVelocity = Vector3.zero;
-            cachedRigidbody.angularVelocity = Vector3.zero;
+            ZeroRigidbodyVelocityIfDynamic(cachedRigidbody);
             cachedRigidbody.Sleep();
         }
     }
@@ -191,6 +204,7 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement, I
     private void EnsureReferences()
     {
         cachedRigidbody ??= GetComponent<Rigidbody>();
+        CaptureAuthoredRigidbodyState();
 
         if (climbCollider == null)
         {
@@ -294,6 +308,8 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement, I
 
     private void ApplyPlacedState(bool enabled)
     {
+        ApplyRigidbodyStateForPlacement(enabled || isGrabbed);
+
         if (climbCollider != null)
         {
             climbCollider.enabled = !isGrabbed;
@@ -306,11 +322,98 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement, I
 
         if (navMeshLink != null)
         {
-            navMeshLink.activated = enabled && enableNavMeshLink && !isGrabbed;
+            navMeshLink.activated = enabled &&
+                                    enableNavMeshLink &&
+                                    !isGrabbed &&
+                                    !pendingNavMeshLinkRefresh;
         }
     }
 
-    private Quaternion BuildPlacementRotation(Vector3 outward)
+    private void QueueNavMeshLinkRefresh(Vector3 topSurfacePoint, Vector3 outward)
+    {
+        pendingNavMeshTopSurfacePoint = topSurfacePoint;
+        pendingNavMeshOutward = outward;
+        pendingNavMeshLinkRefresh = enableNavMeshLink && !isGrabbed;
+
+        if (navMeshLink != null && pendingNavMeshLinkRefresh)
+        {
+            navMeshLink.activated = false;
+        }
+    }
+
+    private void RefreshNavMeshLinkPlacement()
+    {
+        EnsureReferences();
+        Physics.SyncTransforms();
+
+        Vector3 flatOutward = Vector3.ProjectOnPlane(pendingNavMeshOutward, Vector3.up);
+        if (flatOutward.sqrMagnitude <= 0.0001f)
+        {
+            flatOutward = transform.forward;
+        }
+
+        flatOutward.Normalize();
+        bottomAnchorWorld = GetColliderEndpointWorld(isTop: false);
+        topAnchorWorld = GetColliderEndpointWorld(isTop: true);
+        ladderHeight = GetTargetPlacementHeight();
+
+        Vector3 resolvedTopSurfacePoint = ResolveTopSurfacePoint(topAnchorWorld, pendingNavMeshTopSurfacePoint);
+        ConfigureNavMeshLink(resolvedTopSurfacePoint, bottomAnchorWorld, flatOutward);
+    }
+
+    private void CaptureAuthoredRigidbodyState()
+    {
+        if (capturedAuthoredRigidbodyState || cachedRigidbody == null)
+        {
+            return;
+        }
+
+        authoredUseGravity = cachedRigidbody.useGravity;
+        authoredIsKinematic = cachedRigidbody.isKinematic;
+        capturedAuthoredRigidbodyState = true;
+    }
+
+    private void ApplyRigidbodyStateForPlacement(bool isPlaced)
+    {
+        if (cachedRigidbody == null)
+        {
+            return;
+        }
+
+        CaptureAuthoredRigidbodyState();
+
+        if (isPlaced)
+        {
+            ZeroRigidbodyVelocityIfDynamic(cachedRigidbody);
+            cachedRigidbody.useGravity = false;
+            cachedRigidbody.isKinematic = true;
+            cachedRigidbody.Sleep();
+            return;
+        }
+
+        if (!capturedAuthoredRigidbodyState)
+        {
+            return;
+        }
+
+        cachedRigidbody.isKinematic = authoredIsKinematic;
+        cachedRigidbody.useGravity = authoredUseGravity;
+        ZeroRigidbodyVelocityIfDynamic(cachedRigidbody);
+        cachedRigidbody.WakeUp();
+    }
+
+    private static void ZeroRigidbodyVelocityIfDynamic(Rigidbody body)
+    {
+        if (body == null || body.isKinematic)
+        {
+            return;
+        }
+
+        body.linearVelocity = Vector3.zero;
+        body.angularVelocity = Vector3.zero;
+    }
+
+    private Quaternion BuildPlacementRotation(Vector3 bottomPoint, Vector3 topPoint, Vector3 outward)
     {
         Vector3 flatOutward = Vector3.ProjectOnPlane(outward, Vector3.up);
         if (flatOutward.sqrMagnitude <= 0.0001f)
@@ -318,15 +421,68 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement, I
             flatOutward = Vector3.back;
         }
 
-        Quaternion baseRotation = Quaternion.LookRotation(-flatOutward.normalized, Vector3.up);
-        return baseRotation * Quaternion.Euler(placementPitchOffsetDegrees, 0f, 0f);
+        flatOutward.Normalize();
+
+        Vector3 climbDirection = topPoint - bottomPoint;
+        if (climbDirection.sqrMagnitude <= 0.0001f)
+        {
+            climbDirection = Vector3.up;
+        }
+        else
+        {
+            climbDirection.Normalize();
+        }
+
+        if (Vector3.Dot(climbDirection, Vector3.up) <= 0.001f)
+        {
+            climbDirection = Vector3.up;
+        }
+
+        Vector3 forward = Vector3.ProjectOnPlane(-flatOutward, climbDirection);
+        if (forward.sqrMagnitude <= 0.0001f)
+        {
+            forward = Vector3.ProjectOnPlane(transform.forward, climbDirection);
+        }
+
+        if (forward.sqrMagnitude <= 0.0001f)
+        {
+            forward = Vector3.Cross(climbDirection, Vector3.right);
+        }
+
+        if (forward.sqrMagnitude <= 0.0001f)
+        {
+            forward = Vector3.Cross(climbDirection, Vector3.forward);
+        }
+
+        return Quaternion.LookRotation(forward.normalized, climbDirection);
     }
 
     private void AlignColliderToPlacement(Vector3 bottomPoint, Quaternion placementRotation)
     {
-        Vector3 localBottomPoint = GetColliderLocalEndpoint(isTop: false);
-        Vector3 worldPosition = bottomPoint - (placementRotation * localBottomPoint);
+        Vector3 worldPosition = CalculatePlacementWorldPosition(bottomPoint, placementRotation);
         transform.SetPositionAndRotation(worldPosition, placementRotation);
+    }
+
+    private Vector3 CalculatePlacementWorldPosition(Vector3 bottomPoint, Quaternion placementRotation)
+    {
+        Vector3 localBottomPoint = GetLowestColliderSupportLocalPoint(placementRotation);
+        return bottomPoint - (placementRotation * localBottomPoint);
+    }
+
+    private Vector3 GetLowestColliderSupportLocalPoint(Quaternion placementRotation)
+    {
+        if (climbCollider == null)
+        {
+            return GetColliderLocalEndpoint(isTop: false);
+        }
+
+        Vector3 halfExtents = climbCollider.size * 0.5f;
+        Vector3 localDown = Quaternion.Inverse(placementRotation) * Vector3.down;
+
+        return climbCollider.center + new Vector3(
+            localDown.x >= 0f ? halfExtents.x : -halfExtents.x,
+            localDown.y >= 0f ? halfExtents.y : -halfExtents.y,
+            localDown.z >= 0f ? halfExtents.z : -halfExtents.z);
     }
 
     private void LiftPlacedColliderAboveGround(float minimumBottomY)
@@ -906,13 +1062,11 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement, I
         horizontalOutward.Normalize();
 
         Vector3 colliderSize = GetClimbColliderSize();
-        float topPlatformOffset = Mathf.Max(colliderSize.z * 0.5f, navMeshLinkTopPlatformOffset);
         float bottomOffset = Mathf.Max(0f, navMeshLinkBottomOffset);
 
         Vector3 bottomWorld = bottomPoint + horizontalOutward * bottomOffset;
-        Vector3 topWorld = topSurfacePoint - horizontalOutward * topPlatformOffset;
         bottomWorld = ResolveClosestNavMeshEndpoint(bottomWorld, bottomPoint.y);
-        topWorld = ResolveClosestNavMeshEndpoint(topWorld, topSurfacePoint.y);
+        Vector3 topWorld = ResolveTopNavMeshLinkWorld(topSurfacePoint, horizontalOutward, colliderSize);
 
         navMeshLink.agentTypeID = 0;
         navMeshLink.bidirectional = true;
@@ -933,24 +1087,106 @@ public class StandardLadder : MonoBehaviour, IGrabbable, ICustomGrabPlacement, I
         return resolvedTopSurfacePoint;
     }
 
+    private Vector3 ResolveTopNavMeshLinkWorld(Vector3 topSurfacePoint, Vector3 outward, Vector3 colliderSize)
+    {
+        float expectedSurfaceY = topSurfacePoint.y;
+        float platformInset = Mathf.Max(colliderSize.z * 0.5f, navMeshLinkTopPlatformOffset);
+        float ladderFaceOffset = colliderSize.z * 0.5f;
+
+        Vector3 ladderCenterAtSurface = ResolveLadderCenterAtY(expectedSurfaceY);
+        Vector3 ladderFaceAtSurface = ladderCenterAtSurface + outward * ladderFaceOffset;
+        if (TryResolveTopPlatformNavMeshEndpoint(
+                ladderFaceAtSurface,
+                topSurfacePoint,
+                outward,
+                expectedSurfaceY,
+                platformInset,
+                out Vector3 resolvedTopWorld))
+        {
+            return resolvedTopWorld;
+        }
+
+        return ladderFaceAtSurface - outward * platformInset;
+    }
+
+    private Vector3 ResolveLadderCenterAtY(float worldY)
+    {
+        Vector3 bottom = bottomAnchorWorld;
+        Vector3 top = topAnchorWorld;
+        float verticalDelta = top.y - bottom.y;
+        if (Mathf.Abs(verticalDelta) <= 0.0001f)
+        {
+            return top;
+        }
+
+        float clampedY = Mathf.Clamp(worldY, Mathf.Min(bottom.y, top.y), Mathf.Max(bottom.y, top.y));
+        float t = Mathf.Clamp01((clampedY - bottom.y) / verticalDelta);
+        return Vector3.Lerp(bottom, top, t);
+    }
+
+    private bool TryResolveTopPlatformNavMeshEndpoint(
+        Vector3 ladderFaceAtSurface,
+        Vector3 topSurfacePoint,
+        Vector3 outward,
+        float expectedSurfaceY,
+        float basePlatformInset,
+        out Vector3 resolvedWorldPoint)
+    {
+        float maxExtraSearch = Mathf.Max(0f, navMeshLinkTopPlatformSearchDistance);
+        float searchStep = Mathf.Max(0.01f, navMeshLinkTopPlatformSearchStep);
+
+        for (float extraInset = 0f; extraInset <= maxExtraSearch + 0.001f; extraInset += searchStep)
+        {
+            float platformInset = basePlatformInset + extraInset;
+            Vector3 geometryCandidate = ladderFaceAtSurface - outward * platformInset;
+            if (TryResolveClosestNavMeshEndpoint(geometryCandidate, expectedSurfaceY, out resolvedWorldPoint))
+            {
+                return true;
+            }
+
+            Vector3 legacyCandidate = topSurfacePoint - outward * platformInset;
+            if (TryResolveClosestNavMeshEndpoint(legacyCandidate, expectedSurfaceY, out resolvedWorldPoint))
+            {
+                return true;
+            }
+        }
+
+        resolvedWorldPoint = default;
+        return false;
+    }
+
     private Vector3 ResolveClosestNavMeshEndpoint(Vector3 fallbackWorldPoint, float expectedSurfaceY)
     {
+        if (TryResolveClosestNavMeshEndpoint(fallbackWorldPoint, expectedSurfaceY, out Vector3 resolvedWorldPoint))
+        {
+            return resolvedWorldPoint;
+        }
+
+        return fallbackWorldPoint;
+    }
+
+    private bool TryResolveClosestNavMeshEndpoint(Vector3 fallbackWorldPoint, float expectedSurfaceY, out Vector3 resolvedWorldPoint)
+    {
+        resolvedWorldPoint = fallbackWorldPoint;
         if (!enableNavMeshLink || !autoSnapLinkEndpointsToNavMesh)
         {
-            return fallbackWorldPoint;
+            return false;
         }
 
-        if (!NavMesh.SamplePosition(fallbackWorldPoint, out NavMeshHit navMeshHit, navMeshEndpointSnapDistance, NavMesh.AllAreas))
+        float sampleDistance = Mathf.Max(0.05f, navMeshEndpointSnapDistance);
+        if (!NavMesh.SamplePosition(fallbackWorldPoint, out NavMeshHit navMeshHit, sampleDistance, NavMesh.AllAreas))
         {
-            return fallbackWorldPoint;
+            return false;
         }
 
-        if (Mathf.Abs(navMeshHit.position.y - expectedSurfaceY) > navMeshEndpointVerticalTolerance)
+        float verticalTolerance = Mathf.Max(0.05f, navMeshEndpointVerticalTolerance);
+        if (Mathf.Abs(navMeshHit.position.y - expectedSurfaceY) > verticalTolerance)
         {
-            return fallbackWorldPoint;
+            return false;
         }
 
-        return navMeshHit.position;
+        resolvedWorldPoint = navMeshHit.position;
+        return true;
     }
 
     private static void DestroyRuntimeSafe(Object target)

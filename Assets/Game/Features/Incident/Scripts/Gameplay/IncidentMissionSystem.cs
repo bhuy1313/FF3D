@@ -19,6 +19,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
         [SerializeField] private bool hasFailed;
         [SerializeField] private int score;
         [SerializeField] private int maxScore;
+        [SerializeField] private bool isStageObjective;
 
         public string Title => title;
         public string Summary => summary;
@@ -26,8 +27,9 @@ public partial class IncidentMissionSystem : MonoBehaviour
         public bool HasFailed => hasFailed;
         public int Score => score;
         public int MaxScore => maxScore;
+        public bool IsStageObjective => isStageObjective;
 
-        public void Set(MissionObjectiveEvaluation evaluation, MissionObjectiveScoreEvaluation scoreEvaluation)
+        public void Set(MissionObjectiveEvaluation evaluation, MissionObjectiveScoreEvaluation scoreEvaluation, bool stageObjective)
         {
             title = evaluation.Title;
             summary = evaluation.Summary;
@@ -35,6 +37,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
             hasFailed = evaluation.HasFailed;
             score = scoreEvaluation.Score;
             maxScore = scoreEvaluation.MaxScore;
+            isStageObjective = stageObjective;
         }
     }
 
@@ -213,10 +216,12 @@ public partial class IncidentMissionSystem : MonoBehaviour
     [SerializeField] private bool progressDirty = true;
     [SerializeField] private List<string> activatedSignalKeys = new List<string>();
 
-    private readonly List<MissionObjectiveDefinition> activeObjectiveDefinitions = new List<MissionObjectiveDefinition>();
+    private readonly List<MissionObjectiveDefinition> activePersistentObjectiveDefinitions = new List<MissionObjectiveDefinition>();
+    private readonly List<MissionObjectiveDefinition> activeStageObjectiveDefinitions = new List<MissionObjectiveDefinition>();
     private readonly List<MissionFailConditionDefinition> activeFailConditionDefinitions = new List<MissionFailConditionDefinition>();
     private readonly List<MissionStageDefinition> activeStageDefinitions = new List<MissionStageDefinition>();
     private readonly List<MissionObjectiveDefinition> scoreScratchObjectives = new List<MissionObjectiveDefinition>();
+    private readonly HashSet<MissionObjectiveDefinition> objectiveScratchSet = new HashSet<MissionObjectiveDefinition>();
     private readonly List<MissionStageDefinition> resultStageScratch = new List<MissionStageDefinition>();
     private readonly List<MissionObjectiveDefinition> resultObjectiveScratch = new List<MissionObjectiveDefinition>();
     private readonly List<MissionFailConditionDefinition> resultFailConditionScratch = new List<MissionFailConditionDefinition>();
@@ -443,7 +448,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
         }
 
         int currentIndex = index - completedCount;
-        return TryGetObjectiveStatus(currentIndex, out status);
+        return TryGetCurrentResultObjectiveStatus(currentIndex, out status);
     }
 
     public bool TryResolveSceneObject(string key, out GameObject targetObject)
@@ -622,7 +627,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
 
     private bool HasFailedVictimOutcome()
     {
-        if (activeObjectiveDefinitions.Count > 0)
+        if (HasAnyActiveDefinitionObjectives())
         {
             return false;
         }
@@ -864,7 +869,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
             return;
         }
 
-        missionDefinition.CollectObjectives(resultObjectiveScratch);
+        missionDefinition.CollectPersistentObjectives(resultObjectiveScratch);
         for (int i = 0; i < resultObjectiveScratch.Count; i++)
         {
             MissionObjectiveDefinition objective = resultObjectiveScratch[i];
@@ -884,7 +889,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
             }
 
             resultObjectiveScratch.Clear();
-            stage.CollectObjectives(resultObjectiveScratch);
+            missionDefinition.CollectStageObjectives(resultObjectiveScratch, stageIndex);
             for (int objectiveIndex = 0; objectiveIndex < resultObjectiveScratch.Count; objectiveIndex++)
             {
                 MissionObjectiveDefinition objective = resultObjectiveScratch[objectiveIndex];
@@ -932,11 +937,21 @@ public partial class IncidentMissionSystem : MonoBehaviour
 
     private bool AreActiveDefinitionObjectivesSatisfied(MissionProgressSnapshot snapshot, bool allowNoRelevantObjectives)
     {
+        return AreObjectiveDefinitionsSatisfied(activeStageObjectiveDefinitions, snapshot, allowNoRelevantObjectives);
+    }
+
+    private bool ArePersistentDefinitionObjectivesSatisfied(MissionProgressSnapshot snapshot, bool allowNoRelevantObjectives)
+    {
+        return AreObjectiveDefinitionsSatisfied(activePersistentObjectiveDefinitions, snapshot, allowNoRelevantObjectives);
+    }
+
+    private bool AreObjectiveDefinitionsSatisfied(List<MissionObjectiveDefinition> objectives, MissionProgressSnapshot snapshot, bool allowNoRelevantObjectives)
+    {
         MissionObjectiveContext context = BuildObjectiveContext(snapshot);
         bool hasRelevantObjective = false;
-        for (int i = 0; i < activeObjectiveDefinitions.Count; i++)
+        for (int i = 0; i < objectives.Count; i++)
         {
-            MissionObjectiveDefinition objective = activeObjectiveDefinitions[i];
+            MissionObjectiveDefinition objective = objectives[i];
             if (objective == null)
             {
                 continue;
@@ -956,6 +971,11 @@ public partial class IncidentMissionSystem : MonoBehaviour
         }
 
         return hasRelevantObjective || allowNoRelevantObjectives;
+    }
+
+    private bool HasAnyActiveDefinitionObjectives()
+    {
+        return activePersistentObjectiveDefinitions.Count > 0 || activeStageObjectiveDefinitions.Count > 0;
     }
 
     private bool HasFailedObjectiveOutcome()
@@ -996,7 +1016,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
             return completedCount;
         }
 
-        return completedCount + ObjectiveStatusCount;
+        return completedCount + GetCurrentResultObjectiveStatusCount();
     }
 
     private bool ShouldIncludeCurrentObjectiveStatusesInResult()
@@ -1006,7 +1026,96 @@ public partial class IncidentMissionSystem : MonoBehaviour
             return ObjectiveStatusCount > 0;
         }
 
-        return !HasCapturedStageObjectiveHistory(currentStageIndex) && ObjectiveStatusCount > 0;
+        return HasUncapturedCurrentObjectiveStatusesInResult();
+    }
+
+    private bool TryGetCurrentResultObjectiveStatus(int filteredIndex, out MissionObjectiveStatusSnapshot status)
+    {
+        status = default;
+        if (filteredIndex < 0 || objectiveStatuses == null)
+        {
+            return false;
+        }
+
+        int resolvedIndex = 0;
+        for (int i = 0; i < objectiveStatuses.Count; i++)
+        {
+            MissionObjectiveStatus objectiveStatus = objectiveStatuses[i];
+            if (objectiveStatus == null || !ShouldIncludeCurrentObjectiveStatusInResult(objectiveStatus))
+            {
+                continue;
+            }
+
+            if (resolvedIndex == filteredIndex)
+            {
+                status = new MissionObjectiveStatusSnapshot(
+                    objectiveStatus.Title,
+                    objectiveStatus.Summary,
+                    objectiveStatus.IsComplete,
+                    objectiveStatus.HasFailed,
+                    objectiveStatus.Score,
+                    objectiveStatus.MaxScore);
+                return true;
+            }
+
+            resolvedIndex++;
+        }
+
+        return false;
+    }
+
+    private int GetCurrentResultObjectiveStatusCount()
+    {
+        if (objectiveStatuses == null)
+        {
+            return 0;
+        }
+
+        int count = 0;
+        for (int i = 0; i < objectiveStatuses.Count; i++)
+        {
+            MissionObjectiveStatus objectiveStatus = objectiveStatuses[i];
+            if (objectiveStatus != null && ShouldIncludeCurrentObjectiveStatusInResult(objectiveStatus))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private bool HasUncapturedCurrentObjectiveStatusesInResult()
+    {
+        if (objectiveStatuses == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < objectiveStatuses.Count; i++)
+        {
+            MissionObjectiveStatus objectiveStatus = objectiveStatuses[i];
+            if (objectiveStatus != null && ShouldIncludeCurrentObjectiveStatusInResult(objectiveStatus))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool ShouldIncludeCurrentObjectiveStatusInResult(MissionObjectiveStatus objectiveStatus)
+    {
+        if (objectiveStatus == null)
+        {
+            return false;
+        }
+
+        if (!objectiveStatus.IsStageObjective)
+        {
+            return true;
+        }
+
+        return !HasCapturedStageObjectiveHistory(currentStageIndex);
     }
 
     private void BuildLegacyObjectiveStatuses(MissionProgressSnapshot snapshot)
@@ -1014,9 +1123,9 @@ public partial class IncidentMissionSystem : MonoBehaviour
         Objectives.BuildLegacyObjectiveStatuses(snapshot);
     }
 
-    private void AddObjectiveStatus(MissionObjectiveEvaluation evaluation, MissionObjectiveScoreEvaluation scoreEvaluation)
+    private void AddObjectiveStatus(MissionObjectiveEvaluation evaluation, MissionObjectiveScoreEvaluation scoreEvaluation, bool stageObjective)
     {
-        Objectives.AddObjectiveStatus(evaluation, scoreEvaluation);
+        Objectives.AddObjectiveStatus(evaluation, scoreEvaluation, stageObjective);
     }
 
     private static MissionObjectiveScoreEvaluation CreateLegacyBinaryScore(bool isComplete)
@@ -1031,7 +1140,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
         return new MissionObjectiveScoreEvaluation(score, LegacyObjectiveScoreWeight, string.Empty);
     }
 
-    private int SumObjectiveStatusScore()
+    private int SumObjectiveStatusScore(bool includeStageObjectives, bool includePersistentObjectives)
     {
         if (objectiveStatuses == null)
         {
@@ -1042,13 +1151,45 @@ public partial class IncidentMissionSystem : MonoBehaviour
         for (int i = 0; i < objectiveStatuses.Count; i++)
         {
             MissionObjectiveStatus status = objectiveStatuses[i];
-            if (status != null)
+            if (status == null)
+            {
+                continue;
+            }
+
+            if ((status.IsStageObjective && includeStageObjectives) ||
+                (!status.IsStageObjective && includePersistentObjectives))
             {
                 score += Mathf.Max(0, status.Score);
             }
         }
 
         return score;
+    }
+
+    private int SumObjectiveStatusMaxScore(bool includeStageObjectives, bool includePersistentObjectives)
+    {
+        if (objectiveStatuses == null)
+        {
+            return 0;
+        }
+
+        int maxScore = 0;
+        for (int i = 0; i < objectiveStatuses.Count; i++)
+        {
+            MissionObjectiveStatus status = objectiveStatuses[i];
+            if (status == null)
+            {
+                continue;
+            }
+
+            if ((status.IsStageObjective && includeStageObjectives) ||
+                (!status.IsStageObjective && includePersistentObjectives))
+            {
+                maxScore += Mathf.Max(0, status.MaxScore);
+            }
+        }
+
+        return maxScore;
     }
 
     private int CalculateCompletedStageObjectiveScore()
@@ -1092,9 +1233,20 @@ public partial class IncidentMissionSystem : MonoBehaviour
 
     private int CalculateMissionObjectiveMaximumScore()
     {
+        objectiveScratchSet.Clear();
+        int score = 0;
+
+        for (int i = 0; i < activePersistentObjectiveDefinitions.Count; i++)
+        {
+            MissionObjectiveDefinition objective = activePersistentObjectiveDefinitions[i];
+            if (objective != null && objectiveScratchSet.Add(objective))
+            {
+                score += objective.ScoreWeight;
+            }
+        }
+
         if (HasActiveStageSequence())
         {
-            int score = 0;
             for (int i = 0; i < activeStageDefinitions.Count; i++)
             {
                 MissionStageDefinition stage = activeStageDefinitions[i];
@@ -1108,7 +1260,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
                 for (int objectiveIndex = 0; objectiveIndex < scoreScratchObjectives.Count; objectiveIndex++)
                 {
                     MissionObjectiveDefinition objective = scoreScratchObjectives[objectiveIndex];
-                    if (objective != null)
+                    if (objective != null && objectiveScratchSet.Add(objective))
                     {
                         score += objective.ScoreWeight;
                     }
@@ -1116,24 +1268,17 @@ public partial class IncidentMissionSystem : MonoBehaviour
             }
 
             scoreScratchObjectives.Clear();
+            objectiveScratchSet.Clear();
             return score;
         }
 
-        if (activeObjectiveDefinitions.Count > 0)
+        if (activePersistentObjectiveDefinitions.Count > 0)
         {
-            int score = 0;
-            for (int i = 0; i < activeObjectiveDefinitions.Count; i++)
-            {
-                MissionObjectiveDefinition objective = activeObjectiveDefinitions[i];
-                if (objective != null)
-                {
-                    score += objective.ScoreWeight;
-                }
-            }
-
+            objectiveScratchSet.Clear();
             return score;
         }
 
+        objectiveScratchSet.Clear();
         int legacyScore = 0;
         if (requireAllFiresExtinguished && totalTrackedFires > 0)
         {

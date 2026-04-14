@@ -207,6 +207,7 @@ public partial class BotCommandAgent
 
             if (crouchReadyTime < 0f)
             {
+                behaviorContext.SetExtinguishStance(UnityEngine.Random.Range(0, 2));
                 crouchReadyTime = Time.time + Mathf.Max(0f, fireHoseCrouchDelay);
                 StopExtinguisher();
                 return;

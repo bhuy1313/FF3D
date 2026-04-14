@@ -382,13 +382,14 @@ namespace StarterAssets
                 return;
             }
 
-            if (FindGrabbable(hit.collider) == null)
+            IGrabbable grabbable = FindGrabbable(hit.collider);
+            if (grabbable == null)
             {
                 return;
             }
 
             Rigidbody targetBody = hit.rigidbody;
-            if (targetBody == null || targetBody.isKinematic)
+            if (targetBody == null)
             {
                 return;
             }
@@ -403,8 +404,7 @@ namespace StarterAssets
             grabbedOriginalIsKinematic = grabbedBody.isKinematic;
             grabbedOriginalDetectCollisions = grabbedBody.detectCollisions;
 
-            grabbedBody.linearVelocity = Vector3.zero;
-            grabbedBody.angularVelocity = Vector3.zero;
+            ZeroRigidbodyVelocityIfDynamic(grabbedBody);
             grabbedBody.isKinematic = true;
             grabbedBody.detectCollisions = false;
 
@@ -438,8 +438,7 @@ namespace StarterAssets
 
                 grabbedBody.isKinematic = grabbedOriginalIsKinematic;
                 grabbedBody.detectCollisions = grabbedOriginalDetectCollisions;
-                grabbedBody.linearVelocity = Vector3.zero;
-                grabbedBody.angularVelocity = Vector3.zero;
+                ZeroRigidbodyVelocityIfDynamic(grabbedBody);
             }
 
             grabbedPlacementOverride?.OnGrabCancelled();
@@ -641,17 +640,34 @@ namespace StarterAssets
             grabbedTransform.SetParent(grabbedOriginalParent, true);
             grabbedTransform.SetPositionAndRotation(worldPosition, worldRotation);
 
-            grabbedBody.isKinematic = grabbedOriginalIsKinematic;
             grabbedBody.detectCollisions = grabbedOriginalDetectCollisions;
-            grabbedBody.linearVelocity = Vector3.zero;
-            grabbedBody.angularVelocity = Vector3.zero;
-            grabbedPlacementOverride?.OnGrabPlaced(worldPosition, worldRotation);
+
+            if (grabbedPlacementOverride != null)
+            {
+                grabbedPlacementOverride.OnGrabPlaced(worldPosition, worldRotation);
+            }
+            else
+            {
+                grabbedBody.isKinematic = grabbedOriginalIsKinematic;
+                ZeroRigidbodyVelocityIfDynamic(grabbedBody);
+            }
 
             DestroyGrabPreview();
             grabbedFireSources.Clear();
             grabbedBody = null;
             grabbedOriginalParent = null;
             grabbedPlacementOverride = null;
+        }
+
+        private static void ZeroRigidbodyVelocityIfDynamic(Rigidbody body)
+        {
+            if (body == null || body.isKinematic)
+            {
+                return;
+            }
+
+            body.linearVelocity = Vector3.zero;
+            body.angularVelocity = Vector3.zero;
         }
 
         private GameObject EnsureGrabPreview()

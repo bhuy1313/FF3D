@@ -37,7 +37,7 @@ public static class MissionAssetValidation
         SerializedObject serializedMission = new SerializedObject(mission);
         SerializedProperty missionId = serializedMission.FindProperty("missionId");
         SerializedProperty missionTitle = serializedMission.FindProperty("missionTitle");
-        SerializedProperty missionObjectives = serializedMission.FindProperty("objectives");
+        SerializedProperty missionObjectives = serializedMission.FindProperty("persistentObjectives");
         SerializedProperty missionFailConditions = serializedMission.FindProperty("failConditions");
         SerializedProperty missionStages = serializedMission.FindProperty("stages");
         SerializedProperty missionTimeLimit = serializedMission.FindProperty("timeLimitSeconds");
@@ -52,18 +52,13 @@ public static class MissionAssetValidation
             entries.Add(new Entry(Severity.Warning, "Mission Title is empty.", mission));
         }
 
-        int objectiveCount = CountAssignedElements(missionObjectives, entries, "top-level objective");
+        int objectiveCount = CountAssignedElements(missionObjectives, entries, "persistent objective");
         int failConditionCount = CountAssignedElements(missionFailConditions, entries, "fail condition");
         int stageCount = CountAssignedElements(missionStages, entries, "stage");
 
         if (objectiveCount == 0 && stageCount == 0)
         {
-            entries.Add(new Entry(Severity.Error, "Mission has no objectives and no stages.", mission));
-        }
-
-        if (objectiveCount > 0 && stageCount > 0)
-        {
-            entries.Add(new Entry(Severity.Warning, "Mission has both top-level objectives and stages. Runtime uses stages and ignores top-level objectives.", mission));
+            entries.Add(new Entry(Severity.Error, "Mission has no persistent objectives and no stages.", mission));
         }
 
         HashSet<MissionStageDefinition> seenStages = new HashSet<MissionStageDefinition>();

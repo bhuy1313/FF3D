@@ -25,7 +25,7 @@ public class MissionAuthoringWindow : EditorWindow
     private Vector2 authoringScroll;
     private Vector2 sceneScanScroll;
     private WindowTab activeTab;
-    private bool showLegacyObjectives;
+    private bool showPersistentObjectives = true;
     private bool showFailConditions = true;
     private readonly Dictionary<string, string> keyPickerSearchTerms = new Dictionary<string, string>();
     private string signalEmitterFilter = string.Empty;
@@ -173,7 +173,7 @@ public class MissionAuthoringWindow : EditorWindow
         EditorGUILayout.Space();
         DrawStagesSection();
         EditorGUILayout.Space();
-        DrawLegacyObjectivesSection();
+        DrawPersistentObjectivesSection();
         EditorGUILayout.Space();
         DrawFailConditionsSection();
 
@@ -226,28 +226,25 @@ public class MissionAuthoringWindow : EditorWindow
         }
     }
 
-    private void DrawLegacyObjectivesSection()
+    private void DrawPersistentObjectivesSection()
     {
         using (new EditorGUILayout.VerticalScope("box"))
         {
-            showLegacyObjectives = EditorGUILayout.Foldout(showLegacyObjectives, "Mission Objectives (Legacy)", true);
-            if (!showLegacyObjectives)
+            showPersistentObjectives = EditorGUILayout.Foldout(showPersistentObjectives, "Persistent Objectives", true);
+            if (!showPersistentObjectives)
             {
                 return;
             }
 
-            if (MissionHasStages())
-            {
-                EditorGUILayout.HelpBox("Mission has stages. Runtime uses stage objectives and ignores this legacy top-level list.", MessageType.Info);
-            }
+            EditorGUILayout.HelpBox("Persistent objectives stay active across the entire mission, including staged missions.", MessageType.Info);
 
             SerializedObject serializedMission = new SerializedObject(missionDefinition);
             serializedMission.Update();
             DrawReferenceList<MissionObjectiveDefinition>(
-                "Objectives",
+                "Persistent Objectives",
                 serializedMission,
-                "objectives",
-                "No top-level objectives assigned.");
+                "persistentObjectives",
+                "No persistent objectives assigned.");
             serializedMission.ApplyModifiedProperties();
         }
     }
@@ -904,12 +901,6 @@ public class MissionAuthoringWindow : EditorWindow
         }
 
         MissionStageDefinition objectiveStage = ResolveObjectiveStageTarget();
-        if (MissionHasStages() && objectiveStage == null)
-        {
-            ShowNotification(new GUIContent("Select a stage first."));
-            return;
-        }
-
         MissionObjectiveDefinition createdObjective = CreateObjectiveFromSelectedObject(selectedObject, objectiveStage);
         if (createdObjective == null)
         {
@@ -1169,7 +1160,7 @@ public class MissionAuthoringWindow : EditorWindow
         SerializedObject owner = objectiveStage != null
             ? new SerializedObject(objectiveStage)
             : new SerializedObject(missionDefinition);
-        MissionAuthoringAssetUtility.AppendReference(owner, "objectives", objective);
+        MissionAuthoringAssetUtility.AppendReference(owner, objectiveStage != null ? "objectives" : "persistentObjectives", objective);
         if (objectiveStage != null)
         {
             selectedStage = objectiveStage;
@@ -1397,7 +1388,7 @@ public class MissionAuthoringWindow : EditorWindow
             return values;
         }
 
-        CollectStringPropertyValuesFromList(new SerializedObject(missionDefinition).FindProperty("objectives"), propertyName, values);
+        CollectStringPropertyValuesFromList(new SerializedObject(missionDefinition).FindProperty("persistentObjectives"), propertyName, values);
         CollectStringPropertyValuesFromList(new SerializedObject(missionDefinition).FindProperty("failConditions"), propertyName, values);
 
         SerializedProperty stages = new SerializedObject(missionDefinition).FindProperty("stages");
@@ -1608,7 +1599,7 @@ public class MissionAuthoringWindow : EditorWindow
             return usages;
         }
 
-        CollectKeyUsageFromList(new SerializedObject(missionDefinition).FindProperty("objectives"), propertyName, "Mission Objective", usages);
+        CollectKeyUsageFromList(new SerializedObject(missionDefinition).FindProperty("persistentObjectives"), propertyName, "Persistent Objective", usages);
         CollectKeyUsageFromList(new SerializedObject(missionDefinition).FindProperty("failConditions"), propertyName, "Fail Condition", usages);
 
         SerializedProperty stages = new SerializedObject(missionDefinition).FindProperty("stages");

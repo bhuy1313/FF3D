@@ -15,13 +15,13 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
     }
 
     [Header("Single Sash Fallback")]
-    [SerializeField] private string windowChildName = "Window";
+    [SerializeField] private Transform singleSashTransform;
     [SerializeField] private Vector3 openLocalEulerOffset = new Vector3(0f, 0f, -65f);
 
     [Header("Double Sash")]
-    [SerializeField] private string leftWindowChildName = "WindowLeft";
+    [SerializeField] private Transform leftSashTransform;
     [SerializeField] private Vector3 leftOpenLocalEulerOffset = new Vector3(0f, 0f, 65f);
-    [SerializeField] private string rightWindowChildName = "WindowRight";
+    [SerializeField] private Transform rightSashTransform;
     [SerializeField] private Vector3 rightOpenLocalEulerOffset = new Vector3(0f, 0f, -65f);
 
     [Header("Interaction")]
@@ -114,6 +114,21 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
             BreakSash(sashes[i], sashes[i]?.Transform != null ? sashes[i].Transform.position : transform.position, transform.forward);
     }
 
+    public void SetOpenState(bool isOpen)
+    {
+        if (!initialized)
+        {
+            InitializeState();
+        }
+
+        if (sashes.Count == 0)
+        {
+            return;
+        }
+
+        SetAllUnbrokenSashesOpenState(isOpen);
+    }
+
     public void TakeDamage(float amount, GameObject source, Vector3 hitPoint, Vector3 hitNormal)
     {
         if (amount < breakDamageThreshold)
@@ -132,22 +147,16 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
     {
         sashes.Clear();
 
-        Transform left = FindNamedChild(leftWindowChildName);
-        Transform right = FindNamedChild(rightWindowChildName);
-
-        if (left != null || right != null)
+        if (leftSashTransform != null || rightSashTransform != null)
         {
-            TryAddSash(left, leftOpenLocalEulerOffset);
+            TryAddSash(leftSashTransform, leftOpenLocalEulerOffset);
 
-            if (right != null && right != left)
-                TryAddSash(right, rightOpenLocalEulerOffset);
+            if (rightSashTransform != null && rightSashTransform != leftSashTransform)
+                TryAddSash(rightSashTransform, rightOpenLocalEulerOffset);
         }
         else
         {
-            Transform single = FindNamedChild(windowChildName);
-            if (single == null)
-                single = transform;
-
+            Transform single = singleSashTransform != null ? singleSashTransform : transform;
             TryAddSash(single, openLocalEulerOffset);
         }
 
@@ -171,14 +180,6 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
         sash.TargetLocalRotation = sash.IsOpen ? sash.OpenLocalRotation : sash.ClosedLocalRotation;
         sash.Transform.localRotation = sash.TargetLocalRotation;
         sashes.Add(sash);
-    }
-
-    private Transform FindNamedChild(string childName)
-    {
-        if (string.IsNullOrWhiteSpace(childName))
-            return null;
-
-        return transform.Find(childName);
     }
 
     private void BreakPreferredSash(Vector3 worldPoint, Vector3 impactDirection)

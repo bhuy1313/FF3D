@@ -28,7 +28,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5239504675546528037}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -88,6 +88,7 @@ MonoBehaviour:
   - {fileID: 0}
   forceMaximumSmokeDensity: 0
   startSmokeDensity: 0
+  runtimeSmokeAccumulationMultiplier: 1
   smokePerBurningFire: 0.3
   smokePerFireIntensity: 0.7
   passiveVentilationRelief: 0.04
@@ -143,7 +144,7 @@ BoxCollider:
   m_Enabled: 1
   serializedVersion: 3
   m_Size: {x: 6.1, y: 3.2999997, z: 9.1}
-  m_Center: {x: 0.0009999275, y: -0.21250021, z: 0.0049991608}
+  m_Center: {x: 2.501, y: -0.21249926, z: -7.495001}
 --- !u!114 &3553583254257902102
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -158,11 +159,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SmokeHazardAutoFit
   smokeHazard: {fileID: 4737069364363785356}
   triggerZone: {fileID: 4536955930849080249}
-  cornerMarkers:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
+  cornerMarkerA: {fileID: 0}
+  cornerMarkerB: {fileID: 0}
   roomHeight: 3.2
   bottomOffset: 0
   sizePadding: {x: 0.1, y: 0.1, z: 0.1}
@@ -223,27 +221,27 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 198748979371217952, guid: d2972e98be874aae8d28deccf3bb8c7c, type: 3}
       propertyPath: ShapeModule.m_Scale.x
-      value: 6.25
+      value: 6.2499995
       objectReference: {fileID: 0}
     - target: {fileID: 198748979371217952, guid: d2972e98be874aae8d28deccf3bb8c7c, type: 3}
       propertyPath: ShapeModule.m_Scale.y
-      value: 9.150002
+      value: 9.150003
       objectReference: {fileID: 0}
     - target: {fileID: 198748979371217952, guid: d2972e98be874aae8d28deccf3bb8c7c, type: 3}
       propertyPath: ShapeModule.m_Scale.z
-      value: 3.4500008
+      value: 3.4500022
       objectReference: {fileID: 0}
     - target: {fileID: 198748979371217952, guid: d2972e98be874aae8d28deccf3bb8c7c, type: 3}
       propertyPath: ShapeModule.m_Position.x
-      value: 0.0009999275
+      value: 2.5009997
       objectReference: {fileID: 0}
     - target: {fileID: 198748979371217952, guid: d2972e98be874aae8d28deccf3bb8c7c, type: 3}
       propertyPath: ShapeModule.m_Position.y
-      value: -0.0049991608
+      value: 7.4950023
       objectReference: {fileID: 0}
     - target: {fileID: 198748979371217952, guid: d2972e98be874aae8d28deccf3bb8c7c, type: 3}
       propertyPath: ShapeModule.m_Position.z
-      value: -0.21250033
+      value: -0.21249807
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

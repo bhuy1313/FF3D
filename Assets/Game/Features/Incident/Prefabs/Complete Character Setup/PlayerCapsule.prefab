@@ -21,7 +21,8 @@ GameObject:
   - component: {fileID: 4492952563589190220}
   - component: {fileID: 2491088869697895321}
   - component: {fileID: 113958436394587796}
-  - component: {fileID: 1291686791951276430}
+  - component: {fileID: 5371307414548487237}
+  - component: {fileID: 1275314555599915401}
   m_Layer: 7
   m_Name: PlayerCapsule
   m_TagString: Player
@@ -64,8 +65,8 @@ CharacterController:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Height: 2
-  m_Radius: 0.5
+  m_Height: 1.8
+  m_Radius: 0.4
   m_SlopeLimit: 45
   m_StepOffset: 0.25
   m_SkinWidth: 0.02
@@ -93,12 +94,22 @@ MonoBehaviour:
   CrouchHeight: 1
   CrouchCameraOffset: -0.5
   CrouchTransitionSpeed: 40
-  DebugCrouchState: 1
+  DebugCrouchState: 0
   CrouchDebugLogCooldown: 0.5
+  EnableMovementWeightPenalty: 1
+  WeightForMinimumSpeed: 80
+  MinimumWeightSpeedMultiplier: 0.35
+  SprintDisabledWeight: 45
+  CrouchWeightPenaltyScale: 0.6
+  ClimbWeightPenaltyScale: 0.85
   ClimbSpeed: 3
   JumpToExitClimb: 1
-  ClimbStartStep: 0.1
-  ClimbStartMaxSteps: 5
+  ClimbStartStep: 0.15
+  ClimbStartMaxSteps: 8
+  ClimbStartFacePadding: 0.08
+  ClimbStartSnapDuration: 0.3
+  ClimbStartSnapArcHeight: 0.03
+  ClimbStartGroundedGraceDuration: 0.15
   JumpHeight: 1.2
   Gravity: -45
   JumpTimeout: 0.1
@@ -106,9 +117,17 @@ MonoBehaviour:
   Grounded: 1
   GroundedOffset: -0.14
   GroundedRadius: 0.5
+  GroundedGraceTime: 0.06
   GroundLayers:
     serializedVersion: 2
     m_Bits: 65
+  EnableFallDamage: 1
+  MinimumFallAirborneTime: 0.15
+  MinimumFallDamageDistance: 3
+  MaximumFallDamageDistance: 10
+  MinimumFallDamageLandingSpeed: 7.5
+  MaximumFallDamage: 100
+  FallDamageExponent: 1.35
   CinemachineCameraTarget: {fileID: 5717452355489449494}
   TopClamp: 90
   BottomClamp: -90
@@ -127,6 +146,11 @@ MonoBehaviour:
   FallCameraDownwardOffset: 0.5
   JumpCameraMaxRiseSpeed: 5
   FallCameraMaxSpeed: 7
+  EnableWeightCameraMotionImpact: 1
+  WeightBobFrequencyMultiplierAtMax: 0.5
+  WeightBobAmplitudeMultiplierAtMax: 1.3
+  WeightStrafeTiltMultiplierAtMax: 0.8
+  WeightCameraDownOffsetAtMax: 0.03
 --- !u!114 &3964331092331264185
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -295,7 +319,14 @@ MonoBehaviour:
   grabDistance: 4
   maxGrabMass: 50
   grabPoint: {fileID: 0}
-  grabPointLocalPosition: {x: 0, y: -0.5, z: 0.75}
+  grabPointLocalPosition: {x: 0, y: -0.5, z: 1}
+  enableGrabPlacement: 1
+  grabPlacementMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  grabPlacementDistance: 4
+  grabPlacementSurfacePadding: 0.02
+  grabPlacementPreviewColor: {r: 0.45, g: 0.95, b: 0.65, a: 0.4}
   inventory: {fileID: 3514143529300713076}
   currentTarget: {fileID: 0}
 --- !u!114 &3514143529300713076
@@ -359,10 +390,29 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerHazardExposure
   smokeRiseSpeed: 2.5
   smokeFallSpeed: 1.75
-  smokeEnterThreshold: 0.08
-  smokeExitThreshold: 0.04
+  smokeEnterThreshold: 0.1
+  smokeExitThreshold: 0.1
+  targetCamera: {fileID: 0}
+  fireGlareRiseSpeed: 5
+  fireGlareFallSpeed: 3
+  fireGlareMaxDistance: 16
+  fireMinimumViewDot: 0.05
+  fireViewportEdgeFade: 0.12
+  simultaneousFireOverlayCount: 4
   smokeDensity01: 0
   isInSmoke: 0
+  fireGlare01: 0
+  fireGlareViewportPosition: {x: 0.5, y: 0.5}
+  fireGlareBySlot:
+  - 0
+  - 0
+  - 0
+  - 0
+  fireGlareViewportPositions:
+  - {x: 0.5, y: 0.5}
+  - {x: 0.5, y: 0.5}
+  - {x: 0.5, y: 0.5}
+  - {x: 0.5, y: 0.5}
 --- !u!114 &4492952563589190220
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -402,6 +452,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::StarterAssets.FPSCommandSystem
   viewCamera: {fileID: 0}
   interactionSystem: {fileID: 0}
+  playerInput: {fileID: 0}
   selectionDistance: 300
   commandableMask:
     serializedVersion: 2
@@ -411,6 +462,7 @@ MonoBehaviour:
   cancelCommandKey: 27
   cancelAllFollowKey: 120
   toggleBotOutlineKey: 122
+  cycleCommandPageKey: 9
   destinationRayDistance: 200
   destinationMask:
     serializedVersion: 2
@@ -432,6 +484,7 @@ MonoBehaviour:
   rescueDebugSphereColor: {r: 0.2, g: 0.85, b: 1, a: 0.2}
   wheelSelector: {fileID: 113958436394587796}
   selectedCommandTarget: {fileID: 0}
+  activeCommandPageIndex: 0
 --- !u!114 &113958436394587796
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -447,18 +500,28 @@ MonoBehaviour:
   mousePosition: {x: 0, y: 0}
   currentAngle: 0
   selection: 0
+  selectionWheelCanvas: {fileID: 0}
+  selectionWheelCanvasGroup: {fileID: 0}
+  graphicRaycaster: {fileID: 0}
+  menuItemsParent: {fileID: 0}
+  menuItemPrefab: {fileID: 7600931405032607057, guid: a672729b403704f4293a11ef3e73b500, type: 3}
+  menuItemCount: 4
+  slotSize: {x: 400, y: 400}
+  pageIndicatorLabel: {fileID: 0}
+  pageIndicatorBackground: {fileID: 0}
+  pageIndicatorAnchoredPosition: {x: 0, y: 154}
+  pageIndicatorSize: {x: 180, y: 34}
+  defaultWheelColor: {r: 0, g: 1, b: 0.63, a: 0.5}
+  defaultLabelColor: {r: 1, g: 1, b: 1, a: 1}
+  defaultIndicatorBackgroundColor: {r: 0, g: 0, b: 0, a: 0.72}
+  showDebugOverlay: 0
+  debugOverlayOffset: {x: 16, y: 16}
   menuItems:
   - {fileID: 0}
   - {fileID: 0}
   - {fileID: 0}
   - {fileID: 0}
-  selectionWheelCanvas: {fileID: 0}
-  selectionWheelCanvasGroup: {fileID: 0}
-  menuItemsParent: {fileID: 0}
-  menuItemPrefab: {fileID: 7600931405032607057, guid: a672729b403704f4293a11ef3e73b500, type: 3}
-  menuItemCount: 4
-  menuItemRadius: 0
---- !u!208 &1291686791951276430
+--- !u!208 &5371307414548487237
 NavMeshObstacle:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -474,6 +537,25 @@ NavMeshObstacle:
   m_CarveOnlyStationary: 1
   m_Center: {x: 0, y: 1, z: 0}
   m_TimeToStationary: 0.5
+--- !u!114 &1275314555599915401
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1119617129175808138}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7fb73f5c4e83457f87f2909d7e22d587, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerActionLock
+  firstPersonController: {fileID: 0}
+  characterController: {fileID: 0}
+  interactionSystem: {fileID: 0}
+  inventorySystem: {fileID: 0}
+  smoothPoseSnap: 1
+  poseSnapDuration: 0.3
+  poseSnapArcHeight: 0.03
 --- !u!1 &4869327717737380247
 GameObject:
   m_ObjectHideFlags: 0
@@ -562,7 +644,7 @@ Transform:
   m_GameObject: {fileID: 5717452355489449494}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 1.375, z: 0}
+  m_LocalPosition: {x: 0, y: 1.575, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -678,9 +760,9 @@ CapsuleCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 2
-  m_Radius: 0.5
+  m_Radius: 0.4
   m_Height: 2
   m_Direction: 1
   m_Center: {x: 0, y: 0, z: 0}
@@ -709,7 +791,7 @@ Transform:
   m_GameObject: {fileID: 7280383643488747288}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0.438}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

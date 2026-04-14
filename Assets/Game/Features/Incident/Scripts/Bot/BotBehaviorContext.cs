@@ -36,6 +36,8 @@ public class BotBehaviorContext : MonoBehaviour
     [SerializeField] private string crouchAnimationState = "Idle Crouching";
     [SerializeField] private string uncrouchAnimationState = "Breathing Idle";
     [SerializeField] private bool crouchAnimationActive;
+    [SerializeField] private string extinguishStanceParameter = "ExtinguishStance";
+    [SerializeField] private float extinguishStance;
     [SerializeField] private bool driveLoadedLowerBodyLayer = true;
     [SerializeField] private string loadedLowerBodyLayer = "Lower Body Layer";
     [SerializeField] private float loadedLowerBodyLayerWeightLerpSpeed = 10f;
@@ -53,6 +55,7 @@ public class BotBehaviorContext : MonoBehaviour
     private int crouchAnimationLayerIndex = -1;
     private int crouchAnimationStateHash;
     private int uncrouchAnimationStateHash;
+    private int extinguishStanceParameterHash;
     private int loadedLowerBodyLayerIndex = -1;
 
     public NavMeshAgent NavMeshAgent => navMeshAgent;
@@ -344,6 +347,48 @@ public class BotBehaviorContext : MonoBehaviour
         ApplyCrouchAnimation();
     }
 
+    public void SetExtinguishStance(float stance)
+    {
+        extinguishStance = stance;
+        Debug.Log($"[BotBehaviorContext] Random ExtinguishStance set to: {stance}");
+        if (extinguishStanceParameterHash != 0 && CanDriveAnimator())
+        {
+            if (TryGetParameterType(extinguishStanceParameterHash, out AnimatorControllerParameterType type))
+            {
+                if (type == AnimatorControllerParameterType.Float)
+                {
+                    animator.SetFloat(extinguishStanceParameterHash, stance);
+                }
+                else if (type == AnimatorControllerParameterType.Int)
+                {
+                    animator.SetInteger(extinguishStanceParameterHash, Mathf.RoundToInt(stance));
+                }
+            }
+        }
+    }
+
+    private bool TryGetParameterType(int parameterHash, out AnimatorControllerParameterType type)
+    {
+        type = default;
+        if (parameterHash == 0 || !CanDriveAnimator())
+        {
+            return false;
+        }
+
+        AnimatorControllerParameter[] parameters = animator.parameters;
+        for (int i = 0; i < parameters.Length; i++)
+        {
+            AnimatorControllerParameter parameter = parameters[i];
+            if (parameter.nameHash == parameterHash)
+            {
+                type = parameter.type;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static Vector2 SanitizeRange(Vector2 range, float minimum)
     {
         float min = Mathf.Max(minimum, range.x);
@@ -396,6 +441,7 @@ public class BotBehaviorContext : MonoBehaviour
         crouchAnimationParameterHash = ToHash(crouchAnimationParameter);
         crouchAnimationStateHash = ToHash(crouchAnimationState);
         uncrouchAnimationStateHash = ToHash(uncrouchAnimationState);
+        extinguishStanceParameterHash = ToHash(extinguishStanceParameter);
         RefreshCrouchAnimationLayerIndex();
         RefreshLoadedLowerBodyLayerIndex();
     }

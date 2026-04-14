@@ -74,7 +74,7 @@ MonoBehaviour:
   minHpToLive: 5
   regrowHpPerSecond: 150
   startLitOnEnable: 0
-  allowRegrowFromZero: 0
+  allowRegrowFromZero: 1
   regrowResumeDelay: 1.5
   currentHp: 0
   enableSpread: 1
@@ -105,7 +105,7 @@ MonoBehaviour:
   fireParticleSystem: {fileID: 1226362911604020181}
   particleVisualRoot: {fileID: 1425968994307210059}
   includeChildParticleSystems: 1
-  keepParticleWorldUp: 1
+  keepParticleWorldUp: 0
   particleUpAxis: 1
   scaleParticleObjectWithIntensity: 1
   minParticleObjectScaleMultiplier: 0.1
@@ -257,7 +257,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7094587362819054123}
   - component: {fileID: 2938465174206581745}
-  - component: {fileID: 2568938361458826141}
+  - component: {fileID: 1007429527485983940}
   m_Layer: 11
   m_Name: FireLight
   m_TagString: Untagged
@@ -345,7 +345,7 @@ Light:
   m_LightUnit: 1
   m_LuxAtDistance: 1
   m_EnableSpotReflector: 1
---- !u!114 &2568938361458826141
+--- !u!114 &1007429527485983940
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

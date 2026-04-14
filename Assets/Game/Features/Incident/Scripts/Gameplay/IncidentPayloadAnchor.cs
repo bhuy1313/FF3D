@@ -17,6 +17,8 @@ public class IncidentPayloadAnchor : MonoBehaviour
     [SerializeField] private bool createRuntimeSmokeHazard = true;
     [SerializeField] private SmokeHazard smokeHazard;
     [SerializeField] private HazardIsolationDevice[] hazardIsolationDevices = Array.Empty<HazardIsolationDevice>();
+    [SerializeField] private IncidentFireSpawnSocket[] explicitSpawnSockets = Array.Empty<IncidentFireSpawnSocket>();
+    [SerializeField] private bool includeInactiveSpawnSockets = true;
 
     private readonly List<Fire> runtimeFires = new List<Fire>();
     private Transform runtimeRoot;
@@ -26,6 +28,12 @@ public class IncidentPayloadAnchor : MonoBehaviour
     public string FireOriginKey => fireOriginKey;
     public string LogicalLocationKey => logicalLocationKey;
     public bool IsDefaultAnchor => isDefaultAnchor;
+    public Transform RuntimeRoot => runtimeRoot;
+    public FireGroup RuntimeFireGroup => runtimeFireGroup;
+    public SmokeHazard RuntimeSmokeHazard => runtimeSmokeHazard;
+    public IReadOnlyList<Fire> RuntimeFires => runtimeFires;
+    public bool HasConfiguredHazardIsolationDevices => hazardIsolationDevices != null && hazardIsolationDevices.Length > 0;
+    public bool HasConfiguredSpawnSockets => ResolveSpawnSockets().Length > 0;
 
     public bool MatchesFireOrigin(string key)
     {
@@ -75,11 +83,27 @@ public class IncidentPayloadAnchor : MonoBehaviour
         runtimeFires.Clear();
 
         int requestedCount = Mathf.Max(1, payload.initialFireCount);
+        IncidentFireSpawnSocket[] spawnSockets = ResolveSpawnSockets();
+        List<IncidentFireSpawnSocket> selectedSockets = SelectSpawnSockets(payload, spawnSockets, requestedCount);
         for (int i = 0; i < requestedCount; i++)
         {
-            Vector3 offset = CalculateSpawnOffset(i, requestedCount);
-            Vector3 worldPosition = transform.position + offset;
-            Quaternion worldRotation = Quaternion.LookRotation(transform.forward.sqrMagnitude > 0f ? transform.forward : Vector3.forward, Vector3.up);
+            Vector3 worldPosition;
+            Quaternion worldRotation;
+            if (i < selectedSockets.Count && selectedSockets[i] != null)
+            {
+                IncidentFireSpawnSocket socket = selectedSockets[i];
+                worldPosition = socket.WorldPosition;
+                worldRotation = socket.WorldRotation != Quaternion.identity
+                    ? socket.WorldRotation
+                    : ResolveFallbackRotation();
+            }
+            else
+            {
+                Vector3 offset = CalculateSpawnOffset(i, requestedCount);
+                worldPosition = transform.position + offset;
+                worldRotation = ResolveFallbackRotation();
+            }
+
             Fire fireInstance = Instantiate(defaultFirePrefab, worldPosition, worldRotation, parent);
             fireInstance.name = $"{defaultFirePrefab.name}_{i + 1}";
             ConfigureFireInstance(fireInstance, payload);
@@ -136,10 +160,19 @@ public class IncidentPayloadAnchor : MonoBehaviour
         SmokeHazard targetSmokeHazard = smokeHazard;
         if (targetSmokeHazard == null && createRuntimeSmokeHazard && parent != null)
         {
-            targetSmokeHazard = parent.GetComponent<SmokeHazard>();
-            if (targetSmokeHazard == null)
+            Transform existingSmokeObj = parent.Find("RuntimeSmoke");
+            if (existingSmokeObj != null)
             {
-                targetSmokeHazard = parent.gameObject.AddComponent<SmokeHazard>();
+                targetSmokeHazard = existingSmokeObj.GetComponent<SmokeHazard>();
+            }
+            else
+            {
+                GameObject smokeObj = new GameObject("RuntimeSmoke");
+                smokeObj.transform.SetParent(parent, false);
+                smokeObj.transform.localPosition = Vector3.zero;
+                smokeObj.transform.localRotation = Quaternion.identity;
+                smokeObj.transform.localScale = Vector3.one;
+                targetSmokeHazard = smokeObj.AddComponent<SmokeHazard>();
             }
 
             BoxCollider trigger = parent.GetComponent<BoxCollider>();
@@ -217,6 +250,169 @@ public class IncidentPayloadAnchor : MonoBehaviour
                 float angle = (ringIndex / Mathf.Max(1f, totalCount - 1f)) * Mathf.PI * 2f;
                 Vector3 radial = (right * Mathf.Cos(angle)) + (forward * Mathf.Sin(angle));
                 return radial.normalized * spawnSpacing;
+        }
+    }
+
+    private List<IncidentFireSpawnSocket> SelectSpawnSockets(
+        IncidentWorldSetupPayload payload,
+        IncidentFireSpawnSocket[] spawnSockets,
+        int requestedCount)
+    {
+        List<IncidentFireSpawnSocket> results = new List<IncidentFireSpawnSocket>();
+        if (spawnSockets == null || spawnSockets.Length <= 0 || requestedCount <= 0)
+        {
+            return results;
+        }
+
+        System.Random random = new System.Random(BuildSelectionSeed(payload));
+        List<IncidentFireSpawnSocket> remainingSockets = new List<IncidentFireSpawnSocket>(spawnSockets.Length);
+        for (int i = 0; i < spawnSockets.Length; i++)
+        {
+            if (spawnSockets[i] != null)
+            {
+                remainingSockets.Add(spawnSockets[i]);
+            }
+        }
+
+        IncidentFireSpawnSocket primarySocket = PickWeightedSocket(remainingSockets, random, requirePrimary: true);
+        if (primarySocket == null)
+        {
+            primarySocket = PickWeightedSocket(remainingSockets, random, requirePrimary: false);
+        }
+
+        if (primarySocket != null)
+        {
+            results.Add(primarySocket);
+            remainingSockets.Remove(primarySocket);
+        }
+
+        while (results.Count < requestedCount && remainingSockets.Count > 0)
+        {
+            IncidentFireSpawnSocket secondarySocket = PickWeightedSocket(remainingSockets, random, requirePrimary: false, requireSecondary: true);
+            if (secondarySocket == null)
+            {
+                break;
+            }
+
+            results.Add(secondarySocket);
+            remainingSockets.Remove(secondarySocket);
+        }
+
+        return results;
+    }
+
+    private IncidentFireSpawnSocket[] ResolveSpawnSockets()
+    {
+        if (explicitSpawnSockets != null && explicitSpawnSockets.Length > 0)
+        {
+            return explicitSpawnSockets;
+        }
+
+        return GetComponentsInChildren<IncidentFireSpawnSocket>(includeInactiveSpawnSockets);
+    }
+
+    private IncidentFireSpawnSocket PickWeightedSocket(
+        List<IncidentFireSpawnSocket> candidates,
+        System.Random random,
+        bool requirePrimary,
+        bool requireSecondary = false)
+    {
+        if (candidates == null || candidates.Count <= 0)
+        {
+            return null;
+        }
+
+        int totalWeight = 0;
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            IncidentFireSpawnSocket candidate = candidates[i];
+            if (!IsSocketEligible(candidate, requirePrimary, requireSecondary))
+            {
+                continue;
+            }
+
+            totalWeight += candidate.SelectionWeight;
+        }
+
+        if (totalWeight <= 0)
+        {
+            return null;
+        }
+
+        int roll = random.Next(0, totalWeight);
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            IncidentFireSpawnSocket candidate = candidates[i];
+            if (!IsSocketEligible(candidate, requirePrimary, requireSecondary))
+            {
+                continue;
+            }
+
+            roll -= candidate.SelectionWeight;
+            if (roll < 0)
+            {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsSocketEligible(IncidentFireSpawnSocket socket, bool requirePrimary, bool requireSecondary)
+    {
+        if (socket == null)
+        {
+            return false;
+        }
+
+        if (requirePrimary && !socket.CanSpawnPrimary)
+        {
+            return false;
+        }
+
+        if (requireSecondary && !socket.CanSpawnSecondary)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private int BuildSelectionSeed(IncidentWorldSetupPayload payload)
+    {
+        unchecked
+        {
+            int hash = 17;
+            hash = (hash * 31) + GetStableHash(caseSensitiveValue: payload != null ? payload.caseId : string.Empty);
+            hash = (hash * 31) + GetStableHash(caseSensitiveValue: payload != null ? payload.scenarioId : string.Empty);
+            hash = (hash * 31) + GetStableHash(caseSensitiveValue: payload != null ? payload.fireOrigin : string.Empty);
+            hash = (hash * 31) + GetStableHash(caseSensitiveValue: payload != null ? payload.logicalFireLocation : string.Empty);
+            return hash;
+        }
+    }
+
+    private Quaternion ResolveFallbackRotation()
+    {
+        Vector3 forward = transform.forward.sqrMagnitude > 0f ? transform.forward : Vector3.forward;
+        return Quaternion.LookRotation(forward, Vector3.up);
+    }
+
+    private static int GetStableHash(string caseSensitiveValue)
+    {
+        if (string.IsNullOrEmpty(caseSensitiveValue))
+        {
+            return 0;
+        }
+
+        unchecked
+        {
+            int hash = 23;
+            for (int i = 0; i < caseSensitiveValue.Length; i++)
+            {
+                hash = (hash * 31) + caseSensitiveValue[i];
+            }
+
+            return hash;
         }
     }
 
