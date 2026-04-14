@@ -288,6 +288,14 @@ public class AssessRiskPopupEntryController : MonoBehaviour
             return;
         }
 
+        isPopupOpen = false;
+        ResetPopupSelectionState();
+
+        if (popupBlockerImage != null)
+        {
+            popupBlockerImage.enabled = true;
+        }
+
         HidePopupImmediate();
 
         if (transcriptExtractionController != null)
@@ -970,6 +978,7 @@ public class AssessRiskPopupEntryController : MonoBehaviour
         WarnIfMissingReference("Result popup next phase button", resultPopupNextPhaseButton, resultPopup);
         WarnIfMissingReference("Result popup summary text", resultPopupSummaryText, resultPopup);
         WarnIfMissingReference("Result popup review text", resultPopupReviewText, resultPopup);
+
     }
 
     private void SelectLowSeverity()
@@ -1054,6 +1063,13 @@ public class AssessRiskPopupEntryController : MonoBehaviour
             RefreshSubmitReportButtonState();
             RefreshAssessRiskButtonState();
             return;
+        }
+
+        isSubmitPopupOpen = false;
+
+        if (submitPopupBlockerImage != null)
+        {
+            submitPopupBlockerImage.enabled = true;
         }
 
         HideSubmitPopupImmediate();
@@ -1147,6 +1163,13 @@ public class AssessRiskPopupEntryController : MonoBehaviour
             RefreshAssessRiskButtonState();
             RefreshSubmitReportButtonState();
             return;
+        }
+
+        isResultPopupOpen = false;
+
+        if (resultPopupBlockerImage != null)
+        {
+            resultPopupBlockerImage.enabled = true;
         }
 
         HideResultPopupImmediate();

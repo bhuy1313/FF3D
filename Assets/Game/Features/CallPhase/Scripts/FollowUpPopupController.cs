@@ -24,6 +24,7 @@ public class FollowUpPopupController : MonoBehaviour
     private readonly List<FollowUpQuestionOptionView> spawnedOptionViews = new List<FollowUpQuestionOptionView>();
     private readonly HashSet<string> loggedMissingWarnings = new HashSet<string>();
     private CallPhaseFollowUpQuestionOptionData selectedQuestionOption;
+    private Coroutine deferredLayoutRefreshCoroutine;
     private bool isPopupOpen;
 
     public static bool AnyPopupOpen { get; private set; }
@@ -132,12 +133,15 @@ public class FollowUpPopupController : MonoBehaviour
             return;
         }
 
+        followUpPopupRootObject.SetActive(true);
+        followUpPopupRootObject.transform.SetAsLastSibling();
+
         BuildQuestionOptions();
         selectedQuestionOption = null;
         RefreshConfirmButtonState();
+        RefreshQuestionListLayoutImmediate();
+        StartDeferredQuestionListLayoutRefresh();
 
-        followUpPopupRootObject.SetActive(true);
-        followUpPopupRootObject.transform.SetAsLastSibling();
         isPopupOpen = true;
         AnyPopupOpen = true;
 
@@ -331,6 +335,50 @@ public class FollowUpPopupController : MonoBehaviour
         fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
     }
 
+    private void RefreshQuestionListLayoutImmediate()
+    {
+        if (questionListRoot == null)
+        {
+            return;
+        }
+
+        Canvas.ForceUpdateCanvases();
+
+        RectTransform current = questionListRoot;
+        while (current != null)
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(current);
+            current = current.parent as RectTransform;
+        }
+
+        ScrollRect scrollRect = questionListRoot.GetComponentInParent<ScrollRect>(true);
+        if (scrollRect != null)
+        {
+            scrollRect.StopMovement();
+            scrollRect.verticalNormalizedPosition = 1f;
+            LayoutRebuilder.ForceRebuildLayoutImmediate(scrollRect.transform as RectTransform);
+        }
+
+        Canvas.ForceUpdateCanvases();
+    }
+
+    private void StartDeferredQuestionListLayoutRefresh()
+    {
+        if (deferredLayoutRefreshCoroutine != null)
+        {
+            StopCoroutine(deferredLayoutRefreshCoroutine);
+        }
+
+        deferredLayoutRefreshCoroutine = StartCoroutine(DeferredQuestionListLayoutRefresh());
+    }
+
+    private System.Collections.IEnumerator DeferredQuestionListLayoutRefresh()
+    {
+        yield return null;
+        RefreshQuestionListLayoutImmediate();
+        deferredLayoutRefreshCoroutine = null;
+    }
+
     private void RefreshConfirmButtonState()
     {
         if (confirmButton != null)
@@ -341,6 +389,12 @@ public class FollowUpPopupController : MonoBehaviour
 
     private void HidePopupImmediate()
     {
+        if (deferredLayoutRefreshCoroutine != null)
+        {
+            StopCoroutine(deferredLayoutRefreshCoroutine);
+            deferredLayoutRefreshCoroutine = null;
+        }
+
         ClearSpawnedOptions();
         selectedQuestionOption = null;
         isPopupOpen = false;

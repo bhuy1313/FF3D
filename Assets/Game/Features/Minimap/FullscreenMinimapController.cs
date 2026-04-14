@@ -850,7 +850,6 @@ public class FullscreenMinimapController : MonoBehaviour
         Image panelImage = legendPanelObject.GetComponent<Image>();
         if (panelImage != null)
         {
-            panelImage.color = legendPanelColor;
             panelImage.raycastTarget = false;
         }
 
@@ -1018,15 +1017,16 @@ public class FullscreenMinimapController : MonoBehaviour
         Transform iconTransform = FindDescendant(rowObject.transform, "Icon");
         if (iconTransform != null)
         {
-            RawImage iconRawImage = iconTransform.GetComponent<RawImage>();
+            RawImage iconRawImage = iconTransform.GetComponentInChildren<RawImage>(true);
             if (iconRawImage != null)
             {
                 iconRawImage.texture = entry.iconSprite != null ? entry.iconSprite.texture : null;
+                iconRawImage.uvRect = GetSpriteUvRect(entry.iconSprite);
                 iconRawImage.color = entry.iconColor;
                 iconRawImage.raycastTarget = false;
             }
 
-            Image iconImage = iconTransform.GetComponent<Image>();
+            Image iconImage = iconTransform.GetComponentInChildren<Image>(true);
             if (iconImage != null)
             {
                 iconImage.sprite = entry.iconSprite;
@@ -1057,6 +1057,22 @@ public class FullscreenMinimapController : MonoBehaviour
         }
 
         return true;
+    }
+
+    private static Rect GetSpriteUvRect(Sprite sprite)
+    {
+        if (sprite == null || sprite.texture == null)
+        {
+            return new Rect(0f, 0f, 1f, 1f);
+        }
+
+        Rect textureRect = sprite.textureRect;
+        Texture texture = sprite.texture;
+        return new Rect(
+            textureRect.x / texture.width,
+            textureRect.y / texture.height,
+            textureRect.width / texture.width,
+            textureRect.height / texture.height);
     }
 
     private static GameObject CreateUiGameObject(Transform parent, string objectName)
