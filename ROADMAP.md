@@ -4,11 +4,10 @@
 Xay dung game mo phong chua chay goc nhin thu nhat, noi nguoi choi danh gia hien truong, chon dung cong cu, kiem soat chay lan, cuu nan va hoan thanh nhiem vu duoi ap luc thoi gian va an toan.
 
 ## Hien Trang Du An (Thang 2/2026)
-- He FPS (di chuyen, tuong tac, inventory, vitals) da choi duoc.
+- He FPS (di chuyen, tuong tuong, inventory, vitals) da choi duoc.
 - He lua da co nen tang (cuong do, chay lan, dap lua, gay sat thuong).
 - Cong cu chinh da co (voi cuu hoa, binh chua chay, riu), nhung chieu sau gameplay con han che.
-- Scene gameplay chinh dang la `Assets/Scenes/DemoWorld.unity`.
-- Build settings hien van tro toi `Assets/Scenes/SampleScene.unity`.
+- Build settings da duoc cau hinh voi cac scene chinh (BootIntro, MainMenu, Map1, v.v.).
 
 ## Roadmap 2026
 
@@ -16,7 +15,7 @@ Xay dung game mo phong chua chay goc nhin thu nhat, noi nguoi choi danh gia hien
 Muc tieu: Hoan thien mot vong lap nhiem vu day du, choi tron ven tu dau den cuoi.
 
 Pham vi:
-- Dat `DemoWorld` lam scene build mac dinh.
+- Hoan thien luong chuyen scene tu Main Menu vao Map1.
 - Them luong nhiem vu: briefing, dang lam nhiem vu, thang/thua, choi lai.
 - Them muc tieu ro rang: dap cac diem chay, cuu nan nhan, thoat khu vuc an toan.
 - Them UI theo doi tien do nhiem vu.
@@ -62,7 +61,7 @@ Tieu chi hoan thanh:
 Muc tieu: Dat muc noi dung du cho ban phat hanh som (early access style).
 
 Pham vi:
-- Xay them 2 map nhiem vu ngoai DemoWorld.
+- Xay them 2 map nhiem vu moi.
 - Mo rong he tuong tac vat the va object pha huy.
 - Cai thien readability UI, key hint va huong dan nhap mon.
 - Them menu cai dat (am thanh, do nhay, do hoa, keybind).
@@ -79,7 +78,7 @@ Muc tieu: Dat chat luong phat hanh on dinh.
 Pham vi:
 - Profiling va toi uu CPU/GPU/physics cho scene nang.
 - Thiet lap regression test cho he lua, trang thai nhiem vu, inventory.
-- Them test EditMode va PlayMode trong `Assets/Tests`.
+- Them test EditMode va PlayMode trong `Assets/Game/Tests`.
 - Chay cac vong bug bash va can bang gameplay.
 - Chuan bi pipeline build phat hanh va goi phan phoi.
 
@@ -102,7 +101,7 @@ Tieu chi hoan thanh:
 - M5 (cuoi thang 12/2026): Dat ban Release Candidate.
 
 ## Sprint Uu Tien Ngay (2 Tuan)
-- Chuyen build scene mac dinh sang `DemoWorld`.
+- Dam bao luong build hoat dong xuyen suot tu BootIntro den Map1.
 - Lam state machine nhiem vu va UI theo doi muc tieu.
 - Cho binh chua chay tac dong truc tiep len `Fire` tuong tu hose (tuning rieng).
 - Bo sung toi thieu 5 PlayMode test cho thang/thua nhiem vu va dap lua.

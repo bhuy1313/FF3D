@@ -6,9 +6,9 @@
 Key gameplay systems include an FPS controller, interaction system, inventory, vitals management, and a comprehensive fire system covering intensity, spread, extinguishing mechanics, and damage.
 
 ### Key Directories
-- `Assets/TrueJourney/Script`: Core gameplay C# scripts (interaction, fire systems, player state, inventory).
-- `Assets/UI/Scripts` and `Assets/UI/Prefabs`: Runtime UI logic and UI prefabs/materials.
-- `Assets/Scenes`: Playable scenes (currently focusing on `DemoWorld.unity` for the main gameplay loop).
+- `Assets/Game/Features`: Feature-based architecture containing core gameplay C# scripts (interaction, fire systems, player state, inventory).
+- `Assets/Game/UI`: Runtime UI logic and UI prefabs/materials.
+- `Assets/Game/Scenes`: Core playable scenes (e.g., Map1, Tutorial).
 - `ProjectSettings/`: Unity editor and project configuration files.
 - `Packages/manifest.json`: Unity package dependencies (URP, Input System, Test Framework, etc.).
 
@@ -38,7 +38,7 @@ Ensure you use the correct Unity Editor path for version `6000.3.3f1`.
 ### Coding Style
 - **Language:** C#
 - **Indentation:** 4-space indentation.
-- **Braces:** Match the style of existing scripts in `Assets/TrueJourney/Script`.
+- **Braces:** Match the style of existing scripts in `Assets/Game/Features`.
 - **File Organization:** Keep one `MonoBehaviour` per file. The file name must exactly match the class name (e.g., `Fire.cs` -> `class Fire`).
 - **Naming:** 
     - `PascalCase` for types, methods, and properties.
@@ -48,7 +48,7 @@ Ensure you use the correct Unity Editor path for version `6000.3.3f1`.
 
 ### Testing Guidelines
 - The Unity Test Framework (`com.unity.test-framework`) is installed.
-- Add new tests in `Assets/Tests/EditMode` or `Assets/Tests/PlayMode`.
+- Add new tests in `Assets/Game/Tests/EditMode` or `Assets/Game/Tests/PlayMode`.
 - Use descriptive test file names like `FeatureNameTests.cs`.
 - Keep tests deterministic; avoid relying on scene-only or manual setup when possible.
 - When implementing gameplay changes, include at least one automated test or document the reasoning if automation is not feasible.

@@ -33,6 +33,7 @@ public class TimeOfDayPresetController : MonoBehaviour
     [Header("Preset")]
     [SerializeField] private TimeOfDayPreset selectedPreset = TimeOfDayPreset.Evening;
     [SerializeField] private bool applyOnEnable = true;
+    [SerializeField, Tooltip("Allow overriding RenderSettings.fogEndDistance")] private bool applyFogEnd = true;
 
     [Header("References")]
     [SerializeField] private Light sunLight;
@@ -115,7 +116,12 @@ public class TimeOfDayPresetController : MonoBehaviour
         RenderSettings.fogMode = FogMode.Linear;
         RenderSettings.fogColor = preset.fogColor;
         RenderSettings.fogStartDistance = preset.fogStart;
-        RenderSettings.fogEndDistance = preset.fogEnd;
+        
+        if (applyFogEnd)
+        {
+            RenderSettings.fogEndDistance = preset.fogEnd;
+        }
+
         RenderSettings.ambientMode = AmbientMode.Trilight;
         RenderSettings.ambientSkyColor = preset.ambientSkyColor;
         RenderSettings.ambientEquatorColor = preset.ambientEquatorColor;

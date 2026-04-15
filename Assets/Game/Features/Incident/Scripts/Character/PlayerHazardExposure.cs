@@ -21,6 +21,7 @@ public class PlayerHazardExposure : MonoBehaviour
     [SerializeField] private float fireGlareMaxDistance = 16f;
     [SerializeField, Range(0f, 1f)] private float fireMinimumViewDot = 0.05f;
     [SerializeField] private float fireViewportEdgeFade = 0.12f;
+    [SerializeField] private LayerMask fireGlareObstacleMask = ~0;
     [SerializeField, Range(1, MaxTrackedFireGlareTargets)] private int simultaneousFireOverlayCount = 2;
 
     [Header("Runtime")]
@@ -267,6 +268,11 @@ public class PlayerHazardExposure : MonoBehaviour
         Vector3 direction = toFire / distance;
         float viewDot = Vector3.Dot(targetCamera.transform.forward, direction);
         if (viewDot < fireMinimumViewDot)
+        {
+            return false;
+        }
+
+        if (Physics.Linecast(origin, fireWorldPosition, out RaycastHit hit, fireGlareObstacleMask, QueryTriggerInteraction.Ignore))
         {
             return false;
         }

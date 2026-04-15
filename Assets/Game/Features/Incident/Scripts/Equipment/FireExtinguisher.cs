@@ -30,6 +30,7 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
     [SerializeField] private float coneBaseRadius = 0.15f;
     [SerializeField] private int coneSegments = 4;
     [SerializeField] private LayerMask sprayMask = ~0;
+    [SerializeField] private LayerMask lineOfSightMask = 1; // Default layer
 
     [Header("References")]
     [SerializeField] private Transform sprayOrigin;
@@ -47,6 +48,7 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
     [SerializeField] private bool drawConeGizmo = true;
     [SerializeField] private bool drawGizmoOnlyWhenSelected = true;
 
+    private readonly Collider[] hitBuffer = new Collider[64];
     private Rigidbody cachedRigidbody;
     public Rigidbody Rigidbody => cachedRigidbody;
     public float MovementWeightKg => Mathf.Max(0f, movementWeightKg);
@@ -303,11 +305,11 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
             float distance = segmentLength * (i + 1);
             float radius = coneBaseRadius + Mathf.Tan(coneHalfAngle * Mathf.Deg2Rad) * distance;
             Vector3 center = start + forward * distance;
-            Collider[] hits = Physics.OverlapSphere(center, radius, sprayMask, QueryTriggerInteraction.Collide);
+            int hitCount = Physics.OverlapSphereNonAlloc(center, radius, hitBuffer, sprayMask, QueryTriggerInteraction.Collide);
 
-            for (int hitIndex = 0; hitIndex < hits.Length; hitIndex++)
+            for (int hitIndex = 0; hitIndex < hitCount; hitIndex++)
             {
-                Collider hit = hits[hitIndex];
+                Collider hit = hitBuffer[hitIndex];
                 if (hit == null)
                 {
                     continue;
@@ -323,6 +325,11 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
 
                 float angle = Vector3.Angle(forward, toHit.normalized);
                 if (angle > coneHalfAngle)
+                {
+                    continue;
+                }
+
+                if (Physics.Linecast(start, closestPoint, out RaycastHit lineHit, lineOfSightMask, QueryTriggerInteraction.Ignore))
                 {
                     continue;
                 }

@@ -72,7 +72,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Fire
   maxHp: 750
   minHpToLive: 5
-  regrowHpPerSecond: 150
+  regrowHpPerSecond: 25
   startLitOnEnable: 0
   allowRegrowFromZero: 1
   regrowResumeDelay: 1.5
@@ -163,7 +163,7 @@ Transform:
   m_GameObject: {fileID: 5999290247994043861}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.131, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 0.1, y: 0.1, z: 0.1}
   m_ConstrainProportionsScale: 1
   m_Children: []
@@ -274,7 +274,7 @@ Transform:
   m_GameObject: {fileID: 7284510936271845061}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.35, z: 0}
+  m_LocalPosition: {x: 0, y: 0.2, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -291,7 +291,7 @@ Light:
   serializedVersion: 13
   m_Type: 2
   m_Color: {r: 1, g: 0.8241787, b: 0.28773582, a: 1}
-  m_Intensity: 4.2
+  m_Intensity: 2.1
   m_Range: 8
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -404,7 +404,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4288416149911810, guid: f293a2dcc753a4a489fefe7f8f312d69, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.5
+      value: 0.25
       objectReference: {fileID: 0}
     - target: {fileID: 4288416149911810, guid: f293a2dcc753a4a489fefe7f8f312d69, type: 3}
       propertyPath: m_LocalPosition.z

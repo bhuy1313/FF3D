@@ -21,8 +21,8 @@ GameObject:
   - component: {fileID: 4492952563589190220}
   - component: {fileID: 2491088869697895321}
   - component: {fileID: 113958436394587796}
-  - component: {fileID: 5371307414548487237}
-  - component: {fileID: 1275314555599915401}
+  - component: {fileID: 8950939218687114040}
+  - component: {fileID: 414707341230274163}
   m_Layer: 7
   m_Name: PlayerCapsule
   m_TagString: Player
@@ -67,8 +67,8 @@ CharacterController:
   serializedVersion: 3
   m_Height: 1.8
   m_Radius: 0.4
-  m_SlopeLimit: 45
-  m_StepOffset: 0.25
+  m_SlopeLimit: 50
+  m_StepOffset: 0.35
   m_SkinWidth: 0.02
   m_MinMoveDistance: 0
   m_Center: {x: 0, y: 0.93, z: 0}
@@ -143,7 +143,7 @@ MonoBehaviour:
   CameraMotionBlendSpeed: 16
   StrafeTilt: 0.75
   JumpCameraUpwardOffset: 0.3
-  FallCameraDownwardOffset: 0.5
+  FallCameraDownwardOffset: 0
   JumpCameraMaxRiseSpeed: 5
   FallCameraMaxSpeed: 7
   EnableWeightCameraMotionImpact: 1
@@ -398,6 +398,9 @@ MonoBehaviour:
   fireGlareMaxDistance: 16
   fireMinimumViewDot: 0.05
   fireViewportEdgeFade: 0.12
+  fireGlareObstacleMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
   simultaneousFireOverlayCount: 4
   smokeDensity01: 0
   isInSmoke: 0
@@ -521,7 +524,7 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   - {fileID: 0}
---- !u!208 &5371307414548487237
+--- !u!208 &8950939218687114040
 NavMeshObstacle:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -537,7 +540,7 @@ NavMeshObstacle:
   m_CarveOnlyStationary: 1
   m_Center: {x: 0, y: 1, z: 0}
   m_TimeToStationary: 0.5
---- !u!114 &1275314555599915401
+--- !u!114 &414707341230274163
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -644,7 +647,7 @@ Transform:
   m_GameObject: {fileID: 5717452355489449494}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 1.575, z: 0}
+  m_LocalPosition: {x: 0, y: 1.575, z: -0.25}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -670,7 +673,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &4482913686442254094
 Transform:
   m_ObjectHideFlags: 0
