@@ -158,6 +158,11 @@ public class FPSInventorySystem : MonoBehaviour
             return false;
         }
 
+        if (HasItem && ActiveItemBlocksSelectionChange())
+        {
+            return index == activeIndex;
+        }
+
         if (index == activeIndex)
         {
             StowSlot(slots[activeIndex]);
@@ -173,6 +178,18 @@ public class FPSInventorySystem : MonoBehaviour
         activeIndex = index;
         EquipSlot(slots[activeIndex]);
         return true;
+    }
+
+    private bool ActiveItemBlocksSelectionChange()
+    {
+        if (!HasItem)
+        {
+            return false;
+        }
+
+        IPickupable activeItem = slots[activeIndex].Item;
+        return activeItem is IInventorySelectionBlocker selectionBlocker &&
+            selectionBlocker.BlocksInventorySelectionChange(gameObject);
     }
 
     private bool ContainsItem(IPickupable pickupable)

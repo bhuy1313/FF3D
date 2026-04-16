@@ -5,7 +5,7 @@ using UnityEngine.Serialization;
 using UnityEngine.InputSystem;
 #endif
 
-public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotExtinguisherItem, IMovementWeightSource
+public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotExtinguisherItem, IMovementWeightSource, IInventorySelectionBlocker, IJumpActionBlocker
 {
     private enum SprayPattern
     {
@@ -842,6 +842,21 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
     {
         currentUser = user;
         currentUserIsBot = user != null && user.GetComponentInParent<BotBehaviorContext>() != null;
+    }
+
+    public bool BlocksInventorySelectionChange(GameObject owner)
+    {
+        return owner != null && ReferenceEquals(currentHolder, owner);
+    }
+
+    public bool BlocksJumpAction(GameObject owner)
+    {
+        if (!isSpraying || owner == null)
+        {
+            return false;
+        }
+
+        return ReferenceEquals(currentUser, owner) || ReferenceEquals(currentHolder, owner);
     }
 
     private SprayPatternConfig GetCurrentPatternConfig()

@@ -1,6 +1,7 @@
 using StarterAssets;
 using TrueJourney.BotBehavior;
 using UnityEngine;
+using System.Collections;
 
 [DisallowMultipleComponent]
 public class FireHoseConnectionPoint : MonoBehaviour, IInteractable
@@ -11,8 +12,17 @@ public class FireHoseConnectionPoint : MonoBehaviour, IInteractable
     [SerializeField] private float refillInternalTankPerSecond = 0f;
     [SerializeField] private bool logConnections = false;
 
+    [Header("Interaction")]
+    [SerializeField] private float interactionDuration = 0.65f;
+    [SerializeField] private bool lockPlayerWhileInteracting = true;
+
     [Header("Runtime")]
     [SerializeField] private FireHose connectedHose;
+    [SerializeField] private bool interactionInProgress;
+
+    private Coroutine interactionRoutine;
+    private GameObject activeInteractor;
+    private PlayerActionLock activePlayerLock;
 
     public bool ProvidesPressurizedWater => providesPressurizedWater && SupplyPressureMultiplier > 0f;
     public float SupplyPressureMultiplier => providesPressurizedWater ? Mathf.Max(0f, supplyPressureMultiplier) : 0f;
@@ -22,7 +32,49 @@ public class FireHoseConnectionPoint : MonoBehaviour, IInteractable
 
     public void Interact(GameObject interactor)
     {
+        if (interactionInProgress)
+        {
+            return;
+        }
+
         FireHose hose = ResolveHeldFireHose(interactor);
+        if (hose == null)
+        {
+            return;
+        }
+
+        if (interactionDuration <= 0.01f)
+        {
+            ApplyInteraction(hose);
+            return;
+        }
+
+        interactionRoutine = StartCoroutine(PerformInteractionAfterDelay(interactor, hose));
+    }
+
+    private IEnumerator PerformInteractionAfterDelay(GameObject interactor, FireHose hose)
+    {
+        interactionInProgress = true;
+        activeInteractor = interactor;
+        AcquirePlayerLock(interactor);
+
+        yield return new WaitForSeconds(Mathf.Max(0.01f, interactionDuration));
+
+        interactionRoutine = null;
+        interactionInProgress = false;
+        activeInteractor = null;
+        ReleasePlayerLock();
+
+        if (!isActiveAndEnabled || hose == null)
+        {
+            yield break;
+        }
+
+        ApplyInteraction(hose);
+    }
+
+    private void ApplyInteraction(FireHose hose)
+    {
         if (hose == null)
         {
             return;
@@ -77,6 +129,16 @@ public class FireHoseConnectionPoint : MonoBehaviour, IInteractable
 
     private void OnDisable()
     {
+        if (interactionRoutine != null)
+        {
+            StopCoroutine(interactionRoutine);
+            interactionRoutine = null;
+        }
+
+        interactionInProgress = false;
+        activeInteractor = null;
+        ReleasePlayerLock();
+
         if (connectedHose == null)
         {
             return;
@@ -91,6 +153,7 @@ public class FireHoseConnectionPoint : MonoBehaviour, IInteractable
     {
         supplyPressureMultiplier = Mathf.Max(0f, supplyPressureMultiplier);
         refillInternalTankPerSecond = Mathf.Max(0f, refillInternalTankPerSecond);
+        interactionDuration = Mathf.Max(0f, interactionDuration);
     }
 
     private static FireHose ResolveHeldFireHose(GameObject interactor)
@@ -120,5 +183,27 @@ public class FireHoseConnectionPoint : MonoBehaviour, IInteractable
         }
 
         return null;
+    }
+
+    private void AcquirePlayerLock(GameObject interactor)
+    {
+        if (!lockPlayerWhileInteracting || interactor == null || interactor.GetComponent<BotCommandAgent>() != null)
+        {
+            return;
+        }
+
+        activePlayerLock = PlayerActionLock.GetOrCreate(interactor);
+        activePlayerLock?.AcquireFullLock();
+    }
+
+    private void ReleasePlayerLock()
+    {
+        if (activePlayerLock == null)
+        {
+            return;
+        }
+
+        activePlayerLock.ReleaseFullLock();
+        activePlayerLock = null;
     }
 }

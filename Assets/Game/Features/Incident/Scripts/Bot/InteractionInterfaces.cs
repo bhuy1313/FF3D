@@ -28,6 +28,16 @@ public interface IInventoryRuntimeTickable
     void OnInventoryTick(GameObject owner, bool isEquipped, float deltaTime);
 }
 
+public interface IInventorySelectionBlocker
+{
+    bool BlocksInventorySelectionChange(GameObject owner);
+}
+
+public interface IJumpActionBlocker
+{
+    bool BlocksJumpAction(GameObject owner);
+}
+
 public interface IGrabbable
 {
     //None

@@ -190,6 +190,7 @@ namespace StarterAssets
 		private GameObject _mainCamera;
 		private PlayerVitals _vitals;
 		private FPSInteractionSystem _interactionSystem;
+		private FPSInventorySystem _inventorySystem;
 
 		private const float _threshold = 0.00001f;
 		private bool _wantsSprint;
@@ -226,6 +227,10 @@ namespace StarterAssets
 		private float _lastResolvedFallDamage;
 
 		public bool IsCrouching => _isCrouching;
+		public bool IsClimbing => _isClimbing;
+		public bool WantsSprint => _wantsSprint;
+		public float VerticalVelocity => _verticalVelocity;
+		public float CurrentMovementBurdenKg => GetCurrentMovementBurdenKg();
 		public bool IsTrackingFall => _isTrackingFall;
 		public float CurrentTrackedFallDistance => _isTrackingFall
 			? Mathf.Max(0f, _trackedAirbornePeakY - transform.position.y)
@@ -292,6 +297,7 @@ namespace StarterAssets
 			_input = GetComponent<StarterAssetsInputs>();
 			_vitals = GetComponent<PlayerVitals>();
 			_interactionSystem = GetComponent<FPSInteractionSystem>();
+			_inventorySystem = GetComponent<FPSInventorySystem>();
 #if ENABLE_INPUT_SYSTEM
 			_playerInput = GetComponent<PlayerInput>();
 			if (_playerInput != null && _playerInput.actions != null)
@@ -1102,6 +1108,11 @@ namespace StarterAssets
 
 		private void JumpAndGravity()
 		{
+			if (IsJumpBlockedByHeldItem())
+			{
+				_input.jump = false;
+			}
+
 			if (_isClimbing)
 			{
 				_verticalVelocity = 0f;
@@ -1157,6 +1168,32 @@ namespace StarterAssets
 			{
 				_verticalVelocity += Gravity * Time.deltaTime;
 			}
+		}
+
+		private bool IsJumpBlockedByHeldItem()
+		{
+			if (_inventorySystem == null)
+			{
+				return false;
+			}
+
+			GameObject heldObject = _inventorySystem.HeldObject;
+			if (heldObject == null)
+			{
+				return false;
+			}
+
+			MonoBehaviour[] components = heldObject.GetComponents<MonoBehaviour>();
+			for (int i = 0; i < components.Length; i++)
+			{
+				if (components[i] is IJumpActionBlocker jumpBlocker &&
+					jumpBlocker.BlocksJumpAction(gameObject))
+				{
+					return true;
+				}
+			}
+
+			return false;
 		}
 
 		private void ClimbMove()

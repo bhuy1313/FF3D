@@ -2601,7 +2601,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 488739571219905206, guid: b776637ebbae7ec4eb8e05eb727ecd87, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 553468921299418875, guid: b776637ebbae7ec4eb8e05eb727ecd87, type: 3}
       propertyPath: m_LocalPosition.x
@@ -2649,7 +2649,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4990459243102346162, guid: b776637ebbae7ec4eb8e05eb727ecd87, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -24689,6 +24689,11 @@ MonoBehaviour:
   m_SelectedFaces: 
   m_SelectedEdges: []
   m_SelectedVertices: 
+--- !u!1 &664704779 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1816086955231797324, guid: a3bca02bbbca3d146b0ff0248da05478, type: 3}
+  m_PrefabInstance: {fileID: 830000000000000010}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &672630986
 GameObject:
   m_ObjectHideFlags: 0
@@ -30133,6 +30138,21 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 1094207202177416888, guid: a3bca02bbbca3d146b0ff0248da05478, type: 3}
   m_PrefabInstance: {fileID: 830000000000000010}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &765013295
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 664704779}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c85dffbce88f476e865da8f7d718f5c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerEquippedItemPoseProfile
+  overridePlayerEquippedPose: 1
+  equippedLocalPosition: {x: 0, y: 0.1, z: 0.025}
+  equippedLocalEulerAngles: {x: -90, y: 90, z: 0}
 --- !u!1 &765560123
 GameObject:
   m_ObjectHideFlags: 0
@@ -103731,10 +103751,53 @@ PrefabInstance:
       propertyPath: m_Name
       value: FireHose
       objectReference: {fileID: 0}
+    - target: {fileID: 7404256443553440381, guid: a3bca02bbbca3d146b0ff0248da05478, type: 3}
+      propertyPath: poseEntries.Array.size
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 7404256443553440381, guid: a3bca02bbbca3d146b0ff0248da05478, type: 3}
+      propertyPath: poseEntries.Array.data[0].key
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 7404256443553440381, guid: a3bca02bbbca3d146b0ff0248da05478, type: 3}
+      propertyPath: poseEntries.Array.data[2].key
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7404256443553440381, guid: a3bca02bbbca3d146b0ff0248da05478, type: 3}
+      propertyPath: poseEntries.Array.data[2].pose.rightHandIkWeight
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7404256443553440381, guid: a3bca02bbbca3d146b0ff0248da05478, type: 3}
+      propertyPath: poseEntries.Array.data[2].pose.equippedLocalPosition.y
+      value: 0.1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7404256443553440381, guid: a3bca02bbbca3d146b0ff0248da05478, type: 3}
+      propertyPath: poseEntries.Array.data[2].pose.equippedLocalPosition.z
+      value: 0.036
+      objectReference: {fileID: 0}
+    - target: {fileID: 7404256443553440381, guid: a3bca02bbbca3d146b0ff0248da05478, type: 3}
+      propertyPath: poseEntries.Array.data[0].pose.equippedLocalEulerAngles.x
+      value: -90
+      objectReference: {fileID: 0}
+    - target: {fileID: 7404256443553440381, guid: a3bca02bbbca3d146b0ff0248da05478, type: 3}
+      propertyPath: poseEntries.Array.data[0].pose.equippedLocalEulerAngles.y
+      value: 90
+      objectReference: {fileID: 0}
+    - target: {fileID: 7404256443553440381, guid: a3bca02bbbca3d146b0ff0248da05478, type: 3}
+      propertyPath: poseEntries.Array.data[2].pose.equippedLocalEulerAngles.x
+      value: -90
+      objectReference: {fileID: 0}
+    - target: {fileID: 7404256443553440381, guid: a3bca02bbbca3d146b0ff0248da05478, type: 3}
+      propertyPath: poseEntries.Array.data[2].pose.equippedLocalEulerAngles.y
+      value: 90
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1816086955231797324, guid: a3bca02bbbca3d146b0ff0248da05478, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 765013295}
   m_SourcePrefab: {fileID: 100100000, guid: a3bca02bbbca3d146b0ff0248da05478, type: 3}
 --- !u!114 &830000000000000020
 MonoBehaviour:
