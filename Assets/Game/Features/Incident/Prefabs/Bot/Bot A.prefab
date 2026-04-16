@@ -3893,7 +3893,7 @@ GameObject:
   - component: {fileID: 5580254689201413862}
   m_Layer: 3
   m_Name: Bot A
-  m_TagString: Untagged
+  m_TagString: Bot
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -4026,16 +4026,13 @@ MonoBehaviour:
   pickupDistance: 1.5
   sprayFacingThreshold: 0.9
   sprayStartDelay: 0.75
-  crouchBeforeFireHoseSpray: 1
-  fireHoseCrouchDelay: 0.35
   extinguisherRouteCorridorWidth: 6
-  extinguisherApproachRetargetDistance: 0.75
   pointFireApproachSearchRadius: 8
   pointFireApproachSampleStep: 1.5
   pointFireApproachDirections: 12
   pointFireApproachHeightWeight: 1.5
   enableRouteFireClearing: 1
-  routeFireDetectionPadding: 0.5
+  routeFireDetectionRadius: 4
   routeFireVerticalTolerance: 2
   enablePathClearing: 1
   breakableCorridorWidth: 1.5
