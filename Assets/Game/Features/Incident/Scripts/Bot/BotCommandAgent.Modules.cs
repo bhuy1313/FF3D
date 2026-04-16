@@ -85,8 +85,7 @@ public partial class BotCommandAgent
                     else
                     {
                         owner.behaviorContext?.SetCommandIntent(BotCommandIntentPayload.Create(BotCommandType.Move, destination));
-                        owner.navMeshAgent.isStopped = false;
-                        accepted = owner.navMeshAgent.SetDestination(destination);
+                        accepted = owner.TryNavigateTo(destination);
                     }
                     break;
                 case BotCommandType.Extinguish:
@@ -192,21 +191,14 @@ public partial class BotCommandAgent
             }
 
             Vector3 approachDestination = scanOrigin;
-            if (mode == BotExtinguishCommandMode.PointFire &&
-                owner.TryResolvePointFireApproachPosition(scanOrigin, out Vector3 sampledDestination))
-            {
-                approachDestination = sampledDestination;
-            }
-            else if (owner.navMeshSampleDistance > 0f &&
-                     NavMesh.SamplePosition(scanOrigin, out NavMeshHit navMeshHit, owner.navMeshSampleDistance, owner.navMeshAgent.areaMask))
+            if (owner.navMeshSampleDistance > 0f &&
+                NavMesh.SamplePosition(scanOrigin, out NavMeshHit navMeshHit, owner.navMeshSampleDistance, owner.navMeshAgent.areaMask))
             {
                 approachDestination = navMeshHit.position;
             }
 
             PrepareForIssuedCommand(BotCommandType.Extinguish);
-            owner.CacheIssuedExtinguishTargets(mode, pointFireTarget, fireGroupTarget);
             owner.behaviorContext.SetExtinguishOrder(approachDestination, scanOrigin, mode);
-            owner.extinguishStartupPending = true;
             owner.lastIssuedDestination = approachDestination;
             owner.hasIssuedDestination = true;
             return true;

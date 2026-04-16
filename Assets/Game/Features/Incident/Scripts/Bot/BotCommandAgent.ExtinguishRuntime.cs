@@ -137,31 +137,6 @@ public partial class BotCommandAgent
         return facingDot >= sprayFacingThreshold;
     }
 
-    private float ScoreSuppressionTool(IBotExtinguisherItem tool, Vector3 orderPoint, Vector3 firePosition, Vector3 toolPosition, IFireTarget fireTarget)
-    {
-        float requiredHorizontalDistance = GetRequiredHorizontalDistanceForAim(tool, firePosition);
-        float desiredHorizontalDistance = Mathf.Max(tool.PreferredSprayDistance, requiredHorizontalDistance);
-        float preferredDistance = tool.PreferredSprayDistance;
-
-        if (!UsesPreciseAim(tool) && fireTarget != null)
-        {
-            desiredHorizontalDistance = GetDesiredExtinguisherCenterDistance(tool, fireTarget);
-            preferredDistance = GetDesiredExtinguisherStandOffDistance(tool);
-        }
-
-        Vector3 attackPosition = ResolveExtinguishPosition(orderPoint, firePosition, desiredHorizontalDistance);
-        float travelToAttack = Vector3.Distance(toolPosition, attackPosition);
-        float fitPenalty = Mathf.Abs((!UsesPreciseAim(tool) && fireTarget != null ? GetDesiredExtinguisherStandOffDistance(tool) : desiredHorizontalDistance) - preferredDistance) * 0.35f;
-        float rangePenalty = !UsesPreciseAim(tool) && fireTarget != null
-            ? 0f
-            : desiredHorizontalDistance > tool.MaxSprayDistance
-            ? (desiredHorizontalDistance - tool.MaxSprayDistance) * 4f
-            : 0f;
-        float verticalPenalty = GetVerticalAimPenalty(toolPosition, firePosition);
-        float throughputBonus = Mathf.Max(0f, tool.ApplyWaterPerSecond) * 0.1f;
-        return travelToAttack + fitPenalty + rangePenalty + verticalPenalty - throughputBonus;
-    }
-
     private bool CanToolReachFire(IBotExtinguisherItem tool, BotExtinguishCommandMode orderMode, Vector3 orderPoint, Vector3 firePosition, IFireGroupTarget fireGroup, IFireTarget fireTarget)
     {
         if (tool == null)
@@ -337,6 +312,23 @@ public partial class BotCommandAgent
         }
 
         return HasLineOfSightToFireTarget(position, firePosition, fireTarget);
+    }
+
+    private bool ShouldRepositionForExtinguisher(IBotExtinguisherItem tool, Vector3 botPosition, Vector3 firePosition, IFireTarget fireTarget, out float desiredHorizontalDistance)
+    {
+        float edgeDistanceToFire = GetFireEdgeDistance(botPosition, firePosition, fireTarget);
+        float distanceToFire = GetDistanceToFireEdge(botPosition, firePosition, fireTarget);
+        float desiredStandOffDistance = GetDesiredExtinguisherStandOffDistanceLocked(tool, fireTarget);
+        float allowedEdgeRange = GetAllowedExtinguisherEdgeRange(tool);
+        desiredHorizontalDistance = GetDesiredExtinguisherCenterDistance(tool, fireTarget);
+        bool keepCurrentStandDistance = IsExtinguisherTargetLocked(fireTarget);
+        bool canExtinguishFromCurrentPosition = CanExtinguishFromPosition(tool, botPosition, firePosition, fireTarget);
+        bool isFartherThanPreferred = edgeDistanceToFire > desiredStandOffDistance + ExtinguisherRangeSlack;
+        bool isCloserThanPreferred = edgeDistanceToFire + ExtinguisherRangeSlack < desiredStandOffDistance;
+
+        return distanceToFire > allowedEdgeRange ||
+               (!keepCurrentStandDistance && (isFartherThanPreferred || isCloserThanPreferred)) ||
+               !canExtinguishFromCurrentPosition;
     }
 
     private float GetDistanceToFireEdge(Vector3 fromPosition, Vector3 firePosition, IFireTarget fireTarget)
@@ -973,8 +965,6 @@ public partial class BotCommandAgent
         ReleaseCommittedTool();
         preferredExtinguishTool = null;
         SetCurrentFireTarget(null);
-        commandedPointFireTarget = null;
-        commandedFireGroupTarget = null;
         currentExtinguishTargetPosition = default;
         currentExtinguishAimPoint = default;
         currentExtinguishLaunchDirection = default;
@@ -982,7 +972,6 @@ public partial class BotCommandAgent
         hasCurrentExtinguishAimPoint = false;
         hasCurrentExtinguishLaunchDirection = false;
         currentExtinguishTrajectoryPointCount = 0;
-        extinguishStartupPending = false;
         sprayReadyTime = -1f;
         currentExtinguishSubtask = BotExtinguishSubtask.None;
         extinguishTaskDetail = "Awaiting extinguish assignment.";

@@ -58,10 +58,15 @@ namespace TrueJourney.BotBehavior
             {
                 if (commandAgent.TryCompleteMovePickupTarget())
                 {
-                    context.ClearMoveOrder();
                     navMeshAgent.ResetPath();
-                    commandAgent.ResetMoveActivityDebug();
-                    return Status.Success;
+
+                    currentDestination = destination;
+                    if (!(commandAgent.TryNavigateTo(currentDestination)))
+                    {
+                        return Status.Failure;
+                    }
+
+                    return Status.Running;
                 }
 
                 return Status.Running;

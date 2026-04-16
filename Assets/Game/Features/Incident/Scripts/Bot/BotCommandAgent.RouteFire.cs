@@ -9,7 +9,7 @@ public partial class BotCommandAgent
         return currentRouteBlockingFire != null && currentRouteBlockingFire.IsBurning;
     }
 
-    private void ClearRouteFireRuntime()
+    private void ClearRouteFireRuntime(bool releaseCommittedTool = true)
     {
         ClearHeadAimFocus();
         ClearHandAimFocus();
@@ -17,19 +17,17 @@ public partial class BotCommandAgent
         StopExtinguisher();
         ClearExtinguisherTargetLock();
         SetPickupWindow(false);
-        ReleaseCommittedTool();
+        if (releaseCommittedTool)
+        {
+            ReleaseCommittedTool();
+        }
+
         sprayReadyTime = -1f;
         currentRouteBlockingFire = null;
     }
 
-    private bool ShouldUseFireHoseCrouch(IBotExtinguisherItem tool)
-    {
-        return crouchBeforeFireHoseSpray && tool != null && UsesPreciseAim(tool);
-    }
-
     private void ResetExtinguishCrouchState()
     {
-        crouchReadyTime = -1f;
         if (behaviorContext != null)
         {
             behaviorContext.SetCrouchAnimation(false);
@@ -38,49 +36,34 @@ public partial class BotCommandAgent
 
     private bool TryHandleRouteBlockingFire(Vector3 destination)
     {
+        return TryHandleSharedFireRoute(destination, false);
+    }
+
+    private bool TryHandleProactiveExtinguishRoute(Vector3 destination)
+    {
+        return TryHandleSharedFireRoute(destination, true);
+    }
+
+    private bool TryHandleSharedFireRoute(Vector3 destination, bool acquireToolImmediately)
+    {
         if (!enableRouteFireClearing ||
             navMeshAgent == null ||
             !navMeshAgent.enabled ||
             !navMeshAgent.isOnNavMesh ||
             behaviorContext == null ||
-            behaviorContext.HasExtinguishOrder ||
             behaviorContext.HasFollowOrder)
         {
-            ClearRouteFireRuntime();
+            ClearRouteFireRuntime(!acquireToolImmediately);
             return false;
         }
 
-        if (!TryCalculatePreviewPath(destination, out _, out NavMeshPath previewPath) || previewPath == null)
-        {
-            ClearRouteFireRuntime();
-            return false;
-        }
-
-        IFireTarget lockedBlockingFire = currentRouteBlockingFire != null &&
-                                         currentRouteBlockingFire.IsBurning &&
-                                         IsExtinguisherTargetLocked(currentRouteBlockingFire)
+        bool hasEquippedRouteTool = IsRouteFireExtinguisherUsable(activeExtinguisher);
+        IFireTarget blockingFire = hasEquippedRouteTool &&
+                                   currentRouteBlockingFire != null &&
+                                   currentRouteBlockingFire.IsBurning &&
+                                   IsWithinRouteFireDetection(currentRouteBlockingFire)
             ? currentRouteBlockingFire
-            : null;
-
-        if (!TryResolveBlockingFireOnPath(previewPath, out IFireTarget blockingFire))
-        {
-            if (lockedBlockingFire != null)
-            {
-                blockingFire = lockedBlockingFire;
-            }
-            else
-            {
-                if (currentRouteBlockingFire != null)
-                {
-                    LogPathClearingFlow(
-                        $"route-fire-open:{GetDebugTargetName(currentRouteBlockingFire)}",
-                        "Route is clear.");
-                }
-
-                ClearRouteFireRuntime();
-                return false;
-            }
-        }
+            : FindNearbyRouteFire();
 
         if (blockingFire == null)
         {
@@ -91,22 +74,50 @@ public partial class BotCommandAgent
                     "Route is clear.");
             }
 
-            ClearRouteFireRuntime();
-            return false;
+            ClearRouteFireRuntime(!acquireToolImmediately);
+            SetCurrentFireTarget(null);
+
+            if (!acquireToolImmediately)
+            {
+                return false;
+            }
+
+            if (IsWithinArrivalDistance(destination))
+            {
+                navMeshAgent.ResetPath();
+                navMeshAgent.isStopped = true;
+                return false;
+            }
+
+            SetExtinguishSubtask(BotExtinguishSubtask.MoveToFire, "Moving to extinguish destination.");
+            UpdateExtinguishDebugStage(ExtinguishDebugStage.MovingToFire, $"Moving toward extinguish destination {destination}.");
+            TrySetDestinationDirect(destination);
+            return true;
+        }
+
+        bool targetChanged = !ReferenceEquals(currentRouteBlockingFire, blockingFire);
+        if (targetChanged)
+        {
+            sprayReadyTime = -1f;
+            StopExtinguisher();
+            ClearExtinguisherTargetLock();
         }
 
         currentRouteBlockingFire = blockingFire;
+        SetCurrentFireTarget(blockingFire);
         LogPathClearingFlow(
             $"route-fire-detected:{GetDebugTargetName(blockingFire)}",
-            "Detected fire blocking the path.");
+            "Detected fire nearby, stopping to clear.");
 
         Vector3 firePosition = blockingFire.GetWorldPosition();
-        IBotExtinguisherItem routeTool = ResolveCommittedExtinguishTool(
-            firePosition,
-            firePosition,
-            null,
-            blockingFire,
-            BotExtinguishCommandMode.PointFire);
+        IBotExtinguisherItem routeTool = IsRouteFireExtinguisherUsable(activeExtinguisher)
+            ? activeExtinguisher
+            : ResolveCommittedExtinguishTool(
+                firePosition,
+                firePosition,
+                null,
+                blockingFire,
+                BotExtinguishCommandMode.PointFire);
         if (routeTool == null || UsesPreciseAim(routeTool))
         {
             ClearHeadAimFocus();
@@ -122,8 +133,22 @@ public partial class BotCommandAgent
             return true;
         }
 
+        SetExtinguishSubtask(BotExtinguishSubtask.AcquireTool, "Acquiring Fire Extinguisher.");
         if (!TryEnsureExtinguisherEquipped(routeTool))
         {
+            if (!acquireToolImmediately)
+            {
+                if (routeTool is IPickupable pickupable && pickupable.Rigidbody != null && !routeTool.IsHeld)
+                {
+                    SetMovePickupTarget(pickupable);
+                }
+
+                currentRouteBlockingFire = null;
+                SetCurrentFireTarget(null);
+                sprayReadyTime = -1f;
+                ClearExtinguisherTargetLock();
+            }
+
             ClearHeadAimFocus();
             ClearHandAimFocus();
             LogPathClearingFlow(
@@ -140,42 +165,27 @@ public partial class BotCommandAgent
             return true;
         }
 
-        PrimeExtinguisherTargetLock(equippedTool, blockingFire);
-
-        float desiredStandOffDistance = GetDesiredExtinguisherStandOffDistanceLocked(equippedTool, blockingFire);
-        float desiredHorizontalDistance = GetDesiredExtinguisherCenterDistance(equippedTool, blockingFire);
-        float horizontalDistanceToFire = GetHorizontalDistance(transform.position, firePosition);
-        float edgeDistanceToFire = GetFireEdgeDistance(transform.position, firePosition, blockingFire);
-        float distanceToFire = GetDistanceToFireEdge(transform.position, firePosition, blockingFire);
-        float allowedEdgeRange = GetAllowedExtinguisherEdgeRange(equippedTool);
-        bool keepCurrentStandDistance = IsExtinguisherTargetLocked(blockingFire);
-        bool canExtinguishFromCurrentPosition = CanExtinguishFromCurrentPosition(equippedTool, firePosition, blockingFire);
-        bool isFartherThanPreferred = edgeDistanceToFire > desiredStandOffDistance + ExtinguisherRangeSlack;
-        bool isCloserThanPreferred = edgeDistanceToFire + ExtinguisherRangeSlack < desiredStandOffDistance;
-        bool shouldReposition =
-            distanceToFire > allowedEdgeRange ||
-            (!keepCurrentStandDistance && (isFartherThanPreferred || isCloserThanPreferred)) ||
-            !canExtinguishFromCurrentPosition;
-
-        if (shouldReposition)
+        if (!equippedTool.HasUsableCharge)
         {
-            Vector3 desiredPosition = ResolveExtinguisherApproachPosition(transform.position, firePosition, desiredHorizontalDistance);
-            LogPathClearingFlow(
-                $"route-fire-move:{GetDebugTargetName(blockingFire)}:{FormatFlowVectorKey(desiredPosition)}",
-                "Moving.");
-            ClearHeadAimFocus();
-            ClearHandAimFocus();
             StopExtinguisher();
-            sprayReadyTime = -1f;
-            TrySetDestinationDirect(desiredPosition);
-            return true;
+            ClearRouteFireRuntime(!acquireToolImmediately);
+            return false;
         }
 
+        PrimeExtinguisherTargetLock(equippedTool, blockingFire);
         navMeshAgent.ResetPath();
         navMeshAgent.isStopped = true;
         AimTowards(firePosition);
         SetHandAimFocus(firePosition);
         SetHeadAimFocus(firePosition);
+        SetExtinguishSubtask(BotExtinguishSubtask.AimAtFire, "Aiming at nearby fire.");
+
+        if (!IsAimSettled(equippedTool, firePosition))
+        {
+            StopExtinguisher();
+            sprayReadyTime = -1f;
+            return true;
+        }
 
         if (sprayReadyTime < 0f)
         {
@@ -190,12 +200,13 @@ public partial class BotCommandAgent
             return true;
         }
 
+        SetExtinguishSubtask(BotExtinguishSubtask.Spray, "Spraying nearby fire.");
         LogPathClearingFlow(
             $"route-fire-spray:{GetDebugTargetName(blockingFire)}",
-            "Clearing fire from route.");
+            "Detected nearby fire. Stop and extinguish.");
         LockExtinguisherTarget(blockingFire);
         equippedTool.SetExternalSprayState(true, gameObject);
-        TryApplyWaterToFireTarget(equippedTool, blockingFire, firePosition);
+        ApplyRouteFireSuppression(equippedTool, blockingFire);
 
         if (!blockingFire.IsBurning)
         {
@@ -204,67 +215,79 @@ public partial class BotCommandAgent
             LogPathClearingFlow(
                 $"route-fire-open:{GetDebugTargetName(blockingFire)}",
                 "Route is clear.");
-            ClearRouteFireRuntime();
-            return false;
+            ClearRouteFireRuntime(!acquireToolImmediately);
+            SetCurrentFireTarget(null);
+            return acquireToolImmediately;
         }
 
         return true;
     }
 
-    private bool TryResolveBlockingFireOnPath(NavMeshPath previewPath, out IFireTarget blockingFire)
+    private bool IsWithinRouteFireDetection(IFireTarget fireTarget)
     {
-        blockingFire = null;
-        if (!enableRouteFireClearing || previewPath == null || previewPath.corners == null || previewPath.corners.Length == 0)
+        if (fireTarget == null || !fireTarget.IsBurning)
         {
             return false;
         }
 
-        float bestPathDistance = float.PositiveInfinity;
-        Vector3 segmentStart = transform.position;
-        float accumulatedPathDistance = 0f;
-
-        for (int i = 0; i < previewPath.corners.Length; i++)
+        Vector3 firePosition = fireTarget.GetWorldPosition();
+        Vector3 botPosition = transform.position;
+        if (Mathf.Abs(firePosition.y - botPosition.y) > routeFireVerticalTolerance)
         {
-            Vector3 segmentEnd = previewPath.corners[i];
-            float segmentLength = GetHorizontalDistance(segmentStart, segmentEnd);
-            if (segmentLength <= 0.01f)
+            return false;
+        }
+
+        float detectionRadiusSq = Mathf.Max(0.1f, routeFireDetectionRadius);
+        detectionRadiusSq *= detectionRadiusSq;
+        return (firePosition - botPosition).sqrMagnitude <= detectionRadiusSq;
+    }
+
+    private IFireTarget FindNearbyRouteFire()
+    {
+        float nearestDistanceSq = Mathf.Max(0.1f, routeFireDetectionRadius);
+        nearestDistanceSq *= nearestDistanceSq;
+        IFireTarget nearestFire = null;
+        Vector3 botPosition = transform.position;
+
+        foreach (IFireTarget candidate in BotRuntimeRegistry.ActiveFireTargets)
+        {
+            if (candidate == null || !candidate.IsBurning)
             {
-                segmentStart = segmentEnd;
                 continue;
             }
 
-            foreach (IFireTarget candidate in BotRuntimeRegistry.ActiveFireTargets)
+            Vector3 firePosition = candidate.GetWorldPosition();
+            if (Mathf.Abs(firePosition.y - botPosition.y) > routeFireVerticalTolerance)
             {
-                if (candidate == null || !candidate.IsBurning)
-                {
-                    continue;
-                }
-
-                Vector3 firePosition = candidate.GetWorldPosition();
-                if (Mathf.Abs(firePosition.y - transform.position.y) > routeFireVerticalTolerance)
-                {
-                    continue;
-                }
-
-                float detectionRadius = Mathf.Max(0.05f, candidate.GetWorldRadius() + routeFireDetectionPadding);
-                float distanceToSegment = DistanceToSegment2D(firePosition, segmentStart, segmentEnd, out float t);
-                if (distanceToSegment > detectionRadius)
-                {
-                    continue;
-                }
-
-                float pathDistance = accumulatedPathDistance + segmentLength * Mathf.Clamp01(t);
-                if (pathDistance < bestPathDistance)
-                {
-                    bestPathDistance = pathDistance;
-                    blockingFire = candidate;
-                }
+                continue;
             }
 
-            accumulatedPathDistance += segmentLength;
-            segmentStart = segmentEnd;
+            float distanceSq = (firePosition - botPosition).sqrMagnitude;
+            if (distanceSq > nearestDistanceSq)
+            {
+                continue;
+            }
+
+            nearestDistanceSq = distanceSq;
+            nearestFire = candidate;
         }
 
-        return blockingFire != null;
+        return nearestFire;
+    }
+
+    private static void ApplyRouteFireSuppression(IBotExtinguisherItem tool, IFireTarget fireTarget)
+    {
+        if (tool == null || fireTarget == null || !fireTarget.IsBurning)
+        {
+            return;
+        }
+
+        float suppressionAmount = Mathf.Max(0f, tool.ApplyWaterPerSecond) * Time.deltaTime;
+        if (suppressionAmount <= 0f)
+        {
+            return;
+        }
+
+        fireTarget.ApplySuppression(suppressionAmount, tool.SuppressionAgent);
     }
 }

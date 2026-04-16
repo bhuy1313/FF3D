@@ -5,14 +5,13 @@ public class FPSInventorySystem : MonoBehaviour
     [Header("Pickup")]
     [SerializeField] private bool allowPickup = true;
     [SerializeField] private int maxSlots = 6;
-    [SerializeField] private Transform viewPointTransform;
+    [SerializeField] private Transform equipRoot;
     [SerializeField] private Transform inventoryRoot;
-    [SerializeField] private Vector3 viewPoint;
     [SerializeField] private bool hideStoredItems = true;
-    [Header("ViewPoint Rotation Lag")]
-    [SerializeField] private bool useViewPointRotationLag = true;
-    [SerializeField] private float viewPointRotationFollowSpeed = 12f;
-    [SerializeField] private float viewPointRotationMaxAngle = 8f;
+    [Header("EquipRoot Rotation Lag")]
+    [SerializeField] private bool useEquipRootRotationLag = true;
+    [SerializeField] private float equipRootRotationFollowSpeed = 12f;
+    [SerializeField] private float equipRootRotationMaxAngle = 8f;
     [SerializeField] private bool createRuntimeLagPivot = true;
 
     private class InventorySlot
@@ -36,23 +35,18 @@ public class FPSInventorySystem : MonoBehaviour
 
     private void Awake()
     {
-        if (viewPointTransform == null)
+        if (equipRoot == null)
         {
             Camera cam = Camera.main;
             if (cam != null)
             {
-                GameObject hold = new GameObject("ViewPointTransform");
+                GameObject hold = new GameObject("EquipRoot");
                 hold.transform.SetParent(cam.transform, false);
-                hold.transform.localPosition = viewPoint;
-                viewPointTransform = hold.transform;
+                equipRoot = hold.transform;
             }
         }
-        else
-        {
-            viewPointTransform.localPosition = viewPoint;
-        }
 
-        ConfigureViewPointRotationLag();
+        ConfigureEquipRootRotationLag();
         ApplyRotationLagSettings();
 
         if (inventoryRoot == null)
@@ -71,7 +65,7 @@ public class FPSInventorySystem : MonoBehaviour
 
     public bool TryPickup(GameObject target, GameObject picker)
     {
-        if (!allowPickup || target == null || viewPointTransform == null || maxSlots <= 0)
+        if (!allowPickup || target == null || equipRoot == null || maxSlots <= 0)
         {
             return false;
         }
@@ -197,9 +191,8 @@ public class FPSInventorySystem : MonoBehaviour
     private void EquipSlot(InventorySlot slot)
     {
         Transform itemTransform = slot.Item.Rigidbody.transform;
-        itemTransform.SetParent(viewPointTransform, false);
-        itemTransform.localPosition = Vector3.zero;
-        itemTransform.localRotation = Quaternion.identity;
+        itemTransform.SetParent(equipRoot, false);
+        ApplyEquippedPose(slot.Item, itemTransform);
         if (hideStoredItems && slot.WasActive)
         {
             slot.Item.Rigidbody.gameObject.SetActive(true);
@@ -324,16 +317,63 @@ public class FPSInventorySystem : MonoBehaviour
         }
     }
 
-    private void ConfigureViewPointRotationLag()
+    private static void ApplyEquippedPose(IPickupable pickupable, Transform itemTransform)
     {
-        if (viewPointTransform == null)
+        if (itemTransform == null)
         {
             return;
         }
 
-        if (useViewPointRotationLag && createRuntimeLagPivot && Application.isPlaying)
+        if (TryGetEquippedPose(pickupable, itemTransform, out Vector3 localPosition, out Vector3 localEulerAngles))
         {
-            Transform followParent = viewPointTransform.parent;
+            itemTransform.localPosition = localPosition;
+            itemTransform.localRotation = Quaternion.Euler(localEulerAngles);
+            return;
+        }
+
+        itemTransform.localPosition = Vector3.zero;
+        itemTransform.localRotation = Quaternion.identity;
+    }
+
+    private static bool TryGetEquippedPose(IPickupable pickupable, Transform itemTransform, out Vector3 localPosition, out Vector3 localEulerAngles)
+    {
+        localPosition = default;
+        localEulerAngles = default;
+
+        if (pickupable is PlayerEquippedItemPoseProfile pickupableProfile &&
+            pickupableProfile.TryGetEquippedPose(out localPosition, out localEulerAngles))
+        {
+            return true;
+        }
+
+        if (itemTransform == null)
+        {
+            return false;
+        }
+
+        MonoBehaviour[] components = itemTransform.GetComponents<MonoBehaviour>();
+        for (int i = 0; i < components.Length; i++)
+        {
+            if (components[i] is PlayerEquippedItemPoseProfile profile &&
+                profile.TryGetEquippedPose(out localPosition, out localEulerAngles))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void ConfigureEquipRootRotationLag()
+    {
+        if (equipRoot == null)
+        {
+            return;
+        }
+
+        if (useEquipRootRotationLag && createRuntimeLagPivot && Application.isPlaying)
+        {
+            Transform followParent = equipRoot.parent;
             if (followParent == null)
             {
                 return;
@@ -341,17 +381,17 @@ public class FPSInventorySystem : MonoBehaviour
 
             if (runtimeLagPivot == null)
             {
-                Transform existingPivot = followParent.Find("ViewPointLagPivot");
+                Transform existingPivot = followParent.Find("EquipRootLagPivot");
                 if (existingPivot != null)
                 {
                     runtimeLagPivot = existingPivot;
                 }
                 else
                 {
-                    GameObject pivot = new GameObject("ViewPointLagPivot");
+                    GameObject pivot = new GameObject("EquipRootLagPivot");
                     pivot.transform.SetParent(followParent, false);
-                    pivot.transform.localPosition = viewPointTransform.localPosition;
-                    pivot.transform.localRotation = viewPointTransform.localRotation;
+                    pivot.transform.localPosition = equipRoot.localPosition;
+                    pivot.transform.localRotation = equipRoot.localRotation;
                     runtimeLagPivot = pivot.transform;
                 }
             }
@@ -362,14 +402,14 @@ public class FPSInventorySystem : MonoBehaviour
                 rotationLag = runtimeLagPivot.gameObject.AddComponent<ChildRotationLag>();
             }
 
-            viewPointTransform = runtimeLagPivot;
+            equipRoot = runtimeLagPivot;
             return;
         }
 
-        rotationLag = viewPointTransform.GetComponent<ChildRotationLag>();
+        rotationLag = equipRoot.GetComponent<ChildRotationLag>();
         if (rotationLag == null)
         {
-            rotationLag = viewPointTransform.gameObject.AddComponent<ChildRotationLag>();
+            rotationLag = equipRoot.gameObject.AddComponent<ChildRotationLag>();
         }
     }
 
@@ -380,15 +420,15 @@ public class FPSInventorySystem : MonoBehaviour
             return;
         }
 
-        if (!useViewPointRotationLag)
+        if (!useEquipRootRotationLag)
         {
             rotationLag.enabled = false;
             return;
         }
 
         rotationLag.enabled = true;
-        rotationLag.parentToFollow = viewPointTransform.parent;
-        rotationLag.followSpeed = Mathf.Max(0.01f, viewPointRotationFollowSpeed);
-        rotationLag.maxAngle = Mathf.Clamp(viewPointRotationMaxAngle, 0f, 45f);
+        rotationLag.parentToFollow = equipRoot.parent;
+        rotationLag.followSpeed = Mathf.Max(0.01f, equipRootRotationFollowSpeed);
+        rotationLag.maxAngle = Mathf.Clamp(equipRootRotationMaxAngle, 0f, 45f);
     }
 }

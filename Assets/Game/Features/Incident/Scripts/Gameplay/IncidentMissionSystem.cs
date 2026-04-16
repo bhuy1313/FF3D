@@ -778,6 +778,10 @@ public partial class IncidentMissionSystem : MonoBehaviour
     private void HandleTrackedRescueCompleted()
     {
         MarkProgressDirty();
+        if (missionState == MissionState.Running)
+        {
+            RefreshRuntimeStateIfDirty();
+        }
     }
 
     private void HandleTrackedVictimTriageStateChanged(VictimCondition.TriageState triageState)
