@@ -75,29 +75,6 @@ MonoBehaviour:
   actionTitle: Activate Exit Trigger
   actionDescription: Reveal the extraction trigger after the fire is contained.
   targetKey: event-1
---- !u!114 &-6510022302844551002
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 71d070a933174ca0883d92d5166ea502, type: 3}
-  m_Name: Tutorial_IsolatePowerStage_MissionStageDefinition
-  m_EditorClassIdentifier: Assembly-CSharp::MissionStageDefinition
-  stageId: isolate-power
-  stageTitleLocalizationKey: 
-  stageTitle: Isolate Power
-  stageDescriptionLocalizationKey: 
-  stageDescription: Use the electrical panel to isolate the energized fire before
-    applying water.
-  nextStageDelaySeconds: 0.5
-  objectives:
-  - {fileID: -6510022302844551001}
-  onStageStartedActions: []
-  onStageCompletedActions: []
 --- !u!114 &-6510022302844551001
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -315,7 +292,6 @@ MonoBehaviour:
   - {fileID: 8481906818168850072}
   stages:
   - {fileID: -934915021428583584}
-  - {fileID: -6510022302844551002}
   - {fileID: -6961200827763521532}
   - {fileID: -6214757763015457672}
   - {fileID: 7531105325497548688}
