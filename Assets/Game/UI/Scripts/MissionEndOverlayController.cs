@@ -1,3 +1,6 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -12,7 +15,16 @@ public class MissionEndOverlayController : MonoBehaviour
         "ContainFireObjectiveRow",
         "BreakBarricadeObjectiveRow",
         "RescueVictimObjectiveRow",
-        "ReachExitObjectiveRow"
+        "ReachExitObjectiveRow",
+    };
+
+    private static readonly string[] ObjectiveTextNames =
+    {
+        "OpenGateObjectiveText",
+        "ContainFireObjectiveText",
+        "BreakBarricadeObjectiveText",
+        "RescueVictimObjectiveText",
+        "ReachExitObjectiveText",
     };
 
     private static readonly Color ObjectivePendingColor = new Color(0.92f, 0.95f, 1f, 1f);
@@ -22,37 +34,84 @@ public class MissionEndOverlayController : MonoBehaviour
     private static readonly Color ObjectiveFailedTextColor = new Color(1f, 0.86f, 0.86f, 1f);
 
     [Header("References")]
-    [SerializeField] private IncidentMissionSystem missionSystem;
-    [SerializeField] private Canvas targetCanvas;
+    [SerializeField]
+    private IncidentMissionSystem missionSystem;
+
+    [SerializeField]
+    private Canvas targetCanvas;
 
     [Header("Behavior")]
-    [SerializeField] private bool pauseGameplayOnMissionEnd = true;
-    [SerializeField] private bool unlockCursorOnMissionEnd = true;
-    [SerializeField] private bool showRetryButton = true;
-    [SerializeField] private bool showMainMenuButton = true;
-    [SerializeField] private string mainMenuSceneName = "MainMenu";
+    [SerializeField]
+    private bool pauseGameplayOnMissionEnd = true;
+
+    [SerializeField]
+    private bool unlockCursorOnMissionEnd = true;
+
+    [SerializeField]
+    private bool showRetryButton = true;
+
+    [SerializeField]
+    private bool showMainMenuButton = true;
+
+    [SerializeField]
+    private string mainMenuSceneName = "MainMenu";
 
     [Header("Labels")]
-    [SerializeField] private string resultLabel = "RESULT";
-    [SerializeField] private string completedTitle = "Mission Complete";
-    [SerializeField] private string failedTitle = "Mission Failed";
-    [SerializeField] private string retryButtonLabel = "Retry";
-    [SerializeField] private string mainMenuButtonLabel = "Main Menu";
-    [SerializeField] private string performanceHeader = "PERFORMANCE";
-    [SerializeField] private string objectivesHeader = "OBJECTIVES";
-    [SerializeField] private string noObjectivesLabel = "No tracked objectives.";
-    [SerializeField] private string timeLabel = "Time";
-    [SerializeField] private string firesLabel = "Fires";
-    [SerializeField] private string rescuesLabel = "Rescues";
-    [SerializeField] private string victimsLabel = "Victims";
-    [SerializeField] private string scoreLabel = "Score";
-    [SerializeField] private string victimsValueFormat = "U:{0} C:{1} S:{2} X:{3} D:{4}";
+    [SerializeField]
+    private string resultLabel = "RESULT";
+
+    [SerializeField]
+    private string completedTitle = "Mission Complete";
+
+    [SerializeField]
+    private string failedTitle = "Mission Failed";
+
+    [SerializeField]
+    private string retryButtonLabel = "Retry";
+
+    [SerializeField]
+    private string mainMenuButtonLabel = "Main Menu";
+
+    [SerializeField]
+    private string performanceHeader = "PERFORMANCE";
+
+    [SerializeField]
+    private string objectivesHeader = "OBJECTIVES";
+
+    [SerializeField]
+    private string noObjectivesLabel = "No tracked objectives.";
+
+    [SerializeField]
+    private string timeLabel = "Time";
+
+    [SerializeField]
+    private string firesLabel = "Fires";
+
+    [SerializeField]
+    private string rescuesLabel = "Rescues";
+
+    [SerializeField]
+    private string victimsLabel = "Victims";
+
+    [SerializeField]
+    private string rankLabel = "RANK";
+
+    [SerializeField]
+    private string scoreLabel = "Score";
+
+    [SerializeField]
+    private string victimsValueFormat = "U:{0} C:{1} S:{2} X:{3} D:{4}";
 
     [Header("Scene UI Names")]
-    [SerializeField] private string resultPopupObjectName = "ResultPopup";
+    [SerializeField]
+    private string resultPopupObjectName = "ResultPopup";
 
     private GameObject overlayRoot;
     private CanvasGroup overlayCanvasGroup;
+    private MissionResultPopupSequence overlaySequence;
+    private Transform overlayContentRoot;
+    private GameObject gameSummaryPanelRoot;
+    private GameObject legacyResultPanelRoot;
     private TMP_Text resultLabelText;
     private TMP_Text resultStateText;
     private TMP_Text missionNameText;
@@ -71,6 +130,9 @@ public class MissionEndOverlayController : MonoBehaviour
     private TMP_Text objectivesHeaderText;
     private RectTransform objectivesListRectTransform;
     private ObjectiveRowView[] objectiveRows;
+    private GameObject rankStampRoot;
+    private TMP_Text rankLabelText;
+    private TMP_Text rankValueText;
     private GameObject retryButtonRoot;
     private Button retryButton;
     private TMP_Text retryButtonText;
@@ -82,6 +144,9 @@ public class MissionEndOverlayController : MonoBehaviour
     private bool timeScaleOverridden;
     private bool missingOverlayWarningLogged;
     private bool callbacksBound;
+    private bool usingCompletionIntroSequence;
+    private Coroutine rankStampCoroutine;
+    private Coroutine rankStampDelayCoroutine;
 
     private sealed class ObjectiveRowView
     {
@@ -131,8 +196,10 @@ public class MissionEndOverlayController : MonoBehaviour
             return;
         }
 
-        if (missionSystem.State == IncidentMissionSystem.MissionState.Completed ||
-            missionSystem.State == IncidentMissionSystem.MissionState.Failed)
+        if (
+            missionSystem.State == IncidentMissionSystem.MissionState.Completed
+            || missionSystem.State == IncidentMissionSystem.MissionState.Failed
+        )
         {
             OpenResultOverlay();
         }
@@ -162,7 +229,9 @@ public class MissionEndOverlayController : MonoBehaviour
         {
             if (!missingOverlayWarningLogged)
             {
-                Debug.LogWarning($"[MissionEndOverlayController] Could not find '{resultPopupObjectName}' in scene '{SceneManager.GetActiveScene().name}'.");
+                Debug.LogWarning(
+                    $"[MissionEndOverlayController] Could not find '{resultPopupObjectName}' in scene '{SceneManager.GetActiveScene().name}'."
+                );
                 missingOverlayWarningLogged = true;
             }
 
@@ -171,50 +240,114 @@ public class MissionEndOverlayController : MonoBehaviour
 
         overlayRoot = overlayTransform.gameObject;
         overlayCanvasGroup = overlayRoot.GetComponent<CanvasGroup>();
-
-        resultLabelText = FindText(overlayTransform, "ResultLabelText");
-        resultStateText = FindText(overlayTransform, "ResultStateText");
-        missionNameText = FindText(overlayTransform, "MissionNameText");
-        performanceHeaderText = FindFirstTextInNamedRow(overlayTransform, "PerformanceHeadingRow");
-        timeLabelText = FindLabelTextInNamedRow(overlayTransform, "TimeStatRow");
-        timeValueText = FindValueTextInNamedRow(overlayTransform, "TimeStatRow");
-        scoreLabelText = FindLabelTextInNamedRow(overlayTransform, "ScoreStatRow");
-        scoreRowRoot = FindDescendantByName(overlayTransform, "ScoreStatRow")?.gameObject;
-        scoreValueText = FindValueTextInNamedRow(overlayTransform, "ScoreStatRow");
-        rescuesLabelText = FindLabelTextInNamedRow(overlayTransform, "RescuesStatRow");
-        rescuesValueText = FindValueTextInNamedRow(overlayTransform, "RescuesStatRow");
-        victimsLabelText = FindLabelTextInNamedRow(overlayTransform, "VictimsStatRow");
-        victimsValueText = FindValueTextInNamedRow(overlayTransform, "VictimsStatRow");
-        firesLabelText = FindLabelTextInNamedRow(overlayTransform, "FiresStatRow");
-        firesValueText = FindValueTextInNamedRow(overlayTransform, "FiresStatRow");
-        objectivesHeaderText = FindText(overlayTransform, "ObjectivesHeadingText");
-        objectivesListRectTransform = FindDescendantByName(overlayTransform, "ObjectivesList") as RectTransform;
-
-        objectiveRows = new ObjectiveRowView[ObjectiveRowNames.Length];
-        for (int i = 0; i < ObjectiveRowNames.Length; i++)
+        overlaySequence = overlayRoot.GetComponent<MissionResultPopupSequence>();
+        if (
+            overlaySequence == null
+            && SceneManager.GetActiveScene().name == "Tutorial"
+            && FindDescendantByName(overlayTransform, "MissionComplete") != null
+        )
         {
-            Transform rowTransform = FindDescendantByName(overlayTransform, ObjectiveRowNames[i]);
-            if (rowTransform == null)
-            {
-                continue;
-            }
-
-            objectiveRows[i] = new ObjectiveRowView
-            {
-                Root = rowTransform.gameObject,
-                Text = FindFirstTextInTransform(rowTransform),
-                Icon = FindFirstImageInTransform(rowTransform),
-                LayoutElement = rowTransform.GetComponent<LayoutElement>() ?? rowTransform.gameObject.AddComponent<LayoutElement>()
-            };
+            overlaySequence = overlayRoot.AddComponent<MissionResultPopupSequence>();
         }
 
-        retryButtonRoot = FindDescendantByName(overlayTransform, "RetryButtonRoot")?.gameObject;
-        retryButton = FindButton(overlayTransform, "RetryButton");
-        retryButtonText = FindText(overlayTransform, "RetryButtonText");
+        Transform gameSummaryTransform = FindDescendantByName(overlayTransform, "GameSummaryPanel");
+        Transform legacyResultTransform = FindDescendantByName(overlayTransform, "ResultPanel");
+        overlayContentRoot = gameSummaryTransform ?? legacyResultTransform ?? overlayTransform;
+        gameSummaryPanelRoot = gameSummaryTransform?.gameObject;
+        legacyResultPanelRoot = legacyResultTransform?.gameObject;
 
-        mainMenuButtonRoot = FindDescendantByName(overlayTransform, "MainMenuButtonRoot")?.gameObject;
-        mainMenuButton = FindButton(overlayTransform, "MainMenuButton");
-        mainMenuButtonText = FindText(overlayTransform, "MainMenuButtonText");
+        if (gameSummaryPanelRoot != null && legacyResultPanelRoot != null)
+        {
+            legacyResultPanelRoot.SetActive(false);
+        }
+
+        resultLabelText =
+            FindText(overlayContentRoot, "Txt_Result")
+            ?? FindText(overlayContentRoot, "ResultLabelText");
+        resultStateText =
+            FindText(overlayContentRoot, "Txt_MissionComplete")
+            ?? FindText(overlayContentRoot, "ResultStateText");
+        missionNameText =
+            FindText(overlayContentRoot, "Txt_Subtitle")
+            ?? FindText(overlayContentRoot, "MissionNameText");
+        performanceHeaderText =
+            FindText(overlayContentRoot, "Txt_PerformanceTitle")
+            ?? FindFirstTextInNamedRow(overlayContentRoot, "PerformanceHeadingRow");
+        timeLabelText =
+            FindTextInNamedRow(overlayContentRoot, "StatRow_Time", "Txt_Label")
+            ?? FindTextInNamedRowChild(overlayContentRoot, "TimeStatRow", 0)
+            ?? FindLabelTextInNamedRow(overlayContentRoot, "TimeStatRow");
+        timeValueText =
+            FindTextInNamedRow(overlayContentRoot, "StatRow_Time", "Txt_Value")
+            ?? FindText(overlayContentRoot, "TimerText")
+            ?? FindValueTextInNamedRow(overlayContentRoot, "TimeStatRow");
+        scoreLabelText =
+            FindTextInNamedRow(overlayContentRoot, "ScoreRow", "Txt_Label")
+            ?? FindTextInNamedRowChild(overlayContentRoot, "ScoreStatRow", 0)
+            ?? FindLabelTextInNamedRow(overlayContentRoot, "ScoreStatRow");
+        scoreRowRoot =
+            FindDescendantByName(overlayContentRoot, "ScoreRow")?.gameObject
+            ?? FindDescendantByName(overlayContentRoot, "ScoreStatRow")?.gameObject;
+        scoreValueText =
+            FindTextInNamedRow(overlayContentRoot, "ScoreRow", "Txt_Value")
+            ?? FindTextInNamedRowChild(overlayContentRoot, "ScoreStatRow", 1)
+            ?? FindValueTextInNamedRow(overlayContentRoot, "ScoreStatRow");
+        rescuesLabelText =
+            FindTextInNamedRow(overlayContentRoot, "StatRow_Rescues", "Txt_Label")
+            ?? FindTextInNamedRowChild(overlayContentRoot, "RescuesStatRow", 0)
+            ?? FindLabelTextInNamedRow(overlayContentRoot, "RescuesStatRow");
+        rescuesValueText =
+            FindTextInNamedRow(overlayContentRoot, "StatRow_Rescues", "Txt_Value")
+            ?? FindTextInNamedRowChild(overlayContentRoot, "RescuesStatRow", 1)
+            ?? FindValueTextInNamedRow(overlayContentRoot, "RescuesStatRow");
+        victimsLabelText =
+            FindTextInNamedRow(overlayContentRoot, "StatRow_Victims", "Txt_Label")
+            ?? FindTextInNamedRowChild(overlayContentRoot, "VictimsStatRow", 0)
+            ?? FindLabelTextInNamedRow(overlayContentRoot, "VictimsStatRow");
+        victimsValueText =
+            FindTextInNamedRow(overlayContentRoot, "StatRow_Victims", "Txt_Value")
+            ?? FindTextInNamedRowChild(overlayContentRoot, "VictimsStatRow", 1)
+            ?? FindValueTextInNamedRow(overlayContentRoot, "VictimsStatRow");
+        firesLabelText =
+            FindTextInNamedRow(overlayContentRoot, "StatRow_Fires", "Txt_Label")
+            ?? FindTextInNamedRowChild(overlayContentRoot, "FiresStatRow", 0)
+            ?? FindLabelTextInNamedRow(overlayContentRoot, "FiresStatRow");
+        firesValueText =
+            FindTextInNamedRow(overlayContentRoot, "StatRow_Fires", "Txt_Value")
+            ?? FindTextInNamedRowChild(overlayContentRoot, "FiresStatRow", 1)
+            ?? FindValueTextInNamedRow(overlayContentRoot, "FiresStatRow");
+        objectivesHeaderText =
+            FindText(overlayContentRoot, "Txt_ObjectivesTitle")
+            ?? FindText(overlayContentRoot, "ObjectivesHeadingText");
+        objectivesListRectTransform =
+            FindDescendantByName(overlayContentRoot, "Objectives_Area") as RectTransform
+            ?? FindDescendantByName(overlayContentRoot, "ObjectivesList") as RectTransform;
+        rankStampRoot = FindDescendantByName(overlayContentRoot, "Rank_Stamp_Group")?.gameObject;
+        rankLabelText = FindText(overlayContentRoot, "Txt_RankLabel");
+        rankValueText = FindText(overlayContentRoot, "Txt_RankGrade");
+        objectiveRows = BuildObjectiveRows(overlayContentRoot);
+
+        retryButtonRoot =
+            FindDescendantByName(overlayContentRoot, "btnRetry")?.gameObject
+            ?? FindDescendantByName(overlayContentRoot, "RetryButtonRoot")?.gameObject;
+        retryButton =
+            FindButton(overlayContentRoot, "btnRetry")
+            ?? FindButton(overlayContentRoot, "RetryButton");
+        retryButtonText =
+            FindFirstTextInTransform(
+                retryButton != null ? retryButton.transform : retryButtonRoot?.transform
+            ) ?? FindText(overlayContentRoot, "RetryButtonText");
+
+        mainMenuButtonRoot =
+            FindDescendantByName(overlayContentRoot, "btnBackToMain")?.gameObject
+            ?? FindDescendantByName(overlayContentRoot, "MainMenuButtonRoot")?.gameObject;
+        mainMenuButton =
+            FindButton(overlayContentRoot, "btnBackToMain")
+            ?? FindButton(overlayContentRoot, "MainMenuButton");
+        mainMenuButtonText =
+            FindFirstTextInTransform(
+                mainMenuButton != null ? mainMenuButton.transform : mainMenuButtonRoot?.transform
+            ) ?? FindText(overlayContentRoot, "MainMenuButtonText");
     }
 
     private void BindButtonCallbacks()
@@ -248,26 +381,10 @@ public class MissionEndOverlayController : MonoBehaviour
         }
 
         hasOpenedResult = true;
-        PopulateOverlay();
-        RefreshButtonLabels();
-
-        if (retryButtonRoot != null)
-        {
-            retryButtonRoot.SetActive(showRetryButton);
-        }
-
-        if (mainMenuButtonRoot != null)
-        {
-            mainMenuButtonRoot.SetActive(showMainMenuButton);
-        }
+        usingCompletionIntroSequence = false;
 
         overlayRoot.SetActive(true);
-        if (overlayCanvasGroup != null)
-        {
-            overlayCanvasGroup.alpha = 1f;
-            overlayCanvasGroup.interactable = true;
-            overlayCanvasGroup.blocksRaycasts = true;
-        }
+        EnsurePreferredSummaryPanelActive();
 
         if (pauseGameplayOnMissionEnd)
         {
@@ -281,10 +398,66 @@ public class MissionEndOverlayController : MonoBehaviour
             Cursor.visible = true;
             Cursor.lockState = CursorLockMode.None;
         }
+
+        if (
+            missionSystem.State == IncidentMissionSystem.MissionState.Completed
+            && overlaySequence != null
+            && overlaySequence.CanPlayCompletionIntro
+        )
+        {
+            usingCompletionIntroSequence = true;
+            PopulateOverlay();
+            RefreshButtonLabels();
+
+            if (retryButtonRoot != null)
+            {
+                retryButtonRoot.SetActive(showRetryButton);
+            }
+
+            if (mainMenuButtonRoot != null)
+            {
+                mainMenuButtonRoot.SetActive(showMainMenuButton);
+            }
+
+            overlaySequence.PlayCompletionIntro(HandleCompletionIntroFinished);
+            return;
+        }
+
+        if (overlaySequence != null)
+        {
+            overlaySequence.PrepareSummaryLayout();
+        }
+
+        PopulateOverlay();
+        RefreshButtonLabels();
+
+        if (retryButtonRoot != null)
+        {
+            retryButtonRoot.SetActive(showRetryButton);
+        }
+
+        if (mainMenuButtonRoot != null)
+        {
+            mainMenuButtonRoot.SetActive(showMainMenuButton);
+        }
+
+        if (overlayCanvasGroup != null)
+        {
+            overlayCanvasGroup.alpha = 1f;
+            overlayCanvasGroup.interactable = true;
+            overlayCanvasGroup.blocksRaycasts = true;
+        }
     }
 
     private void HideOverlayImmediate()
     {
+        usingCompletionIntroSequence = false;
+
+        if (overlaySequence != null)
+        {
+            overlaySequence.HideImmediate();
+        }
+
         if (overlayRoot == null)
         {
             return;
@@ -300,6 +473,14 @@ public class MissionEndOverlayController : MonoBehaviour
         else
         {
             overlayRoot.SetActive(false);
+        }
+
+        // Stop any pending or running rank stamp coroutines when hiding overlay
+        StopRankStampDelay();
+        if (rankStampCoroutine != null)
+        {
+            StopCoroutine(rankStampCoroutine);
+            rankStampCoroutine = null;
         }
     }
 
@@ -317,9 +498,10 @@ public class MissionEndOverlayController : MonoBehaviour
 
         if (resultStateText != null)
         {
-            resultStateText.text = missionSystem.State == IncidentMissionSystem.MissionState.Completed
-                ? MissionLocalization.Get("mission.end.completed_title", completedTitle)
-                : MissionLocalization.Get("mission.end.failed_title", failedTitle);
+            resultStateText.text =
+                missionSystem.State == IncidentMissionSystem.MissionState.Completed
+                    ? MissionLocalization.Get("mission.end.completed_title", completedTitle)
+                    : MissionLocalization.Get("mission.end.failed_title", failedTitle);
         }
 
         if (missionNameText != null)
@@ -331,7 +513,8 @@ public class MissionEndOverlayController : MonoBehaviour
         {
             performanceHeaderText.text = MissionLocalization.Get(
                 "mission.end.performance_header",
-                MissionLocalization.Get("mission.end.stats_header", performanceHeader));
+                MissionLocalization.Get("mission.end.stats_header", performanceHeader)
+            );
         }
 
         if (timeLabelText != null)
@@ -346,12 +529,18 @@ public class MissionEndOverlayController : MonoBehaviour
 
         if (rescuesLabelText != null)
         {
-            rescuesLabelText.text = MissionLocalization.Get("mission.end.rescues_label", rescuesLabel);
+            rescuesLabelText.text = MissionLocalization.Get(
+                "mission.end.rescues_label",
+                rescuesLabel
+            );
         }
 
         if (victimsLabelText != null)
         {
-            victimsLabelText.text = MissionLocalization.Get("mission.end.victims_label", victimsLabel);
+            victimsLabelText.text = MissionLocalization.Get(
+                "mission.end.victims_label",
+                victimsLabel
+            );
         }
 
         if (scoreLabelText != null)
@@ -359,9 +548,14 @@ public class MissionEndOverlayController : MonoBehaviour
             scoreLabelText.text = MissionLocalization.Get("mission.end.score_label", scoreLabel);
         }
 
+        if (rankLabelText != null)
+        {
+            rankLabelText.text = MissionLocalization.Get("mission.end.rank_label", rankLabel);
+        }
+
         if (timeValueText != null)
         {
-            timeValueText.text = FormatElapsedTime(missionSystem.ElapsedTime);
+            timeValueText.text = BuildTimeValue();
         }
 
         if (scoreRowRoot != null)
@@ -370,13 +564,39 @@ public class MissionEndOverlayController : MonoBehaviour
             scoreRowRoot.SetActive(hasScore);
             if (hasScore && scoreValueText != null)
             {
-                scoreValueText.text = BuildScoreValue();
+                scoreValueText.text = BuildScoreValue(rankValueText == null);
+            }
+        }
+
+        if (rankStampRoot != null)
+        {
+            bool hasRank = !string.IsNullOrWhiteSpace(missionSystem.DisplayedScoreRank);
+            bool showRank = missionSystem.DisplayedMaximumScore > 0 || hasRank;
+            rankStampRoot.SetActive(showRank);
+
+            if (showRank && rankValueText != null)
+            {
+                rankValueText.text = hasRank ? missionSystem.DisplayedScoreRank : "-";
+            }
+
+            if (showRank)
+            {
+                StartRankStampDelay();
+            }
+            else
+            {
+                StopRankStampDelay();
+                if (rankStampRoot != null)
+                {
+                    rankStampRoot.SetActive(false);
+                }
             }
         }
 
         if (rescuesValueText != null)
         {
-            rescuesValueText.text = $"{missionSystem.DisplayedRescuedCount} / {missionSystem.DisplayedTotalTrackedRescuables}";
+            rescuesValueText.text =
+                $"{missionSystem.DisplayedRescuedCount} / {missionSystem.DisplayedTotalTrackedRescuables}";
         }
 
         if (victimsValueText != null)
@@ -388,17 +608,22 @@ public class MissionEndOverlayController : MonoBehaviour
                 missionSystem.DisplayedCriticalVictimCount,
                 missionSystem.DisplayedStabilizedVictimCount,
                 missionSystem.DisplayedExtractedVictimCount,
-                missionSystem.DisplayedDeceasedVictimCount);
+                missionSystem.DisplayedDeceasedVictimCount
+            );
         }
 
         if (firesValueText != null)
         {
-            firesValueText.text = $"{missionSystem.DisplayedExtinguishedFireCount} / {missionSystem.DisplayedTotalTrackedFires}";
+            firesValueText.text =
+                $"{missionSystem.DisplayedExtinguishedFireCount} / {missionSystem.DisplayedTotalTrackedFires}";
         }
 
         if (objectivesHeaderText != null)
         {
-            objectivesHeaderText.text = MissionLocalization.Get("mission.end.objectives_header", objectivesHeader);
+            objectivesHeaderText.text = MissionLocalization.Get(
+                "mission.end.objectives_header",
+                objectivesHeader
+            );
         }
 
         RefreshObjectiveRows();
@@ -406,7 +631,7 @@ public class MissionEndOverlayController : MonoBehaviour
 
     private void HandleLanguageChanged(AppLanguage _)
     {
-        if (!hasOpenedResult)
+        if (!hasOpenedResult || usingCompletionIntroSequence)
         {
             return;
         }
@@ -414,6 +639,31 @@ public class MissionEndOverlayController : MonoBehaviour
         ResolveSceneOverlay();
         PopulateOverlay();
         RefreshButtonLabels();
+    }
+
+    private void HandleCompletionIntroFinished()
+    {
+        usingCompletionIntroSequence = false;
+        ResolveSceneOverlay();
+        PopulateOverlay();
+        RefreshButtonLabels();
+
+        if (retryButtonRoot != null)
+        {
+            retryButtonRoot.SetActive(showRetryButton);
+        }
+
+        if (mainMenuButtonRoot != null)
+        {
+            mainMenuButtonRoot.SetActive(showMainMenuButton);
+        }
+
+        if (overlayCanvasGroup != null)
+        {
+            overlayCanvasGroup.alpha = 1f;
+            overlayCanvasGroup.interactable = true;
+            overlayCanvasGroup.blocksRaycasts = true;
+        }
     }
 
     private void RefreshObjectiveRows()
@@ -433,9 +683,18 @@ public class MissionEndOverlayController : MonoBehaviour
             }
         }
 
-        for (int i = 0; i < missionSystem.ResultObjectiveStatusCount && visibleCount < objectiveRows.Length; i++)
+        for (
+            int i = 0;
+            i < missionSystem.ResultObjectiveStatusCount && visibleCount < objectiveRows.Length;
+            i++
+        )
         {
-            if (!missionSystem.TryGetResultObjectiveStatus(i, out MissionObjectiveStatusSnapshot status))
+            if (
+                !missionSystem.TryGetResultObjectiveStatus(
+                    i,
+                    out MissionObjectiveStatusSnapshot status
+                )
+            )
             {
                 continue;
             }
@@ -474,7 +733,10 @@ public class MissionEndOverlayController : MonoBehaviour
         firstRow.Root.SetActive(true);
         if (firstRow.Text != null)
         {
-            firstRow.Text.text = MissionLocalization.Get("mission.end.no_objectives", noObjectivesLabel);
+            firstRow.Text.text = MissionLocalization.Get(
+                "mission.end.no_objectives",
+                noObjectivesLabel
+            );
             firstRow.Text.color = ObjectivePendingColor;
         }
 
@@ -524,14 +786,13 @@ public class MissionEndOverlayController : MonoBehaviour
         float preferredHeight = 36f;
         if (row.Text != null)
         {
-            row.Text.enableAutoSizing = true;
-            row.Text.fontSizeMin = 12f;
+            // Disable auto-sizing to prevent the text component from changing font size at runtime.
+            row.Text.enableAutoSizing = false;
             row.Text.textWrappingMode = TextWrappingModes.Normal;
             row.Text.overflowMode = TextOverflowModes.Overflow;
 
-            RectTransform rowRectTransform = row.Root.transform as RectTransform;
-            float textWidth = rowRectTransform != null ? Mathf.Max(140f, rowRectTransform.rect.width - 32f) : 220f;
-            preferredHeight = Mathf.Max(preferredHeight, row.Text.GetPreferredValues(row.Text.text, textWidth, 0f).y + 10f);
+            // Do not compute preferredHeight from GetPreferredValues to avoid dynamic row resizing.
+            // Keep the default/fallback preferredHeight value above.
         }
 
         row.LayoutElement.minHeight = preferredHeight;
@@ -551,10 +812,10 @@ public class MissionEndOverlayController : MonoBehaviour
         Canvas.ForceUpdateCanvases();
     }
 
-    private string BuildScoreValue()
+    private string BuildScoreValue(bool includeRank)
     {
         string scoreValue = $"{missionSystem.DisplayedScore}/{missionSystem.DisplayedMaximumScore}";
-        if (string.IsNullOrWhiteSpace(missionSystem.DisplayedScoreRank))
+        if (!includeRank || string.IsNullOrWhiteSpace(missionSystem.DisplayedScoreRank))
         {
             return scoreValue;
         }
@@ -562,7 +823,10 @@ public class MissionEndOverlayController : MonoBehaviour
         return $"{scoreValue} [{missionSystem.DisplayedScoreRank}]";
     }
 
-    private static string BuildObjectiveText(MissionObjectiveStatusSnapshot status, bool includePrefix)
+    private static string BuildObjectiveText(
+        MissionObjectiveStatusSnapshot status,
+        bool includePrefix
+    )
     {
         string text = !string.IsNullOrWhiteSpace(status.Summary) ? status.Summary : status.Title;
         if (status.MaxScore > 0)
@@ -575,11 +839,10 @@ public class MissionEndOverlayController : MonoBehaviour
             return text;
         }
 
-        string prefix = status.HasFailed
-            ? MissionLocalization.Get("mission.hud.prefix.failed", "[FAILED]")
-            : status.IsComplete
-                ? MissionLocalization.Get("mission.hud.prefix.completed", "[DONE]")
-                : MissionLocalization.Get("mission.hud.prefix.pending", "[ ]");
+        string prefix =
+            status.HasFailed ? MissionLocalization.Get("mission.hud.prefix.failed", "[FAILED]")
+            : status.IsComplete ? MissionLocalization.Get("mission.hud.prefix.completed", "[DONE]")
+            : MissionLocalization.Get("mission.hud.prefix.pending", "[ ]");
         return $"{prefix} {text}";
     }
 
@@ -587,12 +850,18 @@ public class MissionEndOverlayController : MonoBehaviour
     {
         if (retryButtonText != null)
         {
-            retryButtonText.text = MissionLocalization.Get("mission.end.retry_button", retryButtonLabel);
+            retryButtonText.text = MissionLocalization.Get(
+                "mission.end.retry_button",
+                retryButtonLabel
+            );
         }
 
         if (mainMenuButtonText != null)
         {
-            mainMenuButtonText.text = MissionLocalization.Get("mission.end.main_menu_button", mainMenuButtonLabel);
+            mainMenuButtonText.text = MissionLocalization.Get(
+                "mission.end.main_menu_button",
+                mainMenuButtonLabel
+            );
         }
     }
 
@@ -622,7 +891,21 @@ public class MissionEndOverlayController : MonoBehaviour
         timeScaleOverridden = false;
     }
 
-    private static string FormatElapsedTime(float elapsedSeconds)
+    private string BuildTimeValue()
+    {
+        if (missionSystem == null)
+        {
+            return string.Empty;
+        }
+
+        float seconds =
+            missionSystem.TimeLimitSeconds > 0f
+                ? missionSystem.RemainingTimeSeconds
+                : missionSystem.ElapsedTime;
+        return FormatClock(seconds);
+    }
+
+    private static string FormatClock(float elapsedSeconds)
     {
         int roundedSeconds = Mathf.Max(0, Mathf.RoundToInt(elapsedSeconds));
         int hours = roundedSeconds / 3600;
@@ -692,6 +975,12 @@ public class MissionEndOverlayController : MonoBehaviour
         return FindDescendantByName(root, objectName)?.GetComponent<TMP_Text>();
     }
 
+    private static TMP_Text FindTextInNamedRow(Transform root, string rowName, string textName)
+    {
+        Transform row = FindDescendantByName(root, rowName);
+        return FindText(row, textName);
+    }
+
     private static Button FindButton(Transform root, string objectName)
     {
         return FindDescendantByName(root, objectName)?.GetComponent<Button>();
@@ -701,6 +990,17 @@ public class MissionEndOverlayController : MonoBehaviour
     {
         Transform row = FindDescendantByName(root, rowName);
         return FindFirstTextInTransform(row);
+    }
+
+    private static TMP_Text FindTextInNamedRowChild(Transform root, string rowName, int childIndex)
+    {
+        Transform row = FindDescendantByName(root, rowName);
+        if (row == null || childIndex < 0 || childIndex >= row.childCount)
+        {
+            return null;
+        }
+
+        return FindFirstTextInTransform(row.GetChild(childIndex));
     }
 
     private static TMP_Text FindFirstTextInTransform(Transform root)
@@ -722,6 +1022,12 @@ public class MissionEndOverlayController : MonoBehaviour
             return null;
         }
 
+        TMP_Text directChildValueText = FindBoundaryTextInRow(row, false);
+        if (directChildValueText != null)
+        {
+            return directChildValueText;
+        }
+
         TMP_Text[] texts = row.GetComponentsInChildren<TMP_Text>(true);
         if (texts.Length == 0)
         {
@@ -739,6 +1045,12 @@ public class MissionEndOverlayController : MonoBehaviour
             return null;
         }
 
+        TMP_Text directChildLabelText = FindBoundaryTextInRow(row, true);
+        if (directChildLabelText != null)
+        {
+            return directChildLabelText;
+        }
+
         TMP_Text[] texts = row.GetComponentsInChildren<TMP_Text>(true);
         if (texts.Length == 0)
         {
@@ -746,6 +1058,26 @@ public class MissionEndOverlayController : MonoBehaviour
         }
 
         return texts[0];
+    }
+
+    private static TMP_Text FindBoundaryTextInRow(Transform row, bool firstChild)
+    {
+        if (row == null || row.childCount == 0)
+        {
+            return null;
+        }
+
+        int childIndex = firstChild ? 0 : row.childCount - 1;
+        Transform child = row.GetChild(childIndex);
+        TMP_Text childText = FindFirstTextInTransform(child);
+        if (childText != null)
+        {
+            return childText;
+        }
+
+        return row.childCount >= 2
+            ? FindFirstTextInTransform(row.GetChild(firstChild ? 1 : row.childCount - 2))
+            : null;
     }
 
     private static Image FindFirstImageInTransform(Transform root)
@@ -765,5 +1097,191 @@ public class MissionEndOverlayController : MonoBehaviour
         }
 
         return null;
+    }
+
+    private static ObjectiveRowView[] BuildObjectiveRows(Transform root)
+    {
+        Transform objectivesArea = FindDescendantByName(root, "Objectives_Area");
+        if (objectivesArea != null)
+        {
+            List<ObjectiveRowView> summaryRows = new List<ObjectiveRowView>();
+            for (int i = 0; i < objectivesArea.childCount; i++)
+            {
+                Transform rowTransform = objectivesArea.GetChild(i);
+                if (!rowTransform.name.StartsWith("ObjectiveRow_", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                summaryRows.Add(
+                    new ObjectiveRowView
+                    {
+                        Root = rowTransform.gameObject,
+                        Text =
+                            FindText(rowTransform, "Txt_ObjectiveDesc")
+                            ?? FindFirstTextInTransform(rowTransform),
+                        Icon =
+                            FindDescendantByName(rowTransform, "Icon_Checkmark")
+                                ?.GetComponent<Image>() ?? FindFirstImageInTransform(rowTransform),
+                        LayoutElement = rowTransform.GetComponent<LayoutElement>(),
+                    }
+                );
+            }
+
+            if (summaryRows.Count > 0)
+            {
+                return summaryRows.ToArray();
+            }
+        }
+
+        ObjectiveRowView[] legacyRows = new ObjectiveRowView[ObjectiveRowNames.Length];
+        for (int i = 0; i < ObjectiveRowNames.Length; i++)
+        {
+            Transform rowTransform = FindDescendantByName(root, ObjectiveRowNames[i]);
+            if (rowTransform == null)
+            {
+                continue;
+            }
+
+            legacyRows[i] = new ObjectiveRowView
+            {
+                Root = rowTransform.gameObject,
+                Text =
+                    FindText(root, ObjectiveTextNames[i])
+                    ?? FindTextInNamedRowChild(root, ObjectiveRowNames[i], 1)
+                    ?? FindFirstTextInTransform(rowTransform),
+                Icon = FindFirstImageInTransform(rowTransform),
+                LayoutElement = rowTransform.GetComponent<LayoutElement>(),
+            };
+        }
+
+        return legacyRows;
+    }
+
+    private void EnsurePreferredSummaryPanelActive()
+    {
+        if (gameSummaryPanelRoot == null)
+        {
+            return;
+        }
+
+        gameSummaryPanelRoot.SetActive(true);
+        if (legacyResultPanelRoot != null)
+        {
+            legacyResultPanelRoot.SetActive(false);
+        }
+    }
+
+    private void StartRankStampAnimation()
+    {
+        if (rankStampCoroutine != null)
+        {
+            StopCoroutine(rankStampCoroutine);
+            rankStampCoroutine = null;
+        }
+
+        if (rankStampRoot == null)
+        {
+            return;
+        }
+
+        // Ensure the stamp GameObject is active before animating.
+        rankStampRoot.SetActive(true);
+        rankStampCoroutine = StartCoroutine(RankStampRoutine());
+    }
+
+    private IEnumerator RankStampRoutine()
+    {
+        Transform t = rankStampRoot.transform;
+        Vector3 originalScale = t.localScale;
+        Quaternion originalRot = t.localRotation;
+
+        t.localScale = Vector3.zero;
+        t.localRotation = Quaternion.Euler(0f, 0f, -30f);
+
+        float phase1 = 0.12f;
+        float phase2 = 0.18f;
+        float elapsed = 0f;
+
+        // pop in to slightly larger than original
+        while (elapsed < phase1)
+        {
+            float p = elapsed / phase1;
+            float s = Mathf.SmoothStep(0f, 1.25f, p);
+            t.localScale = originalScale * s;
+            t.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(-30f, 10f, p));
+            elapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        // settle back to original with small bounce
+        elapsed = 0f;
+        Vector3 overshoot = originalScale * 1.05f;
+        while (elapsed < phase2)
+        {
+            float p = elapsed / phase2;
+            float s = Mathf.SmoothStep(1.25f, 1f, p);
+            t.localScale = originalScale * s;
+            t.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(10f, 0f, p));
+            elapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        t.localScale = originalScale;
+        t.localRotation = originalRot;
+        rankStampCoroutine = null;
+    }
+
+    private void StartRankStampDelay()
+    {
+        StopRankStampDelay();
+        if (rankStampRoot == null)
+        {
+            return;
+        }
+        // Ensure it's hidden until delay completes
+        rankStampRoot.SetActive(false);
+        rankStampDelayCoroutine = StartCoroutine(RankStampDelayRoutine());
+    }
+
+    private void StopRankStampDelay()
+    {
+        if (rankStampDelayCoroutine != null)
+        {
+            StopCoroutine(rankStampDelayCoroutine);
+            rankStampDelayCoroutine = null;
+        }
+    }
+
+    private IEnumerator RankStampDelayRoutine()
+    {
+        // wait until GameSummaryPanel is active
+        if (gameSummaryPanelRoot == null)
+        {
+            yield break;
+        }
+
+        // Wait until panel becomes active in hierarchy
+        while (!gameSummaryPanelRoot.activeInHierarchy)
+        {
+            yield return null;
+        }
+
+        // Require 3 seconds of continuous visible time (unscaled)
+        float required = 3f;
+        float timer = 0f;
+        while (timer < required)
+        {
+            if (!gameSummaryPanelRoot.activeInHierarchy)
+            {
+                // aborted, panel hidden again
+                yield break;
+            }
+            timer += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        rankStampDelayCoroutine = null;
+        StartRankStampAnimation();
     }
 }

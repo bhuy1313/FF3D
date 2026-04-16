@@ -747,6 +747,7 @@ GameObject:
   - component: {fileID: 126010339}
   - component: {fileID: 126010338}
   - component: {fileID: 126010337}
+  - component: {fileID: 126010340}
   m_Layer: 5
   m_Name: LevelButton_01
   m_TagString: Untagged
@@ -856,6 +857,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 126010335}
   m_CullTransparentMesh: 1
+--- !u!114 &126010340
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 126010335}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03e2ad4bd1685ac42bb63cc3070b2528, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
+  hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
 --- !u!1 &175227394
 GameObject:
   m_ObjectHideFlags: 0
@@ -1142,6 +1156,7 @@ GameObject:
   - component: {fileID: 214789550}
   - component: {fileID: 214789549}
   - component: {fileID: 214789548}
+  - component: {fileID: 214789551}
   m_Layer: 5
   m_Name: btnSelectManual
   m_TagString: Untagged
@@ -1251,6 +1266,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 214789546}
   m_CullTransparentMesh: 1
+--- !u!114 &214789551
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 214789546}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03e2ad4bd1685ac42bb63cc3070b2528, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
+  hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
 --- !u!1 &227634749
 GameObject:
   m_ObjectHideFlags: 0
@@ -1339,6 +1367,7 @@ GameObject:
   - component: {fileID: 229873619}
   - component: {fileID: 229873618}
   - component: {fileID: 229873617}
+  - component: {fileID: 229873620}
   m_Layer: 5
   m_Name: LevelButton_03
   m_TagString: Untagged
@@ -1448,6 +1477,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 229873615}
   m_CullTransparentMesh: 1
+--- !u!114 &229873620
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 229873615}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03e2ad4bd1685ac42bb63cc3070b2528, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
+  hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
 --- !u!1 &254341424
 GameObject:
   m_ObjectHideFlags: 0
@@ -1827,6 +1869,7 @@ GameObject:
   - component: {fileID: 311261089}
   - component: {fileID: 311261088}
   - component: {fileID: 311261087}
+  - component: {fileID: 311261090}
   m_Layer: 5
   m_Name: LevelButton_02
   m_TagString: Untagged
@@ -1936,6 +1979,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 311261085}
   m_CullTransparentMesh: 1
+--- !u!114 &311261090
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 311261085}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03e2ad4bd1685ac42bb63cc3070b2528, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
+  hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
 --- !u!1 &362534168
 GameObject:
   m_ObjectHideFlags: 0
@@ -2237,8 +2293,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 257516651}
   m_HandleRect: {fileID: 257516650}
   m_Direction: 0
-  m_Value: 1
-  m_Size: 0.9999997
+  m_Value: 0
+  m_Size: 0.9999998
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -2672,6 +2728,7 @@ GameObject:
   - component: {fileID: 521055400}
   - component: {fileID: 521055399}
   - component: {fileID: 521055398}
+  - component: {fileID: 521055401}
   m_Layer: 5
   m_Name: LevelButton_02
   m_TagString: Untagged
@@ -2781,6 +2838,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 521055396}
   m_CullTransparentMesh: 1
+--- !u!114 &521055401
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 521055396}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03e2ad4bd1685ac42bb63cc3070b2528, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
+  hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
 --- !u!1 &543280548
 GameObject:
   m_ObjectHideFlags: 0
@@ -2866,6 +2936,7 @@ GameObject:
   - component: {fileID: 547528741}
   - component: {fileID: 547528740}
   - component: {fileID: 547528739}
+  - component: {fileID: 547528743}
   m_Layer: 5
   m_Name: CityCard
   m_TagString: Untagged
@@ -2985,6 +3056,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 547528737}
   m_CullTransparentMesh: 1
+--- !u!114 &547528743
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 547528737}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03e2ad4bd1685ac42bb63cc3070b2528, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
+  hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
 --- !u!1 &603475599
 GameObject:
   m_ObjectHideFlags: 0
@@ -4355,6 +4439,7 @@ GameObject:
   - component: {fileID: 1029421740}
   - component: {fileID: 1029421744}
   - component: {fileID: 1029421743}
+  - component: {fileID: 1029421745}
   m_Layer: 5
   m_Name: BtnPlay
   m_TagString: Untagged
@@ -4504,6 +4589,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ContentSizeFitter
   m_HorizontalFit: 0
   m_VerticalFit: 2
+--- !u!114 &1029421745
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1029421738}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03e2ad4bd1685ac42bb63cc3070b2528, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
+  hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
 --- !u!1 &1030400444
 GameObject:
   m_ObjectHideFlags: 0
@@ -6133,6 +6231,7 @@ GameObject:
   - component: {fileID: 1367334200}
   - component: {fileID: 1367334199}
   - component: {fileID: 1367334198}
+  - component: {fileID: 1367334201}
   m_Layer: 5
   m_Name: LevelButton_01
   m_TagString: Untagged
@@ -6242,6 +6341,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1367334196}
   m_CullTransparentMesh: 1
+--- !u!114 &1367334201
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1367334196}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03e2ad4bd1685ac42bb63cc3070b2528, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
+  hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
 --- !u!1 &1391146567
 GameObject:
   m_ObjectHideFlags: 0
@@ -7197,6 +7309,7 @@ GameObject:
   - component: {fileID: 1756873980}
   - component: {fileID: 1756873979}
   - component: {fileID: 1756873978}
+  - component: {fileID: 1756873982}
   m_Layer: 5
   m_Name: SuburbanCard
   m_TagString: Untagged
@@ -7316,6 +7429,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1756873976}
   m_CullTransparentMesh: 1
+--- !u!114 &1756873982
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1756873976}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03e2ad4bd1685ac42bb63cc3070b2528, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
+  hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
 --- !u!1 &1758142995
 GameObject:
   m_ObjectHideFlags: 0
@@ -7328,6 +7454,7 @@ GameObject:
   - component: {fileID: 1758142999}
   - component: {fileID: 1758142998}
   - component: {fileID: 1758142997}
+  - component: {fileID: 1758143000}
   m_Layer: 5
   m_Name: LevelButton_03
   m_TagString: Untagged
@@ -7437,6 +7564,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1758142995}
   m_CullTransparentMesh: 1
+--- !u!114 &1758143000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1758142995}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03e2ad4bd1685ac42bb63cc3070b2528, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
+  hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
 --- !u!1 &1770715265
 GameObject:
   m_ObjectHideFlags: 0
@@ -8314,6 +8454,7 @@ GameObject:
   - component: {fileID: 1871432960}
   - component: {fileID: 1871432959}
   - component: {fileID: 1871432961}
+  - component: {fileID: 1871432962}
   m_Layer: 5
   m_Name: item
   m_TagString: Untagged
@@ -8423,6 +8564,19 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &1871432962
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1871432957}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03e2ad4bd1685ac42bb63cc3070b2528, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
+  hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
 --- !u!1 &1904167482
 GameObject:
   m_ObjectHideFlags: 0
@@ -9308,6 +9462,7 @@ GameObject:
   - component: {fileID: 2145686735}
   - component: {fileID: 2145686734}
   - component: {fileID: 2145686733}
+  - component: {fileID: 2145686736}
   m_Layer: 5
   m_Name: btnClose
   m_TagString: Untagged
@@ -9417,6 +9572,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2145686731}
   m_CullTransparentMesh: 1
+--- !u!114 &2145686736
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2145686731}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03e2ad4bd1685ac42bb63cc3070b2528, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
+  hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
 --- !u!1 &2146860103
 GameObject:
   m_ObjectHideFlags: 0
@@ -9793,8 +9961,92 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 3854860956754845600, guid: a2324dcc5bd37d34194d2f2efb321985, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6333690272460569603}
+    - targetCorrespondingSourceObject: {fileID: 3797919629507685110, guid: a2324dcc5bd37d34194d2f2efb321985, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6333690272460569602}
+    - targetCorrespondingSourceObject: {fileID: 4356131960169646937, guid: a2324dcc5bd37d34194d2f2efb321985, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6333690272460569601}
+    - targetCorrespondingSourceObject: {fileID: 3965998684864988070, guid: a2324dcc5bd37d34194d2f2efb321985, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6333690272460569600}
   m_SourcePrefab: {fileID: 100100000, guid: a2324dcc5bd37d34194d2f2efb321985, type: 3}
+--- !u!1 &6333690272460569596 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3965998684864988070, guid: a2324dcc5bd37d34194d2f2efb321985, type: 3}
+  m_PrefabInstance: {fileID: 6333690272460569595}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &6333690272460569597 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4356131960169646937, guid: a2324dcc5bd37d34194d2f2efb321985, type: 3}
+  m_PrefabInstance: {fileID: 6333690272460569595}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &6333690272460569598 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3797919629507685110, guid: a2324dcc5bd37d34194d2f2efb321985, type: 3}
+  m_PrefabInstance: {fileID: 6333690272460569595}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &6333690272460569599 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3854860956754845600, guid: a2324dcc5bd37d34194d2f2efb321985, type: 3}
+  m_PrefabInstance: {fileID: 6333690272460569595}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &6333690272460569600
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6333690272460569596}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03e2ad4bd1685ac42bb63cc3070b2528, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
+  hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+--- !u!114 &6333690272460569601
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6333690272460569597}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03e2ad4bd1685ac42bb63cc3070b2528, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
+  hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+--- !u!114 &6333690272460569602
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6333690272460569598}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03e2ad4bd1685ac42bb63cc3070b2528, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
+  hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+--- !u!114 &6333690272460569603
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6333690272460569599}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03e2ad4bd1685ac42bb63cc3070b2528, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
+  hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
