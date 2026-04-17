@@ -1,0 +1,60 @@
+#  ===== UNITY CACHE (BẮT BUỘC IGNORE) =====
+Library/
+Temp/
+Logs/
+Obj/
+Build/
+Builds/
+
+#  ===== VERSION CONTROL =====
+.git/
+.gitignore
+
+#  ===== IDE =====
+.vscode/
+.idea/
+
+#  ===== OS FILES =====
+.DS_Store
+Thumbs.db
+
+#  ===== UNITY GENERATED =====
+MemoryCaptures/
+UserSettings/
+
+#  ===== ADDRESSABLE / BUILD CACHE =====
+ServerData/
+
+# =========================================
+#  ===== IGNORE ASSET NẶNG (CHỈ TRONG ASSETS) =====
+
+Assets/**/*.fbx
+Assets/**/*.obj
+Assets/**/*.blend
+Assets/**/*.psd
+
+Assets/**/*.png
+Assets/**/*.jpg
+Assets/**/*.jpeg
+Assets/**/*.tga
+Assets/**/*.hdr
+
+Assets/**/*.mp3
+Assets/**/*.wav
+Assets/**/*.ogg
+Assets/**/*.mp4
+Assets/**/*.mov
+
+# =========================================
+#  ===== CHO PHÉP NHỮNG THỨ QUAN TRỌNG =====
+
+!Assets/**/*.cs
+!Assets/**/*.prefab
+!Assets/**/*.unity
+!Assets/**/*.asset
+!Assets/**/*.controller
+!Assets/**/*.anim
+!Assets/**/*.meta
+
+!ProjectSettings/
+!Packages/

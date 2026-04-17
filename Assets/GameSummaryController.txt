@@ -1,0 +1,57 @@
+using UnityEngine;
+using DG.Tweening; // Thư viện DOTween
+using TMPro;
+using System.Collections;
+
+public class GameSummaryController : MonoBehaviour
+{
+    public CanvasGroup headerGroup;
+    public RectTransform[] statRows;
+    public RectTransform rankStamp;
+    public TextMeshProUGUI scoreText;
+    public CanvasGroup buttonGroup;
+
+    void Start()
+    {
+        StartCoroutine(PlayAnimations());
+    }
+
+    IEnumerator PlayAnimations()
+    {
+        // 1. Hiện Title
+        headerGroup.DOFade(1f, 0.5f);
+        yield return new WaitForSeconds(0.5f);
+
+        // 2. Hiện tuần tự các dòng chỉ số (Slide in)
+        foreach(var row in statRows)
+        {
+            row.anchoredPosition = new Vector2(-50, row.anchoredPosition.y); // Set vị trí ban đầu
+            row.DOAnchorPosX(0, 0.4f).SetEase(Ease.OutCubic);
+            row.GetComponent<CanvasGroup>().DOFade(1f, 0.4f);
+            yield return new WaitForSeconds(0.15f); // Chờ 150ms như React
+        }
+
+        yield return new WaitForSeconds(0.5f);
+
+        // 3. Đếm điểm
+        int currentScore = 0;
+        DOTween.To(() => currentScore, x => currentScore = x, 850, 1f)
+            .OnUpdate(() => scoreText.text = currentScore.ToString() + "/1000");
+        
+        yield return new WaitForSeconds(1.2f);
+
+        // 4. Hiệu ứng đóng dấu Rank
+        rankStamp.localScale = Vector3.one * 3f;
+        rankStamp.localRotation = Quaternion.Euler(0, 0, -30);
+        rankStamp.gameObject.SetActive(true);
+        
+        rankStamp.DOScale(1f, 0.5f).SetEase(Ease.OutBack); // OutBack tạo độ nảy
+        rankStamp.DORotate(new Vector3(0, 0, 15), 0.5f).SetEase(Ease.OutBack);
+
+        yield return new WaitForSeconds(0.5f);
+
+        // 5. Hiện nút bấm
+        buttonGroup.DOFade(1f, 0.3f);
+        buttonGroup.transform.DOScale(1f, 0.3f).From(Vector3.one * 0.9f);
+    }
+}

@@ -241,11 +241,7 @@ public class MissionEndOverlayController : MonoBehaviour
         overlayRoot = overlayTransform.gameObject;
         overlayCanvasGroup = overlayRoot.GetComponent<CanvasGroup>();
         overlaySequence = overlayRoot.GetComponent<MissionResultPopupSequence>();
-        if (
-            overlaySequence == null
-            && SceneManager.GetActiveScene().name == "Tutorial"
-            && FindDescendantByName(overlayTransform, "MissionComplete") != null
-        )
+        if (overlaySequence == null && CanAutoAttachCompletionSequence(overlayTransform))
         {
             overlaySequence = overlayRoot.AddComponent<MissionResultPopupSequence>();
         }
@@ -319,13 +315,14 @@ public class MissionEndOverlayController : MonoBehaviour
         objectivesHeaderText =
             FindText(overlayContentRoot, "Txt_ObjectivesTitle")
             ?? FindText(overlayContentRoot, "ObjectivesHeadingText");
-        objectivesListRectTransform =
-            FindDescendantByName(overlayContentRoot, "Objectives_Area") as RectTransform
-            ?? FindDescendantByName(overlayContentRoot, "ObjectivesList") as RectTransform;
+        Transform objectivesAreaTransform =
+            FindDescendantByName(overlayContentRoot, "Objectives_Area")
+            ?? FindDescendantByName(overlayContentRoot, "ObjectivesList");
+        objectivesListRectTransform = ResolveObjectivesListRoot(objectivesAreaTransform);
         rankStampRoot = FindDescendantByName(overlayContentRoot, "Rank_Stamp_Group")?.gameObject;
         rankLabelText = FindText(overlayContentRoot, "Txt_RankLabel");
         rankValueText = FindText(overlayContentRoot, "Txt_RankGrade");
-        objectiveRows = BuildObjectiveRows(overlayContentRoot);
+        objectiveRows = BuildObjectiveRows(overlayContentRoot, objectivesAreaTransform);
 
         retryButtonRoot =
             FindDescendantByName(overlayContentRoot, "btnRetry")?.gameObject
@@ -1099,34 +1096,12 @@ public class MissionEndOverlayController : MonoBehaviour
         return null;
     }
 
-    private static ObjectiveRowView[] BuildObjectiveRows(Transform root)
+    private static ObjectiveRowView[] BuildObjectiveRows(Transform root, Transform objectivesArea)
     {
-        Transform objectivesArea = FindDescendantByName(root, "Objectives_Area");
         if (objectivesArea != null)
         {
             List<ObjectiveRowView> summaryRows = new List<ObjectiveRowView>();
-            for (int i = 0; i < objectivesArea.childCount; i++)
-            {
-                Transform rowTransform = objectivesArea.GetChild(i);
-                if (!rowTransform.name.StartsWith("ObjectiveRow_", StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                summaryRows.Add(
-                    new ObjectiveRowView
-                    {
-                        Root = rowTransform.gameObject,
-                        Text =
-                            FindText(rowTransform, "Txt_ObjectiveDesc")
-                            ?? FindFirstTextInTransform(rowTransform),
-                        Icon =
-                            FindDescendantByName(rowTransform, "Icon_Checkmark")
-                                ?.GetComponent<Image>() ?? FindFirstImageInTransform(rowTransform),
-                        LayoutElement = rowTransform.GetComponent<LayoutElement>(),
-                    }
-                );
-            }
+            CollectObjectiveRows(objectivesArea, summaryRows);
 
             if (summaryRows.Count > 0)
             {
@@ -1156,6 +1131,113 @@ public class MissionEndOverlayController : MonoBehaviour
         }
 
         return legacyRows;
+    }
+
+    private static bool CanAutoAttachCompletionSequence(Transform overlayTransform)
+    {
+        if (overlayTransform == null)
+        {
+            return false;
+        }
+
+        return FindDescendantByName(overlayTransform, "MissionComplete") != null
+            && FindDescendantByName(overlayTransform, "GameSummaryPanel") != null;
+    }
+
+    private static void CollectObjectiveRows(Transform root, List<ObjectiveRowView> rows)
+    {
+        if (root == null || rows == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < root.childCount; i++)
+        {
+            Transform child = root.GetChild(i);
+            if (child == null)
+            {
+                continue;
+            }
+
+            if (child.name.StartsWith("ObjectiveRow_", StringComparison.Ordinal))
+            {
+                rows.Add(
+                    new ObjectiveRowView
+                    {
+                        Root = child.gameObject,
+                        Text =
+                            FindText(child, "Txt_ObjectiveDesc")
+                            ?? FindFirstTextInTransform(child),
+                        Icon =
+                            FindDescendantByName(child, "Icon_Checkmark")?.GetComponent<Image>()
+                            ?? FindFirstImageInTransform(child),
+                        LayoutElement =
+                            child.GetComponent<LayoutElement>()
+                            ?? child.GetComponentInChildren<LayoutElement>(true),
+                    }
+                );
+                continue;
+            }
+
+            CollectObjectiveRows(child, rows);
+        }
+    }
+
+    private static RectTransform ResolveObjectivesListRoot(Transform objectivesArea)
+    {
+        if (objectivesArea == null)
+        {
+            return null;
+        }
+
+        Transform explicitListRoot =
+            FindDescendantByName(objectivesArea, "ObjectivesList")
+            ?? FindDescendantByName(objectivesArea, "Objectives_Wrapper")
+            ?? FindDescendantByName(objectivesArea, "Objectives_Content")
+            ?? FindDescendantByName(objectivesArea, "Objectives_VisualRoot")
+            ?? FindDescendantByName(objectivesArea, "Objectives_Body");
+        if (explicitListRoot is RectTransform explicitRect)
+        {
+            return explicitRect;
+        }
+
+        Transform firstObjectiveRow = FindFirstDescendantByPrefix(objectivesArea, "ObjectiveRow_");
+        if (firstObjectiveRow is RectTransform firstRowRect && firstRowRect.parent is RectTransform rowParent)
+        {
+            return rowParent;
+        }
+
+        return objectivesArea as RectTransform;
+    }
+
+    private static Transform FindFirstDescendantByPrefix(Transform root, string prefix)
+    {
+        if (root == null || string.IsNullOrEmpty(prefix))
+        {
+            return null;
+        }
+
+        for (int i = 0; i < root.childCount; i++)
+        {
+            Transform child = root.GetChild(i);
+            if (child == null)
+            {
+                continue;
+            }
+
+            if (child.name.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                return child;
+            }
+
+            Transform found = FindFirstDescendantByPrefix(child, prefix);
+            if (found != null)
+            {
+                return found;
+            }
+        }
+
+        return null;
     }
 
     private void EnsurePreferredSummaryPanelActive()
