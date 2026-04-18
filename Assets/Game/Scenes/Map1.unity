@@ -12146,6 +12146,16 @@ Transform:
   - {fileID: 1985180320}
   m_Father: {fileID: 95034992}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &343732669 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1351316697854724166, guid: ca9c2e052e613ff41bf57d2235bb4a62, type: 3}
+  m_PrefabInstance: {fileID: 2078858327}
+  m_PrefabAsset: {fileID: 0}
+--- !u!223 &343732686 stripped
+Canvas:
+  m_CorrespondingSourceObject: {fileID: 3494388702378132275, guid: ca9c2e052e613ff41bf57d2235bb4a62, type: 3}
+  m_PrefabInstance: {fileID: 2078858327}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &353556747
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -47596,7 +47606,11 @@ PrefabInstance:
     - target: {fileID: 3447858380073853657, guid: e3bf8c7099d32bf40a2b5184c8c127a1, type: 3}
       propertyPath: canvas
       value: 
-      objectReference: {fileID: 0}
+      objectReference: {fileID: 343732669}
+    - target: {fileID: 6149454474236452101, guid: e3bf8c7099d32bf40a2b5184c8c127a1, type: 3}
+      propertyPath: targetCanvas
+      value: 
+      objectReference: {fileID: 343732686}
     - target: {fileID: 6783775267924060584, guid: e3bf8c7099d32bf40a2b5184c8c127a1, type: 3}
       propertyPath: autoStartOnEnable
       value: 1
