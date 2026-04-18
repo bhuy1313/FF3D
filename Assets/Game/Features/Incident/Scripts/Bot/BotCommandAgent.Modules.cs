@@ -85,7 +85,8 @@ public partial class BotCommandAgent
                     else
                     {
                         owner.behaviorContext?.SetCommandIntent(BotCommandIntentPayload.Create(BotCommandType.Move, destination));
-                        accepted = owner.TryNavigateTo(destination);
+                        owner.navMeshAgent.isStopped = false;
+                        accepted = owner.navMeshAgent.SetDestination(destination);
                     }
                     break;
                 case BotCommandType.Extinguish:
@@ -191,14 +192,21 @@ public partial class BotCommandAgent
             }
 
             Vector3 approachDestination = scanOrigin;
-            if (owner.navMeshSampleDistance > 0f &&
-                NavMesh.SamplePosition(scanOrigin, out NavMeshHit navMeshHit, owner.navMeshSampleDistance, owner.navMeshAgent.areaMask))
+            if (mode == BotExtinguishCommandMode.PointFire &&
+                owner.TryResolvePointFireApproachPosition(scanOrigin, out Vector3 sampledDestination))
+            {
+                approachDestination = sampledDestination;
+            }
+            else if (owner.navMeshSampleDistance > 0f &&
+                     NavMesh.SamplePosition(scanOrigin, out NavMeshHit navMeshHit, owner.navMeshSampleDistance, owner.navMeshAgent.areaMask))
             {
                 approachDestination = navMeshHit.position;
             }
 
             PrepareForIssuedCommand(BotCommandType.Extinguish);
+            owner.CacheIssuedExtinguishTargets(mode, pointFireTarget, fireGroupTarget);
             owner.behaviorContext.SetExtinguishOrder(approachDestination, scanOrigin, mode);
+            owner.extinguishStartupPending = true;
             owner.lastIssuedDestination = approachDestination;
             owner.hasIssuedDestination = true;
             return true;
@@ -327,12 +335,22 @@ public partial class BotCommandAgent
 
         public bool ShouldRefreshPathClearingCheck()
         {
-            if (!owner.enablePathClearing || owner.navMeshAgent == null || !owner.navMeshAgent.enabled || !owner.navMeshAgent.isOnNavMesh)
+            if (owner.navMeshAgent == null || !owner.navMeshAgent.enabled || !owner.navMeshAgent.isOnNavMesh)
             {
                 return false;
             }
 
-            if (owner.currentBlockedBreakable != null && !owner.currentBlockedBreakable.IsBroken && owner.currentBlockedBreakable.CanBeClearedByBot)
+            bool shouldRefreshForBreakables = owner.enablePathClearing;
+            bool shouldRefreshForRouteFire = owner.enableRouteFireClearing;
+            if (!shouldRefreshForBreakables && !shouldRefreshForRouteFire)
+            {
+                return false;
+            }
+
+            if (shouldRefreshForBreakables &&
+                owner.currentBlockedBreakable != null &&
+                !owner.currentBlockedBreakable.IsBroken &&
+                owner.currentBlockedBreakable.CanBeClearedByBot)
             {
                 return true;
             }

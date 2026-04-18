@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.AI;
 using TrueJourney.BotBehavior;
 
 public partial class BotCommandAgent
@@ -6,26 +7,55 @@ public partial class BotCommandAgent
     private void ProcessExtinguishOrder()
     {
         if (inventorySystem == null ||
-            navMeshAgent == null ||
             !navMeshAgent.enabled ||
             !navMeshAgent.isOnNavMesh ||
-            behaviorContext == null ||
-            !behaviorContext.TryGetExtinguishOrder(out Vector3 destination, out _, out _))
+            !behaviorContext.TryGetExtinguishOrder(out Vector3 orderPoint, out Vector3 scanOrigin, out BotExtinguishCommandMode orderMode))
         {
             return;
         }
 
+        Vector3 targetSearchPoint = orderMode == BotExtinguishCommandMode.PointFire ? scanOrigin : orderPoint;
+        SetExtinguishSubtask(BotExtinguishSubtask.AcquireTarget, "Acquiring fire target.");
+        IFireGroupTarget fireGroup = orderMode == BotExtinguishCommandMode.PointFire ? null : ResolveIssuedFireGroupTarget(targetSearchPoint);
+        IFireTarget fireTarget = orderMode == BotExtinguishCommandMode.PointFire
+            ? ResolveIssuedPointFireTarget(targetSearchPoint)
+            : ResolveActiveFireTarget(targetSearchPoint);
+        LogVerboseExtinguish(
+            VerboseExtinguishLogCategory.Targeting,
+            $"target:{GetDebugTargetName(fireTarget)}:{GetDebugTargetName(fireGroup)}",
+            $"Order={targetSearchPoint}, fireTarget={GetDebugTargetName(fireTarget)}, fireGroup={GetDebugTargetName(fireGroup)}, mode={orderMode}.");
+        if ((fireGroup == null || !fireGroup.HasActiveFires) && (fireTarget == null || !fireTarget.IsBurning))
+        {
+            CompleteExtinguishOrder("No active fire target remained near the assigned point.");
+            return;
+        }
+
+        UpdateExtinguishDebugStage(ExtinguishDebugStage.SearchingFireGroup, $"Resolved FireGroup near {orderPoint}.");
+
+        Vector3 botPosition = transform.position;
+        Vector3 firePosition = fireTarget != null && fireTarget.IsBurning
+            ? fireTarget.GetWorldPosition()
+            : fireGroup.GetClosestActiveFirePosition(botPosition);
         SetExtinguishSubtask(BotExtinguishSubtask.AcquireTool, "Acquiring suppression tool.");
-        preferredExtinguishTool = ResolveCommittedExtinguishTool(
-            destination,
-            destination,
-            null,
-            null,
-            BotExtinguishCommandMode.PointFire);
+        preferredExtinguishTool = ResolveCommittedExtinguishTool(orderPoint, firePosition, fireGroup, fireTarget, orderMode);
+        LogVerboseExtinguish(
+            VerboseExtinguishLogCategory.Tooling,
+            $"tool:{GetToolName(preferredExtinguishTool)}:{firePosition}",
+            $"Selected tool={GetToolName(preferredExtinguishTool)} for fire={firePosition}.");
         if (preferredExtinguishTool == null)
         {
-            UpdateExtinguishDebugStage(ExtinguishDebugStage.NoReachableTool, $"No available Fire Extinguisher found for route to {destination}.");
-            FailActiveExtinguishOrder("No available Fire Extinguisher found.", BotTaskStatus.Blocked);
+            if (orderMode == BotExtinguishCommandMode.FireGroup &&
+                TryFallbackFireGroupOrderToPointFire(fireTarget, out Vector3 fallbackDestination))
+            {
+                LogVerboseExtinguish(
+                    VerboseExtinguishLogCategory.Tooling,
+                    $"fallback-pointfire:{GetDebugTargetName(fireTarget)}:{fallbackDestination}",
+                    $"No suitable FireGroup tool found. Falling back to PointFire at {fallbackDestination}.");
+                return;
+            }
+
+            UpdateExtinguishDebugStage(ExtinguishDebugStage.NoReachableTool, $"No available suppression tool can reach fire near {firePosition}.");
+            FailActiveExtinguishOrder("No available suppression tool can reach the assigned fire.", BotTaskStatus.Blocked);
             return;
         }
 
@@ -37,14 +67,67 @@ public partial class BotCommandAgent
             return;
         }
 
-        currentExtinguishTargetPosition = destination;
-        hasCurrentExtinguishTargetPosition = true;
-        if (TryHandleProactiveExtinguishRoute(destination))
+        if (extinguishStartupPending)
         {
+            SetExtinguishSubtask(BotExtinguishSubtask.Recover, "Recovering extinguish order.");
+            ClearHeadAimFocus();
+            ClearHandAimFocus();
+            extinguishStartupPending = false;
             return;
         }
 
-        CompleteExtinguishOrder("Reached extinguish destination.");
+        LogVerboseExtinguish(
+            VerboseExtinguishLogCategory.Tooling,
+            $"equipped:{GetToolName(activeExtinguisher)}",
+            $"Equipped tool={GetToolName(activeExtinguisher)}.");
+
+        bool usesPreciseAim = UsesPreciseAim(activeExtinguisher);
+        if (!usesPreciseAim)
+        {
+            fireTarget = orderMode == BotExtinguishCommandMode.PointFire
+                ? ResolveIssuedPointFireTarget(targetSearchPoint)
+                : ResolveExtinguisherRouteTarget(targetSearchPoint);
+            if (fireTarget != null && fireTarget.IsBurning)
+            {
+                firePosition = fireTarget.GetWorldPosition();
+                LogVerboseExtinguish(
+                    VerboseExtinguishLogCategory.Targeting,
+                    $"routetarget:{GetDebugTargetName(fireTarget)}",
+                    $"Using route fire target={GetDebugTargetName(fireTarget)} at {firePosition}.");
+            }
+
+            if (orderMode == BotExtinguishCommandMode.FireGroup &&
+                fireTarget != null &&
+                fireTarget.IsBurning &&
+                TryFallbackFireGroupOrderToPointFire(fireTarget, out Vector3 extinguisherFallbackDestination))
+            {
+                LogVerboseExtinguish(
+                    VerboseExtinguishLogCategory.Tooling,
+                    $"fallback-extinguisher-pointfire:{GetDebugTargetName(fireTarget)}:{extinguisherFallbackDestination}",
+                    $"Fire Extinguisher selected for FireGroup. Falling back to PointFire at {extinguisherFallbackDestination}.");
+                return;
+            }
+        }
+        else if (fireGroup != null)
+        {
+            firePosition = fireGroup.GetWorldCenter();
+        }
+
+        if (!activeExtinguisher.HasUsableCharge)
+        {
+            ResetExtinguishCrouchState();
+            UpdateExtinguishDebugStage(ExtinguishDebugStage.OutOfCharge, "Extinguisher is out of charge.");
+            FailActiveExtinguishOrder("Active suppression tool is out of charge.", BotTaskStatus.Failed);
+            return;
+        }
+
+        if (usesPreciseAim)
+        {
+            ProcessFireHoseExtinguishRoute(targetSearchPoint, fireGroup, firePosition, botPosition);
+            return;
+        }
+
+        ProcessFireExtinguisherExtinguishRoute(orderPoint, targetSearchPoint, fireTarget, firePosition, botPosition);
     }
 
     private bool TryEnsureExtinguisherEquipped(IBotExtinguisherItem desiredTool)
@@ -90,14 +173,21 @@ public partial class BotCommandAgent
         for (int i = 0; i < inventoryTools.Count; i++)
         {
             IBotExtinguisherItem candidate = inventoryTools[i];
-            if (!IsRouteFireExtinguisherUsable(candidate))
+            if (candidate == null || !candidate.HasUsableCharge || !candidate.IsAvailableTo(gameObject))
             {
                 continue;
             }
 
-            if (0f < bestScore)
+            if (!DoesToolMatchExtinguishMode(candidate, orderMode) ||
+                !CanToolReachFire(candidate, orderMode, orderPoint, firePosition, fireGroup, fireTarget))
             {
-                bestScore = 0f;
+                continue;
+            }
+
+            float score = ScoreSuppressionTool(candidate, orderPoint, firePosition, transform.position, fireTarget);
+            if (score < bestScore)
+            {
+                bestScore = score;
                 bestTool = candidate;
             }
         }
@@ -143,7 +233,13 @@ public partial class BotCommandAgent
         ref float bestScore)
     {
         Component candidateComponent = candidate as Component;
-        if (candidateComponent == null || candidate.IsHeld || candidate.Rigidbody == null || !IsRouteFireExtinguisherUsable(candidate))
+        if (candidateComponent == null || candidate.IsHeld || candidate.Rigidbody == null || !candidate.HasUsableCharge || !candidate.IsAvailableTo(gameObject))
+        {
+            return;
+        }
+
+        if (!DoesToolMatchExtinguishMode(candidate, orderMode) ||
+            !CanToolReachFire(candidate, orderMode, orderPoint, firePosition, fireGroup, fireTarget))
         {
             return;
         }
@@ -154,7 +250,7 @@ public partial class BotCommandAgent
             return;
         }
 
-        float score = Mathf.Sqrt(distanceSq);
+        float score = ScoreSuppressionTool(candidate, orderPoint, firePosition, candidateComponent.transform.position, fireTarget) + Mathf.Sqrt(distanceSq);
         if (score < bestScore)
         {
             bestScore = score;
@@ -164,15 +260,17 @@ public partial class BotCommandAgent
 
     private IBotExtinguisherItem ResolveCommittedExtinguishTool(Vector3 orderPoint, Vector3 firePosition, IFireGroupTarget fireGroup, IFireTarget fireTarget, BotExtinguishCommandMode orderMode)
     {
-        if (IsRouteFireExtinguisherUsable(activeExtinguisher) &&
+        if (activeExtinguisher != null &&
             activeExtinguisher.IsHeld &&
-            activeExtinguisher.ClaimOwner == gameObject)
+            activeExtinguisher.ClaimOwner == gameObject &&
+            activeExtinguisher.HasUsableCharge &&
+            DoesToolMatchExtinguishMode(activeExtinguisher, orderMode))
         {
             committedExtinguishTool = activeExtinguisher;
             return activeExtinguisher;
         }
 
-        if (IsRouteFireExtinguisherUsable(committedExtinguishTool))
+        if (IsToolStillUsable(committedExtinguishTool, orderMode, orderPoint, firePosition, fireGroup, fireTarget))
         {
             return committedExtinguishTool;
         }
@@ -184,14 +282,111 @@ public partial class BotCommandAgent
             return null;
         }
 
-        if (!(selectedTool.IsHeld && selectedTool.ClaimOwner == gameObject) &&
-            !selectedTool.TryClaim(gameObject))
+        if (!selectedTool.TryClaim(gameObject))
         {
             return null;
         }
 
         committedExtinguishTool = selectedTool;
         return committedExtinguishTool;
+    }
+
+    private bool TryFallbackFireGroupOrderToPointFire(IFireTarget fireTarget, out Vector3 fallbackDestination)
+    {
+        fallbackDestination = default;
+        if (behaviorContext == null ||
+            navMeshAgent == null ||
+            !navMeshAgent.enabled ||
+            !navMeshAgent.isOnNavMesh ||
+            fireTarget == null ||
+            !fireTarget.IsBurning)
+        {
+            return false;
+        }
+
+        Vector3 scanOrigin = fireTarget.GetWorldPosition();
+        fallbackDestination = scanOrigin;
+        if (TryResolvePointFireApproachPosition(scanOrigin, out Vector3 approachDestination))
+        {
+            fallbackDestination = approachDestination;
+        }
+        else if (navMeshSampleDistance > 0f &&
+                 NavMesh.SamplePosition(scanOrigin, out NavMeshHit navMeshHit, navMeshSampleDistance, navMeshAgent.areaMask))
+        {
+            fallbackDestination = navMeshHit.position;
+        }
+
+        ClearExtinguishRuntimeState();
+        CacheIssuedExtinguishTargets(BotExtinguishCommandMode.PointFire, fireTarget, null);
+        behaviorContext.SetExtinguishOrder(fallbackDestination, scanOrigin, BotExtinguishCommandMode.PointFire);
+        extinguishStartupPending = true;
+        lastIssuedDestination = fallbackDestination;
+        hasIssuedDestination = true;
+        return true;
+    }
+
+    private void CacheIssuedExtinguishTargets(
+        BotExtinguishCommandMode mode,
+        IFireTarget pointFireTarget,
+        IFireGroupTarget fireGroupTarget)
+    {
+        commandedPointFireTarget = mode == BotExtinguishCommandMode.PointFire && pointFireTarget != null && pointFireTarget.IsBurning
+            ? pointFireTarget
+            : null;
+        commandedFireGroupTarget = mode == BotExtinguishCommandMode.FireGroup && fireGroupTarget != null && fireGroupTarget.HasActiveFires
+            ? fireGroupTarget
+            : null;
+    }
+
+    private IFireTarget ResolveIssuedPointFireTarget(Vector3 scanOrigin)
+    {
+        IFireTarget localTarget = ResolvePointFireTarget(scanOrigin);
+        if (localTarget != null && localTarget.IsBurning)
+        {
+            if (commandedPointFireTarget != null && !commandedPointFireTarget.IsBurning)
+            {
+                commandedPointFireTarget = null;
+            }
+
+            SetCurrentFireTarget(localTarget);
+            return currentFireTarget;
+        }
+
+        if (commandedPointFireTarget != null && commandedPointFireTarget.IsBurning)
+        {
+            SetCurrentFireTarget(commandedPointFireTarget);
+            return currentFireTarget;
+        }
+
+        SetCurrentFireTarget(null);
+        commandedPointFireTarget = null;
+        return currentFireTarget;
+    }
+
+    private IFireGroupTarget ResolveIssuedFireGroupTarget(Vector3 orderPoint)
+    {
+        if (commandedFireGroupTarget != null && commandedFireGroupTarget.HasActiveFires)
+        {
+            return commandedFireGroupTarget;
+        }
+
+        commandedFireGroupTarget = FindClosestActiveFireGroup(orderPoint);
+        return commandedFireGroupTarget;
+    }
+
+    private bool IsToolStillUsable(IBotExtinguisherItem tool, BotExtinguishCommandMode orderMode, Vector3 orderPoint, Vector3 firePosition, IFireGroupTarget fireGroup, IFireTarget fireTarget)
+    {
+        if (tool == null)
+        {
+            return false;
+        }
+
+        if (!tool.HasUsableCharge || !tool.IsAvailableTo(gameObject) || !DoesToolMatchExtinguishMode(tool, orderMode))
+        {
+            return false;
+        }
+
+        return CanToolReachFire(tool, orderMode, orderPoint, firePosition, fireGroup, fireTarget);
     }
 
     private void ReleaseCommittedToolIfMatches(IBotExtinguisherItem tool)
@@ -211,11 +406,82 @@ public partial class BotCommandAgent
         }
     }
 
-    private bool IsRouteFireExtinguisherUsable(IBotExtinguisherItem tool)
+    private IFireGroupTarget FindClosestActiveFireGroup(Vector3 orderPoint)
     {
-        return tool != null &&
-               !UsesPreciseAim(tool) &&
-               tool.HasUsableCharge &&
-               tool.IsAvailableTo(gameObject);
+        IFireGroupTarget bestGroup = null;
+        IFireGroupTarget nearestGroup = null;
+        float bestDistanceSq = float.PositiveInfinity;
+        float nearestDistanceSq = float.PositiveInfinity;
+        float searchRadiusSq = fireSearchRadius * fireSearchRadius;
+
+        foreach (IFireGroupTarget candidate in BotRuntimeRegistry.ActiveFireGroups)
+        {
+            if (candidate == null || !candidate.HasActiveFires)
+            {
+                continue;
+            }
+
+            float distanceSq = (candidate.GetWorldCenter() - orderPoint).sqrMagnitude;
+            if (distanceSq < nearestDistanceSq)
+            {
+                nearestDistanceSq = distanceSq;
+                nearestGroup = candidate;
+            }
+
+            if (distanceSq > searchRadiusSq || distanceSq >= bestDistanceSq)
+            {
+                continue;
+            }
+
+            bestDistanceSq = distanceSq;
+            bestGroup = candidate;
+        }
+
+        return bestGroup != null ? bestGroup : nearestGroup;
+    }
+
+    private Vector3 ResolveExtinguishPosition(Vector3 requestedPoint, Vector3 firePosition, float preferredDistance)
+    {
+        if (TryResolvePreciseStandPosition(requestedPoint, firePosition, preferredDistance, out Vector3 desiredPosition))
+        {
+            return desiredPosition;
+        }
+
+        return transform.position;
+    }
+
+    private Vector3 ResolveExtinguisherApproachPosition(Vector3 orderPoint, Vector3 firePosition, float preferredDistance)
+    {
+        if (TryResolveExtinguisherStandPosition(orderPoint, firePosition, preferredDistance, out Vector3 desiredPosition))
+        {
+            return desiredPosition;
+        }
+
+        if (TryResolvePointFireApproachPosition(orderPoint, out desiredPosition))
+        {
+            return desiredPosition;
+        }
+
+        if (TryResolveReachableReferencePosition(orderPoint, Mathf.Max(navMeshSampleDistance, pointFireApproachSampleStep, 2f), out desiredPosition))
+        {
+            return desiredPosition;
+        }
+
+        return transform.position;
+    }
+
+    private bool ShouldIssueExtinguisherApproachMove(Vector3 destination)
+    {
+        if (navMeshAgent == null || !navMeshAgent.enabled || !navMeshAgent.isOnNavMesh)
+        {
+            return true;
+        }
+
+        if (navMeshAgent.isStopped || !navMeshAgent.hasPath || navMeshAgent.pathPending || navMeshAgent.pathStatus != NavMeshPathStatus.PathComplete)
+        {
+            return true;
+        }
+
+        return GetHorizontalDistance(navMeshAgent.destination, destination) > Mathf.Max(0.1f, extinguisherApproachRetargetDistance);
     }
 }

@@ -59,6 +59,14 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
         Attack
     }
 
+    private enum RouteFirePhase
+    {
+        Idle = 0,
+        AcquireTool = 1,
+        ReturnToFire = 2,
+        Extinguish = 3
+    }
+
     [Header("References")]
     [SerializeField] private NavMeshAgent navMeshAgent;
     [SerializeField] private BotBehaviorContext behaviorContext;
@@ -96,7 +104,10 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     [SerializeField] private float pickupDistance = 1.5f;
     [SerializeField] private float sprayFacingThreshold = 0.9f;
     [SerializeField] private float sprayStartDelay = 0.3f;
+    [SerializeField] private bool crouchBeforeFireHoseSpray = true;
+    [SerializeField] private float fireHoseCrouchDelay = 0.35f;
     [SerializeField] private float extinguisherRouteCorridorWidth = 3f;
+    [SerializeField] private float extinguisherApproachRetargetDistance = 0.75f;
     [SerializeField] private float pointFireApproachSearchRadius = 8f;
     [SerializeField] private float pointFireApproachSampleStep = 1.5f;
     [SerializeField] private int pointFireApproachDirections = 12;
@@ -104,7 +115,8 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
 
     [Header("Route Fire")]
     [SerializeField] private bool enableRouteFireClearing = true;
-    [SerializeField] private float routeFireDetectionRadius = 4f;
+    [SerializeField] private float routeFireDetectionRadius = 4.5f;
+    [SerializeField] private float routeFireDetectionPadding = 0.5f;
     [SerializeField] private float routeFireVerticalTolerance = 2f;
 
     [Header("Path Clearing")]
@@ -169,7 +181,10 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     private IBotBreakableTarget currentBlockedBreakable;
     private IBotBreakableTarget temporarilyRejectedBreakable;
     private IFireTarget currentRouteBlockingFire;
+    private RouteFirePhase currentRouteFirePhase;
     private IFireTarget currentFireTarget;
+    private IFireTarget commandedPointFireTarget;
+    private IFireGroupTarget commandedFireGroupTarget;
     private IFireTarget lockedExtinguisherFireTarget;
     private float lockedExtinguisherFireRadius;
     private float lockedExtinguisherStandOffDistance;
@@ -189,6 +204,7 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     private bool hasCurrentExtinguishLaunchDirection;
     private readonly Vector3[] currentExtinguishTrajectoryPoints = new Vector3[24];
     private int currentExtinguishTrajectoryPointCount;
+    private readonly Collider[] routeFireDetectionHits = new Collider[64];
     private Transform followTarget;
     private Vector3 lastFollowDestination;
     private int currentEscortSlotIndex = -1;
@@ -196,7 +212,9 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     private readonly Vector3[] escortSlotOffsets = new Vector3[5];
     private readonly int[] occupiedEscortSlotIndices = new int[5];
     private BotActivityDebug activityDebug;
+    private bool extinguishStartupPending;
     private float sprayReadyTime = -1f;
+    private float crouchReadyTime = -1f;
     private float nextBreakUseTime;
     private float nextPathClearingRefreshTime;
     private float pathClearingResumeGraceUntilTime;
@@ -503,14 +521,13 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
 
     private void PrepareNonExtinguishCommandRuntime()
     {
-        bool preserveRouteFireRuntime = IsRouteFireClearingActive() || HasMovePickupTarget;
-        if (!preserveRouteFireRuntime)
+        if (!IsRouteFireClearingActive())
         {
             ClearHandAimFocus();
         }
 
         ClearInactiveTacticalCommandRuntime();
-        if (preserveRouteFireRuntime || activityDebug == null || !activityDebug.HasExtinguishDebugStage)
+        if (IsRouteFireClearingActive() || activityDebug == null || !activityDebug.HasExtinguishDebugStage)
         {
             return;
         }

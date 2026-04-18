@@ -350,11 +350,6 @@ namespace TrueJourney.BotBehavior
                 return item != null;
             }
 
-            if (HasItem && ActiveItemBlocksSelectionChange())
-            {
-                return false;
-            }
-
             if (HasItem)
             {
                 StowSlot(slots[activeIndex]);
@@ -391,11 +386,6 @@ namespace TrueJourney.BotBehavior
             if (activeIndex == index)
             {
                 return true;
-            }
-
-            if (HasItem && ActiveItemBlocksSelectionChange())
-            {
-                return false;
             }
 
             if (HasItem)
@@ -450,11 +440,6 @@ namespace TrueJourney.BotBehavior
                 return false;
             }
 
-            if (ActiveItemBlocksSelectionChange())
-            {
-                return false;
-            }
-
             InventorySlot activeSlot = slots[activeIndex];
             if (activeSlot?.Item?.Rigidbody == null)
             {
@@ -470,11 +455,6 @@ namespace TrueJourney.BotBehavior
 
         public bool StowAllItems()
         {
-            if (HasItem && ActiveItemBlocksSelectionChange())
-            {
-                return false;
-            }
-
             bool changed = false;
             for (int i = 0; i < slots.Count; i++)
             {
@@ -593,18 +573,6 @@ namespace TrueJourney.BotBehavior
                 }
             }
             return false;
-        }
-
-        private bool ActiveItemBlocksSelectionChange()
-        {
-            if (!HasItem)
-            {
-                return false;
-            }
-
-            IPickupable activeItem = slots[activeIndex].Item;
-            return activeItem is IInventorySelectionBlocker selectionBlocker &&
-                   selectionBlocker.BlocksInventorySelectionChange(gameObject);
         }
 
         private static bool TryResolvePickupable(Rigidbody body, out IPickupable pickupable)
