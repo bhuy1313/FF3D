@@ -33,7 +33,6 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
     [SerializeField] private LayerMask lineOfSightMask = 1; // Default layer
 
     [Header("References")]
-    [SerializeField] private Transform sprayOrigin;
     [SerializeField] private ParticleSystem sprayParticles;
     [SerializeField] private AudioSource sprayAudio;
 
@@ -74,11 +73,6 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
         if (sprayParticles == null)
         {
             sprayParticles = GetComponentInChildren<ParticleSystem>();
-        }
-
-        if (sprayOrigin == null && sprayParticles != null)
-        {
-            sprayOrigin = sprayParticles.transform;
         }
 
         if (sprayAudio == null)
@@ -280,7 +274,7 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
             return;
         }
 
-        Transform origin = sprayOrigin != null ? sprayOrigin : transform;
+        Transform origin = sprayParticles != null ? sprayParticles.transform : transform;
         Vector3 start = origin.position;
         Vector3 forward = origin.forward;
         if (!IsFinite(start) || !IsFinite(forward))
@@ -454,7 +448,7 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
 
     private void DrawConeGizmo()
     {
-        Transform origin = sprayOrigin != null ? sprayOrigin : transform;
+        Transform origin = sprayParticles != null ? sprayParticles.transform : transform;
         if (origin == null || maxSprayDistance <= 0f)
         {
             return;
