@@ -98,7 +98,24 @@ public class MissionResultPopupSequence : MonoBehaviour
         CacheLayoutState();
         KillSequence();
 
-        SetActive(gradientBackground, true);
+        if (gradientBackground != null)
+        {
+            gradientBackground.SetActive(true);
+            CanvasGroup bgCanvasGroup = gradientBackground.GetComponent<CanvasGroup>();
+            if (bgCanvasGroup == null) bgCanvasGroup = gradientBackground.AddComponent<CanvasGroup>();
+            
+            // Nếu root (PopupSequence) đang hiển thị thì chạy fade in, còn nếu bị ẩn ngay từ đầu thì bỏ qua
+            if (rootCanvasGroup != null && rootCanvasGroup.alpha > 0)
+            {
+                bgCanvasGroup.alpha = 0f;
+                bgCanvasGroup.DOFade(1f, 0.6f).SetUpdate(true);
+            }
+            else
+            {
+                bgCanvasGroup.alpha = 1f;
+            }
+        }
+
         SetActive(gameSummaryPanel, true);
 
         if (missionCompleteRoot != null)
