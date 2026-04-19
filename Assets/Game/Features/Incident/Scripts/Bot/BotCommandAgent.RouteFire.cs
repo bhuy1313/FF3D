@@ -62,6 +62,7 @@ public partial class BotCommandAgent
         if (behaviorContext != null)
         {
             behaviorContext.SetCrouchAnimation(false);
+            behaviorContext.SetExtinguishStance(-1f);
         }
     }
 

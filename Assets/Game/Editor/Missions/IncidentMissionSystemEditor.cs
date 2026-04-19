@@ -35,6 +35,14 @@ public class IncidentMissionSystemEditor : Editor
         EditorGUILayout.LabelField("Mission Configuration", EditorStyles.boldLabel);
         DrawProperty("missionDefinition");
         DrawProperty("sceneObjectRegistry");
+
+        using (new EditorGUI.DisabledScope(GetMissionDefinition() == null))
+        {
+            if (GUILayout.Button("Open Mission Authoring"))
+            {
+                MissionAuthoringWindow.OpenWindow(GetMissionDefinition());
+            }
+        }
     }
 
     private void DrawOverlayConfiguration()

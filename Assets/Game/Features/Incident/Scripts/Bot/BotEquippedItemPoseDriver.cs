@@ -112,13 +112,15 @@ namespace TrueJourney.BotBehavior
             isAimingTool = commandAgent != null && commandAgent.IsAimingEquippedItemPose;
             isCrouching = behaviorContext != null && behaviorContext.IsCrouchAnimationActive;
             isMoving = ShouldUseMovePose();
+            float extinguishStance = behaviorContext != null ? behaviorContext.ExtinguishStance : -1f;
 
             return BotEquippedPoseKeyUtility.Resolve(
                 hasEquippedItem,
                 isUsingTool,
                 isAimingTool,
                 isCrouching,
-                isMoving);
+                isMoving,
+                extinguishStance);
         }
 
         private bool ShouldUseMovePose()

@@ -66,29 +66,6 @@ MonoBehaviour:
   scoreWeight: 25
   scoreMode: 1
   autoDiscoverRescuables: 1
---- !u!114 &-3849525741119110217
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 18f5bf78b5364d6ead303ebdb616e58f, type: 3}
-  m_Name: Tutorial_OpenGateObjective_InteractTargetObjectiveDefinition
-  m_EditorClassIdentifier: Assembly-CSharp::InteractTargetObjectiveDefinition
-  objectiveTitleLocalizationKey: mission.tutorial.objective.open_gate.title
-  objectiveTitle: Open the Gate
-  objectiveDescriptionLocalizationKey: mission.tutorial.objective.open_gate.description
-  objectiveDescription: Interact with the chainlink gate to access the incident area.
-  scoreWeight: 5
-  scoreMode: 0
-  targetSignalKey: tutorial-open-gate
-  pendingSummaryLocalizationKey: mission.tutorial.objective.open_gate.pending
-  pendingSummary: Interact with the gate to open the route
-  completedSummaryLocalizationKey: mission.tutorial.objective.open_gate.completed
-  completedSummary: Gate opened
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -105,7 +82,8 @@ MonoBehaviour:
   missionTitleLocalizationKey: mission.tutorial.title
   missionTitle: Complete Incident Tutorial
   missionDescriptionLocalizationKey: mission.tutorial.description
-  missionDescription: Resolve every tutorial objective in the incident yard and extract all victims.
+  missionDescription: Resolve every tutorial objective in the incident yard and extract
+    all victims.
   timeLimitSeconds: 0
   scoreConfig:
     enableScoring: 1
@@ -129,13 +107,10 @@ MonoBehaviour:
     bRankLabel: B
     cRankLabel: C
   persistentObjectives:
-  - {fileID: -3849525741119110217}
   - {fileID: -6510022302844551001}
   - {fileID: 1803299867243040891}
-  - {fileID: 6914176494378091833}
   - {fileID: -6214757763015457602}
   - {fileID: -6214757763015457601}
-  - {fileID: 4534189158508311404}
   failConditions:
   - {fileID: 8481906818168850071}
   - {fileID: 8481906818168850072}
@@ -158,53 +133,6 @@ MonoBehaviour:
   scoreWeight: 20
   scoreMode: 1
   autoDiscoverFires: 1
---- !u!114 &4534189158508311404
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 935577cc867e4d6ab534bb1ec0efb605, type: 3}
-  m_Name: Tutorial_ReachExitObjective_ReachAreaObjectiveDefinition
-  m_EditorClassIdentifier: Assembly-CSharp::ReachAreaObjectiveDefinition
-  objectiveTitleLocalizationKey: mission.tutorial.objective.reach_exit.title
-  objectiveTitle: Reach the Exit
-  objectiveDescriptionLocalizationKey: mission.tutorial.objective.reach_exit.description
-  objectiveDescription: Move into the highlighted extraction area after the fire
-    is out.
-  scoreWeight: 5
-  scoreMode: 0
-  targetSignalKey: tutorial-reach-exit
-  pendingSummaryLocalizationKey: mission.tutorial.objective.reach_exit.pending
-  pendingSummary: Move to the extraction point
-  completedSummaryLocalizationKey: mission.tutorial.objective.reach_exit.completed
-  completedSummary: Extraction point reached
---- !u!114 &6914176494378091833
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 98e6762d87534aceb27f6dd73f366f36, type: 3}
-  m_Name: Tutorial_BreakBarricadeObjective_BreakTargetObjectiveDefinition
-  m_EditorClassIdentifier: Assembly-CSharp::BreakTargetObjectiveDefinition
-  objectiveTitleLocalizationKey: mission.tutorial.objective.break_barricade.title
-  objectiveTitle: Break target
-  objectiveDescriptionLocalizationKey: mission.tutorial.objective.break_barricade.description
-  objectiveDescription: 
-  scoreWeight: 5
-  scoreMode: 0
-  targetSignalKey: tutorial-break-barricade
-  pendingSummaryLocalizationKey: mission.tutorial.objective.break_barricade.pending
-  pendingSummary: Break target
-  completedSummaryLocalizationKey: mission.tutorial.objective.break_barricade.completed
-  completedSummary: Target broken
 --- !u!114 &8481906818168850071
 MonoBehaviour:
   m_ObjectHideFlags: 0

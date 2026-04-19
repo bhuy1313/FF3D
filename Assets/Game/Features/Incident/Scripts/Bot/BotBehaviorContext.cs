@@ -37,7 +37,7 @@ public class BotBehaviorContext : MonoBehaviour
     [SerializeField] private string uncrouchAnimationState = "Breathing Idle";
     [SerializeField] private bool crouchAnimationActive;
     [SerializeField] private string extinguishStanceParameter = "ExtinguishStance";
-    [SerializeField] private float extinguishStance;
+    [SerializeField] private float extinguishStance = -1f;
     [SerializeField] private bool driveLoadedLowerBodyLayer = true;
     [SerializeField] private string loadedLowerBodyLayer = "Lower Body Layer";
     [SerializeField] private float loadedLowerBodyLayerWeightLerpSpeed = 10f;
@@ -80,6 +80,7 @@ public class BotBehaviorContext : MonoBehaviour
     public bool IsMovementAnimationActive => movementAnimationActive;
     public bool IsCrouchAnimationActive => crouchAnimationActive;
     public float MovementAnimationThreshold => movementAnimationThreshold;
+    public float ExtinguishStance => extinguishStance;
 
     private void Awake()
     {

@@ -10,7 +10,9 @@ namespace TrueJourney.BotBehavior
         Aim = 2,
         Use = 3,
         Crouch = 4,
-        Reload = 5
+        Reload = 5,
+        CrouchStance0 = 6,
+        CrouchStance1 = 7
     }
 
     [Serializable]

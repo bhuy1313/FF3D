@@ -1,3 +1,5 @@
+using UnityEngine;
+
 namespace TrueJourney.BotBehavior
 {
     public static class BotEquippedPoseKeyUtility
@@ -7,7 +9,8 @@ namespace TrueJourney.BotBehavior
             bool isUsingTool,
             bool isAimingTool,
             bool isCrouching,
-            bool isMoving)
+            bool isMoving,
+            float extinguishStance)
         {
             if (!hasEquippedItem)
             {
@@ -16,6 +19,15 @@ namespace TrueJourney.BotBehavior
 
             if (isCrouching)
             {
+                if (Mathf.Approximately(extinguishStance, 0f))
+                {
+                    return BotEquippedItemPoseKey.CrouchStance0;
+                }
+                else if (Mathf.Approximately(extinguishStance, 1f))
+                {
+                    return BotEquippedItemPoseKey.CrouchStance1;
+                }
+
                 return BotEquippedItemPoseKey.Crouch;
             }
 

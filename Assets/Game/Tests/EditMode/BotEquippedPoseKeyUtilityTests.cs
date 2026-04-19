@@ -11,7 +11,8 @@ public class BotEquippedPoseKeyUtilityTests
             isUsingTool: true,
             isAimingTool: true,
             isCrouching: true,
-            isMoving: true);
+            isMoving: true,
+            extinguishStance: -1f);
 
         Assert.That(key, Is.EqualTo(BotEquippedItemPoseKey.Default));
     }
@@ -24,9 +25,38 @@ public class BotEquippedPoseKeyUtilityTests
             isUsingTool: true,
             isAimingTool: true,
             isCrouching: true,
-            isMoving: true);
+            isMoving: true,
+            extinguishStance: -1f);
 
         Assert.That(key, Is.EqualTo(BotEquippedItemPoseKey.Crouch));
+    }
+
+    [Test]
+    public void Resolve_ReturnsCrouchStance0()
+    {
+        BotEquippedItemPoseKey key = BotEquippedPoseKeyUtility.Resolve(
+            hasEquippedItem: true,
+            isUsingTool: true,
+            isAimingTool: true,
+            isCrouching: true,
+            isMoving: true,
+            extinguishStance: 0f);
+
+        Assert.That(key, Is.EqualTo(BotEquippedItemPoseKey.CrouchStance0));
+    }
+
+    [Test]
+    public void Resolve_ReturnsCrouchStance1()
+    {
+        BotEquippedItemPoseKey key = BotEquippedPoseKeyUtility.Resolve(
+            hasEquippedItem: true,
+            isUsingTool: true,
+            isAimingTool: true,
+            isCrouching: true,
+            isMoving: true,
+            extinguishStance: 1f);
+
+        Assert.That(key, Is.EqualTo(BotEquippedItemPoseKey.CrouchStance1));
     }
 
     [Test]
@@ -37,7 +67,8 @@ public class BotEquippedPoseKeyUtilityTests
             isUsingTool: true,
             isAimingTool: true,
             isCrouching: false,
-            isMoving: true);
+            isMoving: true,
+            extinguishStance: -1f);
 
         Assert.That(key, Is.EqualTo(BotEquippedItemPoseKey.Use));
     }
@@ -50,7 +81,8 @@ public class BotEquippedPoseKeyUtilityTests
             isUsingTool: false,
             isAimingTool: true,
             isCrouching: false,
-            isMoving: true);
+            isMoving: true,
+            extinguishStance: -1f);
 
         Assert.That(key, Is.EqualTo(BotEquippedItemPoseKey.Aim));
     }
