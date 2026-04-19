@@ -4026,13 +4026,16 @@ MonoBehaviour:
   pickupDistance: 1.5
   sprayFacingThreshold: 0.9
   sprayStartDelay: 0.75
+  crouchBeforeFireHoseSpray: 1
+  fireHoseCrouchDelay: 0.35
   extinguisherRouteCorridorWidth: 6
+  extinguisherApproachRetargetDistance: 0.75
   pointFireApproachSearchRadius: 8
   pointFireApproachSampleStep: 1.5
   pointFireApproachDirections: 12
   pointFireApproachHeightWeight: 1.5
   enableRouteFireClearing: 1
-  routeFireDetectionRadius: 4
+  routeFireDetectionRadius: 3
   routeFireVerticalTolerance: 2
   enablePathClearing: 1
   breakableCorridorWidth: 1.5

@@ -35,27 +35,6 @@ public class IncidentMissionSystemEditor : Editor
         EditorGUILayout.LabelField("Mission Configuration", EditorStyles.boldLabel);
         DrawProperty("missionDefinition");
         DrawProperty("sceneObjectRegistry");
-
-        using (new EditorGUILayout.HorizontalScope())
-        {
-            if (GUILayout.Button("Open Mission Authoring"))
-            {
-                MissionAuthoringWindow.OpenWindow(GetMissionDefinition());
-            }
-
-            using (new EditorGUI.DisabledScope(GetMissionDefinition() == null))
-            {
-                if (GUILayout.Button("Ping Mission Asset"))
-                {
-                    MissionDefinition missionDefinition = GetMissionDefinition();
-                    if (missionDefinition != null)
-                    {
-                        EditorGUIUtility.PingObject(missionDefinition);
-                        Selection.activeObject = missionDefinition;
-                    }
-                }
-            }
-        }
     }
 
     private void DrawOverlayConfiguration()
@@ -71,9 +50,6 @@ public class IncidentMissionSystemEditor : Editor
         DrawProperty("onMissionStarted");
         DrawProperty("onMissionCompleted");
         DrawProperty("onMissionFailed");
-        DrawProperty("onStageStarted");
-        DrawProperty("onStageCompleted");
-        DrawProperty("stageActionBindings");
     }
 
     private void DrawLegacyConfiguration()
@@ -90,7 +66,7 @@ public class IncidentMissionSystemEditor : Editor
 
         if (usingMissionDefinition)
         {
-            EditorGUILayout.HelpBox("MissionDefinition is assigned. These fields are kept for backward compatibility and should usually stay folded away.", MessageType.Info);
+            EditorGUILayout.HelpBox("MissionDefinition is assigned. These fields are kept for backward compatibility.", MessageType.Info);
         }
 
         DrawProperty("missionId");
@@ -147,21 +123,23 @@ public class IncidentMissionSystemEditor : Editor
             }
         }
 
-        if (Application.isPlaying)
+        if (!Application.isPlaying)
         {
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                if (GUILayout.Button("Refresh Objectives"))
-                {
-                    missionSystem.RefreshObjectives();
-                    Repaint();
-                }
+            return;
+        }
 
-                if (GUILayout.Button("Start Mission"))
-                {
-                    missionSystem.StartMission();
-                    Repaint();
-                }
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            if (GUILayout.Button("Refresh Objectives"))
+            {
+                missionSystem.RefreshObjectives();
+                Repaint();
+            }
+
+            if (GUILayout.Button("Start Mission"))
+            {
+                missionSystem.StartMission();
+                Repaint();
             }
         }
     }
@@ -174,11 +152,6 @@ public class IncidentMissionSystemEditor : Editor
             cachedEntries.Clear();
             cachedEntries.AddRange(ValidateIncidentMissionSystem((IncidentMissionSystem)target));
             MissionAssetValidation.LogEntries($"IncidentMissionSystem '{target.name}'", cachedEntries, target);
-        }
-
-        if (cachedEntries.Count == 0)
-        {
-            return;
         }
 
         for (int i = 0; i < cachedEntries.Count; i++)
@@ -212,37 +185,11 @@ public class IncidentMissionSystemEditor : Editor
         }
 
         SerializedObject serializedMission = new SerializedObject(missionDefinition);
-        SerializedProperty stages = serializedMission.FindProperty("stages");
         SerializedProperty objectives = serializedMission.FindProperty("persistentObjectives");
         SerializedProperty failConditions = serializedMission.FindProperty("failConditions");
 
-        if (stages != null && stages.arraySize > 0)
-        {
-            EditorGUILayout.LabelField("Stages", EditorStyles.miniBoldLabel);
-            for (int i = 0; i < stages.arraySize; i++)
-            {
-                MissionStageDefinition stage = stages.GetArrayElementAtIndex(i).objectReferenceValue as MissionStageDefinition;
-                if (stage == null)
-                {
-                    continue;
-                }
-
-                EditorGUILayout.LabelField($"{i + 1}. {stage.StageTitle} [{stage.StageId}]");
-                DrawStagePreview(stage);
-            }
-
-            if (objectives != null && objectives.arraySize > 0)
-            {
-                EditorGUILayout.Space();
-                EditorGUILayout.LabelField("Persistent Objectives", EditorStyles.miniBoldLabel);
-                DrawObjectiveList(objectives);
-            }
-        }
-        else if (objectives != null)
-        {
-            EditorGUILayout.LabelField("Persistent Objectives", EditorStyles.miniBoldLabel);
-            DrawObjectiveList(objectives);
-        }
+        EditorGUILayout.LabelField("Persistent Objectives", EditorStyles.miniBoldLabel);
+        DrawAssetReferenceList(objectives);
 
         if (failConditions != null && failConditions.arraySize > 0)
         {
@@ -278,11 +225,6 @@ public class IncidentMissionSystemEditor : Editor
             }
 
             EditorGUILayout.LabelField("Score", scoreLabel);
-        }
-
-        if (missionSystem.HasActiveStage)
-        {
-            EditorGUILayout.LabelField("Current Stage", $"{missionSystem.CurrentStageIndex + 1}/{missionSystem.TotalStageCount}: {missionSystem.CurrentStageTitle}");
         }
 
         if (missionSystem.ObjectiveStatusCount <= 0)
@@ -323,25 +265,12 @@ public class IncidentMissionSystemEditor : Editor
         if (missionDefinition != null)
         {
             entries.AddRange(MissionAssetValidation.ValidateMission(missionDefinition));
+            ValidateSignalObjectivesAgainstSceneEmitters(missionDefinition, entries);
         }
         else
         {
             entries.Add(new MissionAssetValidation.Entry(MissionAssetValidation.Severity.Warning, "No MissionDefinition assigned. Using legacy mission config on component.", missionSystem));
         }
-
-        MissionSceneObjectRegistry registry = GetAssignedRegistry();
-        SerializedObject serializedMissionSystem = new SerializedObject(missionSystem);
-        SerializedProperty stageActionBindings = serializedMissionSystem.FindProperty("stageActionBindings");
-
-        if (registry == null && UsesTargetKeyDrivenActions(missionDefinition))
-        {
-            entries.Add(new MissionAssetValidation.Entry(MissionAssetValidation.Severity.Warning, "Mission uses target-key actions but no MissionSceneObjectRegistry is assigned.", missionSystem));
-        }
-
-        Dictionary<string, GameObject> registryKeys = CollectRegistryKeys(registry, entries);
-        ValidateStageActionBindingStageIds(stageActionBindings, missionDefinition, entries);
-        ValidateActionTargetKeysAgainstRegistry(missionDefinition, registryKeys, entries);
-        ValidateSignalObjectivesAgainstSceneEmitters(missionSystem.gameObject.scene, missionDefinition, entries);
 
         if (entries.Count == 0)
         {
@@ -384,23 +313,6 @@ public class IncidentMissionSystemEditor : Editor
         EditorGUIUtility.PingObject(registry);
     }
 
-    private void DrawStagePreview(MissionStageDefinition stage)
-    {
-        SerializedObject serializedStage = new SerializedObject(stage);
-        SerializedProperty objectives = serializedStage.FindProperty("objectives");
-        SerializedProperty startedActions = serializedStage.FindProperty("onStageStartedActions");
-        SerializedProperty completedActions = serializedStage.FindProperty("onStageCompletedActions");
-
-        DrawIndentedReferenceList("Objectives", objectives);
-        DrawIndentedReferenceList("Start Actions", startedActions);
-        DrawIndentedReferenceList("Complete Actions", completedActions);
-    }
-
-    private void DrawObjectiveList(SerializedProperty property)
-    {
-        DrawAssetReferenceList(property);
-    }
-
     private void DrawAssetReferenceList(SerializedProperty property)
     {
         if (property == null || !property.isArray)
@@ -418,245 +330,14 @@ public class IncidentMissionSystemEditor : Editor
         }
     }
 
-    private void DrawIndentedReferenceList(string label, SerializedProperty property)
-    {
-        if (property == null || property.arraySize == 0)
-        {
-            return;
-        }
-
-        EditorGUI.indentLevel++;
-        EditorGUILayout.LabelField(label, EditorStyles.miniBoldLabel);
-        DrawAssetReferenceList(property);
-        EditorGUI.indentLevel--;
-    }
-
     private MissionDefinition GetMissionDefinition()
     {
         return serializedObject.FindProperty("missionDefinition")?.objectReferenceValue as MissionDefinition;
     }
 
-    private MissionSceneObjectRegistry GetAssignedRegistry()
-    {
-        return serializedObject.FindProperty("sceneObjectRegistry")?.objectReferenceValue as MissionSceneObjectRegistry;
-    }
-
-    private static Dictionary<string, GameObject> CollectRegistryKeys(MissionSceneObjectRegistry registry, List<MissionAssetValidation.Entry> entries)
-    {
-        Dictionary<string, GameObject> keys = new Dictionary<string, GameObject>(System.StringComparer.OrdinalIgnoreCase);
-        if (registry == null)
-        {
-            return keys;
-        }
-
-        SerializedObject serializedRegistry = new SerializedObject(registry);
-        SerializedProperty entriesProperty = serializedRegistry.FindProperty("entries");
-        if (entriesProperty == null)
-        {
-            return keys;
-        }
-
-        for (int i = 0; i < entriesProperty.arraySize; i++)
-        {
-            SerializedProperty entry = entriesProperty.GetArrayElementAtIndex(i);
-            string key = entry.FindPropertyRelative("key")?.stringValue;
-            GameObject targetObject = entry.FindPropertyRelative("targetObject")?.objectReferenceValue as GameObject;
-
-            if (string.IsNullOrWhiteSpace(key))
-            {
-                entries.Add(new MissionAssetValidation.Entry(MissionAssetValidation.Severity.Warning, $"Registry entry {i} has an empty key.", registry));
-                continue;
-            }
-
-            if (targetObject == null)
-            {
-                entries.Add(new MissionAssetValidation.Entry(MissionAssetValidation.Severity.Warning, $"Registry key '{key}' has no target object.", registry));
-                continue;
-            }
-
-            if (keys.ContainsKey(key.Trim()))
-            {
-                entries.Add(new MissionAssetValidation.Entry(MissionAssetValidation.Severity.Error, $"Duplicate registry key '{key}' found.", registry));
-                continue;
-            }
-
-            keys.Add(key.Trim(), targetObject);
-        }
-
-        return keys;
-    }
-
-    private static void ValidateStageActionBindingStageIds(SerializedProperty stageActionBindings, MissionDefinition missionDefinition, List<MissionAssetValidation.Entry> entries)
-    {
-        if (stageActionBindings == null || missionDefinition == null)
-        {
-            return;
-        }
-
-        HashSet<string> validStageIds = CollectMissionStageIds(missionDefinition);
-        for (int i = 0; i < stageActionBindings.arraySize; i++)
-        {
-            SerializedProperty binding = stageActionBindings.GetArrayElementAtIndex(i);
-            string stageId = binding.FindPropertyRelative("stageId")?.stringValue;
-            if (string.IsNullOrWhiteSpace(stageId))
-            {
-                entries.Add(new MissionAssetValidation.Entry(MissionAssetValidation.Severity.Warning, $"Stage Action Binding {i} has an empty stageId."));
-                continue;
-            }
-
-            if (validStageIds.Count > 0 && !validStageIds.Contains(stageId.Trim()))
-            {
-                entries.Add(new MissionAssetValidation.Entry(MissionAssetValidation.Severity.Warning, $"Stage Action Binding references unknown stageId '{stageId}'."));
-            }
-        }
-    }
-
-    private static HashSet<string> CollectMissionStageIds(MissionDefinition missionDefinition)
-    {
-        HashSet<string> stageIds = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
-        if (missionDefinition == null)
-        {
-            return stageIds;
-        }
-
-        SerializedObject serializedMission = new SerializedObject(missionDefinition);
-        SerializedProperty stages = serializedMission.FindProperty("stages");
-        if (stages == null)
-        {
-            return stageIds;
-        }
-
-        for (int i = 0; i < stages.arraySize; i++)
-        {
-            MissionStageDefinition stage = stages.GetArrayElementAtIndex(i).objectReferenceValue as MissionStageDefinition;
-            if (stage != null && !string.IsNullOrWhiteSpace(stage.StageId))
-            {
-                stageIds.Add(stage.StageId.Trim());
-            }
-        }
-
-        return stageIds;
-    }
-
-    private static bool UsesTargetKeyDrivenActions(MissionDefinition missionDefinition)
+    private static void ValidateSignalObjectivesAgainstSceneEmitters(MissionDefinition missionDefinition, List<MissionAssetValidation.Entry> entries)
     {
         if (missionDefinition == null)
-        {
-            return false;
-        }
-
-        SerializedObject serializedMission = new SerializedObject(missionDefinition);
-        SerializedProperty stages = serializedMission.FindProperty("stages");
-        if (stages == null)
-        {
-            return false;
-        }
-
-        for (int i = 0; i < stages.arraySize; i++)
-        {
-            MissionStageDefinition stage = stages.GetArrayElementAtIndex(i).objectReferenceValue as MissionStageDefinition;
-            if (stage == null)
-            {
-                continue;
-            }
-
-            SerializedObject serializedStage = new SerializedObject(stage);
-            if (HasActionWithTargetKey(serializedStage.FindProperty("onStageStartedActions")) ||
-                HasActionWithTargetKey(serializedStage.FindProperty("onStageCompletedActions")))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static bool HasActionWithTargetKey(SerializedProperty actionsProperty)
-    {
-        if (actionsProperty == null)
-        {
-            return false;
-        }
-
-        for (int i = 0; i < actionsProperty.arraySize; i++)
-        {
-            MissionActionDefinition action = actionsProperty.GetArrayElementAtIndex(i).objectReferenceValue as MissionActionDefinition;
-            if (action == null)
-            {
-                continue;
-            }
-
-            SerializedObject serializedAction = new SerializedObject(action);
-            SerializedProperty targetKey = serializedAction.FindProperty("targetKey");
-            if (targetKey != null && !string.IsNullOrWhiteSpace(targetKey.stringValue))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static void ValidateActionTargetKeysAgainstRegistry(MissionDefinition missionDefinition, Dictionary<string, GameObject> registryKeys, List<MissionAssetValidation.Entry> entries)
-    {
-        if (missionDefinition == null)
-        {
-            return;
-        }
-
-        SerializedObject serializedMission = new SerializedObject(missionDefinition);
-        SerializedProperty stages = serializedMission.FindProperty("stages");
-        if (stages == null)
-        {
-            return;
-        }
-
-        for (int i = 0; i < stages.arraySize; i++)
-        {
-            MissionStageDefinition stage = stages.GetArrayElementAtIndex(i).objectReferenceValue as MissionStageDefinition;
-            if (stage == null)
-            {
-                continue;
-            }
-
-            SerializedObject serializedStage = new SerializedObject(stage);
-            ValidateActionListTargetKeys(serializedStage.FindProperty("onStageStartedActions"), registryKeys, entries, stage, "OnStageStarted");
-            ValidateActionListTargetKeys(serializedStage.FindProperty("onStageCompletedActions"), registryKeys, entries, stage, "OnStageCompleted");
-        }
-    }
-
-    private static void ValidateActionListTargetKeys(SerializedProperty actionsProperty, Dictionary<string, GameObject> registryKeys, List<MissionAssetValidation.Entry> entries, MissionStageDefinition stage, string label)
-    {
-        if (actionsProperty == null)
-        {
-            return;
-        }
-
-        for (int i = 0; i < actionsProperty.arraySize; i++)
-        {
-            MissionActionDefinition action = actionsProperty.GetArrayElementAtIndex(i).objectReferenceValue as MissionActionDefinition;
-            if (action == null)
-            {
-                continue;
-            }
-
-            SerializedObject serializedAction = new SerializedObject(action);
-            SerializedProperty targetKey = serializedAction.FindProperty("targetKey");
-            if (targetKey == null || string.IsNullOrWhiteSpace(targetKey.stringValue))
-            {
-                continue;
-            }
-
-            if (!registryKeys.ContainsKey(targetKey.stringValue.Trim()))
-            {
-                entries.Add(new MissionAssetValidation.Entry(MissionAssetValidation.Severity.Warning, $"{label} action '{action.name}' in stage '{stage.StageTitle}' references missing registry key '{targetKey.stringValue}'.", action));
-            }
-        }
-    }
-
-    private static void ValidateSignalObjectivesAgainstSceneEmitters(UnityEngine.SceneManagement.Scene scene, MissionDefinition missionDefinition, List<MissionAssetValidation.Entry> entries)
-    {
-        if (missionDefinition == null || !scene.IsValid())
         {
             return;
         }
@@ -664,23 +345,7 @@ public class IncidentMissionSystemEditor : Editor
         HashSet<string> sceneSignalKeys = CollectSceneSignalKeys();
         SerializedObject serializedMission = new SerializedObject(missionDefinition);
         SerializedProperty objectives = serializedMission.FindProperty("persistentObjectives");
-        SerializedProperty stages = serializedMission.FindProperty("stages");
-
         ValidateObjectiveSignalKeys(objectives, sceneSignalKeys, entries);
-        if (stages != null)
-        {
-            for (int i = 0; i < stages.arraySize; i++)
-            {
-                MissionStageDefinition stage = stages.GetArrayElementAtIndex(i).objectReferenceValue as MissionStageDefinition;
-                if (stage == null)
-                {
-                    continue;
-                }
-
-                SerializedObject serializedStage = new SerializedObject(stage);
-                ValidateObjectiveSignalKeys(serializedStage.FindProperty("objectives"), sceneSignalKeys, entries);
-            }
-        }
     }
 
     private static void ValidateObjectiveSignalKeys(SerializedProperty objectivesProperty, HashSet<string> sceneSignalKeys, List<MissionAssetValidation.Entry> entries)

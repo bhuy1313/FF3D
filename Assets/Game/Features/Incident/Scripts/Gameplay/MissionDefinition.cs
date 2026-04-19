@@ -22,9 +22,6 @@ public class MissionDefinition : ScriptableObject
     [Header("Fail Conditions")]
     [SerializeField] private List<MissionFailConditionDefinition> failConditions = new List<MissionFailConditionDefinition>();
 
-    [Header("Stages")]
-    [SerializeField] private List<MissionStageDefinition> stages = new List<MissionStageDefinition>();
-
     public string MissionId => missionId;
     public string MissionTitle => MissionLocalization.Get(missionTitleLocalizationKey, missionTitle);
     public string MissionDescription => MissionLocalization.Get(missionDescriptionLocalizationKey, missionDescription);
@@ -41,27 +38,6 @@ public class MissionDefinition : ScriptableObject
             return scoreConfig;
         }
     }
-    public bool HasStages
-    {
-        get
-        {
-            if (stages == null)
-            {
-                return false;
-            }
-
-            for (int i = 0; i < stages.Count; i++)
-            {
-                if (stages[i] != null)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-    }
-
     public void CollectObjectives(List<MissionObjectiveDefinition> results)
     {
         CollectPersistentObjectives(results);
@@ -69,12 +45,6 @@ public class MissionDefinition : ScriptableObject
 
     public void CollectObjectives(List<MissionObjectiveDefinition> results, int stageIndex)
     {
-        if (stageIndex >= 0)
-        {
-            CollectStageObjectives(results, stageIndex);
-            return;
-        }
-
         CollectPersistentObjectives(results);
     }
 
@@ -97,43 +67,6 @@ public class MissionDefinition : ScriptableObject
             if (objective != null)
             {
                 results.Add(objective);
-            }
-        }
-    }
-
-    public void CollectStageObjectives(List<MissionObjectiveDefinition> results, int stageIndex)
-    {
-        if (results == null)
-        {
-            return;
-        }
-
-        results.Clear();
-        if (HasStages && TryGetStage(stageIndex, out MissionStageDefinition stage))
-        {
-            stage.CollectObjectives(results);
-        }
-    }
-
-    public void CollectStages(List<MissionStageDefinition> results)
-    {
-        if (results == null)
-        {
-            return;
-        }
-
-        results.Clear();
-        if (stages == null)
-        {
-            return;
-        }
-
-        for (int i = 0; i < stages.Count; i++)
-        {
-            MissionStageDefinition stage = stages[i];
-            if (stage != null)
-            {
-                results.Add(stage);
             }
         }
     }
@@ -161,37 +94,4 @@ public class MissionDefinition : ScriptableObject
         }
     }
 
-    public bool TryGetStage(int stageIndex, out MissionStageDefinition stage)
-    {
-        stage = null;
-        if (stageIndex < 0)
-        {
-            return false;
-        }
-
-        if (stages == null)
-        {
-            return false;
-        }
-
-        int resolvedIndex = 0;
-        for (int i = 0; i < stages.Count; i++)
-        {
-            MissionStageDefinition candidate = stages[i];
-            if (candidate == null)
-            {
-                continue;
-            }
-
-            if (resolvedIndex == stageIndex)
-            {
-                stage = candidate;
-                return true;
-            }
-
-            resolvedIndex++;
-        }
-
-        return false;
-    }
 }

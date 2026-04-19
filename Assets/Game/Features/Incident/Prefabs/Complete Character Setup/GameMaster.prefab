@@ -293,13 +293,6 @@ MonoBehaviour:
   onMissionFailed:
     m_PersistentCalls:
       m_Calls: []
-  onStageStarted:
-    m_PersistentCalls:
-      m_Calls: []
-  onStageCompleted:
-    m_PersistentCalls:
-      m_Calls: []
-  stageActionBindings: []
   missionState: 0
   elapsedTime: 0
   totalTrackedFires: 0
@@ -355,11 +348,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0c9089fd20114c58aa35ec6f3885b432, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MissionSceneObjectRegistry
-  entries:
-  - key: event-1
-    targetObject: {fileID: 0}
-  - key: explosive-1
-    targetObject: {fileID: 0}
+  entries: []
 --- !u!114 &6149454474236452101
 MonoBehaviour:
   m_ObjectHideFlags: 0

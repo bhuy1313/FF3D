@@ -39,7 +39,6 @@ public static class MissionAssetValidation
         SerializedProperty missionTitle = serializedMission.FindProperty("missionTitle");
         SerializedProperty missionObjectives = serializedMission.FindProperty("persistentObjectives");
         SerializedProperty missionFailConditions = serializedMission.FindProperty("failConditions");
-        SerializedProperty missionStages = serializedMission.FindProperty("stages");
         SerializedProperty missionTimeLimit = serializedMission.FindProperty("timeLimitSeconds");
 
         if (string.IsNullOrWhiteSpace(missionId?.stringValue))
@@ -53,44 +52,11 @@ public static class MissionAssetValidation
         }
 
         int objectiveCount = CountAssignedElements(missionObjectives, entries, "persistent objective");
-        int failConditionCount = CountAssignedElements(missionFailConditions, entries, "fail condition");
-        int stageCount = CountAssignedElements(missionStages, entries, "stage");
-
-        if (objectiveCount == 0 && stageCount == 0)
-        {
-            entries.Add(new Entry(Severity.Error, "Mission has no persistent objectives and no stages.", mission));
-        }
-
-        HashSet<MissionStageDefinition> seenStages = new HashSet<MissionStageDefinition>();
-        HashSet<string> seenStageIds = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
         bool hasTimeLimitFailCondition = false;
 
-        if (missionStages != null)
+        if (objectiveCount == 0)
         {
-            for (int i = 0; i < missionStages.arraySize; i++)
-            {
-                MissionStageDefinition stage = missionStages.GetArrayElementAtIndex(i).objectReferenceValue as MissionStageDefinition;
-                if (stage == null)
-                {
-                    continue;
-                }
-
-                if (!seenStages.Add(stage))
-                {
-                    entries.Add(new Entry(Severity.Warning, $"Stage '{stage.name}' is referenced more than once.", stage));
-                }
-
-                if (string.IsNullOrWhiteSpace(stage.StageId))
-                {
-                    entries.Add(new Entry(Severity.Error, $"Stage '{stage.name}' has an empty Stage Id.", stage));
-                }
-                else if (!seenStageIds.Add(stage.StageId.Trim()))
-                {
-                    entries.Add(new Entry(Severity.Error, $"Duplicate Stage Id '{stage.StageId}' found in mission.", stage));
-                }
-
-                entries.AddRange(ValidateStage(stage));
-            }
+            entries.Add(new Entry(Severity.Error, "Mission has no persistent objectives.", mission));
         }
 
         if (missionObjectives != null)
@@ -112,11 +78,6 @@ public static class MissionAssetValidation
             for (int i = 0; i < missionFailConditions.arraySize; i++)
             {
                 MissionFailConditionDefinition failCondition = missionFailConditions.GetArrayElementAtIndex(i).objectReferenceValue as MissionFailConditionDefinition;
-                if (failCondition == null)
-                {
-                    continue;
-                }
-
                 if (failCondition is TimeLimitFailConditionDefinition)
                 {
                     hasTimeLimitFailCondition = true;
@@ -132,58 +93,6 @@ public static class MissionAssetValidation
         if (entries.Count == 0)
         {
             entries.Add(new Entry(Severity.Info, "No validation issues found.", mission));
-        }
-
-        return entries;
-    }
-
-    public static List<Entry> ValidateStage(MissionStageDefinition stage)
-    {
-        List<Entry> entries = new List<Entry>();
-        if (stage == null)
-        {
-            entries.Add(new Entry(Severity.Error, "Stage asset is missing."));
-            return entries;
-        }
-
-        if (string.IsNullOrWhiteSpace(stage.StageId))
-        {
-            entries.Add(new Entry(Severity.Error, "Stage Id is empty.", stage));
-        }
-
-        if (string.IsNullOrWhiteSpace(stage.StageTitle))
-        {
-            entries.Add(new Entry(Severity.Warning, "Stage Title is empty.", stage));
-        }
-
-        SerializedObject serializedStage = new SerializedObject(stage);
-        SerializedProperty objectives = serializedStage.FindProperty("objectives");
-        SerializedProperty onStageStartedActions = serializedStage.FindProperty("onStageStartedActions");
-        SerializedProperty onStageCompletedActions = serializedStage.FindProperty("onStageCompletedActions");
-
-        int objectiveCount = CountAssignedElements(objectives, entries, "stage objective");
-        if (objectiveCount == 0)
-        {
-            entries.Add(new Entry(Severity.Warning, "Stage has no objectives.", stage));
-        }
-
-        AppendDuplicateReferenceWarnings(objectives, entries, "Objective");
-        AppendDuplicateReferenceWarnings(onStageStartedActions, entries, "Start action");
-        AppendDuplicateReferenceWarnings(onStageCompletedActions, entries, "Complete action");
-
-        ValidateActions(onStageStartedActions, entries, "On Stage Started action");
-        ValidateActions(onStageCompletedActions, entries, "On Stage Completed action");
-
-        if (objectives != null)
-        {
-            for (int i = 0; i < objectives.arraySize; i++)
-            {
-                MissionObjectiveDefinition objective = objectives.GetArrayElementAtIndex(i).objectReferenceValue as MissionObjectiveDefinition;
-                if (objective != null)
-                {
-                    ValidateSignalKeyProperty(objective, "targetSignalKey", entries, "Objective signal key is empty.");
-                }
-            }
         }
 
         return entries;
@@ -217,30 +126,6 @@ public static class MissionAssetValidation
         }
     }
 
-    private static void ValidateActions(SerializedProperty actionsProperty, List<Entry> entries, string actionLabel)
-    {
-        if (actionsProperty == null)
-        {
-            return;
-        }
-
-        for (int i = 0; i < actionsProperty.arraySize; i++)
-        {
-            MissionActionDefinition action = actionsProperty.GetArrayElementAtIndex(i).objectReferenceValue as MissionActionDefinition;
-            if (action == null)
-            {
-                continue;
-            }
-
-            SerializedObject serializedAction = new SerializedObject(action);
-            SerializedProperty targetKey = serializedAction.FindProperty("targetKey");
-            if (targetKey != null && string.IsNullOrWhiteSpace(targetKey.stringValue))
-            {
-                entries.Add(new Entry(Severity.Warning, $"{actionLabel} '{action.name}' has an empty target key.", action));
-            }
-        }
-    }
-
     private static void ValidateSignalKeyProperty(ScriptableObject asset, string propertyName, List<Entry> entries, string warning)
     {
         SerializedObject serializedObject = new SerializedObject(asset);
@@ -261,14 +146,14 @@ public static class MissionAssetValidation
         int assignedCount = 0;
         for (int i = 0; i < arrayProperty.arraySize; i++)
         {
-            if (arrayProperty.GetArrayElementAtIndex(i).objectReferenceValue != null)
+            SerializedProperty element = arrayProperty.GetArrayElementAtIndex(i);
+            if (element.objectReferenceValue == null)
             {
-                assignedCount++;
+                entries.Add(new Entry(Severity.Warning, $"Mission has an empty {label} reference at index {i}."));
+                continue;
             }
-            else
-            {
-                entries.Add(new Entry(Severity.Warning, $"Null {label} entry at index {i}."));
-            }
+
+            assignedCount++;
         }
 
         return assignedCount;
@@ -281,19 +166,16 @@ public static class MissionAssetValidation
             return;
         }
 
-        HashSet<Object> seenReferences = new HashSet<Object>();
+        HashSet<Object> seen = new HashSet<Object>();
         for (int i = 0; i < arrayProperty.arraySize; i++)
         {
-            Object referencedObject = arrayProperty.GetArrayElementAtIndex(i).objectReferenceValue;
-            if (referencedObject == null)
+            Object reference = arrayProperty.GetArrayElementAtIndex(i).objectReferenceValue;
+            if (reference == null || seen.Add(reference))
             {
                 continue;
             }
 
-            if (!seenReferences.Add(referencedObject))
-            {
-                entries.Add(new Entry(Severity.Warning, $"{label} '{referencedObject.name}' is referenced more than once.", referencedObject));
-            }
+            entries.Add(new Entry(Severity.Warning, $"{label} '{reference.name}' is referenced more than once.", reference));
         }
     }
 }

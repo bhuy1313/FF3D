@@ -466,8 +466,7 @@ public static class MissionAuthoringAssetUtility
 
     private static bool ShouldConvertMissionNode(ScriptableObject candidate)
     {
-        return candidate is MissionStageDefinition ||
-               candidate is MissionObjectiveDefinition ||
+        return candidate is MissionObjectiveDefinition ||
                candidate is MissionActionDefinition ||
                candidate is MissionFailConditionDefinition;
     }

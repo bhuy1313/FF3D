@@ -435,11 +435,6 @@ public class MissionHudPresenter : MonoBehaviour
         {
             summaryBuilder.Append(missionSystem.MissionDescription);
         }
-        else if (!string.IsNullOrWhiteSpace(missionSystem.CurrentStageDescription))
-        {
-            summaryBuilder.Append(missionSystem.CurrentStageDescription);
-        }
-
         AppendSituationAdvisories();
         return summaryBuilder.ToString();
     }
@@ -479,17 +474,13 @@ public class MissionHudPresenter : MonoBehaviour
             return string.Empty;
         }
 
-        string currentStageId = missionSystem.CurrentStageId;
         bool powerIsolated = missionSystem.HasSignal("tutorial-isolate-power");
-        if ((string.Equals(currentStageId, "isolate-power", StringComparison.OrdinalIgnoreCase) ||
-             string.Equals(currentStageId, "contain-fire", StringComparison.OrdinalIgnoreCase)) &&
-            !powerIsolated)
+        if (!powerIsolated && missionSystem.ActiveFireCount > 0)
         {
             return "Hazard: electrical source active. Isolate the panel before using water.";
         }
 
-        if (powerIsolated &&
-            string.Equals(currentStageId, "contain-fire", StringComparison.OrdinalIgnoreCase))
+        if (powerIsolated && missionSystem.ActiveFireCount > 0)
         {
             return "Hazard: power isolated. Hose attack is now safe.";
         }

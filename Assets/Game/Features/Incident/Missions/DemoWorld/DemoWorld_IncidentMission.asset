@@ -14,10 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MissionDefinition
   missionId: demoworld-incident
   missionTitle: Resolve DemoWorld Incident
-  missionDescription: Contain the fire, then extract all civilians from the affected area.
+  missionDescription: Extinguish the fire and extract all civilians from the affected area.
   timeLimitSeconds: 0
   persistentObjectives:
+  - {fileID: 11400000, guid: 55cad913e78d4a1fb65f1ad0efc1f8f4, type: 2}
   - {fileID: 11400000, guid: e28b5fd9f34c45fc965b54385c60d551, type: 2}
-  stages:
-  - {fileID: 11400000, guid: 42ce58eca13c4d5ab8a441db921d859a, type: 2}
-  - {fileID: 11400000, guid: 58ad2fd96b054fe08c73c216ddbab6f0, type: 2}

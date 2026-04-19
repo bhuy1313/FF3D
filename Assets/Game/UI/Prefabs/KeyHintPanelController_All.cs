@@ -345,17 +345,8 @@ public class KeyHintPanelController_All : MonoBehaviour
             return false;
         }
 
-        actionNames = stageId switch
-        {
-            "open-gate" => new List<string> { "Move", "Sprint", "Jump", "Crouch" },
-            "contain-fire" => new List<string> { "Move", "Sprint", "Jump", "Crouch" },
-            "break-barricade" => new List<string> { "Move", "Sprint", "Jump", "Crouch" },
-            "rescue-victim" => new List<string> { "Move", "Sprint", "Jump", "Crouch" },
-            "reach-exit" => new List<string> { "Move", "Sprint", "Jump", "Crouch" },
-            _ => null
-        };
-
-        return actionNames != null;
+        actionNames = new List<string> { "Move", "Sprint", "Jump", "Crouch" };
+        return true;
     }
 
     private void AddHintEntries(InputActionMap map, List<ActionHint> hints, string scheme, List<RenderedHint> renderedHints)

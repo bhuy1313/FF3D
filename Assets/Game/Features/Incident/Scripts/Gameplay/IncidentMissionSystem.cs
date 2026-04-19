@@ -6,11 +6,6 @@ using UnityEngine.Events;
 public partial class IncidentMissionSystem : MonoBehaviour
 {
     [System.Serializable]
-    public class MissionStageChangedEvent : UnityEvent<int, string>
-    {
-    }
-
-    [System.Serializable]
     private class MissionObjectiveStatus
     {
         [SerializeField] private string title;
@@ -19,7 +14,6 @@ public partial class IncidentMissionSystem : MonoBehaviour
         [SerializeField] private bool hasFailed;
         [SerializeField] private int score;
         [SerializeField] private int maxScore;
-        [SerializeField] private bool isStageObjective;
 
         public string Title => title;
         public string Summary => summary;
@@ -27,9 +21,8 @@ public partial class IncidentMissionSystem : MonoBehaviour
         public bool HasFailed => hasFailed;
         public int Score => score;
         public int MaxScore => maxScore;
-        public bool IsStageObjective => isStageObjective;
 
-        public void Set(MissionObjectiveEvaluation evaluation, MissionObjectiveScoreEvaluation scoreEvaluation, bool stageObjective)
+        public void Set(MissionObjectiveEvaluation evaluation, MissionObjectiveScoreEvaluation scoreEvaluation)
         {
             title = evaluation.Title;
             summary = evaluation.Summary;
@@ -37,92 +30,6 @@ public partial class IncidentMissionSystem : MonoBehaviour
             hasFailed = evaluation.HasFailed;
             score = scoreEvaluation.Score;
             maxScore = scoreEvaluation.MaxScore;
-            isStageObjective = stageObjective;
-        }
-    }
-
-    [System.Serializable]
-    private class MissionCompletedObjectiveRecord
-    {
-        [SerializeField] private int stageIndex = -1;
-        [SerializeField] private string stageId;
-        [SerializeField] private string title;
-        [SerializeField] private string summary;
-        [SerializeField] private bool isComplete;
-        [SerializeField] private bool hasFailed;
-        [SerializeField] private int score;
-        [SerializeField] private int maxScore;
-
-        public int StageIndex => stageIndex;
-
-        public void Set(int resolvedStageIndex, string resolvedStageId, MissionObjectiveStatus status)
-        {
-            stageIndex = resolvedStageIndex;
-            stageId = resolvedStageId;
-            title = status != null ? status.Title : string.Empty;
-            summary = status != null ? status.Summary : string.Empty;
-            isComplete = status != null && status.IsComplete;
-            hasFailed = status != null && status.HasFailed;
-            score = status != null ? status.Score : 0;
-            maxScore = status != null ? status.MaxScore : 0;
-        }
-
-        public MissionObjectiveStatusSnapshot ToSnapshot()
-        {
-            return new MissionObjectiveStatusSnapshot(title, summary, isComplete, hasFailed, score, maxScore);
-        }
-    }
-
-    [System.Serializable]
-    private class MissionStageScoreRecord
-    {
-        [SerializeField] private int stageIndex;
-        [SerializeField] private string stageId;
-        [SerializeField] private string stageTitle;
-        [SerializeField] private int score;
-        [SerializeField] private int maxScore;
-
-        public int StageIndex => stageIndex;
-        public string StageId => stageId;
-        public string StageTitle => stageTitle;
-        public int Score => score;
-        public int MaxScore => maxScore;
-
-        public void Set(int resolvedStageIndex, string resolvedStageId, string resolvedStageTitle, int resolvedScore, int resolvedMaxScore)
-        {
-            stageIndex = resolvedStageIndex;
-            stageId = resolvedStageId;
-            stageTitle = resolvedStageTitle;
-            score = Mathf.Max(0, resolvedScore);
-            maxScore = Mathf.Max(0, resolvedMaxScore);
-        }
-    }
-
-    [System.Serializable]
-    private class MissionStageActionBinding
-    {
-        [SerializeField] private string stageId;
-        [SerializeField] private UnityEvent onStageStarted;
-        [SerializeField] private UnityEvent onStageCompleted;
-
-        public bool Matches(string candidateStageId)
-        {
-            if (string.IsNullOrWhiteSpace(stageId) || string.IsNullOrWhiteSpace(candidateStageId))
-            {
-                return false;
-            }
-
-            return string.Equals(stageId.Trim(), candidateStageId.Trim(), System.StringComparison.OrdinalIgnoreCase);
-        }
-
-        public void InvokeStarted()
-        {
-            onStageStarted?.Invoke();
-        }
-
-        public void InvokeCompleted()
-        {
-            onStageCompleted?.Invoke();
         }
     }
 
@@ -167,9 +74,6 @@ public partial class IncidentMissionSystem : MonoBehaviour
     [SerializeField] private UnityEvent onMissionStarted;
     [SerializeField] private UnityEvent onMissionCompleted;
     [SerializeField] private UnityEvent onMissionFailed;
-    [SerializeField] private MissionStageChangedEvent onStageStarted;
-    [SerializeField] private MissionStageChangedEvent onStageCompleted;
-    [SerializeField] private List<MissionStageActionBinding> stageActionBindings = new List<MissionStageActionBinding>();
 
     [Header("Runtime")]
     [SerializeField] private MissionState missionState = MissionState.Idle;
@@ -185,18 +89,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
     [SerializeField] private int stabilizedVictimCount;
     [SerializeField] private int extractedVictimCount;
     [SerializeField] private int deceasedVictimCount;
-    [SerializeField] private int currentStageIndex = -1;
-    [SerializeField] private int totalStageCount;
-    [SerializeField] private string currentStageTitle;
-    [SerializeField] private string currentStageDescription;
-    [SerializeField] private bool isStageTransitionPending;
-    [SerializeField] private int pendingStageIndex = -1;
-    [SerializeField] private float pendingStageStartTime = -1f;
-    [SerializeField] private int lastStartedStageEventIndex = -1;
-    [SerializeField] private int lastCompletedStageEventIndex = -1;
     [SerializeField] private List<MissionObjectiveStatus> objectiveStatuses = new List<MissionObjectiveStatus>();
-    [SerializeField] private List<MissionCompletedObjectiveRecord> completedObjectiveRecords = new List<MissionCompletedObjectiveRecord>();
-    [SerializeField] private List<MissionStageScoreRecord> completedStageScoreRecords = new List<MissionStageScoreRecord>();
     [SerializeField] private int currentScore;
     [SerializeField] private int maximumScore;
     [SerializeField] private string currentScoreRank;
@@ -217,12 +110,8 @@ public partial class IncidentMissionSystem : MonoBehaviour
     [SerializeField] private List<string> activatedSignalKeys = new List<string>();
 
     private readonly List<MissionObjectiveDefinition> activePersistentObjectiveDefinitions = new List<MissionObjectiveDefinition>();
-    private readonly List<MissionObjectiveDefinition> activeStageObjectiveDefinitions = new List<MissionObjectiveDefinition>();
     private readonly List<MissionFailConditionDefinition> activeFailConditionDefinitions = new List<MissionFailConditionDefinition>();
-    private readonly List<MissionStageDefinition> activeStageDefinitions = new List<MissionStageDefinition>();
-    private readonly List<MissionObjectiveDefinition> scoreScratchObjectives = new List<MissionObjectiveDefinition>();
     private readonly HashSet<MissionObjectiveDefinition> objectiveScratchSet = new HashSet<MissionObjectiveDefinition>();
-    private readonly List<MissionStageDefinition> resultStageScratch = new List<MissionStageDefinition>();
     private readonly List<MissionObjectiveDefinition> resultObjectiveScratch = new List<MissionObjectiveDefinition>();
     private readonly List<MissionFailConditionDefinition> resultFailConditionScratch = new List<MissionFailConditionDefinition>();
 
@@ -245,15 +134,13 @@ public partial class IncidentMissionSystem : MonoBehaviour
     public int StabilizedVictimCount => stabilizedVictimCount;
     public int ExtractedVictimCount => extractedVictimCount;
     public int DeceasedVictimCount => deceasedVictimCount;
-    public bool HasActiveStage => HasActiveStageSequence();
-    public int CurrentStageIndex => currentStageIndex;
-    public int TotalStageCount => totalStageCount;
-    public string CurrentStageTitle => currentStageTitle;
-    public string CurrentStageDescription => currentStageDescription;
-    public bool IsStageTransitionPending => isStageTransitionPending;
-    public float RemainingStageTransitionDelaySeconds => isStageTransitionPending
-        ? Mathf.Max(0f, pendingStageStartTime - elapsedTime)
-        : 0f;
+    public bool HasActiveStage => false;
+    public int CurrentStageIndex => -1;
+    public int TotalStageCount => 0;
+    public string CurrentStageTitle => string.Empty;
+    public string CurrentStageDescription => string.Empty;
+    public bool IsStageTransitionPending => false;
+    public float RemainingStageTransitionDelaySeconds => 0f;
     public int ObjectiveStatusCount => objectiveStatuses != null ? objectiveStatuses.Count : 0;
     public int ResultObjectiveStatusCount => GetResultObjectiveStatusCount();
     public int CurrentScore => currentScore;
@@ -276,7 +163,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
     public int DisplayedExtractedVictimCount => missionState == MissionState.Completed || missionState == MissionState.Failed ? finalExtractedVictimCount : extractedVictimCount;
     public int DisplayedDeceasedVictimCount => missionState == MissionState.Completed || missionState == MissionState.Failed ? finalDeceasedVictimCount : deceasedVictimCount;
     public float RemainingTimeSeconds => Mathf.Max(0f, ResolveTimeLimitSeconds() - elapsedTime);
-    public string CurrentStageId => ResolveCurrentStageId();
+    public string CurrentStageId => string.Empty;
     public bool FailsOnAnyVictimDeath => ResolveFailsOnAnyVictimDeath();
 
     private GUIStyle overlayGuiStyle;
@@ -317,16 +204,6 @@ public partial class IncidentMissionSystem : MonoBehaviour
             return;
         }
 
-        if (UpdatePendingStageTransition())
-        {
-            return;
-        }
-
-        if (TryAdvanceMissionStageIfReady())
-        {
-            return;
-        }
-
         if (AreCompletionConditionsMet())
             CompleteMission();
     }
@@ -348,16 +225,13 @@ public partial class IncidentMissionSystem : MonoBehaviour
     [ContextMenu("Start Mission")]
     public void StartMission()
     {
-        ResetMissionStageRuntime();
         ResetScoreRuntime();
         ResetFinalPerformanceSnapshot();
-        ResetObjectiveHistoryRuntime();
         ResetSignalEmitters();
         RefreshObjectives();
         elapsedTime = 0f;
         missionState = MissionState.Running;
         onMissionStarted?.Invoke();
-        InvokeCurrentStageStarted();
     }
 
     [ContextMenu("Fail Mission")]
@@ -383,7 +257,6 @@ public partial class IncidentMissionSystem : MonoBehaviour
 
         RefreshProgress();
         RefreshObjectiveStatuses();
-        InvokeCurrentStageCompleted();
         missionState = MissionState.Completed;
         RefreshScoreState();
         CacheFinalScore();
@@ -423,32 +296,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
 
     public bool TryGetResultObjectiveStatus(int index, out MissionObjectiveStatusSnapshot status)
     {
-        status = default;
-        if (index < 0)
-        {
-            return false;
-        }
-
-        int completedCount = completedObjectiveRecords != null ? completedObjectiveRecords.Count : 0;
-        if (index < completedCount)
-        {
-            MissionCompletedObjectiveRecord record = completedObjectiveRecords[index];
-            if (record == null)
-            {
-                return false;
-            }
-
-            status = record.ToSnapshot();
-            return true;
-        }
-
-        if (!ShouldIncludeCurrentObjectiveStatusesInResult())
-        {
-            return false;
-        }
-
-        int currentIndex = index - completedCount;
-        return TryGetCurrentResultObjectiveStatus(currentIndex, out status);
+        return TryGetObjectiveStatus(index, out status);
     }
 
     public bool TryResolveSceneObject(string key, out GameObject targetObject)
@@ -883,27 +731,6 @@ public partial class IncidentMissionSystem : MonoBehaviour
             }
         }
 
-        missionDefinition.CollectStages(resultStageScratch);
-        for (int stageIndex = 0; stageIndex < resultStageScratch.Count; stageIndex++)
-        {
-            MissionStageDefinition stage = resultStageScratch[stageIndex];
-            if (stage == null)
-            {
-                continue;
-            }
-
-            resultObjectiveScratch.Clear();
-            missionDefinition.CollectStageObjectives(resultObjectiveScratch, stageIndex);
-            for (int objectiveIndex = 0; objectiveIndex < resultObjectiveScratch.Count; objectiveIndex++)
-            {
-                MissionObjectiveDefinition objective = resultObjectiveScratch[objectiveIndex];
-                if (objective != null)
-                {
-                    objective.CollectTargets(sceneData);
-                }
-            }
-        }
-
         missionDefinition.CollectFailConditions(resultFailConditionScratch);
         for (int i = 0; i < resultFailConditionScratch.Count; i++)
         {
@@ -937,11 +764,6 @@ public partial class IncidentMissionSystem : MonoBehaviour
                 victims.Add(victimCondition);
             }
         }
-    }
-
-    private bool AreActiveDefinitionObjectivesSatisfied(MissionProgressSnapshot snapshot, bool allowNoRelevantObjectives)
-    {
-        return AreObjectiveDefinitionsSatisfied(activeStageObjectiveDefinitions, snapshot, allowNoRelevantObjectives);
     }
 
     private bool ArePersistentDefinitionObjectivesSatisfied(MissionProgressSnapshot snapshot, bool allowNoRelevantObjectives)
@@ -979,7 +801,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
 
     private bool HasAnyActiveDefinitionObjectives()
     {
-        return activePersistentObjectiveDefinitions.Count > 0 || activeStageObjectiveDefinitions.Count > 0;
+        return activePersistentObjectiveDefinitions.Count > 0;
     }
 
     private bool HasFailedObjectiveOutcome()
@@ -997,129 +819,9 @@ public partial class IncidentMissionSystem : MonoBehaviour
         Objectives.RefreshObjectiveStatuses();
     }
 
-    private void ResetObjectiveHistoryRuntime()
-    {
-        Objectives.ResetObjectiveHistoryRuntime();
-    }
-
-    private void CaptureCurrentStageObjectiveHistoryIfNeeded(string stageId)
-    {
-        Objectives.CaptureCurrentStageObjectiveHistoryIfNeeded(stageId);
-    }
-
-    private bool HasCapturedStageObjectiveHistory(int stageIndex)
-    {
-        return Objectives.HasCapturedStageObjectiveHistory(stageIndex);
-    }
-
     private int GetResultObjectiveStatusCount()
     {
-        int completedCount = completedObjectiveRecords != null ? completedObjectiveRecords.Count : 0;
-        if (!ShouldIncludeCurrentObjectiveStatusesInResult())
-        {
-            return completedCount;
-        }
-
-        return completedCount + GetCurrentResultObjectiveStatusCount();
-    }
-
-    private bool ShouldIncludeCurrentObjectiveStatusesInResult()
-    {
-        if (!HasActiveStageSequence())
-        {
-            return ObjectiveStatusCount > 0;
-        }
-
-        return HasUncapturedCurrentObjectiveStatusesInResult();
-    }
-
-    private bool TryGetCurrentResultObjectiveStatus(int filteredIndex, out MissionObjectiveStatusSnapshot status)
-    {
-        status = default;
-        if (filteredIndex < 0 || objectiveStatuses == null)
-        {
-            return false;
-        }
-
-        int resolvedIndex = 0;
-        for (int i = 0; i < objectiveStatuses.Count; i++)
-        {
-            MissionObjectiveStatus objectiveStatus = objectiveStatuses[i];
-            if (objectiveStatus == null || !ShouldIncludeCurrentObjectiveStatusInResult(objectiveStatus))
-            {
-                continue;
-            }
-
-            if (resolvedIndex == filteredIndex)
-            {
-                status = new MissionObjectiveStatusSnapshot(
-                    objectiveStatus.Title,
-                    objectiveStatus.Summary,
-                    objectiveStatus.IsComplete,
-                    objectiveStatus.HasFailed,
-                    objectiveStatus.Score,
-                    objectiveStatus.MaxScore);
-                return true;
-            }
-
-            resolvedIndex++;
-        }
-
-        return false;
-    }
-
-    private int GetCurrentResultObjectiveStatusCount()
-    {
-        if (objectiveStatuses == null)
-        {
-            return 0;
-        }
-
-        int count = 0;
-        for (int i = 0; i < objectiveStatuses.Count; i++)
-        {
-            MissionObjectiveStatus objectiveStatus = objectiveStatuses[i];
-            if (objectiveStatus != null && ShouldIncludeCurrentObjectiveStatusInResult(objectiveStatus))
-            {
-                count++;
-            }
-        }
-
-        return count;
-    }
-
-    private bool HasUncapturedCurrentObjectiveStatusesInResult()
-    {
-        if (objectiveStatuses == null)
-        {
-            return false;
-        }
-
-        for (int i = 0; i < objectiveStatuses.Count; i++)
-        {
-            MissionObjectiveStatus objectiveStatus = objectiveStatuses[i];
-            if (objectiveStatus != null && ShouldIncludeCurrentObjectiveStatusInResult(objectiveStatus))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private bool ShouldIncludeCurrentObjectiveStatusInResult(MissionObjectiveStatus objectiveStatus)
-    {
-        if (objectiveStatus == null)
-        {
-            return false;
-        }
-
-        if (!objectiveStatus.IsStageObjective)
-        {
-            return true;
-        }
-
-        return !HasCapturedStageObjectiveHistory(currentStageIndex);
+        return ObjectiveStatusCount;
     }
 
     private void BuildLegacyObjectiveStatuses(MissionProgressSnapshot snapshot)
@@ -1127,9 +829,9 @@ public partial class IncidentMissionSystem : MonoBehaviour
         Objectives.BuildLegacyObjectiveStatuses(snapshot);
     }
 
-    private void AddObjectiveStatus(MissionObjectiveEvaluation evaluation, MissionObjectiveScoreEvaluation scoreEvaluation, bool stageObjective)
+    private void AddObjectiveStatus(MissionObjectiveEvaluation evaluation, MissionObjectiveScoreEvaluation scoreEvaluation)
     {
-        Objectives.AddObjectiveStatus(evaluation, scoreEvaluation, stageObjective);
+        Objectives.AddObjectiveStatus(evaluation, scoreEvaluation);
     }
 
     private static MissionObjectiveScoreEvaluation CreateLegacyBinaryScore(bool isComplete)
@@ -1144,7 +846,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
         return new MissionObjectiveScoreEvaluation(score, LegacyObjectiveScoreWeight, string.Empty);
     }
 
-    private int SumObjectiveStatusScore(bool includeStageObjectives, bool includePersistentObjectives)
+    private int SumObjectiveStatusScore()
     {
         if (objectiveStatuses == null)
         {
@@ -1160,79 +862,10 @@ public partial class IncidentMissionSystem : MonoBehaviour
                 continue;
             }
 
-            if ((status.IsStageObjective && includeStageObjectives) ||
-                (!status.IsStageObjective && includePersistentObjectives))
-            {
-                score += Mathf.Max(0, status.Score);
-            }
+            score += Mathf.Max(0, status.Score);
         }
 
         return score;
-    }
-
-    private int SumObjectiveStatusMaxScore(bool includeStageObjectives, bool includePersistentObjectives)
-    {
-        if (objectiveStatuses == null)
-        {
-            return 0;
-        }
-
-        int maxScore = 0;
-        for (int i = 0; i < objectiveStatuses.Count; i++)
-        {
-            MissionObjectiveStatus status = objectiveStatuses[i];
-            if (status == null)
-            {
-                continue;
-            }
-
-            if ((status.IsStageObjective && includeStageObjectives) ||
-                (!status.IsStageObjective && includePersistentObjectives))
-            {
-                maxScore += Mathf.Max(0, status.MaxScore);
-            }
-        }
-
-        return maxScore;
-    }
-
-    private int CalculateCompletedStageObjectiveScore()
-    {
-        if (completedStageScoreRecords == null)
-        {
-            return 0;
-        }
-
-        int score = 0;
-        for (int i = 0; i < completedStageScoreRecords.Count; i++)
-        {
-            MissionStageScoreRecord record = completedStageScoreRecords[i];
-            if (record != null)
-            {
-                score += Mathf.Max(0, record.Score);
-            }
-        }
-
-        return score;
-    }
-
-    private bool HasCapturedStageScore(int stageIndex)
-    {
-        if (stageIndex < 0 || completedStageScoreRecords == null)
-        {
-            return false;
-        }
-
-        for (int i = 0; i < completedStageScoreRecords.Count; i++)
-        {
-            MissionStageScoreRecord record = completedStageScoreRecords[i];
-            if (record != null && record.StageIndex == stageIndex)
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private int CalculateMissionObjectiveMaximumScore()
@@ -1247,33 +880,6 @@ public partial class IncidentMissionSystem : MonoBehaviour
             {
                 score += objective.ScoreWeight;
             }
-        }
-
-        if (HasActiveStageSequence())
-        {
-            for (int i = 0; i < activeStageDefinitions.Count; i++)
-            {
-                MissionStageDefinition stage = activeStageDefinitions[i];
-                if (stage == null)
-                {
-                    continue;
-                }
-
-                scoreScratchObjectives.Clear();
-                stage.CollectObjectives(scoreScratchObjectives);
-                for (int objectiveIndex = 0; objectiveIndex < scoreScratchObjectives.Count; objectiveIndex++)
-                {
-                    MissionObjectiveDefinition objective = scoreScratchObjectives[objectiveIndex];
-                    if (objective != null && objectiveScratchSet.Add(objective))
-                    {
-                        score += objective.ScoreWeight;
-                    }
-                }
-            }
-
-            scoreScratchObjectives.Clear();
-            objectiveScratchSet.Clear();
-            return score;
         }
 
         if (activePersistentObjectiveDefinitions.Count > 0)
@@ -1303,11 +909,6 @@ public partial class IncidentMissionSystem : MonoBehaviour
         }
 
         return legacyScore;
-    }
-
-    private void CaptureCurrentStageScoreIfNeeded(string stageId)
-    {
-        Scoring.CaptureCurrentStageScoreIfNeeded(stageId);
     }
 
     private string BuildObjectiveOverlayLines()
@@ -1362,17 +963,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
     }
 
     private string BuildStageOverlayLine()
-    {
-        if (!HasActiveStageSequence())
-        {
-            return string.Empty;
-        }
-
-        string stageLabel = string.IsNullOrWhiteSpace(currentStageTitle)
-            ? MissionLocalization.Format("mission.hud.stage.single", "Stage {0}", currentStageIndex + 1)
-            : MissionLocalization.Format("mission.hud.stage.full", "Stage {0}/{1}: {2}", currentStageIndex + 1, totalStageCount, currentStageTitle);
-        return $"{stageLabel}\n";
-    }
+        => string.Empty;
 
     private static string LocalizeMissionState(MissionState state)
     {

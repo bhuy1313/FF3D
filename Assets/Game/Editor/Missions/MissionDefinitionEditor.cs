@@ -14,12 +14,6 @@ public class MissionDefinitionEditor : Editor
         serializedObject.ApplyModifiedProperties();
 
         EditorGUILayout.Space();
-        if (GUILayout.Button("Open Mission Authoring"))
-        {
-            MissionAuthoringWindow.OpenWindow((MissionDefinition)target);
-        }
-
-        EditorGUILayout.Space();
         DrawCreationTools();
         EditorGUILayout.Space();
         DrawValidationTools();
@@ -50,11 +44,6 @@ public class MissionDefinitionEditor : Editor
     private void DrawCreationTools()
     {
         EditorGUILayout.LabelField("Quick Create", EditorStyles.boldLabel);
-        if (GUILayout.Button("Create Stage Asset"))
-        {
-            MissionEditorAssetCreationUtility.ShowCreateAssetMenu<MissionStageDefinition>(serializedObject, "stages", "Create Stage");
-        }
-
         if (GUILayout.Button("Create Persistent Objective Asset"))
         {
             MissionEditorAssetCreationUtility.ShowCreateAssetMenu<MissionObjectiveDefinition>(serializedObject, "persistentObjectives", "Create Persistent Objective");

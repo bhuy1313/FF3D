@@ -5,11 +5,9 @@ public partial class IncidentMissionSystem
 {
     private IncidentMissionObjectiveService objectiveService;
     private IncidentMissionScoreService scoreService;
-    private IncidentMissionStageService stageService;
 
     private IncidentMissionObjectiveService Objectives => objectiveService ??= new IncidentMissionObjectiveService(this);
     private IncidentMissionScoreService Scoring => scoreService ??= new IncidentMissionScoreService(this);
-    private IncidentMissionStageService Stages => stageService ??= new IncidentMissionStageService(this);
 
     private sealed class IncidentMissionObjectiveService
     {
@@ -23,13 +21,6 @@ public partial class IncidentMissionSystem
         public bool AreCompletionConditionsMet()
         {
             MissionProgressSnapshot snapshot = owner.BuildProgressSnapshot();
-            if (owner.HasActiveStageSequence())
-            {
-                return owner.IsFinalMissionStage() &&
-                    owner.AreActiveDefinitionObjectivesSatisfied(snapshot, true) &&
-                    owner.ArePersistentDefinitionObjectivesSatisfied(snapshot, true);
-            }
-
             if (owner.activePersistentObjectiveDefinitions.Count > 0)
             {
                 return owner.ArePersistentDefinitionObjectivesSatisfied(snapshot, false);
@@ -57,44 +48,16 @@ public partial class IncidentMissionSystem
         public bool RefreshObjectivesFromDefinition()
         {
             owner.activePersistentObjectiveDefinitions.Clear();
-            owner.activeStageObjectiveDefinitions.Clear();
             owner.activeFailConditionDefinitions.Clear();
-            owner.activeStageDefinitions.Clear();
             if (owner.missionDefinition == null)
             {
-                owner.ClearStageRuntimePresentation();
                 return false;
             }
 
-            owner.missionDefinition.CollectStages(owner.activeStageDefinitions);
             owner.missionDefinition.CollectFailConditions(owner.activeFailConditionDefinitions);
             owner.missionDefinition.CollectPersistentObjectives(owner.activePersistentObjectiveDefinitions);
-            if (owner.activeStageDefinitions.Count > 0)
-            {
-                owner.currentStageIndex = Mathf.Clamp(owner.currentStageIndex < 0 ? 0 : owner.currentStageIndex, 0, owner.activeStageDefinitions.Count - 1);
-                owner.totalStageCount = owner.activeStageDefinitions.Count;
-
-                MissionStageDefinition currentStage = owner.activeStageDefinitions[owner.currentStageIndex];
-                owner.currentStageTitle = currentStage != null ? currentStage.StageTitle : string.Empty;
-                owner.currentStageDescription = currentStage != null ? currentStage.StageDescription : string.Empty;
-
-                owner.missionDefinition.CollectStageObjectives(owner.activeStageObjectiveDefinitions, owner.currentStageIndex);
-            }
-            else
-            {
-                owner.ClearStageRuntimePresentation();
-                if (owner.activePersistentObjectiveDefinitions.Count == 0)
-                {
-                    return false;
-                }
-            }
 
             MissionRuntimeSceneData sceneData = new MissionRuntimeSceneData();
-            for (int i = 0; i < owner.activeStageObjectiveDefinitions.Count; i++)
-            {
-                owner.activeStageObjectiveDefinitions[i].CollectTargets(sceneData);
-            }
-
             for (int i = 0; i < owner.activePersistentObjectiveDefinitions.Count; i++)
             {
                 owner.activePersistentObjectiveDefinitions[i].CollectTargets(sceneData);
@@ -112,19 +75,13 @@ public partial class IncidentMissionSystem
             owner.trackedFires = sceneData.CreateFireList();
             owner.trackedRescuables = sceneData.CreateRescuableList();
             owner.trackedVictimConditions = sceneData.CreateVictimConditionList();
-            return owner.activeStageDefinitions.Count > 0 ||
-                owner.activeStageObjectiveDefinitions.Count > 0 ||
-                owner.activePersistentObjectiveDefinitions.Count > 0 ||
-                owner.activeFailConditionDefinitions.Count > 0;
+            return owner.activePersistentObjectiveDefinitions.Count > 0 || owner.activeFailConditionDefinitions.Count > 0;
         }
 
         public void RefreshLegacyObjectives()
         {
             owner.activePersistentObjectiveDefinitions.Clear();
-            owner.activeStageObjectiveDefinitions.Clear();
             owner.activeFailConditionDefinitions.Clear();
-            owner.activeStageDefinitions.Clear();
-            owner.ClearStageRuntimePresentation();
 
             if (owner.autoDiscoverFires)
             {
@@ -163,21 +120,6 @@ public partial class IncidentMissionSystem
 
             MissionProgressSnapshot snapshot = owner.BuildProgressSnapshot();
             MissionObjectiveContext context = owner.BuildObjectiveContext(snapshot);
-            for (int i = 0; i < owner.activeStageObjectiveDefinitions.Count; i++)
-            {
-                MissionObjectiveDefinition objective = owner.activeStageObjectiveDefinitions[i];
-                if (objective == null)
-                {
-                    continue;
-                }
-
-                MissionObjectiveEvaluation evaluation = objective.Evaluate(context);
-                if (evaluation.IsRelevant && evaluation.HasFailed)
-                {
-                    return true;
-                }
-            }
-
             for (int i = 0; i < owner.activePersistentObjectiveDefinitions.Count; i++)
             {
                 MissionObjectiveDefinition objective = owner.activePersistentObjectiveDefinitions[i];
@@ -254,18 +196,6 @@ public partial class IncidentMissionSystem
                 }
             }
 
-            if (owner.activeStageObjectiveDefinitions != null)
-            {
-                for (int i = 0; i < owner.activeStageObjectiveDefinitions.Count; i++)
-                {
-                    if (owner.activeStageObjectiveDefinitions[i] is VictimOutcomeObjectiveDefinition victimOutcomeObjective &&
-                        victimOutcomeObjective.FailsOnAnyVictimDeath)
-                    {
-                        return true;
-                    }
-                }
-            }
-
             if (owner.activePersistentObjectiveDefinitions != null)
             {
                 for (int i = 0; i < owner.activePersistentObjectiveDefinitions.Count; i++)
@@ -295,66 +225,12 @@ public partial class IncidentMissionSystem
             if (owner.HasAnyActiveDefinitionObjectives())
             {
                 owner.objectiveScratchSet.Clear();
-                CollectObjectiveStatuses(owner.activeStageObjectiveDefinitions, context, true);
-                CollectObjectiveStatuses(owner.activePersistentObjectiveDefinitions, context, false);
+                CollectObjectiveStatuses(owner.activePersistentObjectiveDefinitions, context);
                 owner.objectiveScratchSet.Clear();
                 return;
             }
 
             BuildLegacyObjectiveStatuses(snapshot);
-        }
-
-        public void ResetObjectiveHistoryRuntime()
-        {
-            if (owner.completedObjectiveRecords != null)
-            {
-                owner.completedObjectiveRecords.Clear();
-            }
-        }
-
-        public void CaptureCurrentStageObjectiveHistoryIfNeeded(string stageId)
-        {
-            if (!owner.HasActiveStageSequence() || owner.currentStageIndex < 0 || HasCapturedStageObjectiveHistory(owner.currentStageIndex))
-            {
-                return;
-            }
-
-            if (owner.objectiveStatuses == null || owner.objectiveStatuses.Count == 0)
-            {
-                return;
-            }
-
-            for (int i = 0; i < owner.objectiveStatuses.Count; i++)
-            {
-                MissionObjectiveStatus status = owner.objectiveStatuses[i];
-                if (status == null || !status.IsStageObjective)
-                {
-                    continue;
-                }
-
-                MissionCompletedObjectiveRecord record = new MissionCompletedObjectiveRecord();
-                record.Set(owner.currentStageIndex, stageId, status);
-                owner.completedObjectiveRecords.Add(record);
-            }
-        }
-
-        public bool HasCapturedStageObjectiveHistory(int stageIndex)
-        {
-            if (stageIndex < 0 || owner.completedObjectiveRecords == null)
-            {
-                return false;
-            }
-
-            for (int i = 0; i < owner.completedObjectiveRecords.Count; i++)
-            {
-                MissionCompletedObjectiveRecord record = owner.completedObjectiveRecords[i];
-                if (record != null && record.StageIndex == stageIndex)
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
 
         public void BuildLegacyObjectiveStatuses(MissionProgressSnapshot snapshot)
@@ -375,8 +251,7 @@ public partial class IncidentMissionSystem
                     snapshot.ExtinguishedFireCount >= snapshot.TotalTrackedFires,
                     false,
                     true),
-                    CreateLegacyProgressiveScore(fireProgress),
-                    false);
+                    CreateLegacyProgressiveScore(fireProgress));
             }
 
             if (owner.requireAllRescuablesRescued && snapshot.TotalTrackedRescuables > 0)
@@ -395,8 +270,7 @@ public partial class IncidentMissionSystem
                     snapshot.RescuedCount >= snapshot.TotalTrackedRescuables,
                     false,
                     true),
-                    CreateLegacyProgressiveScore(rescueProgress),
-                    false);
+                    CreateLegacyProgressiveScore(rescueProgress));
             }
 
             bool usesVictimObjective =
@@ -424,19 +298,30 @@ public partial class IncidentMissionSystem
                     !failedByAnyDeath && !failedByDeathLimit && criticalResolved && livingVictimsStabilized,
                     failedByAnyDeath || failedByDeathLimit,
                     true),
-                    CreateLegacyBinaryScore(!failedByAnyDeath && !failedByDeathLimit && criticalResolved && livingVictimsStabilized),
-                    false);
+                    CreateLegacyBinaryScore(!failedByAnyDeath && !failedByDeathLimit && criticalResolved && livingVictimsStabilized));
             }
         }
 
-        public void AddObjectiveStatus(MissionObjectiveEvaluation evaluation, MissionObjectiveScoreEvaluation scoreEvaluation, bool stageObjective)
+        public void AddObjectiveStatus(MissionObjectiveEvaluation evaluation, MissionObjectiveScoreEvaluation scoreEvaluation)
         {
             MissionObjectiveStatus status = new MissionObjectiveStatus();
-            status.Set(evaluation, scoreEvaluation, stageObjective);
+            status.Set(evaluation, scoreEvaluation);
             owner.objectiveStatuses.Add(status);
         }
 
-        private void CollectObjectiveStatuses(List<MissionObjectiveDefinition> objectives, MissionObjectiveContext context, bool stageObjective)
+        public MissionObjectiveScoreEvaluation CreateLegacyBinaryScore(bool isComplete)
+        {
+            int score = isComplete ? LegacyObjectiveScoreWeight : 0;
+            return new MissionObjectiveScoreEvaluation(score, LegacyObjectiveScoreWeight, string.Empty);
+        }
+
+        public MissionObjectiveScoreEvaluation CreateLegacyProgressiveScore(float normalizedProgress)
+        {
+            int score = Mathf.Clamp(Mathf.RoundToInt(LegacyObjectiveScoreWeight * Mathf.Clamp01(normalizedProgress)), 0, LegacyObjectiveScoreWeight);
+            return new MissionObjectiveScoreEvaluation(score, LegacyObjectiveScoreWeight, string.Empty);
+        }
+
+        private void CollectObjectiveStatuses(List<MissionObjectiveDefinition> objectives, MissionObjectiveContext context)
         {
             for (int i = 0; i < objectives.Count; i++)
             {
@@ -454,21 +339,9 @@ public partial class IncidentMissionSystem
 
                 MissionObjectiveScoreEvaluation scoreEvaluation = objective.EvaluateScore(context, evaluation);
                 MissionObjectiveStatus status = new MissionObjectiveStatus();
-                status.Set(evaluation, scoreEvaluation, stageObjective);
+                status.Set(evaluation, scoreEvaluation);
                 owner.objectiveStatuses.Add(status);
             }
-        }
-
-        public MissionObjectiveScoreEvaluation CreateLegacyBinaryScore(bool isComplete)
-        {
-            int score = isComplete ? LegacyObjectiveScoreWeight : 0;
-            return new MissionObjectiveScoreEvaluation(score, LegacyObjectiveScoreWeight, string.Empty);
-        }
-
-        public MissionObjectiveScoreEvaluation CreateLegacyProgressiveScore(float normalizedProgress)
-        {
-            int score = Mathf.Clamp(Mathf.RoundToInt(LegacyObjectiveScoreWeight * Mathf.Clamp01(normalizedProgress)), 0, LegacyObjectiveScoreWeight);
-            return new MissionObjectiveScoreEvaluation(score, LegacyObjectiveScoreWeight, string.Empty);
         }
 
         private static List<T> CollectSceneObjects<T>() where T : Component
@@ -515,11 +388,6 @@ public partial class IncidentMissionSystem
 
         public void ResetScoreRuntime()
         {
-            if (owner.completedStageScoreRecords != null)
-            {
-                owner.completedStageScoreRecords.Clear();
-            }
-
             owner.currentScore = 0;
             owner.maximumScore = 0;
             owner.currentScoreRank = string.Empty;
@@ -537,10 +405,7 @@ public partial class IncidentMissionSystem
 
         public void RefreshScoreState()
         {
-            int objectiveScore = owner.CalculateCompletedStageObjectiveScore();
-            bool includeCurrentStageScore = !owner.HasActiveStageSequence() || !owner.HasCapturedStageScore(owner.currentStageIndex);
-            objectiveScore += owner.SumObjectiveStatusScore(includeCurrentStageScore, true);
-
+            int objectiveScore = owner.SumObjectiveStatusScore();
             int objectiveMaxScore = owner.CalculateMissionObjectiveMaximumScore();
             MissionScoreConfig scoreConfig = owner.missionDefinition != null ? owner.missionDefinition.ScoreConfig : null;
 
@@ -607,267 +472,6 @@ public partial class IncidentMissionSystem
             }
 
             return score;
-        }
-
-        public void CaptureCurrentStageScoreIfNeeded(string stageId)
-        {
-            if (!owner.HasActiveStageSequence() || owner.currentStageIndex < 0 || owner.HasCapturedStageScore(owner.currentStageIndex))
-            {
-                return;
-            }
-
-            int stageScore = owner.SumObjectiveStatusScore(true, false);
-            int stageMaxScore = owner.SumObjectiveStatusMaxScore(true, false);
-
-            string stageTitle = owner.currentStageTitle;
-            MissionStageScoreRecord record = new MissionStageScoreRecord();
-            record.Set(owner.currentStageIndex, stageId, stageTitle, stageScore, stageMaxScore);
-            owner.completedStageScoreRecords.Add(record);
-        }
-    }
-
-    private sealed class IncidentMissionStageService
-    {
-        private readonly IncidentMissionSystem owner;
-
-        public IncidentMissionStageService(IncidentMissionSystem owner)
-        {
-            this.owner = owner;
-        }
-
-        public bool TryAdvanceMissionStageIfReady()
-        {
-            if (!owner.HasActiveStageSequence())
-            {
-                return false;
-            }
-
-            MissionProgressSnapshot snapshot = owner.BuildProgressSnapshot();
-            if (!owner.AreActiveDefinitionObjectivesSatisfied(snapshot, true))
-            {
-                return false;
-            }
-
-            owner.InvokeCurrentStageCompleted();
-
-            if (owner.IsFinalMissionStage())
-            {
-                return false;
-            }
-
-            int nextStageIndex = owner.currentStageIndex + 1;
-            float nextStageDelaySeconds = ResolveCurrentStageTransitionDelaySeconds();
-            if (nextStageDelaySeconds > 0f)
-            {
-                ScheduleStageTransition(nextStageIndex, nextStageDelaySeconds);
-                return true;
-            }
-
-            BeginStage(nextStageIndex);
-            return true;
-        }
-
-        public bool HasActiveStageSequence()
-        {
-            return owner.activeStageDefinitions != null && owner.activeStageDefinitions.Count > 0;
-        }
-
-        public bool IsFinalMissionStage()
-        {
-            return HasActiveStageSequence() && owner.currentStageIndex >= owner.activeStageDefinitions.Count - 1;
-        }
-
-        public float ResolveCurrentStageTransitionDelaySeconds()
-        {
-            if (!owner.TryGetCurrentStageDefinition(out MissionStageDefinition stage) || stage == null)
-            {
-                return 0f;
-            }
-
-            return stage.NextStageDelaySeconds;
-        }
-
-        public void ResetMissionStageRuntime()
-        {
-            ResetSignalState();
-            ClearPendingStageTransition();
-            if (owner.missionDefinition != null && owner.missionDefinition.HasStages)
-            {
-                owner.currentStageIndex = 0;
-                return;
-            }
-
-            ClearStageRuntimePresentation();
-        }
-
-        public void ClearStageRuntimePresentation()
-        {
-            owner.currentStageIndex = -1;
-            owner.totalStageCount = 0;
-            owner.currentStageTitle = string.Empty;
-            owner.currentStageDescription = string.Empty;
-            ClearPendingStageTransition();
-            owner.lastStartedStageEventIndex = -1;
-            owner.lastCompletedStageEventIndex = -1;
-        }
-
-        public void ResetSignalState()
-        {
-            if (owner.activatedSignalKeys != null)
-            {
-                owner.activatedSignalKeys.Clear();
-            }
-        }
-
-        public bool UpdatePendingStageTransition()
-        {
-            if (!owner.isStageTransitionPending)
-            {
-                return false;
-            }
-
-            if (owner.elapsedTime < owner.pendingStageStartTime)
-            {
-                return true;
-            }
-
-            int nextStageIndex = owner.pendingStageIndex;
-            ClearPendingStageTransition();
-            BeginStage(nextStageIndex);
-            return true;
-        }
-
-        public void ScheduleStageTransition(int nextStageIndex, float delaySeconds)
-        {
-            owner.isStageTransitionPending = true;
-            owner.pendingStageIndex = nextStageIndex;
-            owner.pendingStageStartTime = owner.elapsedTime + Mathf.Max(0f, delaySeconds);
-        }
-
-        public void BeginStage(int stageIndex)
-        {
-            owner.currentStageIndex = stageIndex;
-            owner.RefreshObjectives();
-            owner.InvokeCurrentStageStarted();
-        }
-
-        public void ClearPendingStageTransition()
-        {
-            owner.isStageTransitionPending = false;
-            owner.pendingStageIndex = -1;
-            owner.pendingStageStartTime = -1f;
-        }
-
-        public void InvokeCurrentStageStarted()
-        {
-            if (!HasActiveStageSequence() || owner.currentStageIndex == owner.lastStartedStageEventIndex)
-            {
-                return;
-            }
-
-            string stageId = owner.ResolveCurrentStageId();
-            owner.lastStartedStageEventIndex = owner.currentStageIndex;
-            owner.onStageStarted?.Invoke(owner.currentStageIndex, stageId);
-            owner.ExecuteCurrentStageActions(MissionActionTrigger.StageStarted, stageId);
-            owner.InvokeStageBindings(stageId, true);
-        }
-
-        public void InvokeCurrentStageCompleted()
-        {
-            if (!HasActiveStageSequence() || owner.currentStageIndex == owner.lastCompletedStageEventIndex)
-            {
-                return;
-            }
-
-            string stageId = owner.ResolveCurrentStageId();
-            owner.CaptureCurrentStageObjectiveHistoryIfNeeded(stageId);
-            owner.CaptureCurrentStageScoreIfNeeded(stageId);
-            owner.lastCompletedStageEventIndex = owner.currentStageIndex;
-            owner.onStageCompleted?.Invoke(owner.currentStageIndex, stageId);
-            owner.ExecuteCurrentStageActions(MissionActionTrigger.StageCompleted, stageId);
-            owner.InvokeStageBindings(stageId, false);
-        }
-
-        public void ExecuteCurrentStageActions(MissionActionTrigger trigger, string stageId)
-        {
-            if (!owner.TryGetCurrentStageDefinition(out MissionStageDefinition stage))
-            {
-                return;
-            }
-
-            MissionActionExecutionContext context = new MissionActionExecutionContext(
-                owner,
-                owner.missionDefinition,
-                stage,
-                owner.currentStageIndex,
-                stageId,
-                trigger);
-
-            stage.ExecuteActions(context);
-        }
-
-        public void InvokeStageBindings(string stageId, bool started)
-        {
-            if (owner.stageActionBindings == null || string.IsNullOrWhiteSpace(stageId))
-            {
-                return;
-            }
-
-            for (int i = 0; i < owner.stageActionBindings.Count; i++)
-            {
-                MissionStageActionBinding binding = owner.stageActionBindings[i];
-                if (binding == null || !binding.Matches(stageId))
-                {
-                    continue;
-                }
-
-                if (started)
-                {
-                    binding.InvokeStarted();
-                }
-                else
-                {
-                    binding.InvokeCompleted();
-                }
-            }
-        }
-
-        public string ResolveCurrentStageId()
-        {
-            if (!HasActiveStageSequence() || owner.currentStageIndex < 0 || owner.currentStageIndex >= owner.activeStageDefinitions.Count)
-            {
-                return string.Empty;
-            }
-
-            MissionStageDefinition stage = owner.activeStageDefinitions[owner.currentStageIndex];
-            if (stage == null)
-            {
-                return string.Empty;
-            }
-
-            if (!string.IsNullOrWhiteSpace(stage.StageId))
-            {
-                return stage.StageId;
-            }
-
-            if (!string.IsNullOrWhiteSpace(stage.StageTitle))
-            {
-                return stage.StageTitle;
-            }
-
-            return $"stage-{owner.currentStageIndex + 1}";
-        }
-
-        public bool TryGetCurrentStageDefinition(out MissionStageDefinition stage)
-        {
-            stage = null;
-            if (!HasActiveStageSequence() || owner.currentStageIndex < 0 || owner.currentStageIndex >= owner.activeStageDefinitions.Count)
-            {
-                return false;
-            }
-
-            stage = owner.activeStageDefinitions[owner.currentStageIndex];
-            return stage != null;
         }
     }
 }
