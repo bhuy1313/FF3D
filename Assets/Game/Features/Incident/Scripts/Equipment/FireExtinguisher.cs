@@ -328,7 +328,7 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
                     continue;
                 }
 
-                ApplyWaterToColliderSafe(hit, amount, processedFires, SuppressionAgent);
+                ApplyWaterToColliderSafe(hit, amount, processedFires, SuppressionAgent, currentUser);
             }
         }
     }
@@ -337,7 +337,8 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
         Collider collider,
         float amount,
         System.Collections.Generic.HashSet<Fire> processedFires,
-        FireSuppressionAgent suppressionAgent)
+        FireSuppressionAgent suppressionAgent,
+        GameObject sourceUser)
     {
         if (collider == null)
         {
@@ -347,7 +348,7 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
         Fire fire = FindFire(collider);
         if (fire != null && processedFires.Add(fire))
         {
-            fire.ApplySuppression(amount, suppressionAgent);
+            fire.ApplySuppression(amount, suppressionAgent, sourceUser);
         }
     }
 

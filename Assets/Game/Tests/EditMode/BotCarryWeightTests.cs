@@ -19,6 +19,10 @@ public class BotCarryWeightTests
         {
         }
 
+        public void ApplySuppression(float amount, FireSuppressionAgent agent, GameObject sourceUser)
+        {
+        }
+
         public Vector3 GetWorldPosition()
         {
             return transform.position;

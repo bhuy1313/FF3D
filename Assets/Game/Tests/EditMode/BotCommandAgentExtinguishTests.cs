@@ -44,6 +44,11 @@ public class BotCommandAgentExtinguishTests
             SuppressedAmount += amount;
         }
 
+        public void ApplySuppression(float amount, FireSuppressionAgent agent, GameObject sourceUser)
+        {
+            ApplySuppression(amount, agent);
+        }
+
         public Vector3 GetWorldPosition()
         {
             return transform.position;

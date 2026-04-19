@@ -63,7 +63,7 @@ public partial class BotCommandAgent
             return;
         }
 
-        fireGroup.ApplyWater(waterAmount);
+        fireGroup.ApplyWater(waterAmount, gameObject, tool.SuppressionAgent);
     }
 
     private void TryApplyWaterToFireTarget(IBotExtinguisherItem tool, IFireTarget fireTarget, Vector3 firePosition)
@@ -94,7 +94,7 @@ public partial class BotCommandAgent
             return;
         }
 
-        fireTarget.ApplySuppression(waterAmount, tool.SuppressionAgent);
+        fireTarget.ApplySuppression(waterAmount, tool.SuppressionAgent, gameObject);
     }
 
     private bool IsAimSettled(IBotExtinguisherItem tool, Vector3 firePosition)

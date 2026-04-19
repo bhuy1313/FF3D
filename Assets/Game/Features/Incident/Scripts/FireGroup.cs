@@ -76,6 +76,11 @@ public class FireGroup : MonoBehaviour, IFireGroupTarget
 
     public void ApplyWater(float amount)
     {
+        ApplyWater(amount, null, FireSuppressionAgent.Water);
+    }
+
+    public void ApplyWater(float amount, GameObject sourceUser, FireSuppressionAgent suppressionAgent = FireSuppressionAgent.Water)
+    {
         if (amount <= 0f)
         {
             return;
@@ -126,7 +131,7 @@ public class FireGroup : MonoBehaviour, IFireGroupTarget
                 totalWeight);
             if (distributedAmount > 0f)
             {
-                fire.ApplySuppression(distributedAmount, FireSuppressionAgent.Water);
+                fire.ApplySuppression(distributedAmount, suppressionAgent, sourceUser);
             }
         }
     }

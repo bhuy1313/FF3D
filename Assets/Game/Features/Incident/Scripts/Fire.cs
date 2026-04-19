@@ -55,6 +55,14 @@ public class Fire : MonoBehaviour, IFireTarget
     [SerializeField] private float hazardActiveRegrowMultiplier = 2f;
     [Range(0f, 1f)]
     [SerializeField] private float hazardActiveMinimumHpNormalized = 0.18f;
+    [SerializeField] private float electricalWaterShockDamage = 20f;
+    [SerializeField] private float electricalWaterShockCooldown = 0.75f;
+    [SerializeField] private float flammableLiquidWaterBackfireIgniteAmount = 0.18f;
+    [SerializeField] private float flammableLiquidWaterBackfireCooldown = 0.5f;
+    [SerializeField] private float recentSuppressionMemoryDuration = 4f;
+    [SerializeField] private float co2RegrowMultiplier = 1.4f;
+    [SerializeField] private float dryChemicalRegrowMultiplier = 0.55f;
+    [SerializeField] private float dryChemicalSpreadLockDuration = 3f;
 
     [Header("Player Damage")]
     [SerializeField] private float damagePerSecond = 10f;
@@ -96,6 +104,11 @@ public class Fire : MonoBehaviour, IFireTarget
     private readonly List<Vector3> particleBaseStartSize3DMultipliers = new List<Vector3>();
     private Vector3 particleVisualRootBaseLocalScale = Vector3.one;
     private float lastWaterAppliedTime = float.NegativeInfinity;
+    private float lastElectricalWaterShockTime = float.NegativeInfinity;
+    private float lastFlammableLiquidBackfireTime = float.NegativeInfinity;
+    private float spreadLockedUntilTime = float.NegativeInfinity;
+    private float lastSuppressionAppliedTime = float.NegativeInfinity;
+    private FireSuppressionAgent lastSuppressionAgent = FireSuppressionAgent.Water;
     [SerializeField] private bool hazardSourceIsolated;
 
     public bool IsBurning => currentHp > 0f;
@@ -166,6 +179,10 @@ public class Fire : MonoBehaviour, IFireTarget
         currentHp = Mathf.Clamp(currentHp, 0f, Mathf.Max(0f, maxHp));
         spreadTimer = 0f;
         lastWaterAppliedTime = float.NegativeInfinity;
+        lastElectricalWaterShockTime = float.NegativeInfinity;
+        lastFlammableLiquidBackfireTime = float.NegativeInfinity;
+        spreadLockedUntilTime = float.NegativeInfinity;
+        lastSuppressionAppliedTime = float.NegativeInfinity;
         hazardSourceIsolated = startHazardIsolated;
         SyncRadiusAndCollider();
         SyncNavMeshModifier();
@@ -226,13 +243,23 @@ public class Fire : MonoBehaviour, IFireTarget
 
     public void ApplyWater(float amount)
     {
-        ApplySuppression(amount, FireSuppressionAgent.Water);
+        ApplySuppression(amount, FireSuppressionAgent.Water, null);
     }
 
     public void ApplySuppression(float amount, FireSuppressionAgent agent)
     {
+        ApplySuppression(amount, agent, null);
+    }
+
+    public void ApplySuppression(float amount, FireSuppressionAgent agent, GameObject sourceUser)
+    {
         if (amount <= 0f) return;
         if (currentHp <= 0f) return;
+
+        if (HandleUnsafeSuppression(amount, agent, sourceUser))
+        {
+            return;
+        }
 
         float effectiveAmount = amount * GetSuppressionEffectiveness(agent);
         if (effectiveAmount <= 0f)
@@ -246,6 +273,7 @@ public class Fire : MonoBehaviour, IFireTarget
         if (currentHp < previousHp)
         {
             lastWaterAppliedTime = Time.time;
+            RecordSuppression(agent);
         }
 
         if (currentHp <= 0f)
@@ -361,6 +389,7 @@ public class Fire : MonoBehaviour, IFireTarget
     private void TrySpreadFire()
     {
         if (!enableSpread) return;
+        if (Time.time < spreadLockedUntilTime) return;
         if (spreadIgniteAmount <= 0f) return;
         if (currentHp <= 0f || maxHp <= 0f) return;
 
@@ -370,6 +399,13 @@ public class Fire : MonoBehaviour, IFireTarget
         spreadTimer -= Time.deltaTime;
         if (spreadTimer > 0f) return;
         spreadTimer = spreadInterval;
+
+        SpreadToNearbyTargets(spreadIgniteAmount);
+    }
+
+    private void SpreadToNearbyTargets(float igniteAmount)
+    {
+        if (igniteAmount <= 0f) return;
 
         float spreadRadiusWorld = GetSphereRadiusWorld();
         if (spreadRadiusWorld <= 0f) return;
@@ -392,7 +428,7 @@ public class Fire : MonoBehaviour, IFireTarget
             if (spreadOnlyToUnlitTargets && target.currentHp > target.minHpToLive) continue;
             if (!spreadTargets.Add(target)) continue;
 
-            target.Ignite(spreadIgniteAmount);
+            target.Ignite(igniteAmount);
         }
     }
 
@@ -541,7 +577,81 @@ public class Fire : MonoBehaviour, IFireTarget
         regrowResumeDelay = Mathf.Max(0f, regrowResumeDelay);
         hazardActiveRegrowMultiplier = Mathf.Max(0f, hazardActiveRegrowMultiplier);
         hazardActiveMinimumHpNormalized = Mathf.Clamp01(hazardActiveMinimumHpNormalized);
+        electricalWaterShockDamage = Mathf.Max(0f, electricalWaterShockDamage);
+        electricalWaterShockCooldown = Mathf.Max(0f, electricalWaterShockCooldown);
+        flammableLiquidWaterBackfireIgniteAmount = Mathf.Max(0f, flammableLiquidWaterBackfireIgniteAmount);
+        flammableLiquidWaterBackfireCooldown = Mathf.Max(0f, flammableLiquidWaterBackfireCooldown);
+        recentSuppressionMemoryDuration = Mathf.Max(0f, recentSuppressionMemoryDuration);
+        co2RegrowMultiplier = Mathf.Max(0f, co2RegrowMultiplier);
+        dryChemicalRegrowMultiplier = Mathf.Max(0f, dryChemicalRegrowMultiplier);
+        dryChemicalSpreadLockDuration = Mathf.Max(0f, dryChemicalSpreadLockDuration);
         ApplyHazardDefaults();
+    }
+
+    private bool HandleUnsafeSuppression(float amount, FireSuppressionAgent agent, GameObject sourceUser)
+    {
+        if (agent != FireSuppressionAgent.Water)
+        {
+            return false;
+        }
+
+        if (fireType == FireHazardType.Electrical && !hazardSourceIsolated)
+        {
+            TryApplyElectricalShock(sourceUser);
+            return true;
+        }
+
+        if (fireType == FireHazardType.FlammableLiquid)
+        {
+            TriggerFlammableLiquidBackfire(amount);
+            return true;
+        }
+
+        return false;
+    }
+
+    private void TryApplyElectricalShock(GameObject sourceUser)
+    {
+        if (sourceUser == null) return;
+        if (Time.time < lastElectricalWaterShockTime + electricalWaterShockCooldown) return;
+
+        PlayerVitals vitals = sourceUser.GetComponentInParent<PlayerVitals>();
+        if (vitals == null || !vitals.IsAlive) return;
+
+        lastElectricalWaterShockTime = Time.time;
+        vitals.TakeDamage(electricalWaterShockDamage);
+    }
+
+    private void TriggerFlammableLiquidBackfire(float amount)
+    {
+        if (Time.time < lastFlammableLiquidBackfireTime + flammableLiquidWaterBackfireCooldown) return;
+
+        lastFlammableLiquidBackfireTime = Time.time;
+        bool wasBurning = IsBurning;
+        currentHp = Mathf.Min(
+            Mathf.Max(0f, maxHp),
+            currentHp + flammableLiquidWaterBackfireIgniteAmount * Mathf.Max(0.5f, amount));
+        NotifyBurningStateChangeIfNeeded(wasBurning);
+
+        if (!enableSpread) return;
+        SpreadToNearbyTargets(Mathf.Max(spreadIgniteAmount, flammableLiquidWaterBackfireIgniteAmount));
+    }
+
+    private void RecordSuppression(FireSuppressionAgent agent)
+    {
+        lastSuppressionAgent = agent;
+        lastSuppressionAppliedTime = Time.time;
+
+        if (agent == FireSuppressionAgent.DryChemical)
+        {
+            spreadLockedUntilTime = Mathf.Max(spreadLockedUntilTime, Time.time + dryChemicalSpreadLockDuration);
+        }
+    }
+
+    private bool HasRecentSuppressionMemory()
+    {
+        return recentSuppressionMemoryDuration > 0f &&
+               Time.time <= lastSuppressionAppliedTime + recentSuppressionMemoryDuration;
     }
 
     private void CacheReferences()
@@ -866,7 +976,7 @@ public class Fire : MonoBehaviour, IFireTarget
                 switch (agent)
                 {
                     case FireSuppressionAgent.Water:
-                        return 0.2f;
+                        return 0f;
                     case FireSuppressionAgent.CO2:
                         return 1f;
                     default:
@@ -899,18 +1009,32 @@ public class Fire : MonoBehaviour, IFireTarget
 
     private float GetHazardRegrowMultiplier()
     {
-        if (hazardSourceIsolated)
+        float multiplier = 1f;
+
+        if (!hazardSourceIsolated)
         {
-            return 1f;
+            switch (fireType)
+            {
+                case FireHazardType.Electrical:
+                case FireHazardType.GasFed:
+                    multiplier *= hazardActiveRegrowMultiplier;
+                    break;
+            }
         }
 
-        switch (fireType)
+        if (fireType != FireHazardType.OrdinaryCombustibles || !HasRecentSuppressionMemory())
         {
-            case FireHazardType.Electrical:
-            case FireHazardType.GasFed:
-                return hazardActiveRegrowMultiplier;
+            return multiplier;
+        }
+
+        switch (lastSuppressionAgent)
+        {
+            case FireSuppressionAgent.CO2:
+                return multiplier * co2RegrowMultiplier;
+            case FireSuppressionAgent.DryChemical:
+                return multiplier * dryChemicalRegrowMultiplier;
             default:
-                return 1f;
+                return multiplier;
         }
     }
 

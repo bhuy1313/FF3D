@@ -637,7 +637,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
 
                 for (int i = 0; i < hits.Length; i++)
                 {
-                    ApplyWaterToColliderSafe(hits[i].collider, amount, processedGroups, processedFires);
+                    ApplyWaterToColliderSafe(hits[i].collider, amount, processedGroups, processedFires, currentUser);
                 }
             }
 
@@ -694,7 +694,8 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         Collider collider,
         float amount,
         System.Collections.Generic.HashSet<FireGroup> processedGroups,
-        System.Collections.Generic.HashSet<Fire> processedFires)
+        System.Collections.Generic.HashSet<Fire> processedFires,
+        GameObject sourceUser)
     {
         if (collider == null)
             return;
@@ -702,13 +703,13 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         FireGroup fireGroup = FindFireGroup(collider);
         if (fireGroup != null && processedGroups.Add(fireGroup))
         {
-            fireGroup.ApplyWater(amount);
+            fireGroup.ApplyWater(amount, sourceUser, FireSuppressionAgent.Water);
             return;
         }
 
         Fire fire = FindFire(collider);
         if (fire != null && processedFires.Add(fire))
-            fire.ApplySuppression(amount, FireSuppressionAgent.Water);
+            fire.ApplySuppression(amount, FireSuppressionAgent.Water, sourceUser);
     }
 
     private static FireGroup FindFireGroup(Collider collider)

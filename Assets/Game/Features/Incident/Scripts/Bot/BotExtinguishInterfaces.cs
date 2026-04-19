@@ -49,6 +49,7 @@ namespace TrueJourney.BotBehavior
     public interface IFireGroupTarget
     {
         void ApplyWater(float amount);
+        void ApplyWater(float amount, GameObject sourceUser, FireSuppressionAgent suppressionAgent);
         bool HasActiveFires { get; }
         Vector3 GetClosestActiveFirePosition(Vector3 fromPosition);
         Vector3 GetWorldCenter();
@@ -58,6 +59,7 @@ namespace TrueJourney.BotBehavior
     {
         void ApplyWater(float amount);
         void ApplySuppression(float amount, FireSuppressionAgent agent);
+        void ApplySuppression(float amount, FireSuppressionAgent agent, GameObject sourceUser);
         bool IsBurning { get; }
         FireHazardType FireType { get; }
         Vector3 GetWorldPosition();

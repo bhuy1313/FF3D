@@ -12,13 +12,23 @@ public class IncidentPayloadAnchor : MonoBehaviour
 
     [Header("Runtime Spawn")]
     [SerializeField] private Transform runtimeParent;
-    [SerializeField] private float spawnSpacing = 0.8f;
     [SerializeField] private Vector3 runtimeZoneSize = new Vector3(4f, 2.5f, 4f);
     [SerializeField] private bool createRuntimeSmokeHazard = true;
     [SerializeField] private SmokeHazard smokeHazard;
     [SerializeField] private HazardIsolationDevice[] hazardIsolationDevices = Array.Empty<HazardIsolationDevice>();
-    [SerializeField] private IncidentFireSpawnSocket[] explicitSpawnSockets = Array.Empty<IncidentFireSpawnSocket>();
-    [SerializeField] private bool includeInactiveSpawnSockets = true;
+
+    [Header("Secondary Fire Placement")]
+    [SerializeField] [Min(0)] private int secondaryFirePointCount = 3;
+    [SerializeField] [Min(0.1f)] private float secondaryFireRange = 3f;
+    [SerializeField] [Min(0f)] private float minimumSecondaryFireSpacing = 0.85f;
+    [SerializeField] [Min(1)] private int placementAttemptsPerSecondaryFire = 8;
+    [SerializeField] [Min(0.05f)] private float parabolaLaunchHeight = 0.35f;
+    [SerializeField] [Min(0.1f)] private float parabolaApexHeight = 1.4f;
+    [SerializeField] [Min(3)] private int parabolaSegments = 12;
+    [SerializeField] [Min(0.01f)] private float parabolaCastRadius = 0.08f;
+    [SerializeField] [Min(0f)] private float surfaceOffset = 0.03f;
+    [SerializeField] private LayerMask firePlacementMask = ~0;
+    [SerializeField] private QueryTriggerInteraction firePlacementTriggerInteraction = QueryTriggerInteraction.Ignore;
 
     private readonly List<Fire> runtimeFires = new List<Fire>();
     private Transform runtimeRoot;
@@ -33,7 +43,6 @@ public class IncidentPayloadAnchor : MonoBehaviour
     public SmokeHazard RuntimeSmokeHazard => runtimeSmokeHazard;
     public IReadOnlyList<Fire> RuntimeFires => runtimeFires;
     public bool HasConfiguredHazardIsolationDevices => hazardIsolationDevices != null && hazardIsolationDevices.Length > 0;
-    public bool HasConfiguredSpawnSockets => ResolveSpawnSockets().Length > 0;
 
     public bool MatchesFireOrigin(string key)
     {
@@ -82,33 +91,52 @@ public class IncidentPayloadAnchor : MonoBehaviour
     {
         runtimeFires.Clear();
 
-        int requestedCount = Mathf.Max(1, payload.initialFireCount);
-        IncidentFireSpawnSocket[] spawnSockets = ResolveSpawnSockets();
-        List<IncidentFireSpawnSocket> selectedSockets = SelectSpawnSockets(payload, spawnSockets, requestedCount);
-        for (int i = 0; i < requestedCount; i++)
+        List<SpawnPlacement> placements = BuildRuntimeFirePlacements();
+        for (int i = 0; i < placements.Count; i++)
         {
-            Vector3 worldPosition;
-            Quaternion worldRotation;
-            if (i < selectedSockets.Count && selectedSockets[i] != null)
-            {
-                IncidentFireSpawnSocket socket = selectedSockets[i];
-                worldPosition = socket.WorldPosition;
-                worldRotation = socket.WorldRotation != Quaternion.identity
-                    ? socket.WorldRotation
-                    : ResolveFallbackRotation();
-            }
-            else
-            {
-                Vector3 offset = CalculateSpawnOffset(i, requestedCount);
-                worldPosition = transform.position + offset;
-                worldRotation = ResolveFallbackRotation();
-            }
-
-            Fire fireInstance = Instantiate(defaultFirePrefab, worldPosition, worldRotation, parent);
+            SpawnPlacement placement = placements[i];
+            Fire fireInstance = Instantiate(defaultFirePrefab, placement.Position, placement.Rotation, parent);
             fireInstance.name = $"{defaultFirePrefab.name}_{i + 1}";
             ConfigureFireInstance(fireInstance, payload);
             runtimeFires.Add(fireInstance);
         }
+    }
+
+    private List<SpawnPlacement> BuildRuntimeFirePlacements()
+    {
+        List<SpawnPlacement> placements = new List<SpawnPlacement>();
+        Vector3 anchorPosition = transform.position;
+        placements.Add(new SpawnPlacement(anchorPosition, ResolveFallbackRotation()));
+
+        int requestedSecondaryCount = Mathf.Max(0, secondaryFirePointCount);
+        if (requestedSecondaryCount <= 0)
+        {
+            return placements;
+        }
+
+        System.Random random = new System.Random(Guid.NewGuid().GetHashCode());
+        int maxAttempts = Mathf.Max(requestedSecondaryCount, requestedSecondaryCount * Mathf.Max(1, placementAttemptsPerSecondaryFire));
+        int attempts = 0;
+        while (placements.Count - 1 < requestedSecondaryCount && attempts < maxAttempts)
+        {
+            attempts++;
+            if (!TryFindSecondaryPlacement(random, placements, out SpawnPlacement placement))
+            {
+                continue;
+            }
+
+            placements.Add(placement);
+        }
+
+        if (placements.Count - 1 < requestedSecondaryCount)
+        {
+            Debug.LogWarning(
+                $"{nameof(IncidentPayloadAnchor)} on '{name}' only found {placements.Count - 1}/{requestedSecondaryCount} secondary fire placements " +
+                $"within range {secondaryFireRange:0.##}.",
+                this);
+        }
+
+        return placements;
     }
 
     private void ConfigureFireInstance(Fire fireInstance, IncidentWorldSetupPayload payload)
@@ -216,179 +244,80 @@ public class IncidentPayloadAnchor : MonoBehaviour
         }
     }
 
-    private Vector3 CalculateSpawnOffset(int index, int totalCount)
-    {
-        if (index <= 0 || totalCount <= 1)
-        {
-            return Vector3.zero;
-        }
-
-        Vector3 forward = transform.forward;
-        if (forward.sqrMagnitude < 0.0001f)
-        {
-            forward = Vector3.forward;
-        }
-
-        Vector3 right = transform.right;
-        if (right.sqrMagnitude < 0.0001f)
-        {
-            right = Vector3.right;
-        }
-
-        switch (index)
-        {
-            case 1:
-                return forward * spawnSpacing;
-            case 2:
-                return -forward * spawnSpacing;
-            case 3:
-                return right * spawnSpacing;
-            case 4:
-                return -right * spawnSpacing;
-            default:
-                int ringIndex = index - 1;
-                float angle = (ringIndex / Mathf.Max(1f, totalCount - 1f)) * Mathf.PI * 2f;
-                Vector3 radial = (right * Mathf.Cos(angle)) + (forward * Mathf.Sin(angle));
-                return radial.normalized * spawnSpacing;
-        }
-    }
-
-    private List<IncidentFireSpawnSocket> SelectSpawnSockets(
-        IncidentWorldSetupPayload payload,
-        IncidentFireSpawnSocket[] spawnSockets,
-        int requestedCount)
-    {
-        List<IncidentFireSpawnSocket> results = new List<IncidentFireSpawnSocket>();
-        if (spawnSockets == null || spawnSockets.Length <= 0 || requestedCount <= 0)
-        {
-            return results;
-        }
-
-        System.Random random = new System.Random(BuildSelectionSeed(payload));
-        List<IncidentFireSpawnSocket> remainingSockets = new List<IncidentFireSpawnSocket>(spawnSockets.Length);
-        for (int i = 0; i < spawnSockets.Length; i++)
-        {
-            if (spawnSockets[i] != null)
-            {
-                remainingSockets.Add(spawnSockets[i]);
-            }
-        }
-
-        IncidentFireSpawnSocket primarySocket = PickWeightedSocket(remainingSockets, random, requirePrimary: true);
-        if (primarySocket == null)
-        {
-            primarySocket = PickWeightedSocket(remainingSockets, random, requirePrimary: false);
-        }
-
-        if (primarySocket != null)
-        {
-            results.Add(primarySocket);
-            remainingSockets.Remove(primarySocket);
-        }
-
-        while (results.Count < requestedCount && remainingSockets.Count > 0)
-        {
-            IncidentFireSpawnSocket secondarySocket = PickWeightedSocket(remainingSockets, random, requirePrimary: false, requireSecondary: true);
-            if (secondarySocket == null)
-            {
-                break;
-            }
-
-            results.Add(secondarySocket);
-            remainingSockets.Remove(secondarySocket);
-        }
-
-        return results;
-    }
-
-    private IncidentFireSpawnSocket[] ResolveSpawnSockets()
-    {
-        if (explicitSpawnSockets != null && explicitSpawnSockets.Length > 0)
-        {
-            return explicitSpawnSockets;
-        }
-
-        return GetComponentsInChildren<IncidentFireSpawnSocket>(includeInactiveSpawnSockets);
-    }
-
-    private IncidentFireSpawnSocket PickWeightedSocket(
-        List<IncidentFireSpawnSocket> candidates,
+    private bool TryFindSecondaryPlacement(
         System.Random random,
-        bool requirePrimary,
-        bool requireSecondary = false)
+        List<SpawnPlacement> existingPlacements,
+        out SpawnPlacement placement)
     {
-        if (candidates == null || candidates.Count <= 0)
+        placement = default;
+
+        if (random == null || existingPlacements == null)
         {
-            return null;
+            return false;
         }
 
-        int totalWeight = 0;
-        for (int i = 0; i < candidates.Count; i++)
+        float horizontalDistance = Mathf.Lerp(
+            Mathf.Min(minimumSecondaryFireSpacing, secondaryFireRange),
+            Mathf.Max(minimumSecondaryFireSpacing, secondaryFireRange),
+            (float)random.NextDouble());
+        Vector3 launchPosition = transform.position + Vector3.up * Mathf.Max(0f, parabolaLaunchHeight);
+        Vector3 travelDirection = GetRandomHorizontalDirection(random);
+        Vector3 landingPosition = transform.position + travelDirection * horizontalDistance;
+        Vector3 controlPoint = Vector3.Lerp(launchPosition, landingPosition, 0.5f) + Vector3.up * Mathf.Max(0.05f, parabolaApexHeight);
+
+        Vector3 previousPoint = launchPosition;
+        int segmentCount = Mathf.Max(3, parabolaSegments);
+        for (int segmentIndex = 1; segmentIndex <= segmentCount; segmentIndex++)
         {
-            IncidentFireSpawnSocket candidate = candidates[i];
-            if (!IsSocketEligible(candidate, requirePrimary, requireSecondary))
+            float t = segmentIndex / (float)segmentCount;
+            Vector3 nextPoint = EvaluateQuadraticBezier(launchPosition, controlPoint, landingPosition, t);
+            Vector3 segment = nextPoint - previousPoint;
+            float segmentLength = segment.magnitude;
+            if (segmentLength <= 0.0001f)
             {
+                previousPoint = nextPoint;
                 continue;
             }
 
-            totalWeight += candidate.SelectionWeight;
-        }
-
-        if (totalWeight <= 0)
-        {
-            return null;
-        }
-
-        int roll = random.Next(0, totalWeight);
-        for (int i = 0; i < candidates.Count; i++)
-        {
-            IncidentFireSpawnSocket candidate = candidates[i];
-            if (!IsSocketEligible(candidate, requirePrimary, requireSecondary))
+            if (Physics.SphereCast(
+                    previousPoint,
+                    Mathf.Max(0.01f, parabolaCastRadius),
+                    segment / segmentLength,
+                    out RaycastHit hit,
+                    segmentLength,
+                    firePlacementMask,
+                    firePlacementTriggerInteraction) &&
+                IsValidSecondaryHit(hit, existingPlacements))
             {
-                continue;
+                Vector3 position = hit.point + hit.normal * Mathf.Max(0f, surfaceOffset);
+                placement = new SpawnPlacement(position, ResolveSurfaceRotation(hit.normal));
+                return true;
             }
 
-            roll -= candidate.SelectionWeight;
-            if (roll < 0)
-            {
-                return candidate;
-            }
+            previousPoint = nextPoint;
         }
 
-        return null;
+        return false;
     }
 
-    private static bool IsSocketEligible(IncidentFireSpawnSocket socket, bool requirePrimary, bool requireSecondary)
+    private bool IsValidSecondaryHit(RaycastHit hit, List<SpawnPlacement> existingPlacements)
     {
-        if (socket == null)
+        if (hit.collider == null)
         {
             return false;
         }
 
-        if (requirePrimary && !socket.CanSpawnPrimary)
+        Vector3 candidatePosition = hit.point + hit.normal * Mathf.Max(0f, surfaceOffset);
+        float minimumSpacing = Mathf.Max(0f, minimumSecondaryFireSpacing);
+        for (int i = 0; i < existingPlacements.Count; i++)
         {
-            return false;
-        }
-
-        if (requireSecondary && !socket.CanSpawnSecondary)
-        {
-            return false;
+            if ((existingPlacements[i].Position - candidatePosition).sqrMagnitude < minimumSpacing * minimumSpacing)
+            {
+                return false;
+            }
         }
 
         return true;
-    }
-
-    private int BuildSelectionSeed(IncidentWorldSetupPayload payload)
-    {
-        unchecked
-        {
-            int hash = 17;
-            hash = (hash * 31) + GetStableHash(caseSensitiveValue: payload != null ? payload.caseId : string.Empty);
-            hash = (hash * 31) + GetStableHash(caseSensitiveValue: payload != null ? payload.scenarioId : string.Empty);
-            hash = (hash * 31) + GetStableHash(caseSensitiveValue: payload != null ? payload.fireOrigin : string.Empty);
-            hash = (hash * 31) + GetStableHash(caseSensitiveValue: payload != null ? payload.logicalFireLocation : string.Empty);
-            return hash;
-        }
     }
 
     private Quaternion ResolveFallbackRotation()
@@ -397,23 +326,39 @@ public class IncidentPayloadAnchor : MonoBehaviour
         return Quaternion.LookRotation(forward, Vector3.up);
     }
 
-    private static int GetStableHash(string caseSensitiveValue)
+    private Quaternion ResolveSurfaceRotation(Vector3 surfaceNormal)
     {
-        if (string.IsNullOrEmpty(caseSensitiveValue))
+        Vector3 up = surfaceNormal.sqrMagnitude > 0.0001f ? surfaceNormal.normalized : Vector3.up;
+        Vector3 projectedForward = Vector3.ProjectOnPlane(transform.forward, up);
+        if (projectedForward.sqrMagnitude < 0.0001f)
         {
-            return 0;
+            projectedForward = Vector3.ProjectOnPlane(transform.right, up);
         }
 
-        unchecked
+        if (projectedForward.sqrMagnitude < 0.0001f)
         {
-            int hash = 23;
-            for (int i = 0; i < caseSensitiveValue.Length; i++)
-            {
-                hash = (hash * 31) + caseSensitiveValue[i];
-            }
-
-            return hash;
+            projectedForward = Vector3.Cross(up, Vector3.right);
         }
+
+        if (projectedForward.sqrMagnitude < 0.0001f)
+        {
+            projectedForward = Vector3.forward;
+        }
+
+        return Quaternion.LookRotation(projectedForward.normalized, up);
+    }
+
+    private static Vector3 EvaluateQuadraticBezier(Vector3 start, Vector3 control, Vector3 end, float t)
+    {
+        float clampedT = Mathf.Clamp01(t);
+        float invT = 1f - clampedT;
+        return (invT * invT * start) + (2f * invT * clampedT * control) + (clampedT * clampedT * end);
+    }
+
+    private static Vector3 GetRandomHorizontalDirection(System.Random random)
+    {
+        float angle = (float)(random.NextDouble() * Math.PI * 2d);
+        return new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
     }
 
     private void ClearRuntimeObjects()
@@ -437,5 +382,17 @@ public class IncidentPayloadAnchor : MonoBehaviour
         }
 
         return string.Equals(left.Trim(), right.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private readonly struct SpawnPlacement
+    {
+        public SpawnPlacement(Vector3 position, Quaternion rotation)
+        {
+            Position = position;
+            Rotation = rotation;
+        }
+
+        public Vector3 Position { get; }
+        public Quaternion Rotation { get; }
     }
 }

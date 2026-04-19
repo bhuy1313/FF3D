@@ -116,7 +116,6 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     [Header("Route Fire")]
     [SerializeField] private bool enableRouteFireClearing = true;
     [SerializeField] private float routeFireDetectionRadius = 4.5f;
-    [SerializeField] private float routeFireDetectionPadding = 0.5f;
     [SerializeField] private float routeFireVerticalTolerance = 2f;
 
     [Header("Path Clearing")]

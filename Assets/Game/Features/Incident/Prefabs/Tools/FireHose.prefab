@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 9177469773513182376}
   - component: {fileID: 317705974320527891}
   - component: {fileID: 7404256443553440381}
+  - component: {fileID: 951239804325019975}
   m_Layer: 0
   m_Name: FireHose
   m_TagString: Water
@@ -83,7 +84,7 @@ MonoBehaviour:
   rechargePerSecond: 0
   minWaterToUse: 0.05
   toggleUse: 1
-  requiresConnectionToSpray: 1
+  requiresConnectionToSpray: 0
   keepConnectionOnDrop: 1
   movementWeightKg: 18
   sprayOrigin: {fileID: 1512506647122416683}
@@ -243,6 +244,21 @@ MonoBehaviour:
       leftHandIkHintLocalPosition: {x: 0, y: 0, z: 0}
       overrideSpineAimMaxWeight: 0
       spineAimMaxWeight: 0
+--- !u!114 &951239804325019975
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1816086955231797324}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c85dffbce88f476e865da8f7d718f5c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerEquippedItemPoseProfile
+  overridePlayerEquippedPose: 1
+  equippedLocalPosition: {x: 0, y: 0.06, z: 0.022}
+  equippedLocalEulerAngles: {x: -90, y: 0, z: 90}
 --- !u!1 &2569217665633013294
 GameObject:
   m_ObjectHideFlags: 0
