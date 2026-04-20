@@ -28,7 +28,7 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
         public TMP_Text ProgressValueText;
         public TMP_Text RescueCounterText;
         public Image RescueCounterBackground;
-        public List<Image> RescueVictimIcons = new List<Image>();
+        public readonly List<Image> RescueVictimIcons = new List<Image>();
 
         public bool IsValid => Root != null && Label != null;
         public bool IsFireItem => Root != null && Root.name.StartsWith(FireItemName, StringComparison.Ordinal);
@@ -50,13 +50,12 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
     [SerializeField] private TMP_Text timerText;
     [SerializeField] private TMP_Text objectiveCounterText;
     [SerializeField] private TMP_Text progressText;
-    [SerializeField] private TMP_Text progressValueText;
     [SerializeField] private RectTransform objectivesListRoot;
     [SerializeField] private Image accentBarImage;
 
     [Header("Display")]
     [SerializeField] private bool hideWhenMissionMissing = true;
-    [SerializeField] private bool hideWhenMissionIdle = false;
+    [SerializeField] private bool hideWhenMissionIdle;
     [SerializeField] private bool showObjectiveScores = true;
     [SerializeField] private string fallbackMissionTitle = "OPERATION";
     [SerializeField] private string idleTimerText = "--:--";
@@ -132,7 +131,6 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
         timerText ??= FindText("TimerText");
         progressText ??= FindText("ProgressText");
         objectivesListRoot ??= FindRectTransform("ObjectivesList");
-        progressValueText ??= FindTextOutsideObjectives("ProgressValueText");
         accentBarImage ??= FindImage("Bar");
     }
 
@@ -154,7 +152,6 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
             SetText(objectiveCounterText, BuildObjectiveCounterText());
         }
         SetText(progressText, BuildProgressText());
-        SetText(progressValueText, BuildProgressValueText());
 
         if (accentBarImage != null)
         {
@@ -218,8 +215,7 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
             return string.Empty;
         }
 
-        int activeObjectiveNumber = ResolveActiveObjectiveNumber();
-        return string.Format(objectiveCounterFormat, activeObjectiveNumber);
+        return string.Format(objectiveCounterFormat, ResolveActiveObjectiveNumber());
     }
 
     private int ResolveActiveObjectiveNumber()
@@ -250,48 +246,6 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
         int totalObjectives = missionSystem != null ? Mathf.Max(0, missionSystem.ObjectiveStatusCount) : 0;
         int completedObjectives = ResolveCompletedObjectiveCount();
         return string.Format(progressTextFormat, completedObjectives, totalObjectives);
-    }
-
-    private string BuildProgressValueText()
-    {
-        float progressPercent = BuildProgressNormalized() * 100f;
-        return string.Format(progressValueFormat, progressPercent);
-    }
-
-    private float BuildProgressNormalized()
-    {
-        if (missionSystem == null || missionSystem.ObjectiveStatusCount <= 0)
-        {
-            return 0f;
-        }
-
-        float totalNormalizedProgress = 0f;
-        int relevantObjectives = 0;
-
-        for (int i = 0; i < missionSystem.ObjectiveStatusCount; i++)
-        {
-            if (!missionSystem.TryGetObjectiveStatus(i, out MissionObjectiveStatusSnapshot status))
-            {
-                continue;
-            }
-
-            relevantObjectives++;
-            if (status.MaxScore > 0)
-            {
-                totalNormalizedProgress += Mathf.Clamp01(status.Score / (float)status.MaxScore);
-            }
-            else if (status.IsComplete && !status.HasFailed)
-            {
-                totalNormalizedProgress += 1f;
-            }
-        }
-
-        if (relevantObjectives > 0)
-        {
-            return totalNormalizedProgress / relevantObjectives;
-        }
-
-        return 0f;
     }
 
     private int ResolveCompletedObjectiveCount()
@@ -327,16 +281,70 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
 
         EnsureObjectiveViewsInitialized();
 
-        int visibleCount = 0;
+        int fireObjectiveIndex = FindObjectiveIndex(IsFireObjectiveStatus);
+        int rescueObjectiveIndex = FindObjectiveIndex(IsRescueObjectiveStatus);
+        bool[] consumedStatuses = new bool[Mathf.Max(0, missionSystem.ObjectiveStatusCount)];
         bool assignedActiveObjective = false;
+
+        ObjectiveItemView fireView = FindViewByPredicate(static view => view.IsFireItem);
+        if (fireView != null)
+        {
+            if (fireObjectiveIndex >= 0 && missionSystem.TryGetObjectiveStatus(fireObjectiveIndex, out MissionObjectiveStatusSnapshot fireStatus))
+            {
+                ObjectiveVisualState fireState = ResolveObjectiveVisualState(fireStatus, ref assignedActiveObjective);
+                BindObjectiveView(fireView, fireStatus, fireState);
+                consumedStatuses[fireObjectiveIndex] = true;
+            }
+            else
+            {
+                fireView.SetActive(false);
+            }
+        }
+
+        ObjectiveItemView rescueView = FindViewByPredicate(static view => view.IsRescueItem);
+        if (rescueView != null)
+        {
+            if (rescueObjectiveIndex >= 0 && missionSystem.TryGetObjectiveStatus(rescueObjectiveIndex, out MissionObjectiveStatusSnapshot rescueStatus))
+            {
+                ObjectiveVisualState rescueState = ResolveObjectiveVisualState(rescueStatus, ref assignedActiveObjective);
+                BindObjectiveView(rescueView, rescueStatus, rescueState);
+                consumedStatuses[rescueObjectiveIndex] = true;
+            }
+            else
+            {
+                rescueView.SetActive(false);
+            }
+        }
+
+        int visibleCount = 0;
+        for (int i = 0; i < objectiveViews.Count; i++)
+        {
+            if (objectiveViews[i].IsFireItem || objectiveViews[i].IsRescueItem)
+            {
+                visibleCount++;
+            }
+        }
+
         for (int i = 0; i < missionSystem.ObjectiveStatusCount; i++)
         {
+            if (i < consumedStatuses.Length && consumedStatuses[i])
+            {
+                continue;
+            }
+
             if (!missionSystem.TryGetObjectiveStatus(i, out MissionObjectiveStatusSnapshot status))
             {
                 continue;
             }
 
             EnsureObjectiveViewCapacity(visibleCount + 1);
+            while (visibleCount < objectiveViews.Count &&
+                   (objectiveViews[visibleCount].IsFireItem || objectiveViews[visibleCount].IsRescueItem))
+            {
+                visibleCount++;
+                EnsureObjectiveViewCapacity(visibleCount + 1);
+            }
+
             if (visibleCount >= objectiveViews.Count)
             {
                 break;
@@ -349,7 +357,10 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
 
         for (int i = visibleCount; i < objectiveViews.Count; i++)
         {
-            objectiveViews[i].SetActive(false);
+            if (!objectiveViews[i].IsFireItem && !objectiveViews[i].IsRescueItem)
+            {
+                objectiveViews[i].SetActive(false);
+            }
         }
     }
 
@@ -377,16 +388,34 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
             return;
         }
 
-        GameObject template = objectiveViews.Count > 0
-            ? objectiveViews[objectiveViews.Count - 1].Root
-            : objectivesListRoot.GetChild(0).gameObject;
+        GameObject template = FindGenericTemplate();
+        if (template == null)
+        {
+            template = objectiveViews.Count > 0
+                ? objectiveViews[objectiveViews.Count - 1].Root
+                : objectivesListRoot.GetChild(0).gameObject;
+        }
 
         while (objectiveViews.Count < count && template != null)
         {
             GameObject clone = Instantiate(template, objectivesListRoot, false);
-            clone.name = $"{template.name}_Clone{objectiveViews.Count}";
+            clone.name = $"ObjectiveItem_Generic_Clone{objectiveViews.Count}";
             RegisterObjectiveView(clone);
         }
+    }
+
+    private GameObject FindGenericTemplate()
+    {
+        for (int i = 0; i < objectiveViews.Count; i++)
+        {
+            ObjectiveItemView view = objectiveViews[i];
+            if (view != null && view.Root != null && !view.IsFireItem && !view.IsRescueItem)
+            {
+                return view.Root;
+            }
+        }
+
+        return null;
     }
 
     private void RegisterObjectiveView(GameObject itemRoot)
@@ -548,6 +577,73 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
         return $"{text} ({status.Score}/{status.MaxScore})";
     }
 
+    private int FindObjectiveIndex(Func<MissionObjectiveStatusSnapshot, bool> predicate)
+    {
+        if (missionSystem == null || predicate == null)
+        {
+            return -1;
+        }
+
+        for (int i = 0; i < missionSystem.ObjectiveStatusCount; i++)
+        {
+            if (missionSystem.TryGetObjectiveStatus(i, out MissionObjectiveStatusSnapshot status) && predicate(status))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private static bool IsFireObjectiveStatus(MissionObjectiveStatusSnapshot status)
+    {
+        return ContainsAnyKeyword(status.Title, "fire", "extinguish");
+    }
+
+    private static bool IsRescueObjectiveStatus(MissionObjectiveStatusSnapshot status)
+    {
+        return ContainsAnyKeyword(status.Title, "rescue", "victim");
+    }
+
+    private static bool ContainsAnyKeyword(string source, params string[] keywords)
+    {
+        if (string.IsNullOrWhiteSpace(source) || keywords == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < keywords.Length; i++)
+        {
+            string keyword = keywords[i];
+            if (!string.IsNullOrWhiteSpace(keyword) &&
+                source.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private ObjectiveItemView FindViewByPredicate(Func<ObjectiveItemView, bool> predicate)
+    {
+        if (predicate == null)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < objectiveViews.Count; i++)
+        {
+            ObjectiveItemView view = objectiveViews[i];
+            if (view != null && predicate(view))
+            {
+                return view;
+            }
+        }
+
+        return null;
+    }
+
     private static ObjectiveVisualState ResolveObjectiveVisualState(MissionObjectiveStatusSnapshot status, ref bool assignedActiveObjective)
     {
         if (status.HasFailed)
@@ -596,12 +692,6 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
         return FindRectTransform(objectName)?.GetComponent<TMP_Text>();
     }
 
-    private TMP_Text FindTextOutsideObjectives(string objectName)
-    {
-        RectTransform target = FindRectTransformOutside(objectName, objectivesListRoot);
-        return target != null ? target.GetComponent<TMP_Text>() : null;
-    }
-
     private Image FindImage(string objectName)
     {
         return FindRectTransform(objectName)?.GetComponent<Image>();
@@ -627,11 +717,6 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
         return FindDescendantByName(root, objectName) as RectTransform;
     }
 
-    private RectTransform FindRectTransformOutside(string objectName, Transform excludedRoot)
-    {
-        return FindDescendantByNameOutside(transform, objectName, excludedRoot) as RectTransform;
-    }
-
     private static Transform FindDescendantByName(Transform root, string objectName)
     {
         if (root == null || string.IsNullOrWhiteSpace(objectName))
@@ -647,35 +732,6 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
         for (int i = 0; i < root.childCount; i++)
         {
             Transform found = FindDescendantByName(root.GetChild(i), objectName);
-            if (found != null)
-            {
-                return found;
-            }
-        }
-
-        return null;
-    }
-
-    private static Transform FindDescendantByNameOutside(Transform root, string objectName, Transform excludedRoot)
-    {
-        if (root == null || string.IsNullOrWhiteSpace(objectName))
-        {
-            return null;
-        }
-
-        if (root == excludedRoot)
-        {
-            return null;
-        }
-
-        if (root.name == objectName)
-        {
-            return root;
-        }
-
-        for (int i = 0; i < root.childCount; i++)
-        {
-            Transform found = FindDescendantByNameOutside(root.GetChild(i), objectName, excludedRoot);
             if (found != null)
             {
                 return found;
