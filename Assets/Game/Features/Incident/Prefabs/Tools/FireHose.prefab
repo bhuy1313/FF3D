@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 9177469773513182376}
   - component: {fileID: 317705974320527891}
   - component: {fileID: 7404256443553440381}
-  - component: {fileID: 951239804325019975}
+  - component: {fileID: 6610283024095116843}
   m_Layer: 0
   m_Name: FireHose
   m_TagString: Water
@@ -210,21 +210,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: TrueJourney.BotCommands::TrueJourney.BotBehavior.BotEquippedItemPoseProfile
   overrideBotEquippedPose: 1
   poseEntries:
-  - key: 4
+  - key: 6
     pose:
       equippedLocalPosition: {x: 0, y: 0.1, z: 0.036}
       equippedLocalEulerAngles: {x: -90, y: 90, z: 0}
       useRightHandIkTarget: 1
       rightHandIkWeight: 1
-      rightHandIkLocalPosition: {x: 0.023, y: 0.153, z: 0.481}
+      rightHandIkLocalPosition: {x: 0.116, y: 0.109, z: 0.409}
       rightHandIkLocalEulerAngles: {x: 0, y: 0, z: 0}
       useRightHandIkHint: 1
       rightHandIkHintLocalPosition: {x: 0.4978981, y: 0.638, z: -0.27404785}
-      useLeftHandIkTarget: 0
-      leftHandIkWeight: 0
-      leftHandIkLocalPosition: {x: 0, y: 0, z: 0}
-      useLeftHandIkHint: 0
-      leftHandIkHintLocalPosition: {x: 0, y: 0, z: 0}
+      useLeftHandIkTarget: 1
+      leftHandIkWeight: 1
+      leftHandIkLocalPosition: {x: 0.099, y: 0.9948, z: 0.225}
+      useLeftHandIkHint: 1
+      leftHandIkHintLocalPosition: {x: -0.28902435, y: 0.3401849, z: 0.24130249}
       overrideSpineAimMaxWeight: 1
       spineAimMaxWeight: 0.4
   - key: 1
@@ -244,7 +244,41 @@ MonoBehaviour:
       leftHandIkHintLocalPosition: {x: 0, y: 0, z: 0}
       overrideSpineAimMaxWeight: 0
       spineAimMaxWeight: 0
---- !u!114 &951239804325019975
+  - key: 0
+    pose:
+      equippedLocalPosition: {x: 0, y: 0.1, z: 0.036}
+      equippedLocalEulerAngles: {x: -90, y: 90, z: 0}
+      useRightHandIkTarget: 0
+      rightHandIkWeight: 1
+      rightHandIkLocalPosition: {x: 0, y: 0, z: 0}
+      rightHandIkLocalEulerAngles: {x: 0, y: 0, z: 0}
+      useRightHandIkHint: 0
+      rightHandIkHintLocalPosition: {x: 0, y: 0, z: 0}
+      useLeftHandIkTarget: 0
+      leftHandIkWeight: 0
+      leftHandIkLocalPosition: {x: 0, y: 0, z: 0}
+      useLeftHandIkHint: 0
+      leftHandIkHintLocalPosition: {x: 0, y: 0, z: 0}
+      overrideSpineAimMaxWeight: 0
+      spineAimMaxWeight: 0
+  - key: 7
+    pose:
+      equippedLocalPosition: {x: 0, y: 0.1, z: 0.036}
+      equippedLocalEulerAngles: {x: -90, y: 90, z: 0}
+      useRightHandIkTarget: 0
+      rightHandIkWeight: 1
+      rightHandIkLocalPosition: {x: 0, y: 0, z: 0}
+      rightHandIkLocalEulerAngles: {x: 0, y: 0, z: 0}
+      useRightHandIkHint: 0
+      rightHandIkHintLocalPosition: {x: 0, y: 0, z: 0}
+      useLeftHandIkTarget: 0
+      leftHandIkWeight: 0
+      leftHandIkLocalPosition: {x: 0, y: 0, z: 0}
+      useLeftHandIkHint: 0
+      leftHandIkHintLocalPosition: {x: 0, y: 0, z: 0}
+      overrideSpineAimMaxWeight: 1
+      spineAimMaxWeight: 0.4
+--- !u!114 &6610283024095116843
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -257,8 +291,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerEquippedItemPoseProfile
   overridePlayerEquippedPose: 1
-  equippedLocalPosition: {x: 0, y: 0.06, z: 0.022}
-  equippedLocalEulerAngles: {x: -90, y: 0, z: 90}
+  equippedLocalPosition: {x: 0, y: 0.1, z: 0.025}
+  equippedLocalEulerAngles: {x: -90, y: 90, z: 0}
 --- !u!1 &2569217665633013294
 GameObject:
   m_ObjectHideFlags: 0
