@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1694c4f6c9bd422da422e69bdb3662cf, type: 3}
+  m_Name: GameAudioSettings
+  m_EditorClassIdentifier: 
+  audioCatalog: {fileID: 11400000, guid: d4b3128347454c0eb159c0d1b3c293e0, type: 2}
+  masterMixer: {fileID: 24100000, guid: de7eac8a28f47b1478434b661a40c1a5, type: 2}
+  musicMixerGroup: {fileID: 1898900638264398387, guid: de7eac8a28f47b1478434b661a40c1a5, type: 2}
+  sfxMixerGroup: {fileID: 179860979262074923, guid: de7eac8a28f47b1478434b661a40c1a5, type: 2}
+  uiMixerGroup: {fileID: -4437606332921834970, guid: de7eac8a28f47b1478434b661a40c1a5, type: 2}
+  ambienceMixerGroup: {fileID: 2962067461925484231, guid: de7eac8a28f47b1478434b661a40c1a5, type: 2}
+  voiceMixerGroup: {fileID: 1097947626515131799, guid: de7eac8a28f47b1478434b661a40c1a5, type: 2}
+  alertMixerGroup: {fileID: 0}
+  masterVolumeParameter: MasterVolume
+  musicVolumeParameter: MusicVolume
+  sfxVolumeParameter: SfxVolume
+  uiVolumeParameter: UiVolume
+  ambienceVolumeParameter: AmbienceVolume
+  voiceVolumeParameter: VoiceVolume
+  alertVolumeParameter: AlertVolume
+  initialOneShotPoolSize: 8
+  maxOneShotPoolSize: 24

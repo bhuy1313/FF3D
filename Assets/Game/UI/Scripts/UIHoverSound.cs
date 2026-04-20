@@ -10,11 +10,30 @@ namespace FF3D.UI
     {
         [Tooltip("The sound to play when the mouse hovers over this UI element.")]
         [SerializeField] private AudioClip hoverSound;
-        
+
+        [SerializeField]
+        private AudioId hoverAudioId = AudioId.UiHover;
+
+        [SerializeField]
+        private bool useAudioService = true;
+
+        [SerializeField, Range(0f, 1f)]
+        private float volumeScale = 1f;
+
         private AudioSource audioSource;
 
         private void Awake()
         {
+            if (hoverAudioId == AudioId.None)
+            {
+                hoverAudioId = AudioId.UiHover;
+            }
+
+            if (volumeScale <= 0f)
+            {
+                volumeScale = 1f;
+            }
+
             // Try to get an existing AudioSource on this GameObject
             audioSource = GetComponent<AudioSource>();
 
@@ -31,10 +50,19 @@ namespace FF3D.UI
 
         public void OnPointerEnter(PointerEventData eventData)
         {
-            // Play the sound once each time the pointer enters the UI element's rect
-            if (hoverSound != null && audioSource != null)
+            if (hoverAudioId != AudioId.None && AudioService.Play(hoverAudioId) != null)
             {
-                audioSource.PlayOneShot(hoverSound);
+                return;
+            }
+
+            if (hoverSound != null && AudioService.PlayClip2D(hoverSound, AudioBus.Ui, volumeScale) != null)
+            {
+                return;
+            }
+
+            if (!useAudioService && hoverSound != null && audioSource != null)
+            {
+                audioSource.PlayOneShot(hoverSound, volumeScale);
             }
         }
     }

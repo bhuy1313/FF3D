@@ -73,6 +73,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6898180818991586604}
   - component: {fileID: 7310261293633705282}
+  - component: {fileID: 912345678901234567}
   - component: {fileID: 4862395983932905308}
   - component: {fileID: 6667646138187766528}
   - component: {fileID: 1466090541472026100}
@@ -85,6 +86,7 @@ GameObject:
   - component: {fileID: 6054947521262004160}
   - component: {fileID: 526579212534484800}
   - component: {fileID: 1343230103620248346}
+  - component: {fileID: 912345678901234567}
   m_Layer: 7
   m_Name: PlayerCapsule
   m_TagString: Player
@@ -190,6 +192,29 @@ MonoBehaviour:
   FallCameraDownwardOffset: 0.5
   JumpCameraMaxRiseSpeed: 5
   FallCameraMaxSpeed: 7
+--- !u!114 &912345678901234567
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2467124115581809103}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 34b840843b8943948954b2eae9691861, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StarterAssets.PlayerFootstepAudio
+  characterController: {fileID: 7310261293633705282}
+  firstPersonController: {fileID: 4862395983932905308}
+  walkingAudioId: 15
+  stopFadeDuration: 0.08
+  sourceLocalOffset: {x: 0, y: -0.9, z: 0}
+  movementThreshold: 0.2
+  movementStopThreshold: 0.12
+  startDelay: 0.1
+  stopGraceTime: 0.12
+  minLoopPitch: 0.96
+  maxLoopPitch: 1.05
 --- !u!114 &6667646138187766528
 MonoBehaviour:
   m_ObjectHideFlags: 0

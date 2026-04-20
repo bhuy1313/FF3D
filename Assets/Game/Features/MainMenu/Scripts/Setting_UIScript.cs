@@ -53,6 +53,20 @@ public partial class Setting_UIScript : MonoBehaviour
     [SerializeField] private Slider mouseSensitivitySlider;
     [SerializeField] private SliderPercentText mouseSensitivitySliderValueText;
 
+    [Header("Audio Settings")]
+    [SerializeField] private Slider masterVolumeSlider;
+    [SerializeField] private SliderPercentText masterVolumeSliderValueText;
+    [SerializeField] private Slider musicVolumeSlider;
+    [SerializeField] private SliderPercentText musicVolumeSliderValueText;
+    [SerializeField] private Slider ambienceVolumeSlider;
+    [SerializeField] private SliderPercentText ambienceVolumeSliderValueText;
+    [SerializeField] private Slider sfxVolumeSlider;
+    [SerializeField] private SliderPercentText sfxVolumeSliderValueText;
+    [SerializeField] private Slider voiceVolumeSlider;
+    [SerializeField] private SliderPercentText voiceVolumeSliderValueText;
+    [SerializeField] private Slider uiVolumeSlider;
+    [SerializeField] private SliderPercentText uiVolumeSliderValueText;
+
     [Header("Call Phase Settings")]
     [SerializeField] private ThreeStepSlider responseSpeedSlider;
     [SerializeField] private Toggle autoQuestionToggle;
@@ -117,9 +131,11 @@ public partial class Setting_UIScript : MonoBehaviour
         ConfigureResolutionDropdown(useSavedSelection: false);
         ConfigureFovSlider();
         ConfigureMouseSensitivitySlider();
+        ConfigureAudioSliders();
         InitializeResponseSpeedDefaultSelection();
         InitializeFovDefaultSelection();
         InitializeMouseSensitivityDefaultSelection();
+        InitializeAudioDefaultSelection();
         InitializeAutoQuestionDefaultSelection();
         InitializeAutoValidateDefaultSelection();
         InitializeMinimapTypeDefaultSelection();
@@ -149,6 +165,12 @@ public partial class Setting_UIScript : MonoBehaviour
         if (fpsToggle != null) fpsToggle.onValueChanged.AddListener(OnFpsToggleValueChanged);
         if (fovSlider != null) fovSlider.onValueChanged.AddListener(OnFovSliderValueChanged);
         if (mouseSensitivitySlider != null) mouseSensitivitySlider.onValueChanged.AddListener(OnMouseSensitivitySliderValueChanged);
+        RegisterAudioSliderListener(masterVolumeSlider, AudioBus.Master);
+        RegisterAudioSliderListener(musicVolumeSlider, AudioBus.Music);
+        RegisterAudioSliderListener(ambienceVolumeSlider, AudioBus.Ambience);
+        RegisterAudioSliderListener(sfxVolumeSlider, AudioBus.Sfx);
+        RegisterAudioSliderListener(voiceVolumeSlider, AudioBus.Voice);
+        RegisterAudioSliderListener(uiVolumeSlider, AudioBus.Ui);
         if (minimapTypeDropdown != null) minimapTypeDropdown.onValueChanged.AddListener(OnMinimapTypeDropdownValueChanged);
 
     }
@@ -185,6 +207,7 @@ public partial class Setting_UIScript : MonoBehaviour
         LoadSavedFpsSelection();
         LoadSavedFovSelection();
         LoadSavedMouseSensitivitySelection();
+        LoadSavedAudioSelection();
         LoadSavedResponseSpeedSelection();
         LoadSavedAutoQuestionSelection();
         LoadSavedAutoValidateSelection();
@@ -455,6 +478,18 @@ public partial class Setting_UIScript : MonoBehaviour
         fovValueText = FindTextInNamedPanelChild(panelGrap, "FOV", "FOVValueText");
         mouseSensitivitySlider = FindSliderInLocalizedPanelChild(panelCont, MouseSensitivityLocalizationKey);
         mouseSensitivitySliderValueText = FindSliderPercentTextInLocalizedPanelChild(panelCont, MouseSensitivityLocalizationKey);
+        masterVolumeSlider = FindSliderInNamedPanelChild(panelAudio, "Master");
+        masterVolumeSliderValueText = FindSliderPercentTextInNamedPanelChild(panelAudio, "Master");
+        musicVolumeSlider = FindSliderInNamedPanelChild(panelAudio, "Music");
+        musicVolumeSliderValueText = FindSliderPercentTextInNamedPanelChild(panelAudio, "Music");
+        ambienceVolumeSlider = FindSliderInNamedPanelChild(panelAudio, "Ambience");
+        ambienceVolumeSliderValueText = FindSliderPercentTextInNamedPanelChild(panelAudio, "Ambience");
+        sfxVolumeSlider = FindSliderInNamedPanelChild(panelAudio, "SFX");
+        sfxVolumeSliderValueText = FindSliderPercentTextInNamedPanelChild(panelAudio, "SFX");
+        voiceVolumeSlider = FindSliderInNamedPanelChild(panelAudio, "Radio");
+        voiceVolumeSliderValueText = FindSliderPercentTextInNamedPanelChild(panelAudio, "Radio");
+        uiVolumeSlider = FindSliderInNamedPanelChild(panelAudio, "UI");
+        uiVolumeSliderValueText = FindSliderPercentTextInNamedPanelChild(panelAudio, "UI");
 
         if (responseSpeedSlider == null)
         {
@@ -505,6 +540,36 @@ public partial class Setting_UIScript : MonoBehaviour
         if (panelCont != null && mouseSensitivitySlider == null)
         {
             Debug.LogWarning("Setting_UIScript: Mouse sensitivity slider could not be resolved from the control panel.", this);
+        }
+
+        if (panelAudio != null && masterVolumeSlider == null)
+        {
+            Debug.LogWarning("Setting_UIScript: Master volume slider could not be resolved from the audio panel.", this);
+        }
+
+        if (panelAudio != null && musicVolumeSlider == null)
+        {
+            Debug.LogWarning("Setting_UIScript: Music volume slider could not be resolved from the audio panel.", this);
+        }
+
+        if (panelAudio != null && ambienceVolumeSlider == null)
+        {
+            Debug.LogWarning("Setting_UIScript: Ambience volume slider could not be resolved from the audio panel.", this);
+        }
+
+        if (panelAudio != null && sfxVolumeSlider == null)
+        {
+            Debug.LogWarning("Setting_UIScript: SFX volume slider could not be resolved from the audio panel.", this);
+        }
+
+        if (panelAudio != null && voiceVolumeSlider == null)
+        {
+            Debug.LogWarning("Setting_UIScript: Voice / Radio volume slider could not be resolved from the audio panel.", this);
+        }
+
+        if (panelAudio != null && uiVolumeSlider == null)
+        {
+            Debug.LogWarning("Setting_UIScript: UI volume slider could not be resolved from the audio panel.", this);
         }
 
         if (panelGen != null && responseSpeedSlider == null)
@@ -1001,6 +1066,16 @@ public partial class Setting_UIScript : MonoBehaviour
 #else
         Application.Quit();
 #endif
+    }
+
+    private void RegisterAudioSliderListener(Slider slider, AudioBus bus)
+    {
+        if (slider == null)
+        {
+            return;
+        }
+
+        slider.onValueChanged.AddListener(_ => ApplyAudioSliderPreview(bus, slider));
     }
 
     private void RestoreDefaultsAndSave()

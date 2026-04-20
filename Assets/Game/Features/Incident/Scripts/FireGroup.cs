@@ -21,6 +21,9 @@ public class FireGroup : MonoBehaviour, IFireGroupTarget
     [SerializeField] private List<Fire> managedFires = new List<Fire>();
 
     private BoxCollider boxCollider;
+    private FireGroupAudioController fireGroupAudioController;
+
+    public IReadOnlyList<Fire> ManagedFires => managedFires;
 
     private void Awake()
     {
@@ -31,6 +34,8 @@ public class FireGroup : MonoBehaviour, IFireGroupTarget
     private void OnEnable()
     {
         BotRuntimeRegistry.RegisterFireGroup(this);
+        EnsureFireGroupAudioController();
+        fireGroupAudioController?.Initialize(this);
     }
 
     private void OnDisable()
@@ -71,6 +76,19 @@ public class FireGroup : MonoBehaviour, IFireGroupTarget
             {
                 managedFires.Add(fire);
             }
+        }
+    }
+
+    private void EnsureFireGroupAudioController()
+    {
+        if (fireGroupAudioController == null)
+        {
+            fireGroupAudioController = GetComponent<FireGroupAudioController>();
+        }
+
+        if (fireGroupAudioController == null)
+        {
+            fireGroupAudioController = gameObject.AddComponent<FireGroupAudioController>();
         }
     }
 

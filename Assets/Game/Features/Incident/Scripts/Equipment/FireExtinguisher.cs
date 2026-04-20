@@ -35,7 +35,9 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
     [Header("References")]
     [SerializeField] private Transform sprayOrigin;
     [SerializeField] private ParticleSystem sprayParticles;
+    [FormerlySerializedAs("sprayAudio")]
     [SerializeField] private AudioSource sprayAudio;
+    [SerializeField] private float sprayLoopFadeOutDuration = 0.08f;
 
     [Header("Runtime (Debug)")]
     [SerializeField] private float currentCharge;
@@ -50,6 +52,7 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
 
     private readonly Collider[] hitBuffer = new Collider[64];
     private Rigidbody cachedRigidbody;
+    private AudioSource sprayLoopSource;
     public Rigidbody Rigidbody => cachedRigidbody;
     public float MovementWeightKg => Mathf.Max(0f, movementWeightKg);
     public float ApplyWaterPerSecond => botDischargePerSecond;
@@ -79,11 +82,6 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
         if (sprayOrigin == null && sprayParticles != null)
         {
             sprayOrigin = sprayParticles.transform;
-        }
-
-        if (sprayAudio == null)
-        {
-            sprayAudio = GetComponentInChildren<AudioSource>();
         }
 
         currentCharge = Mathf.Clamp(currentCharge <= 0f ? maxCharge : currentCharge, 0f, maxCharge);
@@ -257,20 +255,42 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
             }
         }
 
-        if (sprayAudio != null)
+        if (enable)
         {
-            if (enable)
-            {
-                if (!sprayAudio.isPlaying)
-                {
-                    sprayAudio.Play();
-                }
-            }
-            else
-            {
-                sprayAudio.Stop();
-            }
+            StartSprayAudio();
         }
+        else
+        {
+            StopSprayAudio();
+        }
+    }
+
+    private void StartSprayAudio()
+    {
+        Transform audioAnchor = sprayOrigin != null ? sprayOrigin : transform;
+        AudioService.PlayAtPoint(AudioId.ExtinguisherSprayStart, audioAnchor.position);
+
+        if (sprayLoopSource != null)
+        {
+            AudioService.Stop(sprayLoopSource);
+            sprayLoopSource = null;
+        }
+
+        sprayLoopSource = AudioService.PlayLoop(AudioId.ExtinguisherSprayLoop, audioAnchor);
+        sprayAudio = sprayLoopSource;
+    }
+
+    private void StopSprayAudio()
+    {
+        Transform audioAnchor = sprayOrigin != null ? sprayOrigin : transform;
+        if (sprayLoopSource != null)
+        {
+            AudioService.Stop(sprayLoopSource, sprayLoopFadeOutDuration);
+            sprayLoopSource = null;
+        }
+
+        sprayAudio = null;
+        AudioService.PlayAtPoint(AudioId.ExtinguisherSprayEnd, audioAnchor.position);
     }
 
     private void ApplyExtinguishCone()
@@ -428,6 +448,7 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
         coneHalfAngle = Mathf.Clamp(coneHalfAngle, 0f, 89f);
         coneBaseRadius = Mathf.Max(0f, coneBaseRadius);
         coneSegments = Mathf.Max(1, coneSegments);
+        sprayLoopFadeOutDuration = Mathf.Max(0f, sprayLoopFadeOutDuration);
     }
 
 #if UNITY_EDITOR
