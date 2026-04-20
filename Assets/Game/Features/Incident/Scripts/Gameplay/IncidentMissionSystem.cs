@@ -116,6 +116,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
     private readonly List<MissionFailConditionDefinition> resultFailConditionScratch = new List<MissionFailConditionDefinition>();
 
     public string MissionId => ResolveMissionId();
+    public string MissionOperationTitle => ResolveMissionOperationTitle();
     public string MissionTitle => ResolveMissionTitle();
     public string MissionDescription => ResolveMissionDescription();
     public MissionState State => missionState;
@@ -1012,6 +1013,22 @@ public partial class IncidentMissionSystem : MonoBehaviour
         }
 
         return missionTitle;
+    }
+
+    private string ResolveMissionOperationTitle()
+    {
+        if (missionDefinition != null && !string.IsNullOrWhiteSpace(missionDefinition.OperationTitle))
+        {
+            return missionDefinition.OperationTitle;
+        }
+
+        string resolvedMissionTitle = ResolveMissionTitle();
+        if (string.IsNullOrWhiteSpace(resolvedMissionTitle))
+        {
+            return "OPERATION";
+        }
+
+        return $"OPERATION: {resolvedMissionTitle.Trim().ToUpperInvariant()}";
     }
 
     private string ResolveMissionDescription()
