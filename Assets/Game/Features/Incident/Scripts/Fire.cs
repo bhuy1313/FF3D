@@ -96,7 +96,6 @@ public class Fire : MonoBehaviour, IFireTarget
     private readonly List<Vector3> particleBaseStartSize3DMultipliers = new List<Vector3>();
     private Vector3 particleVisualRootBaseLocalScale = Vector3.one;
     private float lastWaterAppliedTime = float.NegativeInfinity;
-    private FireAudioEmitter fireAudioEmitter;
     [SerializeField] private bool hazardSourceIsolated;
 
     public bool IsBurning => currentHp > 0f;
@@ -171,8 +170,6 @@ public class Fire : MonoBehaviour, IFireTarget
         SyncRadiusAndCollider();
         SyncNavMeshModifier();
         ApplyVisuals(forcePlayState: true);
-        EnsureFireAudioEmitter();
-        fireAudioEmitter?.Initialize(this);
     }
 
     private void OnDisable()
@@ -183,8 +180,6 @@ public class Fire : MonoBehaviour, IFireTarget
         {
             navMeshModifier.enabled = false;
         }
-
-        fireAudioEmitter?.HandleFireDisabled();
     }
 
     public Vector3 GetThermalSignatureWorldPosition()
@@ -470,19 +465,6 @@ public class Fire : MonoBehaviour, IFireTarget
         }
 
         UpdateParticleVisualRootScale(t01);
-    }
-
-    private void EnsureFireAudioEmitter()
-    {
-        if (fireAudioEmitter == null)
-        {
-            fireAudioEmitter = GetComponent<FireAudioEmitter>();
-        }
-
-        if (fireAudioEmitter == null)
-        {
-            fireAudioEmitter = gameObject.AddComponent<FireAudioEmitter>();
-        }
     }
 
     private void KeepParticlesWorldUp()

@@ -17,41 +17,20 @@ public sealed class FireAudioEmitter : MonoBehaviour
     private bool isBound;
     private bool cachedBurningState;
 
-    public void Initialize(Fire targetFire)
+    private void Awake()
     {
-        if (targetFire == null)
-        {
-            return;
-        }
-
-        if (fire == targetFire && isBound)
-        {
-            cachedBurningState = fire.IsBurning;
-            RefreshLoopState();
-            return;
-        }
-
-        Unbind();
-        fire = targetFire;
-        cachedBurningState = fire.IsBurning;
-
-        fire.BurningStateChanged += HandleBurningStateChanged;
-        fire.Ignited += HandleIgnited;
-        fire.Extinguished += HandleExtinguished;
-        isBound = true;
-
-        RefreshLoopState();
+        fire = GetComponent<Fire>();
     }
 
-    public void HandleFireDisabled()
+    private void OnEnable()
     {
-        StopLoop();
-        Unbind();
+        BindIfNeeded();
+        RefreshLoopState();
     }
 
     private void OnDisable()
     {
-        HandleFireDisabled();
+        Unbind();
     }
 
     private void Update()
@@ -67,6 +46,30 @@ public sealed class FireAudioEmitter : MonoBehaviour
         }
 
         RefreshLoopState();
+    }
+
+    private void BindIfNeeded()
+    {
+        if (isBound)
+        {
+            return;
+        }
+
+        if (fire == null)
+        {
+            fire = GetComponent<Fire>();
+        }
+
+        if (fire == null)
+        {
+            return;
+        }
+
+        cachedBurningState = fire.IsBurning;
+        fire.BurningStateChanged += HandleBurningStateChanged;
+        fire.Ignited += HandleIgnited;
+        fire.Extinguished += HandleExtinguished;
+        isBound = true;
     }
 
     private void HandleIgnited()

@@ -16,29 +16,21 @@ public sealed class FireGroupAudioController : MonoBehaviour
     private FireGroup fireGroup;
     private AudioSource loopSource;
     private bool isBound;
+    private readonly List<Fire> fireBuffer = new List<Fire>();
 
-    public void Initialize(FireGroup targetGroup)
+    private void Awake()
     {
-        if (targetGroup == null)
-        {
-            return;
-        }
+        fireGroup = GetComponent<FireGroup>();
+    }
 
-        if (fireGroup == targetGroup && isBound)
-        {
-            RefreshLoopState();
-            return;
-        }
-
-        Unbind();
-        fireGroup = targetGroup;
-        isBound = true;
+    private void OnEnable()
+    {
+        BindIfNeeded();
         RefreshLoopState();
     }
 
     private void OnDisable()
     {
-        StopLoop();
         Unbind();
     }
 
@@ -52,6 +44,21 @@ public sealed class FireGroupAudioController : MonoBehaviour
         RefreshLoopState();
     }
 
+    private void BindIfNeeded()
+    {
+        if (isBound)
+        {
+            return;
+        }
+
+        if (fireGroup == null)
+        {
+            fireGroup = GetComponent<FireGroup>();
+        }
+
+        isBound = fireGroup != null;
+    }
+
     private void RefreshLoopState()
     {
         if (!isBound || fireGroup == null)
@@ -59,23 +66,19 @@ public sealed class FireGroupAudioController : MonoBehaviour
             return;
         }
 
-        IReadOnlyList<Fire> managedFires = fireGroup.ManagedFires;
         int activeFireCount = 0;
         float totalIntensity = 0f;
-
-        if (managedFires != null)
+        RefreshFireBuffer();
+        for (int i = 0; i < fireBuffer.Count; i++)
         {
-            for (int i = 0; i < managedFires.Count; i++)
+            Fire fire = fireBuffer[i];
+            if (fire == null || !fire.IsBurning)
             {
-                Fire fire = managedFires[i];
-                if (fire == null || !fire.IsBurning)
-                {
-                    continue;
-                }
-
-                activeFireCount++;
-                totalIntensity += fire.NormalizedHp;
+                continue;
             }
+
+            activeFireCount++;
+            totalIntensity += fire.NormalizedHp;
         }
 
         if (activeFireCount <= 0)
@@ -125,7 +128,27 @@ public sealed class FireGroupAudioController : MonoBehaviour
     {
         StopLoop();
 
+        fireBuffer.Clear();
         fireGroup = null;
         isBound = false;
+    }
+
+    private void RefreshFireBuffer()
+    {
+        fireBuffer.Clear();
+        if (fireGroup == null)
+        {
+            return;
+        }
+
+        Fire[] fires = fireGroup.GetComponentsInChildren<Fire>(true);
+        for (int i = 0; i < fires.Length; i++)
+        {
+            Fire fire = fires[i];
+            if (fire != null && !fireBuffer.Contains(fire))
+            {
+                fireBuffer.Add(fire);
+            }
+        }
     }
 }

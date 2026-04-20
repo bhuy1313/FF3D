@@ -57,6 +57,11 @@ public sealed class AudioManager : MonoBehaviour
         {
             gameObject.AddComponent<AudioService>();
         }
+
+        if (GetComponent<IncidentAudioAutoBinder>() == null)
+        {
+            gameObject.AddComponent<IncidentAudioAutoBinder>();
+        }
     }
 
     private void OnDestroy()
