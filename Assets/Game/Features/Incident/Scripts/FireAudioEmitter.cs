@@ -5,17 +5,34 @@ using UnityEngine;
 public sealed class FireAudioEmitter : MonoBehaviour
 {
     [Header("Audio")]
-    [SerializeField] private AudioId loopAudioId = AudioId.FireLoop;
-    [SerializeField, Range(0f, 1f)] private float minLoopVolume = 0.04f;
-    [SerializeField, Range(0f, 1f)] private float maxLoopVolume = 0.16f;
-    [SerializeField, Range(0.5f, 1.5f)] private float minPitch = 0.95f;
-    [SerializeField, Range(0.5f, 1.5f)] private float maxPitch = 1.08f;
-    [SerializeField, Min(0f)] private float stopFadeDuration = 0.2f;
+    [SerializeField] private AudioId sound = AudioId.FireLoop;
 
     private Fire fire;
     private AudioSource loopSource;
     private bool isBound;
     private bool cachedBurningState;
+    private const float MinLoopVolume = 0.04f;
+    private const float MaxLoopVolume = 0.16f;
+    private const float MinPitch = 0.95f;
+    private const float MaxPitch = 1.08f;
+    private const float StopFadeDuration = 0.2f;
+
+    private void Awake()
+    {
+        Initialize(GetComponent<Fire>());
+    }
+
+    private void OnEnable()
+    {
+        if (!isBound)
+        {
+            Initialize(GetComponent<Fire>());
+            return;
+        }
+
+        cachedBurningState = fire != null && fire.IsBurning;
+        RefreshLoopState();
+    }
 
     public void Initialize(Fire targetFire)
     {
@@ -107,8 +124,8 @@ public sealed class FireAudioEmitter : MonoBehaviour
         }
 
         float intensity01 = fire.NormalizedHp;
-        float volumeScale = Mathf.Lerp(minLoopVolume, maxLoopVolume, intensity01);
-        float pitch = Mathf.Lerp(minPitch, maxPitch, intensity01);
+        float volumeScale = Mathf.Lerp(MinLoopVolume, MaxLoopVolume, intensity01);
+        float pitch = Mathf.Lerp(MinPitch, MaxPitch, intensity01);
 
         AudioService.SetSourceVolumeScale(loopSource, volumeScale);
         AudioService.SetSourcePitch(loopSource, pitch);
@@ -121,7 +138,7 @@ public sealed class FireAudioEmitter : MonoBehaviour
             return;
         }
 
-        loopSource = AudioService.PlayLoop(loopAudioId, transform);
+        loopSource = AudioService.PlayLoop(sound, transform);
     }
 
     private void StopLoop()
@@ -131,7 +148,7 @@ public sealed class FireAudioEmitter : MonoBehaviour
             return;
         }
 
-        AudioService.Stop(loopSource, stopFadeDuration);
+        AudioService.Stop(loopSource, StopFadeDuration);
         loopSource = null;
     }
 

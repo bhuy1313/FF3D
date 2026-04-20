@@ -86,6 +86,7 @@ public class Fire : MonoBehaviour, IFireTarget
     [SerializeField] private bool scaleWithIntensity = true;
     [SerializeField] private Vector3 maxScale = Vector3.one;
     [SerializeField] private float maxLightIntensity = 2f;
+    [SerializeField] private FireAudioEmitter audioEmitter;
 
     private SphereCollider sphereCollider;
     private NavMeshModifier navMeshModifier;
@@ -162,6 +163,7 @@ public class Fire : MonoBehaviour, IFireTarget
     private void Awake()
     {
         CacheReferences();
+        EnsureAudioEmitter();
         EnsureCollider();
         EnsureNavMeshModifier();
         EnsureSpreadBuffer();
@@ -172,6 +174,7 @@ public class Fire : MonoBehaviour, IFireTarget
     {
         BotRuntimeRegistry.RegisterFireTarget(this);
         BotRuntimeRegistry.RegisterThermalSignatureSource(this);
+        EnsureAudioEmitter();
 
         if (startLitOnEnable && currentHp <= 0f)
             currentHp = maxHp;
@@ -677,6 +680,21 @@ public class Fire : MonoBehaviour, IFireTarget
 
         if (fireLight == null)
             fireLight = GetComponentInChildren<Light>();
+    }
+
+    private void EnsureAudioEmitter()
+    {
+        if (audioEmitter == null)
+        {
+            audioEmitter = GetComponent<FireAudioEmitter>();
+        }
+
+        if (audioEmitter == null)
+        {
+            audioEmitter = gameObject.AddComponent<FireAudioEmitter>();
+        }
+
+        audioEmitter.Initialize(this);
     }
 
     private void CacheManagedParticleSystems()

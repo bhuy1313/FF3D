@@ -34,7 +34,7 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
 
     [Header("References")]
     [SerializeField] private ParticleSystem sprayParticles;
-    [SerializeField] private AudioSource sprayAudio;
+    [SerializeField] private FireExtinguisherAudioController audioController;
 
     [Header("Runtime (Debug)")]
     [SerializeField] private float currentCharge;
@@ -75,10 +75,7 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
             sprayParticles = GetComponentInChildren<ParticleSystem>();
         }
 
-        if (sprayAudio == null)
-        {
-            sprayAudio = GetComponentInChildren<AudioSource>();
-        }
+        EnsureAudioController();
 
         currentCharge = Mathf.Clamp(currentCharge <= 0f ? maxCharge : currentCharge, 0f, maxCharge);
         SetSprayState(false);
@@ -251,20 +248,22 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
             }
         }
 
-        if (sprayAudio != null)
+        audioController?.RefreshState();
+    }
+
+    private void EnsureAudioController()
+    {
+        if (audioController == null)
         {
-            if (enable)
-            {
-                if (!sprayAudio.isPlaying)
-                {
-                    sprayAudio.Play();
-                }
-            }
-            else
-            {
-                sprayAudio.Stop();
-            }
+            audioController = GetComponent<FireExtinguisherAudioController>();
         }
+
+        if (audioController == null)
+        {
+            audioController = gameObject.AddComponent<FireExtinguisherAudioController>();
+        }
+
+        audioController.Initialize(this);
     }
 
     private void ApplyExtinguishCone()
