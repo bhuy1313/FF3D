@@ -1,0 +1,22 @@
+public enum AudioId
+{
+    None = 0,
+    UiHover = 1,
+    UiClick = 2,
+    UiConfirm = 3,
+    UiBack = 4,
+    PopupOpen = 5,
+    PopupClose = 6,
+    MissionCompleteStinger = 7,
+    MissionFailedStinger = 8,
+    AlarmStart = 9,
+    AlarmLoop = 10,
+    HazardIsolated = 11,
+    HazardReactivated = 12,
+    ExtinguisherSprayLoop = 13,
+    HoseSprayLoop = 14,
+    DefaultWalking = 15,
+    FireLoop = 16,
+    ExtinguisherSprayStart = 17,
+    ExtinguisherSprayEnd = 18,
+}

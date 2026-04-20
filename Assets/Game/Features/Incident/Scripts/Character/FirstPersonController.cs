@@ -324,6 +324,15 @@ namespace StarterAssets
 			ResetFallTrackingState();
 			_wasGroundedLastFrame = Grounded;
 			_wasClimbingLastFrame = _isClimbing;
+			EnsureFootstepAudioComponent();
+		}
+
+		private void EnsureFootstepAudioComponent()
+		{
+			if (GetComponent<PlayerFootstepAudio>() == null)
+			{
+				gameObject.AddComponent<PlayerFootstepAudio>();
+			}
 		}
 
 		private void Update()

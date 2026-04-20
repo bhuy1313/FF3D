@@ -19,6 +19,7 @@ public partial class Setting_UIScript
         SaveFpsSelection();
         SaveFovSelection();
         SaveMouseSensitivitySelection();
+        SaveAudioSelection();
         SaveResponseSpeedSelection();
         SaveAutoQuestionSelection();
         SaveAutoValidateSelection();
@@ -204,6 +205,40 @@ public partial class Setting_UIScript
         }
     }
 
+    private void ConfigureAudioSliders()
+    {
+        ConfigureAudioSlider(masterVolumeSlider, masterVolumeSliderValueText);
+        ConfigureAudioSlider(musicVolumeSlider, musicVolumeSliderValueText);
+        ConfigureAudioSlider(ambienceVolumeSlider, ambienceVolumeSliderValueText);
+        ConfigureAudioSlider(sfxVolumeSlider, sfxVolumeSliderValueText);
+        ConfigureAudioSlider(voiceVolumeSlider, voiceVolumeSliderValueText);
+        ConfigureAudioSlider(uiVolumeSlider, uiVolumeSliderValueText);
+    }
+
+    private void ConfigureAudioSlider(Slider slider, SliderPercentText valueText)
+    {
+        if (slider == null)
+        {
+            return;
+        }
+
+        slider.minValue = AudioVolumeSettings.MinVolume;
+        slider.maxValue = AudioVolumeSettings.MaxVolume;
+        slider.wholeNumbers = false;
+
+        if (valueText != null)
+        {
+            valueText.ConfigureDisplay(
+                SliderPercentText.PercentMode.NormalizeToRange,
+                string.Empty,
+                "%",
+                true,
+                0,
+                100,
+                true);
+        }
+    }
+
     private void HideFovMilestoneLabels()
     {
         Transform fovRoot = FindNamedPanelChild(panelGrap, "FOV");
@@ -286,6 +321,56 @@ public partial class Setting_UIScript
         }
 
         ApplyMouseSensitivitySliderPreview();
+    }
+
+    private void LoadSavedAudioSelection()
+    {
+        LoadSavedAudioSelection(masterVolumeSlider, masterVolumeSliderValueText, AudioBus.Master);
+        LoadSavedAudioSelection(musicVolumeSlider, musicVolumeSliderValueText, AudioBus.Music);
+        LoadSavedAudioSelection(ambienceVolumeSlider, ambienceVolumeSliderValueText, AudioBus.Ambience);
+        LoadSavedAudioSelection(sfxVolumeSlider, sfxVolumeSliderValueText, AudioBus.Sfx);
+        LoadSavedAudioSelection(voiceVolumeSlider, voiceVolumeSliderValueText, AudioBus.Voice);
+        LoadSavedAudioSelection(uiVolumeSlider, uiVolumeSliderValueText, AudioBus.Ui);
+    }
+
+    private void LoadSavedAudioSelection(Slider slider, SliderPercentText valueText, AudioBus bus)
+    {
+        if (slider == null)
+        {
+            return;
+        }
+
+        slider.SetValueWithoutNotify(AudioVolumeSettings.GetSavedOrDefaultVolume(bus));
+        if (valueText != null)
+        {
+            valueText.RefreshDisplay();
+        }
+
+        ApplyAudioSliderPreview(bus, slider);
+    }
+
+    private void InitializeAudioDefaultSelection()
+    {
+        InitializeAudioDefaultSelection(masterVolumeSlider, masterVolumeSliderValueText, AudioBus.Master);
+        InitializeAudioDefaultSelection(musicVolumeSlider, musicVolumeSliderValueText, AudioBus.Music);
+        InitializeAudioDefaultSelection(ambienceVolumeSlider, ambienceVolumeSliderValueText, AudioBus.Ambience);
+        InitializeAudioDefaultSelection(sfxVolumeSlider, sfxVolumeSliderValueText, AudioBus.Sfx);
+        InitializeAudioDefaultSelection(voiceVolumeSlider, voiceVolumeSliderValueText, AudioBus.Voice);
+        InitializeAudioDefaultSelection(uiVolumeSlider, uiVolumeSliderValueText, AudioBus.Ui);
+    }
+
+    private void InitializeAudioDefaultSelection(Slider slider, SliderPercentText valueText, AudioBus bus)
+    {
+        if (slider == null)
+        {
+            return;
+        }
+
+        slider.SetValueWithoutNotify(AudioVolumeSettings.GetDefaultVolume(bus));
+        if (valueText != null)
+        {
+            valueText.RefreshDisplay();
+        }
     }
 
     private void InitializeMouseSensitivityDefaultSelection()
@@ -438,6 +523,26 @@ public partial class Setting_UIScript
         GameplayMouseSensitivityRuntimeApplier.ApplySensitivity(selectedSensitivity);
     }
 
+    private void SaveAudioSelection()
+    {
+        SaveAudioSelection(masterVolumeSlider, AudioBus.Master);
+        SaveAudioSelection(musicVolumeSlider, AudioBus.Music);
+        SaveAudioSelection(ambienceVolumeSlider, AudioBus.Ambience);
+        SaveAudioSelection(sfxVolumeSlider, AudioBus.Sfx);
+        SaveAudioSelection(voiceVolumeSlider, AudioBus.Voice);
+        SaveAudioSelection(uiVolumeSlider, AudioBus.Ui);
+    }
+
+    private void SaveAudioSelection(Slider slider, AudioBus bus)
+    {
+        if (slider == null)
+        {
+            return;
+        }
+
+        AudioService.SetBusVolume(bus, slider.value, true);
+    }
+
     private void SaveResponseSpeedSelection()
     {
         if (responseSpeedSlider == null)
@@ -570,6 +675,16 @@ public partial class Setting_UIScript
 
         GameplayMouseSensitivityRuntimeApplier.ApplySensitivity(
             GameplayMouseSensitivitySettings.SliderValueToSensitivity(mouseSensitivitySlider.value));
+    }
+
+    private void ApplyAudioSliderPreview(AudioBus bus, Slider slider)
+    {
+        if (slider == null)
+        {
+            return;
+        }
+
+        AudioService.SetBusVolume(bus, slider.value, false);
     }
 
     private void ApplyMinimapTypePreview()
