@@ -351,7 +351,6 @@ public class BotBehaviorContext : MonoBehaviour
     public void SetExtinguishStance(float stance)
     {
         extinguishStance = stance;
-        Debug.Log($"[BotBehaviorContext] Random ExtinguishStance set to: {stance}");
         if (extinguishStanceParameterHash != 0 && CanDriveAnimator())
         {
             if (TryGetParameterType(extinguishStanceParameterHash, out AnimatorControllerParameterType type))
@@ -572,7 +571,7 @@ public class BotBehaviorContext : MonoBehaviour
 
     private bool ShouldUseLoadedLowerBodyLayer()
     {
-        if (commandAgent == null || !commandAgent.IsCarryingRescueTarget)
+        if (commandAgent == null)
         {
             return false;
         }

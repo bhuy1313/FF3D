@@ -67,6 +67,7 @@ namespace TrueJourney.BotBehavior
         public Transform InventoryRoot => inventoryRoot;
         public Transform EquippedRoot => equippedRoot;
         public BotEquippedItemPoseKey EquippedPoseKey => equippedPoseKey;
+        public IPickupable ActiveItem => HasItem ? slots[activeIndex].Item : null;
 
         private int activeIndex = -1;
 

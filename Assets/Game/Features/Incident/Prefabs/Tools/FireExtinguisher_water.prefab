@@ -15,6 +15,8 @@ GameObject:
   - component: {fileID: 2159740522226725988}
   - component: {fileID: 6655549779651207383}
   - component: {fileID: 5452969581965160436}
+  - component: {fileID: 4183776417950287684}
+  - component: {fileID: 1333781736053761117}
   m_Layer: 0
   m_Name: FireExtinguisher_water
   m_TagString: Untagged
@@ -30,7 +32,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1559601979303164607}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -71,7 +73,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 1
   sprayParticles: {fileID: 3386994986908344762}
-  sprayAudio: {fileID: 0}
+  audioController: {fileID: 0}
   currentCharge: 0
   isSpraying: 0
   currentHolder: {fileID: 0}
@@ -189,6 +191,36 @@ MonoBehaviour:
   sprayingModelRoot: {fileID: 6818524701426570916}
   hideIdleModelWhileSpraying: 1
   showSprayingModelOnlyWhileSpraying: 1
+--- !u!114 &4183776417950287684
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1559601979303164607}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c85dffbce88f476e865da8f7d718f5c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerEquippedItemPoseProfile
+  overridePlayerEquippedPose: 1
+  equippedLocalPosition: {x: 0.519, y: 0.2, z: 0.046}
+  equippedLocalEulerAngles: {x: 276.38535, y: 267.4936, z: 180.00163}
+--- !u!114 &1333781736053761117
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1559601979303164607}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f918cf92e274b6d97a96780d09faebd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FireExtinguisherAudioController
+  startSound: 17
+  loopSound: 13
+  endSound: 18
 --- !u!1 &3349025479179280749
 GameObject:
   m_ObjectHideFlags: 0
@@ -215,7 +247,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -0.7071068, z: 0, w: 0.7071068}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.65, y: 0.65, z: 0.65}
+  m_LocalScale: {x: 0.7, y: 0.7, z: 0.7}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 3684000608825396077}
@@ -249,7 +281,7 @@ Transform:
   m_GameObject: {fileID: 4557442079566276114}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.518, z: 0.6042}
+  m_LocalPosition: {x: 0, y: 0.555, z: 0.6042}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children:

@@ -76,6 +76,12 @@ namespace TrueJourney.BotBehavior.Editor
                     context = Undo.AddComponent<BotBehaviorContext>(gameObject);
                 }
 
+                BotAnimatorParameterDriver animatorDriver = gameObject.GetComponent<BotAnimatorParameterDriver>();
+                if (animatorDriver == null)
+                {
+                    animatorDriver = Undo.AddComponent<BotAnimatorParameterDriver>(gameObject);
+                }
+
                 BehaviorGraphAgent behaviorAgent = gameObject.GetComponent<BehaviorGraphAgent>();
                 if (behaviorAgent == null)
                 {
@@ -85,6 +91,7 @@ namespace TrueJourney.BotBehavior.Editor
                 Undo.RecordObject(context, "Configure Bot Behavior Context");
                 context.SetUseMoveOrdersAsBehaviorInput(true);
                 EditorUtility.SetDirty(context);
+                EditorUtility.SetDirty(animatorDriver);
 
                 Undo.RecordObject(behaviorAgent, "Assign Bot Behavior Graph");
                 behaviorAgent.Graph = runtimeGraph;

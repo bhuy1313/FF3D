@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &4519826880838102435
+--- !u!1 &2733530193440317877
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,230 +8,9 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 3413795287769351680}
-  - component: {fileID: 6060685233493835470}
-  - component: {fileID: 5472308005824090459}
-  - component: {fileID: 5743202146873858138}
-  - component: {fileID: 4234065757660074837}
-  - component: {fileID: 8072130815384687079}
-  - component: {fileID: 5653189352511875235}
-  m_Layer: 0
-  m_Name: FireExtinguisher_powder
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &3413795287769351680
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4519826880838102435}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 2003795733248959216}
-  - {fileID: 1072414954599416845}
-  - {fileID: 6050232983558883565}
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &6060685233493835470
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4519826880838102435}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: db5baebd92d756c4cb6b408692e7f6b9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::FireExtinguisher
-  extinguisherType: 1
-  movementWeightKg: 12
-  maxCharge: 55555
-  rechargePerSecond: 0
-  minChargeToUse: 0.05
-  toggleUse: 1
-  playerDischargePerSecond: 150
-  botDischargePerSecond: 250
-  maxSprayDistance: 2
-  botStandDistanceFactor: 0
-  coneHalfAngle: 28
-  coneBaseRadius: 0.15
-  coneSegments: 4
-  sprayMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  lineOfSightMask:
-    serializedVersion: 2
-    m_Bits: 1
-  sprayParticles: {fileID: 8170876042360448015}
-  sprayAudio: {fileID: 0}
-  currentCharge: 0
-  isSpraying: 0
-  currentHolder: {fileID: 0}
-  currentUser: {fileID: 0}
-  claimOwner: {fileID: 0}
-  drawConeGizmo: 1
-  drawGizmoOnlyWhenSelected: 1
---- !u!114 &5472308005824090459
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4519826880838102435}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ea4286af94a06ba42979375c3b5f50bf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Item
-  itemName: Fire Extinguisher
-  itemDescription: 
-  itemIcon: {fileID: 0}
---- !u!54 &5743202146873858138
-Rigidbody:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4519826880838102435}
-  serializedVersion: 5
-  m_Mass: 1
-  m_LinearDamping: 0
-  m_AngularDamping: 0.05
-  m_CenterOfMass: {x: 0, y: 0, z: 0}
-  m_InertiaTensor: {x: 1, y: 1, z: 1}
-  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ImplicitCom: 1
-  m_ImplicitTensor: 1
-  m_UseGravity: 1
-  m_IsKinematic: 0
-  m_Interpolate: 0
-  m_Constraints: 0
-  m_CollisionDetection: 0
---- !u!114 &4234065757660074837
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4519826880838102435}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshModifier
-  m_SerializedVersion: 0
-  m_OverrideArea: 0
-  m_Area: 0
-  m_OverrideGenerateLinks: 0
-  m_GenerateLinks: 0
-  m_IgnoreFromBuild: 1
-  m_ApplyToChildren: 1
-  m_AffectedAgents: ffffffff
---- !u!114 &8072130815384687079
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4519826880838102435}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8f585d5ab3b74e20a45f38bc7b169630, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: TrueJourney.BotCommands::TrueJourney.BotBehavior.BotEquippedItemPoseProfile
-  overrideBotEquippedPose: 1
-  poseEntries:
-  - key: 0
-    pose:
-      equippedLocalPosition: {x: 0.1418, y: 0.05, z: 0.0242}
-      equippedLocalEulerAngles: {x: 270, y: 90, z: 0}
-      useRightHandIkTarget: 1
-      rightHandIkWeight: 1
-      rightHandIkLocalPosition: {x: 0.227, y: 0.155, z: 0.284}
-      rightHandIkLocalEulerAngles: {x: 0, y: 270, z: 260}
-      useRightHandIkHint: 1
-      rightHandIkHintLocalPosition: {x: 0.49626923, y: 1.1094639, z: -0.47478485}
-      useLeftHandIkTarget: 0
-      leftHandIkWeight: 0
-      leftHandIkLocalPosition: {x: 0, y: 0, z: 0}
-      useLeftHandIkHint: 0
-      leftHandIkHintLocalPosition: {x: 0, y: 0, z: 0}
-      overrideSpineAimMaxWeight: 1
-      spineAimMaxWeight: 0.4
---- !u!114 &5653189352511875235
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4519826880838102435}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4b374c0b1aee49cab78fbaf7dfe3e987, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::FireExtinguisherStateModelSwitcher
-  fireExtinguisher: {fileID: 6060685233493835470}
-  idleModelRoot: {fileID: 6967029393328208413}
-  sprayingModelRoot: {fileID: 1090492249035318941}
-  hideIdleModelWhileSpraying: 1
-  showSprayingModelOnlyWhileSpraying: 1
---- !u!1 &6655244752646895055
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 6050232983558883565}
-  m_Layer: 0
-  m_Name: Muzzle
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &6050232983558883565
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6655244752646895055}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.585, z: 0.6042}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 3413795287769351680}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &7089265083522037207
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 838430206691884578}
-  - component: {fileID: 6758390739642184050}
-  - component: {fileID: 7425100430073053677}
+  - component: {fileID: 6563367969356685807}
+  - component: {fileID: 686357503998208783}
+  - component: {fileID: 2017459082511519505}
   m_Layer: 0
   m_Name: Gas
   m_TagString: Untagged
@@ -239,28 +18,28 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &838430206691884578
+--- !u!4 &6563367969356685807
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7089265083522037207}
+  m_GameObject: {fileID: 2733530193440317877}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: -0, y: 0, z: 0.784}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1072414954599416845}
+  m_Father: {fileID: 3946754488305707317}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!198 &6758390739642184050
+--- !u!198 &686357503998208783
 ParticleSystem:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7089265083522037207}
+  m_GameObject: {fileID: 2733530193440317877}
   serializedVersion: 8
   lengthInSec: 5
   simulationSpeed: 1.5
@@ -4989,14 +4768,14 @@ ParticleSystem:
         m_PostInfinity: 2
         m_RotationOrder: 4
     vectorLabel1_3: W
---- !u!199 &7425100430073053677
+--- !u!199 &2017459082511519505
 ParticleSystemRenderer:
   serializedVersion: 7
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7089265083522037207}
+  m_GameObject: {fileID: 2733530193440317877}
   m_Enabled: 1
   m_CastShadows: 0
   m_ReceiveShadows: 0
@@ -5069,7 +4848,7 @@ ParticleSystemRenderer:
   m_MeshWeighting1: 1
   m_MeshWeighting2: 1
   m_MeshWeighting3: 1
---- !u!1 &7509653619294251888
+--- !u!1 &4035384826815807568
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -5077,9 +4856,9 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1072414954599416845}
-  - component: {fileID: 8170876042360448015}
-  - component: {fileID: 2997680570547443914}
+  - component: {fileID: 3946754488305707317}
+  - component: {fileID: 7428435995374931612}
+  - component: {fileID: 4490341299466979616}
   m_Layer: 0
   m_Name: PressurisedSteam
   m_TagString: Untagged
@@ -5087,29 +4866,29 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &1072414954599416845
+--- !u!4 &3946754488305707317
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7509653619294251888}
+  m_GameObject: {fileID: 4035384826815807568}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.457, z: 0.6042}
+  m_LocalPosition: {x: -0.001, y: 0.4901, z: 0.62}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children:
-  - {fileID: 838430206691884578}
+  - {fileID: 6563367969356685807}
   m_Father: {fileID: 3413795287769351680}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!198 &8170876042360448015
+--- !u!198 &7428435995374931612
 ParticleSystem:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7509653619294251888}
+  m_GameObject: {fileID: 4035384826815807568}
   serializedVersion: 8
   lengthInSec: 5
   simulationSpeed: 2
@@ -9838,14 +9617,14 @@ ParticleSystem:
         m_PostInfinity: 2
         m_RotationOrder: 4
     vectorLabel1_3: W
---- !u!199 &2997680570547443914
+--- !u!199 &4490341299466979616
 ParticleSystemRenderer:
   serializedVersion: 7
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7509653619294251888}
+  m_GameObject: {fileID: 4035384826815807568}
   m_Enabled: 1
   m_CastShadows: 0
   m_ReceiveShadows: 0
@@ -9918,6 +9697,227 @@ ParticleSystemRenderer:
   m_MeshWeighting1: 1
   m_MeshWeighting2: 1
   m_MeshWeighting3: 1
+--- !u!1 &4519826880838102435
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3413795287769351680}
+  - component: {fileID: 6060685233493835470}
+  - component: {fileID: 5472308005824090459}
+  - component: {fileID: 5743202146873858138}
+  - component: {fileID: 4234065757660074837}
+  - component: {fileID: 8072130815384687079}
+  - component: {fileID: 5653189352511875235}
+  - component: {fileID: 1247219298003423982}
+  - component: {fileID: 7626913887604753650}
+  m_Layer: 0
+  m_Name: FireExtinguisher_powder
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3413795287769351680
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4519826880838102435}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 2003795733248959216}
+  - {fileID: 3946754488305707317}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6060685233493835470
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4519826880838102435}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db5baebd92d756c4cb6b408692e7f6b9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FireExtinguisher
+  extinguisherType: 1
+  movementWeightKg: 12
+  maxCharge: 55555
+  rechargePerSecond: 0
+  minChargeToUse: 0.05
+  toggleUse: 1
+  playerDischargePerSecond: 150
+  botDischargePerSecond: 250
+  maxSprayDistance: 2
+  botStandDistanceFactor: 0
+  coneHalfAngle: 28
+  coneBaseRadius: 0.15
+  coneSegments: 4
+  sprayMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  lineOfSightMask:
+    serializedVersion: 2
+    m_Bits: 1
+  sprayParticles: {fileID: 7428435995374931612}
+  audioController: {fileID: 0}
+  currentCharge: 0
+  isSpraying: 0
+  currentHolder: {fileID: 0}
+  currentUser: {fileID: 0}
+  claimOwner: {fileID: 0}
+  drawConeGizmo: 1
+  drawGizmoOnlyWhenSelected: 1
+--- !u!114 &5472308005824090459
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4519826880838102435}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea4286af94a06ba42979375c3b5f50bf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Item
+  itemName: Fire Extinguisher
+  itemDescription: 
+  itemIcon: {fileID: 0}
+--- !u!54 &5743202146873858138
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4519826880838102435}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
+--- !u!114 &4234065757660074837
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4519826880838102435}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshModifier
+  m_SerializedVersion: 0
+  m_OverrideArea: 0
+  m_Area: 0
+  m_OverrideGenerateLinks: 0
+  m_GenerateLinks: 0
+  m_IgnoreFromBuild: 1
+  m_ApplyToChildren: 1
+  m_AffectedAgents: ffffffff
+--- !u!114 &8072130815384687079
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4519826880838102435}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f585d5ab3b74e20a45f38bc7b169630, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TrueJourney.BotCommands::TrueJourney.BotBehavior.BotEquippedItemPoseProfile
+  overrideBotEquippedPose: 1
+  poseEntries:
+  - key: 0
+    pose:
+      equippedLocalPosition: {x: 0.1418, y: 0.05, z: 0.0242}
+      equippedLocalEulerAngles: {x: 270, y: 90, z: 0}
+      useRightHandIkTarget: 1
+      rightHandIkWeight: 1
+      rightHandIkLocalPosition: {x: 0.227, y: 0.155, z: 0.284}
+      rightHandIkLocalEulerAngles: {x: 0, y: 270, z: 260}
+      useRightHandIkHint: 1
+      rightHandIkHintLocalPosition: {x: 0.49626923, y: 1.1094639, z: -0.47478485}
+      useLeftHandIkTarget: 0
+      leftHandIkWeight: 0
+      leftHandIkLocalPosition: {x: 0, y: 0, z: 0}
+      useLeftHandIkHint: 0
+      leftHandIkHintLocalPosition: {x: 0, y: 0, z: 0}
+      overrideSpineAimMaxWeight: 1
+      spineAimMaxWeight: 0.4
+--- !u!114 &5653189352511875235
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4519826880838102435}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4b374c0b1aee49cab78fbaf7dfe3e987, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FireExtinguisherStateModelSwitcher
+  fireExtinguisher: {fileID: 6060685233493835470}
+  idleModelRoot: {fileID: 6967029393328208413}
+  sprayingModelRoot: {fileID: 1090492249035318941}
+  hideIdleModelWhileSpraying: 1
+  showSprayingModelOnlyWhileSpraying: 1
+--- !u!114 &1247219298003423982
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4519826880838102435}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c85dffbce88f476e865da8f7d718f5c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerEquippedItemPoseProfile
+  overridePlayerEquippedPose: 1
+  equippedLocalPosition: {x: 0.449, y: 0.193, z: 0.044}
+  equippedLocalEulerAngles: {x: 276.38535, y: 267.4936, z: 180.00163}
+--- !u!114 &7626913887604753650
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4519826880838102435}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f918cf92e274b6d97a96780d09faebd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FireExtinguisherAudioController
+  startSound: 17
+  loopSound: 13
+  endSound: 18
 --- !u!1 &8927867607262686459
 GameObject:
   m_ObjectHideFlags: 0
@@ -9944,7 +9944,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -0.7071068, z: 0, w: 0.7071068}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.65, y: 0.65, z: 0.65}
+  m_LocalScale: {x: 0.7, y: 0.7, z: 0.7}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 7774353144422080679}
