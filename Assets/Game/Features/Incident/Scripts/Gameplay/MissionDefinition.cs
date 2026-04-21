@@ -9,6 +9,8 @@ public class MissionDefinition : ScriptableObject
 {
     [Header("Mission")]
     [SerializeField] private string missionId = "incident";
+    [SerializeField] private string operationTitleLocalizationKey;
+    [SerializeField] private string operationTitle = "OPERATION: SUBURBAN FIRE";
     [SerializeField] private string missionTitleLocalizationKey;
     [SerializeField] private string missionTitle = "Resolve Incident";
     [SerializeField] private string missionDescriptionLocalizationKey;
@@ -23,6 +25,7 @@ public class MissionDefinition : ScriptableObject
     [SerializeField] private List<MissionFailConditionDefinition> failConditions = new List<MissionFailConditionDefinition>();
 
     public string MissionId => missionId;
+    public string OperationTitle => ResolveOperationTitle();
     public string MissionTitle => MissionLocalization.Get(missionTitleLocalizationKey, missionTitle);
     public string MissionDescription => MissionLocalization.Get(missionDescriptionLocalizationKey, missionDescription);
     public float TimeLimitSeconds => timeLimitSeconds;
@@ -38,6 +41,24 @@ public class MissionDefinition : ScriptableObject
             return scoreConfig;
         }
     }
+
+    private string ResolveOperationTitle()
+    {
+        string localizedOperationTitle = MissionLocalization.Get(operationTitleLocalizationKey, operationTitle);
+        if (!string.IsNullOrWhiteSpace(localizedOperationTitle))
+        {
+            return localizedOperationTitle;
+        }
+
+        string localizedMissionTitle = MissionLocalization.Get(missionTitleLocalizationKey, missionTitle);
+        if (string.IsNullOrWhiteSpace(localizedMissionTitle))
+        {
+            return "OPERATION";
+        }
+
+        return $"OPERATION: {localizedMissionTitle.Trim().ToUpperInvariant()}";
+    }
+
     public void CollectObjectives(List<MissionObjectiveDefinition> results)
     {
         CollectPersistentObjectives(results);

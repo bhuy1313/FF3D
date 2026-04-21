@@ -1,52 +1,5 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!114 &-6510022302844551001
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 18f5bf78b5364d6ead303ebdb616e58f, type: 3}
-  m_Name: Tutorial_IsolatePowerObjective_InteractTargetObjectiveDefinition
-  m_EditorClassIdentifier: Assembly-CSharp::InteractTargetObjectiveDefinition
-  objectiveTitleLocalizationKey: 
-  objectiveTitle: Isolate Power
-  objectiveDescriptionLocalizationKey: 
-  objectiveDescription: Shut off the electrical panel before suppressing the hazard.
-  scoreWeight: 15
-  scoreMode: 0
-  targetSignalKey: tutorial-isolate-power
-  pendingSummaryLocalizationKey: 
-  pendingSummary: Isolate the electrical panel before attacking the fire
-  completedSummaryLocalizationKey: 
-  completedSummary: Electrical supply isolated
---- !u!114 &-6214757763015457602
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3f3f9e14cc5d4d788da16fe3e793954c, type: 3}
-  m_Name: Tutorial_VictimOutcomeObjective_VictimOutcomeObjectiveDefinition
-  m_EditorClassIdentifier: Assembly-CSharp::VictimOutcomeObjectiveDefinition
-  objectiveTitleLocalizationKey: 
-  objectiveTitle: Victim Condition
-  objectiveDescriptionLocalizationKey: 
-  objectiveDescription: Keep victims alive, resolve critical status, and stabilize
-    all survivors.
-  scoreWeight: 25
-  scoreMode: 1
-  autoDiscoverVictimConditions: 1
-  failOnAnyVictimDeath: 1
-  maxAllowedVictimDeaths: 0
-  requireNoCriticalVictimsAtCompletion: 1
-  requireAllLivingVictimsStabilized: 1
 --- !u!114 &-6214757763015457601
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -79,6 +32,8 @@ MonoBehaviour:
   m_Name: Tutorial_IncidentMission
   m_EditorClassIdentifier: Assembly-CSharp::MissionDefinition
   missionId: tutorial-incident
+  operationTitleLocalizationKey: 
+  operationTitle: 'OPERATION: SUBURBAN FIRE'
   missionTitleLocalizationKey: mission.tutorial.title
   missionTitle: Complete Incident Tutorial
   missionDescriptionLocalizationKey: mission.tutorial.description
@@ -107,9 +62,7 @@ MonoBehaviour:
     bRankLabel: B
     cRankLabel: C
   persistentObjectives:
-  - {fileID: -6510022302844551001}
   - {fileID: 1803299867243040891}
-  - {fileID: -6214757763015457602}
   - {fileID: -6214757763015457601}
   failConditions:
   - {fileID: 8481906818168850071}

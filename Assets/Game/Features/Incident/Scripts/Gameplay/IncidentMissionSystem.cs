@@ -51,6 +51,8 @@ public partial class IncidentMissionSystem : MonoBehaviour
     [SerializeField] private string missionDescription = "Extinguish fires and rescue civilians.";
     [SerializeField] private bool autoStartOnEnable = true;
     [SerializeField] private float timeLimitSeconds = 0f;
+    [Tooltip("Thời gian chờ (giây) sau khi nhiệm vụ chạy trước khi thực sự bắt đầu tính thời gian và đánh giá kết quả.")]
+    [SerializeField] private float startDelay = 0f;
 
     [Header("Overlay")]
     [SerializeField] private bool showMissionOverlay = true;
@@ -78,6 +80,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
     [Header("Runtime")]
     [SerializeField] private MissionState missionState = MissionState.Idle;
     [SerializeField] private float elapsedTime;
+    [SerializeField] private float currentStartDelay;
     [SerializeField] private int totalTrackedFires;
     [SerializeField] private int extinguishedFireCount;
     [SerializeField] private int totalTrackedRescuables;
@@ -116,6 +119,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
     private readonly List<MissionFailConditionDefinition> resultFailConditionScratch = new List<MissionFailConditionDefinition>();
 
     public string MissionId => ResolveMissionId();
+    public string MissionOperationTitle => ResolveMissionOperationTitle();
     public string MissionTitle => ResolveMissionTitle();
     public string MissionDescription => ResolveMissionDescription();
     public MissionState State => missionState;
@@ -189,6 +193,13 @@ public partial class IncidentMissionSystem : MonoBehaviour
         if (missionState != MissionState.Running)
             return;
 
+        if (currentStartDelay > 0f)
+        {
+            currentStartDelay -= Time.deltaTime;
+            RefreshRuntimeStateIfDirty();
+            return;
+        }
+
         elapsedTime += Time.deltaTime;
         RefreshRuntimeStateIfDirty();
 
@@ -230,6 +241,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
         ResetSignalEmitters();
         RefreshObjectives();
         elapsedTime = 0f;
+        currentStartDelay = startDelay;
         missionState = MissionState.Running;
         onMissionStarted?.Invoke();
     }
@@ -1012,6 +1024,22 @@ public partial class IncidentMissionSystem : MonoBehaviour
         }
 
         return missionTitle;
+    }
+
+    private string ResolveMissionOperationTitle()
+    {
+        if (missionDefinition != null && !string.IsNullOrWhiteSpace(missionDefinition.OperationTitle))
+        {
+            return missionDefinition.OperationTitle;
+        }
+
+        string resolvedMissionTitle = ResolveMissionTitle();
+        if (string.IsNullOrWhiteSpace(resolvedMissionTitle))
+        {
+            return "OPERATION";
+        }
+
+        return $"OPERATION: {resolvedMissionTitle.Trim().ToUpperInvariant()}";
     }
 
     private string ResolveMissionDescription()

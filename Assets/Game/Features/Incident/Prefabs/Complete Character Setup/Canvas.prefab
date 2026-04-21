@@ -9010,7 +9010,6 @@ GameObject:
   - component: {fileID: 4485049374097170073}
   - component: {fileID: 7204432629310799070}
   - component: {fileID: 8140388868450890395}
-  - component: {fileID: 7820395600309865055}
   - component: {fileID: 932334299813229044}
   m_Layer: 5
   m_Name: MissionHud
@@ -9079,78 +9078,6 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &7820395600309865055
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4218135758742813437}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 91d583b15e25435794e1a2f0ca5b05eb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MissionHudPresenter
-  missionSystem: {fileID: 0}
-  playerHazardExposure: {fileID: 0}
-  rootCanvasGroup: {fileID: 932334299813229044}
-  missionTitleText: {fileID: 0}
-  missionDescriptionText: {fileID: 0}
-  stageText: {fileID: 0}
-  stateText: {fileID: 0}
-  timerText: {fileID: 0}
-  scoreText: {fileID: 0}
-  objectivesText: {fileID: 0}
-  missionHeaderText: {fileID: 4729817378564049068}
-  missionTimerText: {fileID: 3827049787639170609}
-  missionSummaryText: {fileID: 6470041271009240279}
-  stageCounterText: {fileID: 6062068626474197685}
-  stageHeadlineText: {fileID: 7783527006054637733}
-  stageProgressFillImage: {fileID: 6866885182527491968}
-  stageProgressText: {fileID: 5910913625323617872}
-  objectivesHeaderText: {fileID: 5479553424323441938}
-  objectivesListRoot: {fileID: 2455251613027998872}
-  objectiveItemPrefab: {fileID: 7558426068820310051, guid: ffedb4471d2acc640b0832ad6dac1aec, type: 3}
-  pendingObjectiveIcon: {fileID: 2800000, guid: 0dcad767874d41d42847a08f08a513df, type: 3}
-  activeObjectiveIcon: {fileID: 2800000, guid: 0dcad767874d41d42847a08f08a513df, type: 3}
-  completedObjectiveIcon: {fileID: 2800000, guid: 0dcad767874d41d42847a08f08a513df, type: 3}
-  failedObjectiveIcon: {fileID: 2800000, guid: 0dcad767874d41d42847a08f08a513df, type: 3}
-  objectiveDoneToastRoot: {fileID: 7109392198147798386}
-  objectiveDoneToastText: {fileID: 7782984365473937295}
-  objectiveUpdateToastRoot: {fileID: 2710119706658549474}
-  objectiveUpdateToastTitleText: {fileID: 5698111465770515121}
-  objectiveUpdateToastBodyText: {fileID: 4703832971733125589}
-  hideWhenMissionMissing: 1
-  hideWhenMissionIdle: 0
-  showMissionDescription: 1
-  showCompletedObjectives: 1
-  showObjectiveScores: 1
-  pendingPrefix: '[ ]'
-  completedPrefix: '[DONE]'
-  failedPrefix: '[FAILED]'
-  timerRemainingFormat: '{0:F1}s left'
-  timerElapsedFormat: '{0:F1}s elapsed'
-  scoreFormat: 'Score: {0}/{1}{2}'
-  stageCounterFormat: Stage {0} / {1}
-  objectivesHeaderFormat: OBJECTIVES - {0}
-  progressPercentFormat: '{0:0}%'
-  progressWithScoreFormat: '{0:0}% | {1}'
-  pendingObjectiveColor: {r: 1, g: 1, b: 1, a: 0.65}
-  activeObjectiveColor: {r: 1, g: 1, b: 1, a: 1}
-  completedObjectiveColor: {r: 0.59, g: 1, b: 0.77, a: 0.9}
-  failedObjectiveColor: {r: 1, g: 0.62, b: 0.62, a: 0.95}
-  showSituationAdvisories: 1
-  smokeWarningThreshold: 0.2
-  heavySmokeWarningThreshold: 0.55
-  showInitialObjectiveUpdateToast: 1
-  objectiveDoneToastDuration: 1.1
-  objectiveUpdateToastDuration: 1.45
-  toastGapSeconds: 0.15
-  objectiveDoneToastFormat: '{0} done'
-  objectiveUpdateToastTitle: OBJECTIVE UPDATED
-  hudCanvasGroup: {fileID: 0}
-  allowHudToggleHotkey: 1
-  toggleHudKey: 110
 --- !u!225 &932334299813229044
 CanvasGroup:
   m_ObjectHideFlags: 0
