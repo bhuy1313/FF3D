@@ -2,13 +2,6 @@ using UnityEngine;
 
 public class HudTabToggle : MonoBehaviour
 {
-    [Header("Targets to Toggle")]
-    [Tooltip("Kéo GameObject thứ nhất (ví dụ: HubV2) vào đây")]
-    [SerializeField] private GameObject target1;
-
-    [Tooltip("Kéo GameObject thứ hai vào đây (nếu có)")]
-    [SerializeField] private GameObject target2;
-
     [Header("Settings")]
     [Tooltip("Phím dùng để bật/tắt (Mặc định: Tab)")]
     [SerializeField] private KeyCode toggleKey = KeyCode.Tab;
@@ -16,36 +9,73 @@ public class HudTabToggle : MonoBehaviour
     [Tooltip("Trạng thái hiển thị mặc định khi mới chạy game")]
     [SerializeField] private bool defaultVisible = false;
 
-    private bool isVisible;
+    [Header("Animator Setup")]
+    [Tooltip("Kéo Animator của HubV2_Detail vào đây")]
+    [SerializeField] private Animator panelAnimator;
+
+    [Tooltip("Tên trigger khi mở")]
+    [SerializeField] private string openTrigger = "Open";
+
+    [Tooltip("Tên trigger khi đóng")]
+    [SerializeField] private string closeTrigger = "Close";
+    
+    [Tooltip("Có bắn Trigger ngay khi bắt đầu game không? (Tắt đi nếu đã có Animation tổng tự chạy)")]
+    [SerializeField] private bool fireTriggerOnStart = false;
+
+    [Header("Runtime State")]
+    [Tooltip("Trạng thái hiện tại của DetailGroup (Chỉ nên xem, không nên sửa tay)")]
+    [SerializeField] private bool isVisible;
+
+    /// <summary>
+    /// Cho biết DetailGroup hiện đang được bật hay tắt.
+    /// </summary>
+    public bool IsDetailVisible => isVisible;
 
     private void Awake()
     {
-        // Thiết lập trạng thái ban đầu
         isVisible = defaultVisible;
-        SetTargetsActive(isVisible);
+        
+        // Khởi tạo trạng thái ban đầu cho Animator
+        if (panelAnimator != null && fireTriggerOnStart)
+        {
+            if (isVisible)
+            {
+                panelAnimator.SetTrigger(openTrigger);
+            }
+            else
+            {
+                panelAnimator.SetTrigger(closeTrigger);
+            }
+        }
     }
 
     private void Update()
     {
-        // Kiểm tra xem người chơi có nhấn phím Tab (hoặc phím đã cài) không
         if (Input.GetKeyDown(toggleKey))
         {
-            // Đảo ngược trạng thái: Đang hiện -> Ẩn, Đang ẩn -> Hiện
+            if (panelAnimator == null)
+            {
+                Debug.LogWarning("[HudTabToggle] Chưa gán Animator cho panelAnimator!");
+                return;
+            }
+
+            // Đảo ngược trạng thái logic (bật thành tắt, tắt thành bật)
             isVisible = !isVisible;
-            SetTargetsActive(isVisible);
-        }
-    }
 
-    private void SetTargetsActive(bool active)
-    {
-        if (target1 != null)
-        {
-            target1.SetActive(active);
-        }
-
-        if (target2 != null)
-        {
-            target2.SetActive(active);
+            if (isVisible)
+            {
+                // Muốn MỞ: Đảm bảo GameObject đang được bật trước khi chạy Animation
+                if (!panelAnimator.gameObject.activeSelf)
+                {
+                    panelAnimator.gameObject.SetActive(true);
+                }
+                panelAnimator.SetTrigger(openTrigger);
+            }
+            else
+            {
+                // Muốn ĐÓNG: Chỉ bắn Trigger Close, không SetActive(false) ngay lập tức
+                panelAnimator.SetTrigger(closeTrigger);
+            }
         }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using DG.Tweening;
 
 [DisallowMultipleComponent]
 public sealed class HubV2MissionPresenter : MonoBehaviour
@@ -64,6 +65,12 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
     [SerializeField] private string progressTextFormat = "{0}/{1} OBJECTIVES COMPLETED";
     [SerializeField] private string progressValueFormat = "{0:0}%";
 
+    [Header("Timer Animation")]
+    [Tooltip("Bật hiệu ứng đếm số cho Timer khi bắt đầu nhiệm vụ")]
+    [SerializeField] private bool animateTimerOnStart = true;
+    [Tooltip("Thời gian chạy hiệu ứng đếm số (giây)")]
+    [SerializeField] private float timerAnimDuration = 1.5f;
+
     [Header("Colors")]
     [SerializeField] private Color idleAccentColor = new Color(0.35f, 0.35f, 0.35f, 1f);
     [SerializeField] private Color runningAccentColor = new Color(0.18f, 0.84f, 0.43f, 1f);
@@ -81,6 +88,10 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
 
     private readonly List<ObjectiveItemView> objectiveViews = new List<ObjectiveItemView>();
     private bool objectiveViewsInitialized;
+
+    private float animatedTimerValue = 0f;
+    private bool isTimerAnimating = false;
+    private bool hasTimerAnimated = false;
 
     private void Awake()
     {
@@ -205,10 +216,47 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
             return idleTimerText;
         }
 
-        float seconds = missionSystem.TimeLimitSeconds > 0f
+        // Đặt lại cờ animation nếu nhiệm vụ đang Idle (để chuẩn bị cho nhiệm vụ mới)
+        if (missionSystem.State == IncidentMissionSystem.MissionState.Idle)
+        {
+            hasTimerAnimated = false;
+            isTimerAnimating = false;
+            return idleTimerText;
+        }
+
+        float targetSeconds = missionSystem.TimeLimitSeconds > 0f
             ? missionSystem.RemainingTimeSeconds
             : missionSystem.ElapsedTime;
-        return FormatClock(seconds);
+
+        // Nếu bật hiệu ứng chạy chữ từ 0 lúc bắt đầu nhiệm vụ (và chưa chạy)
+        if (animateTimerOnStart && !hasTimerAnimated && missionSystem.State == IncidentMissionSystem.MissionState.Running)
+        {
+            if (!isTimerAnimating)
+            {
+                isTimerAnimating = true;
+                animatedTimerValue = 0f;
+                
+                // Animate từ 0 đến giá trị thời gian bắt đầu
+                DOTween.To(() => animatedTimerValue, x => animatedTimerValue = x, targetSeconds, timerAnimDuration)
+                    .SetEase(Ease.OutCubic)
+                    .OnComplete(() =>
+                    {
+                        isTimerAnimating = false;
+                        hasTimerAnimated = true;
+                    });
+            }
+            
+            return FormatClock(animatedTimerValue);
+        }
+        
+        // Nếu animation vẫn đang chạy, trả về giá trị đang được tween
+        if (isTimerAnimating)
+        {
+            return FormatClock(animatedTimerValue);
+        }
+
+        // Khi kết thúc animation, hiển thị thời gian thực
+        return FormatClock(targetSeconds);
     }
 
     private string BuildObjectiveCounterText()
@@ -539,13 +587,7 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
 
     private string BuildObjectiveText(MissionObjectiveStatusSnapshot status)
     {
-        string text = !string.IsNullOrWhiteSpace(status.Summary) ? status.Summary : status.Title;
-        if (!showObjectiveScores || status.MaxScore <= 0)
-        {
-            return text;
-        }
-
-        return $"{text} ({status.Score}/{status.MaxScore})";
+        return !string.IsNullOrWhiteSpace(status.Summary) ? status.Summary : status.Title;
     }
 
     private static ObjectiveVisualState ResolveObjectiveVisualState(MissionObjectiveStatusSnapshot status, ref bool assignedActiveObjective)

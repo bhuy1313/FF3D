@@ -82,6 +82,7 @@ public class IncidentMissionSystemEditor : Editor
         DrawProperty("missionDescription");
         DrawProperty("autoStartOnEnable");
         DrawProperty("timeLimitSeconds");
+        DrawProperty("startDelay");
         DrawProperty("autoDiscoverFires");
         DrawProperty("autoDiscoverRescuables");
         DrawProperty("autoDiscoverVictimConditions");
