@@ -83,10 +83,9 @@ public partial class BotCommandAgent
 
             Vector3 targetPosition = target.GetWorldPosition();
             float interactionDistance = Mathf.Max(0.5f, agent.hazardIsolationInteractionDistance);
-            if ((targetPosition - agent.transform.position).sqrMagnitude <= interactionDistance * interactionDistance)
+            if (agent.IsWithinHorizontalDistance(targetPosition, interactionDistance))
             {
                 agent.StopNavMeshMovement();
-
                 return BotPlanTaskStatus.Success;
             }
 
@@ -102,7 +101,7 @@ public partial class BotCommandAgent
             }
 
             agent.navMeshAgent.stoppingDistance = Mathf.Max(agent.navMeshAgent.stoppingDistance, interactionDistance * 0.85f);
-            if (!agent.TryMoveToOrFail(targetPosition, agent.AbortHazardIsolationOrder, "Failed to path to hazard device."))
+            if (!agent.TryMoveIntoHorizontalRangeOrFail(targetPosition, interactionDistance, agent.AbortHazardIsolationOrder, "Failed to path to hazard device."))
             {
                 return BotPlanTaskStatus.Failure;
             }
@@ -163,9 +162,7 @@ public partial class BotCommandAgent
             }
 
             Vector3 targetPosition = target.GetWorldPosition();
-            agent.StopNavMeshMovement();
-
-            agent.AimTowards(targetPosition);
+            agent.StopAndAimTowards(targetPosition);
             interactable.Interact(agent.gameObject);
 
             if (!target.IsHazardActive)

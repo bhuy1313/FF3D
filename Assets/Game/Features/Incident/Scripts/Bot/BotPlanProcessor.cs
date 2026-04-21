@@ -42,6 +42,24 @@ public sealed class BotPlanProcessor
         }
     }
 
+    public void InterruptWith(BotCommandAgent agent, params IBotPlanTask[] tasks)
+    {
+        if (tasks == null || tasks.Length == 0)
+        {
+            return;
+        }
+
+        IBotPlanTask interruptedTask = currentTask;
+        if (interruptedTask != null)
+        {
+            interruptedTask.OnEnd(agent, true);
+            currentTask = null;
+            pendingTasks.AddFirst(interruptedTask);
+        }
+
+        InjectFront(agent, tasks);
+    }
+
     public void Tick(BotCommandAgent agent)
     {
         if (agent == null)

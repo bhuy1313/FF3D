@@ -4,6 +4,166 @@ using TrueJourney.BotBehavior;
 
 public partial class BotCommandAgent
 {
+    private sealed class AcquireBlockedPathTargetTask : IBotPlanTask
+    {
+        private readonly Vector3 destination;
+
+        public AcquireBlockedPathTargetTask(Vector3 destination)
+        {
+            this.destination = destination;
+        }
+
+        public string Name => "Acquire Blocked Path Target";
+
+        public void OnStart(BotCommandAgent agent)
+        {
+            agent.UpdatePathClearingDebugStage(PathClearingDebugStage.SearchingBlocker, $"Checking route to {destination} for blocking breakables.");
+            agent.SetBreakSubtask(BotBreakSubtask.AcquireTarget, "Checking route for blocking obstacle.");
+        }
+
+        public BotPlanTaskStatus OnUpdate(BotCommandAgent agent)
+        {
+            if (agent.currentBlockedBreakable != null &&
+                !agent.currentBlockedBreakable.IsBroken &&
+                agent.currentBlockedBreakable.CanBeClearedByBot &&
+                agent.IsBreakableStillRelevant(agent.currentBlockedBreakable))
+            {
+                agent.UpdatePathClearingDebugStage(
+                    PathClearingDebugStage.BlockedByBreakable,
+                    $"Continuing to clear blocking breakable '{BotCommandAgent.GetDebugTargetName(agent.currentBlockedBreakable)}'.");
+                return BotPlanTaskStatus.Success;
+            }
+
+            if (!agent.TryResolveBlockedBreakable(destination, out IBotBreakableTarget blockedTarget))
+            {
+                agent.UpdatePathClearingDebugStage(PathClearingDebugStage.Cleared, $"No blocking breakable detected toward {destination}.");
+                agent.ClearBlockedPathRuntime();
+                return BotPlanTaskStatus.Success;
+            }
+
+            agent.SetCurrentBlockedBreakable(blockedTarget);
+            agent.SetBreakSubtask(BotBreakSubtask.AcquireTool, $"Preparing tool for '{BotCommandAgent.GetDebugTargetName(blockedTarget)}'.");
+            agent.UpdatePathClearingDebugStage(
+                PathClearingDebugStage.BlockedByBreakable,
+                $"Detected blocking breakable '{BotCommandAgent.GetDebugTargetName(blockedTarget)}' at {blockedTarget.GetWorldPosition()}.");
+            agent.RefreshPathClearingResumeGrace();
+            return BotPlanTaskStatus.Success;
+        }
+
+        public void OnEnd(BotCommandAgent agent, bool interrupted)
+        {
+        }
+    }
+
+    private sealed class AcquireBlockedPathToolTask : IBotPlanTask
+    {
+        public string Name => "Acquire Blocked Path Tool";
+
+        public void OnStart(BotCommandAgent agent)
+        {
+            agent.SetBreakSubtask(BotBreakSubtask.AcquireTool, "Acquiring break tool.");
+        }
+
+        public BotPlanTaskStatus OnUpdate(BotCommandAgent agent)
+        {
+            IBotBreakableTarget blockedTarget = agent.currentBlockedBreakable;
+            if (blockedTarget == null || blockedTarget.IsBroken || !blockedTarget.CanBeClearedByBot)
+            {
+                agent.ClearBlockedPathRuntime();
+                return BotPlanTaskStatus.Success;
+            }
+
+            if (agent.activeBreakTool != null && agent.IsBreakToolStillUsable(agent.activeBreakTool))
+            {
+                return BotPlanTaskStatus.Success;
+            }
+
+            IBotBreakTool breakTool = agent.ResolveCommittedBreakTool();
+            if (breakTool == null)
+            {
+                agent.StopBreakToolRoute();
+                agent.LogPathClearingFlow(
+                    $"no-break-tool:blocker:{BotCommandAgent.GetDebugTargetName(blockedTarget)}",
+                    "No usable tool available.");
+                agent.LogPathClearingFlow(
+                    $"stop-breaktool:blocker:{BotCommandAgent.GetDebugTargetName(blockedTarget)}",
+                    "Stopped.");
+                agent.UpdatePathClearingDebugStage(
+                    PathClearingDebugStage.NoBreakTool,
+                    $"No usable break tool found for '{BotCommandAgent.GetDebugTargetName(blockedTarget)}'.");
+                agent.RefreshPathClearingResumeGrace();
+                return BotPlanTaskStatus.Running;
+            }
+
+            if (!agent.TryEnsureBreakToolEquipped(breakTool))
+            {
+                return BotPlanTaskStatus.Running;
+            }
+
+            return BotPlanTaskStatus.Success;
+        }
+
+        public void OnEnd(BotCommandAgent agent, bool interrupted)
+        {
+        }
+    }
+
+    private sealed class ExecuteBlockedPathTask : IBotPlanTask
+    {
+        public string Name => "Clear Blocked Path";
+
+        public void OnStart(BotCommandAgent agent)
+        {
+        }
+
+        public BotPlanTaskStatus OnUpdate(BotCommandAgent agent)
+        {
+            IBotBreakableTarget blockedTarget = agent.currentBlockedBreakable;
+            if (blockedTarget == null)
+            {
+                agent.ClearBlockedPathRuntime();
+                return BotPlanTaskStatus.Success;
+            }
+
+            if (blockedTarget.IsBroken || !blockedTarget.CanBeClearedByBot)
+            {
+                agent.ClearBlockedPathRuntime();
+                return BotPlanTaskStatus.Success;
+            }
+
+            if (agent.activeBreakTool == null || !agent.IsBreakToolStillUsable(agent.activeBreakTool))
+            {
+                agent.planProcessor.InjectFront(
+                    agent,
+                    new AcquireBlockedPathToolTask(),
+                    new ExecuteBlockedPathTask());
+                return BotPlanTaskStatus.Success;
+            }
+
+            agent.UpdatePathClearingDebugStage(
+                PathClearingDebugStage.BlockedByBreakable,
+                $"Continuing to clear blocking breakable '{BotCommandAgent.GetDebugTargetName(blockedTarget)}'.");
+            agent.RefreshPathClearingResumeGrace();
+            if (!agent.HandleEquippedBreakToolAgainstTarget(agent.activeBreakTool, blockedTarget))
+            {
+                agent.ClearBlockedPathRuntime();
+                return BotPlanTaskStatus.Success;
+            }
+
+            if (blockedTarget.IsBroken)
+            {
+                agent.ClearBlockedPathRuntime();
+                return BotPlanTaskStatus.Success;
+            }
+
+            return BotPlanTaskStatus.Running;
+        }
+
+        public void OnEnd(BotCommandAgent agent, bool interrupted)
+        {
+        }
+    }
+
     [Header("Break Task Flow")]
     [SerializeField] private BotBreakSubtask currentBreakSubtask;
     [SerializeField] private string breakTaskDetail = "Awaiting break assignment.";
@@ -18,102 +178,32 @@ public partial class BotCommandAgent
             return false;
         }
 
-        if (HasPendingCommittedBreakTool())
-        {
-            if (interactionSensor != null &&
-                interactionSensor.TryFindBreakableAhead(out IBotBreakableTarget routeBlockedBreakable) &&
-                routeBlockedBreakable != null &&
-                routeBlockedBreakable.CanBeClearedByBot &&
-                !routeBlockedBreakable.IsBroken)
-            {
-                LogPathClearingFlow(
-                    $"sensor-blocker-reroute:{GetDebugTargetName(routeBlockedBreakable)}:{GetBreakToolName(committedBreakTool)}",
-                    $"Blocker detected: '{GetDebugTargetName(routeBlockedBreakable)}'.");
-                LogPathClearingFlow(
-                    $"retry-breaktool-route:{GetBreakToolName(committedBreakTool)}:{GetDebugTargetName(routeBlockedBreakable)}",
-                    "Searching for another breaching tool.");
-                LogPathClearingFlow(
-                    $"discard-breaktool-route:{GetBreakToolName(committedBreakTool)}:{GetDebugTargetName(routeBlockedBreakable)}",
-                    $"Discarding {GetBreakToolName(committedBreakTool)}.");
-                RejectBreakToolForCurrentBlocker(committedBreakTool, routeBlockedBreakable);
-                StopBreakToolRoute();
-                ReleaseCommittedBreakTool();
-                UpdatePathClearingDebugStage(PathClearingDebugStage.SearchingBreakTool, $"Break tool route is blocked by '{GetDebugTargetName(routeBlockedBreakable)}'. Re-evaluating tool.");
-                return true;
-            }
-
-            if (!IsBreakToolStillUsable(committedBreakTool))
-            {
-                StopBreakToolRoute();
-                LogPathClearingFlow(
-                    $"no-break-tool:committed:{GetBreakToolName(committedBreakTool)}",
-                    "No usable tool available.");
-                LogPathClearingFlow(
-                    $"stop-breaktool:committed:{GetBreakToolName(committedBreakTool)}",
-                    "Stopped.");
-                UpdatePathClearingDebugStage(PathClearingDebugStage.NoBreakTool, $"Committed break tool '{GetBreakToolName(committedBreakTool)}' is no longer usable.");
-                ReleaseCommittedBreakTool();
-                RefreshPathClearingResumeGrace();
-                return true;
-            }
-
-            SetBreakSubtask(BotBreakSubtask.AcquireTool, $"Acquiring break tool '{GetBreakToolName(committedBreakTool)}'.");
-            UpdatePathClearingDebugStage(PathClearingDebugStage.SearchingBreakTool, $"Continuing acquisition of break tool '{GetBreakToolName(committedBreakTool)}'.");
-            RefreshPathClearingResumeGrace();
-            return !TryEnsureBreakToolEquipped(committedBreakTool) || activeBreakTool != null;
-        }
-
-        if (activeBreakTool != null &&
-            currentBlockedBreakable != null &&
+        if (currentBlockedBreakable != null &&
             !currentBlockedBreakable.IsBroken &&
             currentBlockedBreakable.CanBeClearedByBot)
         {
-            IBotBreakableTarget lockedBlockedTarget = currentBlockedBreakable;
-            UpdatePathClearingDebugStage(PathClearingDebugStage.BlockedByBreakable, $"Continuing to clear blocking breakable '{GetDebugTargetName(lockedBlockedTarget)}'.");
-            RefreshPathClearingResumeGrace();
-            return HandleEquippedBreakToolAgainstTarget(activeBreakTool, lockedBlockedTarget);
+            return true;
         }
 
-        UpdatePathClearingDebugStage(PathClearingDebugStage.SearchingBlocker, $"Checking route to {destination} for blocking breakables.");
-        SetBreakSubtask(BotBreakSubtask.AcquireTarget, "Checking route for blocking obstacle.");
         if (!TryResolveBlockedBreakable(destination, out IBotBreakableTarget blockedTarget))
         {
-            UpdatePathClearingDebugStage(PathClearingDebugStage.Cleared, $"No blocking breakable detected toward {destination}.");
+            ClearBlockedPathRuntime();
+            return false;
+        }
+
+        if (planProcessor == null || !planProcessor.HasActivePlan)
+        {
             ClearBlockedPathRuntime();
             return false;
         }
 
         SetCurrentBlockedBreakable(blockedTarget);
-        SetBreakSubtask(BotBreakSubtask.AcquireTool, $"Preparing tool for '{GetDebugTargetName(blockedTarget)}'.");
-        UpdatePathClearingDebugStage(PathClearingDebugStage.BlockedByBreakable, $"Detected blocking breakable '{GetDebugTargetName(blockedTarget)}' at {blockedTarget.GetWorldPosition()}.");
-        RefreshPathClearingResumeGrace();
-        IBotBreakTool breakTool = ResolveCommittedBreakTool();
-        if (breakTool == null)
-        {
-            StopBreakToolRoute();
-            LogPathClearingFlow(
-                $"no-break-tool:blocker:{GetDebugTargetName(blockedTarget)}",
-                "No usable tool available.");
-            LogPathClearingFlow(
-                $"stop-breaktool:blocker:{GetDebugTargetName(blockedTarget)}",
-                "Stopped.");
-            UpdatePathClearingDebugStage(PathClearingDebugStage.NoBreakTool, $"No usable break tool found for '{GetDebugTargetName(blockedTarget)}'.");
-            RefreshPathClearingResumeGrace();
-            return true;
-        }
-
-        if (!TryEnsureBreakToolEquipped(breakTool))
-        {
-            return true;
-        }
-
-        IBotBreakTool equippedBreakTool = activeBreakTool ?? breakTool;
-        if (equippedBreakTool == null)
-        {
-            return false;
-        }
-
-        return HandleEquippedBreakToolAgainstTarget(equippedBreakTool, blockedTarget);
+        planProcessor.InterruptWith(
+            this,
+            new AcquireBlockedPathTargetTask(destination),
+            new AcquireBlockedPathToolTask(),
+            new ExecuteBlockedPathTask());
+        return true;
     }
 
     private bool HandleEquippedBreakToolAgainstTarget(IBotBreakTool equippedBreakTool, IBotBreakableTarget blockedTarget)

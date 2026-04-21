@@ -126,11 +126,9 @@ public partial class BotCommandAgent
             }
 
             Vector3 targetPosition = rescueTarget.GetWorldPosition();
-            float horizontalDistance = BotCommandAgent.GetHorizontalDistance(agent.transform.position, targetPosition);
-            if (horizontalDistance <= agent.rescueInteractionDistance)
+            if (agent.IsWithinHorizontalDistance(targetPosition, agent.rescueInteractionDistance))
             {
-                agent.StopNavMeshMovement();
-                agent.AimTowardsPoint(targetPosition);
+                agent.StopAndAimTowards(targetPosition);
                 return BotPlanTaskStatus.Success;
             }
 

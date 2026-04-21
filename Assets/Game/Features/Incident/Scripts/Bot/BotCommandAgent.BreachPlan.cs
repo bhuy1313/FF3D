@@ -138,10 +138,10 @@ public partial class BotCommandAgent
 
                 Vector3 targetPosition = pryTarget.GetWorldPosition();
                 float interactionDistance = Mathf.Max(0.5f, agent.breachInteractionDistance);
-                if ((targetPosition - agent.transform.position).sqrMagnitude > interactionDistance * interactionDistance)
+                if (!agent.IsWithinHorizontalDistance(targetPosition, interactionDistance))
                 {
                     agent.SetBreakSubtask(BotBreakSubtask.MoveToObstacle, $"Moving to pry target '{BotCommandAgent.GetDebugTargetName(pryTarget)}'.");
-                    if (!agent.TryMoveToOrFail(targetPosition, agent.AbortBreachOrder, "Failed to path to breach target."))
+                    if (!agent.TryMoveIntoHorizontalRangeOrFail(targetPosition, interactionDistance, agent.AbortBreachOrder, "Failed to path to breach target."))
                     {
                         return BotPlanTaskStatus.Failure;
                     }
@@ -149,9 +149,7 @@ public partial class BotCommandAgent
                     return BotPlanTaskStatus.Running;
                 }
 
-                agent.StopNavMeshMovement();
-
-                agent.AimTowards(targetPosition);
+                agent.StopAndAimTowards(targetPosition);
                 if (!pryTarget.IsPryInProgress && !pryTarget.CanBePriedOpen)
                 {
                     agent.AbortBreachOrder("Assigned pry target can no longer be breached.");
