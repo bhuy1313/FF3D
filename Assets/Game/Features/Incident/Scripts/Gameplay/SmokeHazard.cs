@@ -20,6 +20,7 @@ public class SmokeHazard : MonoBehaviour
 
     [Header("Smoke Sources")]
     [SerializeField] private AutoCollectMode autoCollectMode = AutoCollectMode.ChildHierarchy;
+    [SerializeField] private float autoCollectDelay = 0f;
     [SerializeField] private bool autoCollectChildFires = true;
     [SerializeField] private Fire[] linkedFires = System.Array.Empty<Fire>();
     [FormerlySerializedAs("autoCollectChildDoors")]
@@ -145,6 +146,18 @@ public class SmokeHazard : MonoBehaviour
 
     private void Start()
     {
+        if (autoCollectDelay > 0f)
+        {
+            Invoke(nameof(DelayedAutoCollect), autoCollectDelay);
+        }
+        else
+        {
+            DelayedAutoCollect();
+        }
+    }
+
+    private void DelayedAutoCollect()
+    {
         ResolveLinkedObjects(forceRefresh: true);
     }
 
@@ -162,6 +175,7 @@ public class SmokeHazard : MonoBehaviour
         ResolveSupportComponents();
         ResolveTriggerZone();
         ResolveSmokeVfxReferences();
+        autoCollectDelay = Mathf.Max(0f, autoCollectDelay);
         startSmokeDensity = Mathf.Clamp01(startSmokeDensity);
         smokePerBurningFire = Mathf.Max(0f, smokePerBurningFire);
         smokePerFireIntensity = Mathf.Max(0f, smokePerFireIntensity);

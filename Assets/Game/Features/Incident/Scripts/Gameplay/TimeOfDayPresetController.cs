@@ -19,7 +19,6 @@ public class TimeOfDayPresetController : MonoBehaviour
         public Material skybox;
         public Color fogColor;
         public float fogStart;
-        public float fogEnd;
         public Color ambientSkyColor;
         public Color ambientEquatorColor;
         public Color ambientGroundColor;
@@ -33,7 +32,10 @@ public class TimeOfDayPresetController : MonoBehaviour
     [Header("Preset")]
     [SerializeField] private TimeOfDayPreset selectedPreset = TimeOfDayPreset.Evening;
     [SerializeField] private bool applyOnEnable = true;
-    [SerializeField, Tooltip("Allow overriding RenderSettings.fogEndDistance")] private bool applyFogEnd = true;
+
+    [Header("Fog Settings")]
+    [SerializeField] private bool enableFog = true;
+    [SerializeField] private float fogEnd = 240f;
 
     [Header("References")]
     [SerializeField] private Light sunLight;
@@ -112,15 +114,11 @@ public class TimeOfDayPresetController : MonoBehaviour
             RenderSettings.skybox = preset.skybox;
         }
 
-        RenderSettings.fog = true;
+        RenderSettings.fog = enableFog;
         RenderSettings.fogMode = FogMode.Linear;
         RenderSettings.fogColor = preset.fogColor;
         RenderSettings.fogStartDistance = preset.fogStart;
-        
-        if (applyFogEnd)
-        {
-            RenderSettings.fogEndDistance = preset.fogEnd;
-        }
+        RenderSettings.fogEndDistance = fogEnd;
 
         RenderSettings.ambientMode = AmbientMode.Trilight;
         RenderSettings.ambientSkyColor = preset.ambientSkyColor;
@@ -147,7 +145,6 @@ public class TimeOfDayPresetController : MonoBehaviour
                     skybox = morningSkybox,
                     fogColor = new Color(0.84f, 0.71f, 0.67f),
                     fogStart = 0f,
-                    fogEnd = 240f,
                     ambientSkyColor = new Color(0.80f, 0.62f, 0.56f),
                     ambientEquatorColor = new Color(0.57f, 0.49f, 0.46f),
                     ambientGroundColor = new Color(0.22f, 0.18f, 0.17f),
@@ -164,7 +161,6 @@ public class TimeOfDayPresetController : MonoBehaviour
                     skybox = noonSkybox,
                     fogColor = new Color(0.72f, 0.84f, 0.94f),
                     fogStart = 0f,
-                    fogEnd = 420f,
                     ambientSkyColor = new Color(0.56f, 0.73f, 0.92f),
                     ambientEquatorColor = new Color(0.36f, 0.50f, 0.61f),
                     ambientGroundColor = new Color(0.21f, 0.25f, 0.27f),
@@ -181,7 +177,6 @@ public class TimeOfDayPresetController : MonoBehaviour
                     skybox = nightSkybox,
                     fogColor = new Color(0.07f, 0.09f, 0.15f),
                     fogStart = 0f,
-                    fogEnd = 160f,
                     ambientSkyColor = new Color(0.08f, 0.11f, 0.18f),
                     ambientEquatorColor = new Color(0.05f, 0.07f, 0.10f),
                     ambientGroundColor = new Color(0.02f, 0.03f, 0.04f),
@@ -198,7 +193,6 @@ public class TimeOfDayPresetController : MonoBehaviour
                     skybox = eveningSkybox,
                     fogColor = new Color(0.30f, 0.25f, 0.30f),
                     fogStart = 0f,
-                    fogEnd = 210f,
                     ambientSkyColor = new Color(0.25f, 0.22f, 0.28f),
                     ambientEquatorColor = new Color(0.18f, 0.15f, 0.18f),
                     ambientGroundColor = new Color(0.08f, 0.07f, 0.08f),
