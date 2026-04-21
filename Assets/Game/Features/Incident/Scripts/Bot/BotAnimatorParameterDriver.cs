@@ -306,7 +306,7 @@ namespace TrueJourney.BotBehavior
             SetBool(isUsingToolParameter, isUsingTool);
             SetBool(isCarryingVictimParameter, isCarryingVictim);
             SetBool(hasCommandParameter, hasCommand);
-            SetBool(isFollowingParameter, activeCommandType == BotCommandType.Follow || activeCommandType == BotCommandType.Regroup);
+            SetBool(isFollowingParameter, BotCommandTypeUtility.UsesFollowOrder(activeCommandType));
             SetBool(isExtinguishingParameter, activeCommandType == BotCommandType.Extinguish);
             SetBool(isRescuingParameter, activeCommandType == BotCommandType.Rescue);
 

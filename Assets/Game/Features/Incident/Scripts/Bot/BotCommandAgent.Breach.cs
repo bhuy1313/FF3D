@@ -11,48 +11,6 @@ public partial class BotCommandAgent
                payload.CommandType == BotCommandType.Breach;
     }
 
-    private void ProcessBreachCommand()
-    {
-        if (behaviorContext == null || !TryGetBreachIntent(out BotCommandIntentPayload intent))
-        {
-            ClearBreachRuntimeState();
-            return;
-        }
-
-        Vector3 orderPoint = intent.HasWorldPoint
-            ? intent.WorldPoint
-            : hasIssuedDestination ? lastIssuedDestination : transform.position;
-        SetBreakSubtask(BotBreakSubtask.AcquireTarget, "Acquiring breach target.");
-
-        if (currentBreachPryTarget != null && currentBreachPryTarget.IsBreached && !currentBreachPryTarget.IsPryInProgress)
-        {
-            CompleteBreachOrder("Breach completed.");
-            return;
-        }
-
-        if (TryResolveBreachPryTarget(orderPoint, out IBotPryTarget pryTarget))
-        {
-            SetCurrentBreachPryTarget(pryTarget);
-            SetCurrentBlockedBreakable(null);
-            ProcessBreachPryTarget(pryTarget);
-            return;
-        }
-
-        SetCurrentBreachPryTarget(null);
-        if (TryResolveBreachBreakableTarget(orderPoint, out IBotBreakableTarget breakableTarget))
-        {
-            SetCurrentBlockedBreakable(breakableTarget);
-            ProcessBreachBreakableTarget(breakableTarget);
-            return;
-        }
-
-        SetCurrentBlockedBreakable(null);
-        if (IsNearBreachPoint(orderPoint))
-        {
-            CompleteBreachOrder("No breach target found near the assigned point.");
-        }
-    }
-
     private bool TryGetBreachIntent(out BotCommandIntentPayload intent)
     {
         intent = default;

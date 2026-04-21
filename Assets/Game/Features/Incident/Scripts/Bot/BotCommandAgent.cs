@@ -165,6 +165,10 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
 
     [Header("Debug")]
     [SerializeField] private bool enableActivityDebug = false;
+    [SerializeField] private bool showCommandPlanOverlay = false;
+    [SerializeField] private Vector2 commandPlanOverlayScreenOffset = new Vector2(24f, -24f);
+    [SerializeField] private float commandPlanOverlayWidth = 300f;
+    [SerializeField, Range(1, 12)] private int commandPlanOverlayMaxQueuedTasks = 6;
 
     private Vector3 lastIssuedDestination;
     private bool hasIssuedDestination;
@@ -218,13 +222,13 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     private float nextPathClearingRefreshTime;
     private float pathClearingResumeGraceUntilTime;
     private float temporarilyRejectedBreakToolUntilTime;
+    private readonly List<string> commandPlanDebugLines = new List<string>(16);
+    private readonly List<string> commandPlanPendingTaskNames = new List<string>(8);
     private Transform runtimeRescueCarryAnchor;
     private BotRuntimeDecisionService runtimeDecisionService;
-    private BotExtinguishController extinguishController;
     private BotPathClearingController pathClearingController;
     private BotMovePickupController movePickupController;
     private BotFollowController followController;
-    private BotRescueController rescueController;
     private bool headAimConstraintConfigured;
     private bool spineAimConstraintConfigured;
     private Vector3 currentHandAimWorldPosition;
@@ -274,11 +278,10 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
         runtimeDecisionService = new BotRuntimeDecisionService();
         navigationModule = new BotCommandNavigationModule(this);
         commandExecutionModule = new BotCommandExecutionModule(this);
-        extinguishController = new BotExtinguishController(ProcessExtinguishOrder);
+        planProcessor = new BotPlanProcessor();
         pathClearingController = new BotPathClearingController(TryNavigateTo, ShouldRefreshPathClearingCheck);
         movePickupController = new BotMovePickupController();
         followController = new BotFollowController(runtimeDecisionService);
-        rescueController = new BotRescueController(runtimeDecisionService);
         activityDebug = new BotActivityDebug();
         ResolveViewPointReference();
         ResolveHandAimReference();
@@ -298,6 +301,7 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     private void OnDisable()
     {
         RestoreMovementSpeedDefaults();
+        ResetCommandPlanProcessor();
         ReleaseAllTaskReservations();
         ClearCurrentTask();
         BotRuntimeRegistry.UnregisterCommandAgent(this);
@@ -333,7 +337,7 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
         if (behaviorContext.HasExtinguishOrder)
         {
             RefreshTaskState();
-            RunExtinguishController();
+            RunActiveCommandPlan();
             return;
         }
 
@@ -341,7 +345,7 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
         {
             PrepareNonExtinguishCommandRuntime();
             RefreshTaskState();
-            RunRescueController();
+            RunActiveCommandPlan();
             return;
         }
 
@@ -355,7 +359,7 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
         {
             PrepareNonExtinguishCommandRuntime();
             RefreshTaskState();
-            ProcessFollowOrder();
+            RunActiveCommandPlan();
             return;
         }
 
@@ -363,7 +367,7 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
         {
             PrepareNonExtinguishCommandRuntime();
             RefreshTaskState();
-            RunBreachController();
+            RunActiveCommandPlan();
             return;
         }
 
@@ -371,7 +375,7 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
         {
             PrepareNonExtinguishCommandRuntime();
             RefreshTaskState();
-            RunHazardIsolationController();
+            RunActiveCommandPlan();
             return;
         }
 
@@ -381,16 +385,14 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
             (behaviorContext == null || !behaviorContext.UseMoveOrdersAsBehaviorInput))
         {
             RefreshTaskState();
-            if (TryCompleteMovePickupTarget())
-            {
-                if (navMeshAgent != null && navMeshAgent.enabled && navMeshAgent.isOnNavMesh)
-                {
-                    navMeshAgent.ResetPath();
-                }
+            RunActiveCommandPlan();
+            return;
+        }
 
-                ResetMoveActivityDebug();
-            }
-
+        if (HasPlannerDrivenCommandIntent())
+        {
+            RefreshTaskState();
+            RunActiveCommandPlan();
             return;
         }
 
@@ -491,35 +493,15 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
         // Intentionally empty. This lets bots participate in the focus/outline pipeline.
     }
 
-    private void RunExtinguishController()
-    {
-        extinguishController?.Tick();
-    }
-
-    private void RunRescueController()
-    {
-        rescueController?.Tick(
-            this,
-            navMeshAgent,
-            behaviorContext,
-            rescueSearchRadius,
-            rescueInteractionDistance,
-            rescueSafeZoneArrivalDistance,
-            rescueDropOffset);
-    }
-
-    private void RunHazardIsolationController()
-    {
-        ProcessHazardIsolationCommand();
-    }
-
-    private void RunBreachController()
-    {
-        ProcessBreachCommand();
-    }
-
     private void PrepareNonExtinguishCommandRuntime()
     {
+        if ((behaviorContext == null || !behaviorContext.HasExtinguishOrder) &&
+            !HasPlannerDrivenCommandIntent() &&
+            !HasMovePickupTarget)
+        {
+            ResetCommandPlanProcessor();
+        }
+
         if (!IsRouteFireClearingActive())
         {
             ClearHandAimFocus();
@@ -753,6 +735,7 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
             ? BotFollowMode.Escort
             : defaultFollowMode;
         bool allowAssist = commandType == BotCommandType.Follow ||
+                           commandType == BotCommandType.Assist ||
                            commandType == BotCommandType.Regroup ||
                            followAllowAssist;
         Vector3 localOffset = followMode == BotFollowMode.Escort

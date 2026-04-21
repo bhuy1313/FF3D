@@ -84,6 +84,14 @@ public partial class BotCommandAgent
                     }
 
                     break;
+                case BotCommandType.Assist:
+                    if (behaviorContext.HasFollowOrder)
+                    {
+                        BeginOrRefreshTask(BotTaskType.Assist, "Assisting assigned target.", followTarget);
+                        return;
+                    }
+
+                    break;
                 case BotCommandType.Search:
                     if (behaviorContext.HasMoveOrder || HasActiveDirectNavigationIntent())
                     {

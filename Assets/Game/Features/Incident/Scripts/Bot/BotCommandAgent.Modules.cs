@@ -30,6 +30,7 @@ public partial class BotCommandAgent
                 case BotCommandType.Extinguish:
                     return owner.behaviorContext != null && owner.inventorySystem != null;
                 case BotCommandType.Follow:
+                case BotCommandType.Assist:
                 case BotCommandType.Rescue:
                 case BotCommandType.Hold:
                 case BotCommandType.Breach:
@@ -99,6 +100,16 @@ public partial class BotCommandAgent
 
                     PrepareForIssuedCommand(BotCommandType.Follow);
                     owner.behaviorContext.SetFollowOrder(owner.CreateFollowOrder(BotCommandType.Follow));
+                    accepted = true;
+                    break;
+                case BotCommandType.Assist:
+                    if (owner.behaviorContext == null)
+                    {
+                        return false;
+                    }
+
+                    PrepareForIssuedCommand(BotCommandType.Assist);
+                    owner.behaviorContext.SetAssistOrder(owner.CreateFollowOrder(BotCommandType.Assist));
                     accepted = true;
                     break;
                 case BotCommandType.Rescue:

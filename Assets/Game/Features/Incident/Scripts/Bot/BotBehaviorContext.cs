@@ -178,6 +178,12 @@ public class BotBehaviorContext : MonoBehaviour
         activeCommandIntent = BotCommandIntentPayload.CreateFollow(BotCommandType.Regroup, order);
     }
 
+    public void SetAssistOrder(BotFollowOrder order)
+    {
+        followOrderState.SetActive(order);
+        activeCommandIntent = BotCommandIntentPayload.CreateFollow(BotCommandType.Assist, order);
+    }
+
     public void ClearFollowOrder()
     {
         followOrderState.Clear();

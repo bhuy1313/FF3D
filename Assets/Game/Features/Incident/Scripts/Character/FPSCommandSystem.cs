@@ -1366,7 +1366,7 @@ namespace StarterAssets
                 case BotCommandType.Search:
                     return "Search";
                 case BotCommandType.Assist:
-                    return "Follow";
+                    return "Assist";
                 case BotCommandType.Regroup:
                     return "Group";
                 case BotCommandType.Move:
@@ -1413,7 +1413,7 @@ namespace StarterAssets
                 case BotCommandType.Search:
                     return "Search";
                 case BotCommandType.Assist:
-                    return "Follow";
+                    return "Assist";
                 case BotCommandType.Regroup:
                     return "Regroup";
                 case BotCommandType.Move:

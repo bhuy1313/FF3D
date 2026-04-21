@@ -3,6 +3,9 @@ using TrueJourney.BotBehavior;
 
 public partial class BotCommandAgent
 {
+    private static GUIStyle commandPlanOverlayBoxStyle;
+    private static GUIStyle commandPlanOverlayLabelStyle;
+
     private void LogVerboseExtinguish(VerboseExtinguishLogCategory category, string key, string detail)
     {
         return;
@@ -190,6 +193,201 @@ public partial class BotCommandAgent
         if (activityDebug == null || !activityDebug.TryUpdatePathClearingStage(stageValue))
         {
             return;
+        }
+    }
+
+    private void OnGUI()
+    {
+        if (!showCommandPlanOverlay || !ShouldDrawCommandPlanOverlay())
+        {
+            return;
+        }
+
+        Camera targetCamera = Camera.main;
+        if (targetCamera == null)
+        {
+            return;
+        }
+
+        Vector3 anchorWorldPosition = transform.position + Vector3.up * 2.1f;
+        Vector3 screenPoint = targetCamera.WorldToScreenPoint(anchorWorldPosition);
+        if (screenPoint.z <= 0f)
+        {
+            return;
+        }
+
+        EnsureCommandPlanOverlayStyles();
+        BuildCommandPlanOverlayLines();
+        if (commandPlanDebugLines.Count == 0)
+        {
+            return;
+        }
+
+        float lineHeight = commandPlanOverlayLabelStyle.lineHeight > 0f
+            ? commandPlanOverlayLabelStyle.lineHeight
+            : 16f;
+        float overlayHeight = 12f + (commandPlanDebugLines.Count * lineHeight);
+        Rect overlayRect = new Rect(
+            screenPoint.x + commandPlanOverlayScreenOffset.x,
+            Screen.height - screenPoint.y + commandPlanOverlayScreenOffset.y,
+            Mathf.Max(180f, commandPlanOverlayWidth),
+            overlayHeight);
+
+        GUI.Box(overlayRect, GUIContent.none, commandPlanOverlayBoxStyle);
+
+        Rect labelRect = new Rect(
+            overlayRect.x + 8f,
+            overlayRect.y + 6f,
+            overlayRect.width - 16f,
+            overlayRect.height - 12f);
+        string overlayText = string.Join("\n", commandPlanDebugLines);
+        GUI.Label(labelRect, overlayText, commandPlanOverlayLabelStyle);
+    }
+
+    private bool ShouldDrawCommandPlanOverlay()
+    {
+        if (!isActiveAndEnabled)
+        {
+            return false;
+        }
+
+        if (planProcessor != null && planProcessor.HasActivePlan)
+        {
+            return true;
+        }
+
+        if (behaviorContext == null)
+        {
+            return false;
+        }
+
+        return behaviorContext.HasExtinguishOrder ||
+               behaviorContext.HasRescueOrder ||
+               behaviorContext.HasFollowOrder ||
+               behaviorContext.HasMoveOrder ||
+               IsBreachCommandActive() ||
+               IsHazardIsolationCommandActive() ||
+               HasMovePickupTarget;
+    }
+
+    private void BuildCommandPlanOverlayLines()
+    {
+        commandPlanDebugLines.Clear();
+
+        string activeCommand = "None";
+        if (behaviorContext != null && behaviorContext.TryGetCommandIntentSnapshot(out BotCommandIntentPayload payload))
+        {
+            activeCommand = payload.CommandType.ToString();
+        }
+
+        commandPlanDebugLines.Add($"{name}");
+        commandPlanDebugLines.Add($"Command: {activeCommand}");
+
+        string activePlanName = planProcessor != null && !string.IsNullOrWhiteSpace(planProcessor.ActivePlanName)
+            ? planProcessor.ActivePlanName
+            : "(none)";
+        commandPlanDebugLines.Add($"Plan: {activePlanName}");
+
+        string currentTaskName = planProcessor != null && !string.IsNullOrWhiteSpace(planProcessor.CurrentTaskName)
+            ? planProcessor.CurrentTaskName
+            : "(idle)";
+        commandPlanDebugLines.Add($"Current: {currentTaskName}");
+
+        if (currentTask != null && currentTask.HasTask)
+        {
+            string runtimeTaskLine = $"Runtime Task: {currentTask.TaskType}";
+            if (!string.IsNullOrWhiteSpace(currentTask.Detail))
+            {
+                runtimeTaskLine += $" | {currentTask.Detail}";
+            }
+
+            commandPlanDebugLines.Add(runtimeTaskLine);
+        }
+
+        string runtimeInterrupt = GetRuntimeInterruptDebugLine();
+        if (!string.IsNullOrWhiteSpace(runtimeInterrupt))
+        {
+            commandPlanDebugLines.Add($"Interrupt: {runtimeInterrupt}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(activeCommandPlanKey))
+        {
+            commandPlanDebugLines.Add($"Key: {activeCommandPlanKey}");
+        }
+
+        if (planProcessor == null || planProcessor.PendingTaskCount <= 0)
+        {
+            commandPlanDebugLines.Add("Queue: (empty)");
+            return;
+        }
+
+        int maxQueuedTasks = Mathf.Max(1, commandPlanOverlayMaxQueuedTasks);
+        commandPlanPendingTaskNames.Clear();
+        planProcessor.CopyPendingTaskNames(commandPlanPendingTaskNames, maxQueuedTasks);
+        int copiedCount = commandPlanPendingTaskNames.Count;
+
+        commandPlanDebugLines.Insert(4, "Queue:");
+        for (int i = 0; i < copiedCount; i++)
+        {
+            commandPlanDebugLines.Add($" - {commandPlanPendingTaskNames[i]}");
+        }
+
+        int remainingCount = planProcessor.PendingTaskCount - copiedCount;
+        if (remainingCount > 0)
+        {
+            commandPlanDebugLines.Add($" - ... (+{remainingCount})");
+        }
+    }
+
+    private string GetRuntimeInterruptDebugLine()
+    {
+        if (IsRouteFireClearingActive())
+        {
+            string fireName = currentRouteBlockingFire != null
+                ? GetDebugTargetName(currentRouteBlockingFire)
+                : "UnknownFire";
+            return $"RouteFire/{currentRouteFirePhase} | {fireName}";
+        }
+
+        if (currentBlockedBreakable != null &&
+            !currentBlockedBreakable.IsBroken &&
+            currentBlockedBreakable.CanBeClearedByBot)
+        {
+            return $"PathClear/{currentBreakSubtask} | {GetActiveBreakTaskDetail()}";
+        }
+
+        if (behaviorContext != null && behaviorContext.HasExtinguishOrder && currentExtinguishSubtask != BotExtinguishSubtask.None)
+        {
+            return $"Extinguish/{currentExtinguishSubtask} | {GetActiveExtinguishTaskDetail()}";
+        }
+
+        if (behaviorContext != null && behaviorContext.HasRescueOrder && currentRescueSubtask != BotRescueSubtask.None)
+        {
+            return $"Rescue/{currentRescueSubtask} | {GetActiveRescueTaskDetail()}";
+        }
+
+        return string.Empty;
+    }
+
+    private static void EnsureCommandPlanOverlayStyles()
+    {
+        if (commandPlanOverlayBoxStyle == null)
+        {
+            commandPlanOverlayBoxStyle = new GUIStyle(GUI.skin.box)
+            {
+                alignment = TextAnchor.UpperLeft,
+                padding = new RectOffset(8, 8, 6, 6)
+            };
+        }
+
+        if (commandPlanOverlayLabelStyle == null)
+        {
+            commandPlanOverlayLabelStyle = new GUIStyle(GUI.skin.label)
+            {
+                alignment = TextAnchor.UpperLeft,
+                wordWrap = true,
+                richText = false
+            };
         }
     }
 
