@@ -1389,6 +1389,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 491375381040295545, guid: 4e1533178b34e424c835195b3a59b3f2, type: 3}
+      propertyPath: m_CullingMask.m_Bits
+      value: 2049
+      objectReference: {fileID: 0}
     - target: {fileID: 3297692986873615965, guid: 4e1533178b34e424c835195b3a59b3f2, type: 3}
       propertyPath: Target.TrackingTarget
       value: 
@@ -1436,6 +1440,10 @@ PrefabInstance:
     - target: {fileID: 5234295399784031370, guid: 4e1533178b34e424c835195b3a59b3f2, type: 3}
       propertyPath: m_Name
       value: Camera
+      objectReference: {fileID: 0}
+    - target: {fileID: 6794626528649328394, guid: 4e1533178b34e424c835195b3a59b3f2, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -13681,6 +13689,10 @@ PrefabInstance:
       propertyPath: m_AnchorMax.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1464630983174023830, guid: 7eecb2fba78afd540a15a881b3aa88b5, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 1661807169345222316, guid: 7eecb2fba78afd540a15a881b3aa88b5, type: 3}
       propertyPath: m_Name
       value: NotepadFromCallphase
@@ -13691,6 +13703,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3335247814429414739, guid: 7eecb2fba78afd540a15a881b3aa88b5, type: 3}
       propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3880937879323878773, guid: 7eecb2fba78afd540a15a881b3aa88b5, type: 3}
+      propertyPath: m_AnchorMax.x
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3880937879323878773, guid: 7eecb2fba78afd540a15a881b3aa88b5, type: 3}
@@ -13715,7 +13731,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3880937879323878773, guid: 7eecb2fba78afd540a15a881b3aa88b5, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -30.855
+      value: -8
       objectReference: {fileID: 0}
     - target: {fileID: 3899892261679210662, guid: 7eecb2fba78afd540a15a881b3aa88b5, type: 3}
       propertyPath: m_AnchorMax.y

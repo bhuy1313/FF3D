@@ -14,9 +14,11 @@ public class GameMasterUiMovementInputLock : MonoBehaviour
     [SerializeField] private GameObject playerRoot;
     [SerializeField] private StarterAssetsInputs starterAssetsInputs;
     [SerializeField] private FirstPersonController firstPersonController;
+    [SerializeField] private PlayerActionLock playerActionLock;
 
     [Header("Lock Settings")]
-    [SerializeField] private bool disableFirstPersonController = true;
+    [SerializeField] private bool disableFirstPersonController = false;
+    [SerializeField] private bool usePlayerActionLock = true;
     [SerializeField] private bool disableLookInput = true;
 
     private bool isMovementInputLocked;
@@ -122,7 +124,11 @@ public class GameMasterUiMovementInputLock : MonoBehaviour
             }
         }
 
-        if (disableFirstPersonController && firstPersonController != null)
+        if (usePlayerActionLock && playerActionLock != null)
+        {
+            playerActionLock.AcquireFullLock();
+        }
+        else if (disableFirstPersonController && firstPersonController != null)
         {
             restoreFirstPersonControllerEnabled = firstPersonController.enabled;
             firstPersonController.enabled = false;
@@ -138,7 +144,11 @@ public class GameMasterUiMovementInputLock : MonoBehaviour
             return;
         }
 
-        if (disableFirstPersonController && firstPersonController != null)
+        if (usePlayerActionLock && playerActionLock != null)
+        {
+            playerActionLock.ReleaseFullLock();
+        }
+        else if (disableFirstPersonController && firstPersonController != null)
         {
             firstPersonController.enabled = restoreFirstPersonControllerEnabled;
         }
@@ -217,6 +227,18 @@ public class GameMasterUiMovementInputLock : MonoBehaviour
         if (firstPersonController == null)
         {
             firstPersonController = FindAnyObjectByType<FirstPersonController>();
+        }
+
+        if (playerActionLock == null)
+        {
+            if (playerRoot != null)
+            {
+                playerActionLock = PlayerActionLock.GetOrCreate(playerRoot);
+            }
+            else if (firstPersonController != null)
+            {
+                playerActionLock = PlayerActionLock.GetOrCreate(firstPersonController.gameObject);
+            }
         }
     }
 }
