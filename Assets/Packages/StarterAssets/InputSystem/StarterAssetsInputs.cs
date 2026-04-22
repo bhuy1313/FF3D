@@ -18,6 +18,7 @@ namespace StarterAssets
 		public bool use;
 		public bool drop;
 		public bool grab;
+		public bool dispatchNotes;
 		public int slot = -1;
 
 		[Header("Movement Settings")]
@@ -86,6 +87,16 @@ namespace StarterAssets
 			GrabInput(value.isPressed);
 		}
 
+		public void OnToggleDispatchNotes(InputValue value)
+		{
+			if (!value.isPressed)
+			{
+				return;
+			}
+
+			ToggleDispatchNotesInput();
+		}
+
 		public void OnSlot1(InputValue value) { SlotInput(0, value.isPressed); }
 		public void OnSlot2(InputValue value) { SlotInput(1, value.isPressed); }
 		public void OnSlot3(InputValue value) { SlotInput(2, value.isPressed); }
@@ -125,6 +136,11 @@ namespace StarterAssets
 			crouch = !crouch;
 		}
 
+		public void ToggleDispatchNotesInput()
+		{
+			dispatchNotes = !dispatchNotes;
+		}
+
 		public void InteractInput(bool newInteractState)
 		{
 			interact = newInteractState;
@@ -148,6 +164,11 @@ namespace StarterAssets
 		public void GrabInput(bool newGrabState)
 		{
 			grab = newGrabState;
+		}
+
+		public void DispatchNotesInput(bool newDispatchNotesState)
+		{
+			dispatchNotes = newDispatchNotesState;
 		}
 
 		public void ClearGameplayActionInputs()
