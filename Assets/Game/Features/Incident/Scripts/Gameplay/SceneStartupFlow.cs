@@ -12,26 +12,60 @@ public class SceneStartupFlow : MonoBehaviour
         Idle,
         Running,
         Completed,
-        Failed
+        Failed,
     }
 
     [Header("Flow")]
-    [SerializeField] private bool runOnStart = true;
-    [SerializeField] private bool collectTasksFromChildren = true;
-    [SerializeField] private bool includeInactiveTasks = true;
-    [SerializeField] private bool lockPlayerUntilReady = true;
-    [SerializeField] private bool clearInputsWhileLocked = true;
+    [SerializeField]
+    private bool runOnStart = true;
+
+    [SerializeField]
+    private bool collectTasksFromChildren = true;
+
+    [SerializeField]
+    private bool includeInactiveTasks = true;
+
+    [SerializeField]
+    private bool lockPlayerUntilReady = true;
+
+    [SerializeField]
+    private bool clearInputsWhileLocked = true;
 
     [Header("Tasks")]
-    [SerializeField] private List<SceneStartupTask> explicitTasks = new List<SceneStartupTask>();
+    [SerializeField]
+    private List<SceneStartupTask> explicitTasks = new List<SceneStartupTask>();
 
     [Header("Player")]
-    [Tooltip("Optional override. If left empty, the flow will find the active FirstPersonController in the scene.")]
-    [SerializeField] private FirstPersonController playerControllerOverride;
-    [Tooltip("Optional override. If left empty, the flow will use or create PlayerActionLock on the resolved player when locking is enabled.")]
-    [SerializeField] private PlayerActionLock playerActionLock;
-    [Tooltip("Optional override. If left empty, the flow will read StarterAssetsInputs from the resolved player.")]
-    [SerializeField] private StarterAssetsInputs playerInputs;
+    [Tooltip(
+        "Optional override. If left empty, the flow will find the active FirstPersonController in the scene."
+    )]
+    [SerializeField]
+    private FirstPersonController playerControllerOverride;
+
+    [Tooltip(
+        "Optional override. If left empty, the flow will use or create PlayerActionLock on the resolved player when locking is enabled."
+    )]
+    [SerializeField]
+    private PlayerActionLock playerActionLock;
+
+    [Tooltip(
+        "Optional override. If left empty, the flow will read StarterAssetsInputs from the resolved player."
+    )]
+    [SerializeField]
+    private StarterAssetsInputs playerInputs;
+
+    [Header("Entrance Animation")]
+    [Tooltip("Optional Animator to trigger when startup completes.")]
+    [SerializeField]
+    private Animator entranceAnimator;
+
+    [Tooltip("Enable to trigger the entrance animation once when startup completes.")]
+    [SerializeField]
+    private bool triggerEntranceAnimationOnStartup = true;
+
+    [Tooltip("The name of the trigger parameter to set on the animator.")]
+    [SerializeField]
+    private string entranceTriggerName = "BarAnimationEntranceTrigger";
 
     private Coroutine startupRoutine;
     private SceneStartupTask activeTask;
@@ -105,6 +139,16 @@ public class SceneStartupFlow : MonoBehaviour
                 yield return task.Run(this);
             }
 
+            // Trigger entrance animation (one-shot) if configured
+            if (
+                triggerEntranceAnimationOnStartup
+                && entranceAnimator != null
+                && !string.IsNullOrEmpty(entranceTriggerName)
+            )
+            {
+                entranceAnimator.SetTrigger(entranceTriggerName);
+            }
+
             state = StartupState.Completed;
             completed = true;
         }
@@ -176,7 +220,9 @@ public class SceneStartupFlow : MonoBehaviour
 
         if (collectTasksFromChildren)
         {
-            SceneStartupTask[] childTasks = GetComponentsInChildren<SceneStartupTask>(includeInactiveTasks);
+            SceneStartupTask[] childTasks = GetComponentsInChildren<SceneStartupTask>(
+                includeInactiveTasks
+            );
             for (int i = 0; i < childTasks.Length; i++)
             {
                 SceneStartupTask task = childTasks[i];
@@ -255,9 +301,7 @@ public class SceneStartupFlow : MonoBehaviour
         }
 
         FirstPersonController controller = ResolvePlayerController();
-        playerInputs = controller != null
-            ? controller.GetComponent<StarterAssetsInputs>()
-            : null;
+        playerInputs = controller != null ? controller.GetComponent<StarterAssetsInputs>() : null;
         return playerInputs;
     }
 
@@ -272,7 +316,8 @@ public class SceneStartupFlow : MonoBehaviour
         return playerControllerOverride;
     }
 
-    public T FindSceneObject<T>() where T : UnityEngine.Object
+    public T FindSceneObject<T>()
+        where T : UnityEngine.Object
     {
         return FindAnyObjectByType<T>();
     }

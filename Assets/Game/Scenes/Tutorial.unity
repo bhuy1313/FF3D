@@ -41383,6 +41383,81 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
+--- !u!1 &1029333014
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1029333015}
+  - component: {fileID: 1029333017}
+  - component: {fileID: 1029333016}
+  m_Layer: 5
+  m_Name: OverlayMask
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1029333015
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1029333014}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8157316127568319868}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: -0.000030517578, y: -0.000014305115}
+  m_SizeDelta: {x: 1953.1521, y: 1380.0531}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1029333016
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1029333014}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: ffba93df51c9a7b4bb3e21ef2f9e6408, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &1029333017
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1029333014}
+  m_CullTransparentMesh: 1
 --- !u!1 &1032701973
 GameObject:
   m_ObjectHideFlags: 0
@@ -62560,6 +62635,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1417138516}
   - component: {fileID: 1417138517}
+  - component: {fileID: 1417138518}
   m_Layer: 5
   m_Name: Container
   m_TagString: Untagged
@@ -62585,7 +62661,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 254.5, y: 72.9}
+  m_AnchoredPosition: {x: 420.7, y: 128.1}
   m_SizeDelta: {x: 300, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!95 &1417138517
@@ -62610,6 +62686,18 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &1417138518
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1417138515}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbe97a2146476ac4f8f01a71135432f1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DisableAnimatorEvent
 --- !u!1 &1418575512
 GameObject:
   m_ObjectHideFlags: 0
@@ -73611,7 +73699,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -50}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 50, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1648707821
@@ -81944,9 +82032,17 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1504618926}
     - target: {fileID: 5546122349495465332, guid: e3bf8c7099d32bf40a2b5184c8c127a1, type: 3}
+      propertyPath: entranceAnimator
+      value: 
+      objectReference: {fileID: 1417138517}
+    - target: {fileID: 5546122349495465332, guid: e3bf8c7099d32bf40a2b5184c8c127a1, type: 3}
       propertyPath: playerActionLock
       value: 
       objectReference: {fileID: 1504618937}
+    - target: {fileID: 5546122349495465332, guid: e3bf8c7099d32bf40a2b5184c8c127a1, type: 3}
+      propertyPath: explicitTasks.Array.size
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 5546122349495465332, guid: e3bf8c7099d32bf40a2b5184c8c127a1, type: 3}
       propertyPath: playerControllerOverride
       value: 
@@ -112323,7 +112419,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Exit to Main Menu
+  m_text: "Tho\xE1t v\u1EC1 Menu Ch\xEDnh"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: a14230f6adbce6642b2a625b814a40c1, type: 2}
   m_sharedMaterial: {fileID: -5941891425159919092, guid: a14230f6adbce6642b2a625b814a40c1, type: 2}
@@ -119718,6 +119814,7 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 1029333015}
   - {fileID: 1417138516}
   - {fileID: 6577157271693347668}
   - {fileID: 1648707820}
