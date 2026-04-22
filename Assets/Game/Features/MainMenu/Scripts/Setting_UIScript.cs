@@ -71,6 +71,7 @@ public partial class Setting_UIScript : MonoBehaviour
     [SerializeField] private ThreeStepSlider responseSpeedSlider;
     [SerializeField] private Toggle autoQuestionToggle;
     [SerializeField] private Toggle autoValidateToggle;
+    [SerializeField] private Toggle minimapToggle;
     [SerializeField] private TMP_Dropdown minimapTypeDropdown;
 
     [Header("Tab Visual")]
@@ -138,6 +139,7 @@ public partial class Setting_UIScript : MonoBehaviour
         InitializeAudioDefaultSelection();
         InitializeAutoQuestionDefaultSelection();
         InitializeAutoValidateDefaultSelection();
+        InitializeMinimapToggleDefaultSelection();
         InitializeMinimapTypeDefaultSelection();
         ValidateResolvedReferences();
         CaptureDefaultState();
@@ -171,6 +173,7 @@ public partial class Setting_UIScript : MonoBehaviour
         RegisterAudioSliderListener(sfxVolumeSlider, AudioBus.Sfx);
         RegisterAudioSliderListener(voiceVolumeSlider, AudioBus.Voice);
         RegisterAudioSliderListener(uiVolumeSlider, AudioBus.Ui);
+        if (minimapToggle != null) minimapToggle.onValueChanged.AddListener(OnMinimapToggleValueChanged);
         if (minimapTypeDropdown != null) minimapTypeDropdown.onValueChanged.AddListener(OnMinimapTypeDropdownValueChanged);
 
     }
@@ -211,6 +214,7 @@ public partial class Setting_UIScript : MonoBehaviour
         LoadSavedResponseSpeedSelection();
         LoadSavedAutoQuestionSelection();
         LoadSavedAutoValidateSelection();
+        LoadSavedMinimapToggleSelection();
         LoadSavedMinimapTypeSelection();
         ApplyFpsTogglePreview();
         BindDirtyTracking();
@@ -494,6 +498,11 @@ public partial class Setting_UIScript : MonoBehaviour
         if (responseSpeedSlider == null)
         {
             responseSpeedSlider = FindResponseSpeedSlider();
+        }
+
+        if (minimapToggle == null)
+        {
+            minimapToggle = FindToggleByName("ToggMinimap");
         }
 
         if (minimapTypeDropdown == null)

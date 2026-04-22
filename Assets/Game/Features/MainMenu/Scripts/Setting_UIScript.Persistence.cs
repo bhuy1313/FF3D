@@ -23,6 +23,7 @@ public partial class Setting_UIScript
         SaveResponseSpeedSelection();
         SaveAutoQuestionSelection();
         SaveAutoValidateSelection();
+        SaveMinimapToggleSelection();
         SaveMinimapTypeSelection();
         SaveControlBindingOverrides();
         SaveLanguageSelection();
@@ -588,6 +589,43 @@ public partial class Setting_UIScript
         }
     }
 
+    private void LoadSavedMinimapToggleSelection()
+    {
+        if (minimapToggle == null)
+        {
+            return;
+        }
+
+        minimapToggle.isOn = MinimapDisplaySettings.GetSavedOrDefaultEnabled();
+    }
+
+    private void InitializeMinimapToggleDefaultSelection()
+    {
+        if (minimapToggle == null)
+        {
+            return;
+        }
+
+        minimapToggle.isOn = MinimapDisplaySettings.DefaultEnabled;
+    }
+
+    private void SaveMinimapToggleSelection()
+    {
+        if (minimapToggle == null)
+        {
+            return;
+        }
+
+        bool selectedValue = minimapToggle.isOn;
+        bool hasSavedValue = MinimapDisplaySettings.TryGetSavedEnabled(out bool savedValue);
+        if (!hasSavedValue || savedValue != selectedValue)
+        {
+            MinimapDisplaySettings.SaveEnabled(selectedValue);
+        }
+
+        MinimapDisplayRuntime.ApplyEnabled(selectedValue);
+    }
+
     private void SaveMinimapTypeSelection()
     {
         if (minimapTypeDropdown == null)
@@ -640,6 +678,11 @@ public partial class Setting_UIScript
         ApplyMouseSensitivitySliderPreview();
     }
 
+    private void OnMinimapToggleValueChanged(bool _)
+    {
+        ApplyMinimapTogglePreview();
+    }
+
     private void OnMinimapTypeDropdownValueChanged(int _)
     {
         ApplyMinimapTypePreview();
@@ -685,6 +728,16 @@ public partial class Setting_UIScript
         }
 
         AudioService.SetBusVolume(bus, slider.value, false);
+    }
+
+    private void ApplyMinimapTogglePreview()
+    {
+        if (minimapToggle == null)
+        {
+            return;
+        }
+
+        MinimapDisplayRuntime.ApplyEnabled(minimapToggle.isOn);
     }
 
     private void ApplyMinimapTypePreview()
