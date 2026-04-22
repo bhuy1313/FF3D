@@ -508,6 +508,68 @@ namespace TrueJourney.BotBehavior
             return true;
         }
 
+        public bool DropItem(IPickupable pickupable, Vector3 worldPosition, Quaternion worldRotation)
+        {
+            if (pickupable == null || pickupable.Rigidbody == null)
+            {
+                return false;
+            }
+
+            int index = -1;
+            for (int i = 0; i < slots.Count; i++)
+            {
+                if (slots[i].Item == pickupable)
+                {
+                    index = i;
+                    break;
+                }
+            }
+
+            if (index < 0)
+            {
+                return false;
+            }
+
+            InventorySlot slot = slots[index];
+            Rigidbody body = slot.Item.Rigidbody;
+            Transform itemTransform = body.transform;
+            bool wasActiveItem = index == activeIndex;
+
+            slot.Item.OnDrop(gameObject);
+
+            itemTransform.SetParent(slot.OriginalParent, true);
+            itemTransform.SetPositionAndRotation(worldPosition, worldRotation);
+            body.isKinematic = slot.WasKinematic;
+            body.detectCollisions = slot.DetectCollisions;
+            if (!body.isKinematic)
+            {
+                body.linearVelocity = Vector3.zero;
+                body.angularVelocity = Vector3.zero;
+            }
+
+            itemTransform.gameObject.SetActive(slot.WasActive);
+            slots.RemoveAt(index);
+            itemCount = slots.Count;
+
+            if (wasActiveItem)
+            {
+                activeIndex = -1;
+                ResetHandIkPose();
+                ResetSpineAimPose();
+            }
+            else if (activeIndex > index)
+            {
+                activeIndex--;
+            }
+
+            if (logInventoryActions)
+            {
+                Debug.Log($"[BotInventorySystem] Bot {gameObject.name} dropped item {body.gameObject.name}. Total items: {itemCount}/{maxSlots}");
+            }
+
+            return true;
+        }
+
         private bool StowLooseEquippedPickupables()
         {
             if (equippedRoot == null || inventoryRoot == null)

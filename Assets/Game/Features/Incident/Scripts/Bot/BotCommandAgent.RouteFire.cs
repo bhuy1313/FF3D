@@ -4,110 +4,13 @@ using TrueJourney.BotBehavior;
 
 public partial class BotCommandAgent
 {
-    private sealed class AcquireRouteFireToolTask : IBotPlanTask
+    private sealed class MoveToRouteFireTask : MoveToPositionTask
     {
-        public string Name => "Acquire Route Fire Tool";
-
-        public void OnStart(BotCommandAgent agent)
-        {
-            agent.SetRouteFirePhase(RouteFirePhase.AcquireTool);
-        }
-
-        public BotPlanTaskStatus OnUpdate(BotCommandAgent agent)
-        {
-            if (agent.currentRouteBlockingFire == null || !agent.currentRouteBlockingFire.IsBurning)
-            {
-                agent.ClearRouteFireRuntime();
-                return BotPlanTaskStatus.Success;
-            }
-
-            IBotExtinguisherItem equippedTool = agent.activeExtinguisher ?? agent.committedExtinguishTool;
-            if (equippedTool != null &&
-                equippedTool.HasUsableCharge &&
-                !BotCommandAgent.UsesPreciseAim(equippedTool))
-            {
-                agent.SetRouteFirePhase(RouteFirePhase.ReturnToFire);
-                return BotPlanTaskStatus.Success;
-            }
-
-            Vector3 firePosition = agent.currentRouteBlockingFire.GetWorldPosition();
-            IBotExtinguisherItem routeTool = agent.ResolveCommittedExtinguishTool(
-                firePosition,
-                firePosition,
-                null,
-                agent.currentRouteBlockingFire,
-                BotExtinguishCommandMode.PointFire);
-            if (routeTool == null || BotCommandAgent.UsesPreciseAim(routeTool))
-            {
-                agent.ClearHeadAimFocus();
-                agent.ClearHandAimFocus();
-                agent.StopExtinguisher();
-                agent.StopNavMeshMovement();
-                agent.LogPathClearingFlow(
-                    $"route-fire-no-tool:{BotCommandAgent.GetDebugTargetName(agent.currentRouteBlockingFire)}",
-                    "No usable tool available.");
-                return BotPlanTaskStatus.Running;
-            }
-
-            if (!agent.TryEnsureExtinguisherEquipped(routeTool))
-            {
-                agent.ClearHeadAimFocus();
-                agent.ClearHandAimFocus();
-                return BotPlanTaskStatus.Running;
-            }
-
-            agent.SetRouteFirePhase(RouteFirePhase.ReturnToFire);
-            return BotPlanTaskStatus.Success;
-        }
-
-        public void OnEnd(BotCommandAgent agent, bool interrupted)
-        {
-        }
-    }
-
-    private sealed class MoveToRouteFireTask : IBotPlanTask
-    {
-        public string Name => "Return To Route Fire";
-
-        public void OnStart(BotCommandAgent agent)
-        {
-            agent.SetRouteFirePhase(RouteFirePhase.ReturnToFire);
-        }
-
-        public BotPlanTaskStatus OnUpdate(BotCommandAgent agent)
-        {
-            if (agent.currentRouteBlockingFire == null || !agent.currentRouteBlockingFire.IsBurning)
-            {
-                agent.ClearRouteFireRuntime();
-                return BotPlanTaskStatus.Success;
-            }
-
-            IBotExtinguisherItem equippedTool = agent.activeExtinguisher ?? agent.committedExtinguishTool;
-            if (equippedTool == null || !equippedTool.HasUsableCharge || BotCommandAgent.UsesPreciseAim(equippedTool))
-            {
-                agent.planProcessor.InjectFront(
-                    agent,
-                    new AcquireRouteFireToolTask(),
-                    new MoveToRouteFireTask(),
-                    new SuppressRouteFireTask());
-                return BotPlanTaskStatus.Success;
-            }
-
-            Vector3 firePosition = agent.currentRouteBlockingFire.GetWorldPosition();
-            if (!agent.IsFireWithinRouteDetectionRadius(agent.currentRouteBlockingFire, agent.transform.position, agent.routeFireDetectionRadius))
-            {
-                agent.LogPathClearingFlow(
-                    $"route-fire-return:{BotCommandAgent.GetDebugTargetName(agent.currentRouteBlockingFire)}:{BotCommandAgent.FormatFlowVectorKey(firePosition)}",
-                    "Returning to blocked fire.");
-                agent.TrySetDestinationDirect(firePosition);
-                return BotPlanTaskStatus.Running;
-            }
-
-            agent.SetRouteFirePhase(RouteFirePhase.Extinguish);
-            return BotPlanTaskStatus.Success;
-        }
-
-        public void OnEnd(BotCommandAgent agent, bool interrupted)
+        public MoveToRouteFireTask() : base(
+            "Return To Route Fire",
+            agent => agent.UpdateRouteFireReturnMove(),
+            onStart: agent => agent.SetRouteFirePhase(RouteFirePhase.ReturnToFire),
+            moveAction: (agent, destination) => agent.MoveToIgnoringRouteFireInterrupt(destination))
         {
         }
     }
@@ -130,14 +33,19 @@ public partial class BotCommandAgent
                 return BotPlanTaskStatus.Success;
             }
 
-            IBotExtinguisherItem equippedTool = agent.activeExtinguisher ?? agent.committedExtinguishTool;
+            IBotExtinguisherItem equippedTool = agent.ResolveHeldSuppressionTool();
             if (equippedTool == null || BotCommandAgent.UsesPreciseAim(equippedTool))
             {
-                agent.planProcessor.InjectFront(
-                    agent,
-                    new AcquireRouteFireToolTask(),
-                    new MoveToRouteFireTask(),
-                    new SuppressRouteFireTask());
+                agent.QueueRouteFireRecovery();
+                return BotPlanTaskStatus.Success;
+            }
+
+            if (BotCommandAgent.IsUnsafeSuppressionToolForFire(equippedTool, blockingFire))
+            {
+                agent.StopExtinguisher();
+                agent.sprayReadyTime = -1f;
+                agent.preferredExtinguishTool = null;
+                agent.QueueRouteFireRecovery();
                 return BotPlanTaskStatus.Success;
             }
 
@@ -145,14 +53,8 @@ public partial class BotCommandAgent
             {
                 agent.StopExtinguisher();
                 agent.sprayReadyTime = -1f;
-                agent.ReleaseCommittedToolIfMatches(agent.activeExtinguisher);
-                agent.activeExtinguisher = null;
                 agent.preferredExtinguishTool = null;
-                agent.planProcessor.InjectFront(
-                    agent,
-                    new AcquireRouteFireToolTask(),
-                    new MoveToRouteFireTask(),
-                    new SuppressRouteFireTask());
+                agent.QueueRouteFireRecovery();
                 return BotPlanTaskStatus.Success;
             }
 
@@ -210,6 +112,39 @@ public partial class BotCommandAgent
                currentRouteBlockingFire.IsBurning;
     }
 
+    private BotPlan BuildRouteFireInterruptPlan()
+    {
+        BotPlan plan = new BotPlan("RouteFire");
+        switch (currentRouteFirePhase)
+        {
+            case RouteFirePhase.AcquireTool:
+                plan.Add(new AcquireSuppressionToolTask(SuppressionToolAcquisitionKind.RouteFireInterrupt))
+                    .Add(new MovePickupTask())
+                    .Add(new MoveToRouteFireTask())
+                    .Add(new SuppressRouteFireTask());
+                break;
+            case RouteFirePhase.ReturnToFire:
+                plan.Add(new MoveToRouteFireTask())
+                    .Add(new SuppressRouteFireTask());
+                break;
+            case RouteFirePhase.Extinguish:
+                plan.Add(new SuppressRouteFireTask());
+                break;
+        }
+
+        return plan;
+    }
+
+    private void QueueRouteFireRecovery()
+    {
+        planProcessor?.InjectFront(
+            this,
+            new AcquireSuppressionToolTask(SuppressionToolAcquisitionKind.RouteFireInterrupt),
+            new MovePickupTask(),
+            new MoveToRouteFireTask(),
+            new SuppressRouteFireTask());
+    }
+
     private void ClearRouteFireRuntime()
     {
         ClearHeadAimFocus();
@@ -219,6 +154,8 @@ public partial class BotCommandAgent
         ClearExtinguisherTargetLock();
         SetPickupWindow(false);
         ReleaseCommittedTool();
+        activeExtinguisher = null;
+        preferredExtinguishTool = null;
         sprayReadyTime = -1f;
         currentExtinguishTargetPosition = default;
         currentExtinguishAimPoint = default;
@@ -255,10 +192,7 @@ public partial class BotCommandAgent
         if (!enableRouteFireClearing ||
             navMeshAgent == null ||
             !navMeshAgent.enabled ||
-            !navMeshAgent.isOnNavMesh ||
-            behaviorContext == null ||
-            behaviorContext.HasExtinguishOrder ||
-            behaviorContext.HasFollowOrder)
+            !navMeshAgent.isOnNavMesh)
         {
             ClearRouteFireRuntime();
             return false;
@@ -276,6 +210,7 @@ public partial class BotCommandAgent
         }
 
         currentRouteBlockingFire = detectedBlockingFire;
+        TrySuspendFollowIntoMove(destination);
         SetRouteFirePhase(RouteFirePhase.AcquireTool);
         LogPathClearingFlow(
             $"route-fire-detected:{BotCommandAgent.GetDebugTargetName(detectedBlockingFire)}",
@@ -289,7 +224,8 @@ public partial class BotCommandAgent
 
         planProcessor.InterruptWith(
             this,
-            new AcquireRouteFireToolTask(),
+            new AcquireSuppressionToolTask(SuppressionToolAcquisitionKind.RouteFireInterrupt),
+            new MovePickupTask(),
             new MoveToRouteFireTask(),
             new SuppressRouteFireTask());
         return true;
@@ -382,5 +318,85 @@ public partial class BotCommandAgent
         }
 
         return blockingFire != null;
+    }
+
+    private BotPlanTaskStatus TryUpdateRouteFireSuppressionToolAcquisition()
+    {
+        if (currentRouteBlockingFire == null || !currentRouteBlockingFire.IsBurning)
+        {
+            ClearRouteFireRuntime();
+            return BotPlanTaskStatus.Success;
+        }
+
+        IBotExtinguisherItem equippedTool = ResolveHeldSuppressionTool();
+        if (equippedTool != null &&
+            equippedTool.HasUsableCharge &&
+            !BotCommandAgent.IsUnsafeSuppressionToolForFire(equippedTool, currentRouteBlockingFire) &&
+            !BotCommandAgent.UsesPreciseAim(equippedTool))
+        {
+            SetRouteFirePhase(RouteFirePhase.ReturnToFire);
+            return BotPlanTaskStatus.Success;
+        }
+
+        Vector3 firePosition = currentRouteBlockingFire.GetWorldPosition();
+        if (!TryResolveSuppressionTool(
+            firePosition,
+            firePosition,
+            null,
+            currentRouteBlockingFire,
+            BotExtinguishCommandMode.PointFire,
+            true,
+            out IBotExtinguisherItem routeTool))
+        {
+            ClearHeadAimFocus();
+            ClearHandAimFocus();
+            StopExtinguisher();
+            StopNavMeshMovement();
+            LogPathClearingFlow(
+                $"route-fire-no-tool:{BotCommandAgent.GetDebugTargetName(currentRouteBlockingFire)}",
+                "No usable tool available.");
+            return BotPlanTaskStatus.Running;
+        }
+
+        if (!TryAdvanceSuppressionToolAcquisition(routeTool, false))
+        {
+            if (TryPrepareSuppressionToolMovePickup(routeTool))
+            {
+                return BotPlanTaskStatus.Success;
+            }
+
+            return BotPlanTaskStatus.Running;
+        }
+
+        SetRouteFirePhase(RouteFirePhase.ReturnToFire);
+        return BotPlanTaskStatus.Success;
+    }
+
+    private MoveTaskDirective UpdateRouteFireReturnMove()
+    {
+        if (currentRouteBlockingFire == null || !currentRouteBlockingFire.IsBurning)
+        {
+            ClearRouteFireRuntime();
+            return MoveTaskDirective.Success();
+        }
+
+        IBotExtinguisherItem equippedTool = ResolveHeldSuppressionTool();
+        if (equippedTool == null || !equippedTool.HasUsableCharge || BotCommandAgent.UsesPreciseAim(equippedTool))
+        {
+            QueueRouteFireRecovery();
+            return MoveTaskDirective.Success();
+        }
+
+        Vector3 firePosition = currentRouteBlockingFire.GetWorldPosition();
+        if (!IsFireWithinRouteDetectionRadius(currentRouteBlockingFire, transform.position, routeFireDetectionRadius))
+        {
+            LogPathClearingFlow(
+                $"route-fire-return:{BotCommandAgent.GetDebugTargetName(currentRouteBlockingFire)}:{BotCommandAgent.FormatFlowVectorKey(firePosition)}",
+                "Returning to blocked fire.");
+            return MoveTaskDirective.Running(firePosition);
+        }
+
+        SetRouteFirePhase(RouteFirePhase.Extinguish);
+        return MoveTaskDirective.Success();
     }
 }

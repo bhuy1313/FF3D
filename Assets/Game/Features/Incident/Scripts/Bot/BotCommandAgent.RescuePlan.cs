@@ -95,54 +95,22 @@ public partial class BotCommandAgent
         }
     }
 
-    private sealed class MoveToRescueTargetTask : IBotPlanTask
+    private sealed class MoveToRescueTargetTask : MoveToPositionTask
     {
-        public string Name => "Move To Casualty";
-
-        public void OnStart(BotCommandAgent agent)
-        {
-            agent.SetRescueSubtask(BotRescueSubtask.MoveToTarget, "Moving to casualty.");
-        }
-
-        public BotPlanTaskStatus OnUpdate(BotCommandAgent agent)
-        {
-            IRescuableTarget rescueTarget = agent.CurrentRescueTarget;
-            if (rescueTarget == null)
+        public MoveToRescueTargetTask() : base(
+            "Move To Casualty",
+            agent => agent.UpdateRescueTargetMove(),
+            onStart: agent => agent.SetRescueSubtask(BotRescueSubtask.MoveToTarget, "Moving to casualty."),
+            moveAction: (agent, destination) =>
             {
-                agent.RequestCommandPlanRebuild();
-                return BotPlanTaskStatus.Success;
-            }
+                if (agent.MoveToCommand(destination))
+                {
+                    return true;
+                }
 
-            if (rescueTarget.IsCarried && rescueTarget.ActiveRescuer == agent.gameObject)
-            {
-                return BotPlanTaskStatus.Success;
-            }
-
-            if (rescueTarget.IsCarried && rescueTarget.ActiveRescuer != agent.gameObject)
-            {
-                agent.ReacquireRescueTarget("Assigned casualty is already being carried by another rescuer.");
-                agent.RequestCommandPlanRebuild();
-                return BotPlanTaskStatus.Success;
-            }
-
-            Vector3 targetPosition = rescueTarget.GetWorldPosition();
-            if (agent.IsWithinHorizontalDistance(targetPosition, agent.rescueInteractionDistance))
-            {
-                agent.StopAndAimTowards(targetPosition);
-                return BotPlanTaskStatus.Success;
-            }
-
-            agent.LogRescueActivityMessage("rescue-move", "Moving to casualty.");
-            if (!agent.MoveToCommand(targetPosition))
-            {
                 agent.FailActiveRescueOrder("Failed to path to casualty.", BotTaskStatus.Blocked);
-                return BotPlanTaskStatus.Failure;
-            }
-
-            return BotPlanTaskStatus.Running;
-        }
-
-        public void OnEnd(BotCommandAgent agent, bool interrupted)
+                return false;
+            })
         {
         }
     }
@@ -235,56 +203,22 @@ public partial class BotCommandAgent
         }
     }
 
-    private sealed class CarryRescueTargetTask : IBotPlanTask
+    private sealed class CarryRescueTargetTask : MoveToPositionTask
     {
-        public string Name => "Carry Casualty To Safe Zone";
-
-        public void OnStart(BotCommandAgent agent)
-        {
-            agent.SetRescueSubtask(BotRescueSubtask.CarryToSafeZone, "Carrying casualty to safe zone.");
-        }
-
-        public BotPlanTaskStatus OnUpdate(BotCommandAgent agent)
-        {
-            IRescuableTarget rescueTarget = agent.CurrentRescueTarget;
-            ISafeZoneTarget safeZone = agent.CurrentSafeZoneTarget;
-            if (rescueTarget == null || safeZone == null)
+        public CarryRescueTargetTask() : base(
+            "Carry Casualty To Safe Zone",
+            agent => agent.UpdateCarryRescueMove(),
+            onStart: agent => agent.SetRescueSubtask(BotRescueSubtask.CarryToSafeZone, "Carrying casualty to safe zone."),
+            moveAction: (agent, destination) =>
             {
-                agent.RequestCommandPlanRebuild();
-                return BotPlanTaskStatus.Success;
-            }
-
-            if (!rescueTarget.IsCarried || rescueTarget.ActiveRescuer != agent.gameObject)
-            {
-                agent.RequestCommandPlanRebuild();
-                return BotPlanTaskStatus.Success;
-            }
-
-            agent.PrepareCarryRescueCommand();
-
-            Vector3 safeZonePosition = safeZone.GetWorldPosition();
-            float distanceToSafeZone = BotCommandAgent.GetHorizontalDistance(agent.transform.position, safeZonePosition);
-            bool hasReachedSafeZone =
-                safeZone.ContainsPoint(agent.transform.position) ||
-                distanceToSafeZone <= agent.rescueSafeZoneArrivalDistance;
-            if (!hasReachedSafeZone)
-            {
-                agent.LogRescueActivityMessage("rescue-carry", "Carrying casualty to safe zone.");
-                if (!agent.MoveToRescueCarrySafeZoneCommand(safeZonePosition))
+                if (agent.MoveToRescueCarrySafeZoneCommand(destination))
                 {
-                    agent.FailActiveRescueOrder("Failed to path to rescue safe zone.", BotTaskStatus.Blocked);
-                    return BotPlanTaskStatus.Failure;
+                    return true;
                 }
 
-                return BotPlanTaskStatus.Running;
-            }
-
-            agent.StopNavMeshMovement();
-
-            return BotPlanTaskStatus.Success;
-        }
-
-        public void OnEnd(BotCommandAgent agent, bool interrupted)
+                agent.FailActiveRescueOrder("Failed to path to rescue safe zone.", BotTaskStatus.Blocked);
+                return false;
+            })
         {
         }
     }
@@ -330,6 +264,65 @@ public partial class BotCommandAgent
             .Add(new StabilizeOrCarryRescueTask())
             .Add(new CarryRescueTargetTask())
             .Add(new CompleteRescueTask());
+    }
+
+    private MoveTaskDirective UpdateRescueTargetMove()
+    {
+        IRescuableTarget rescueTarget = CurrentRescueTarget;
+        if (rescueTarget == null)
+        {
+            RequestCommandPlanRebuild();
+            return MoveTaskDirective.Success();
+        }
+
+        if (rescueTarget.IsCarried && rescueTarget.ActiveRescuer == gameObject)
+        {
+            return MoveTaskDirective.Success();
+        }
+
+        if (rescueTarget.IsCarried && rescueTarget.ActiveRescuer != gameObject)
+        {
+            ReacquireRescueTarget("Assigned casualty is already being carried by another rescuer.");
+            RequestCommandPlanRebuild();
+            return MoveTaskDirective.Success();
+        }
+
+        Vector3 targetPosition = rescueTarget.GetWorldPosition();
+        LogRescueActivityMessage("rescue-move", "Moving to casualty.");
+        return UpdateMoveIntoHorizontalRange(targetPosition, rescueInteractionDistance, () => StopAndAimTowards(targetPosition));
+    }
+
+    private MoveTaskDirective UpdateCarryRescueMove()
+    {
+        IRescuableTarget rescueTarget = CurrentRescueTarget;
+        ISafeZoneTarget safeZone = CurrentSafeZoneTarget;
+        if (rescueTarget == null || safeZone == null)
+        {
+            RequestCommandPlanRebuild();
+            return MoveTaskDirective.Success();
+        }
+
+        if (!rescueTarget.IsCarried || rescueTarget.ActiveRescuer != gameObject)
+        {
+            RequestCommandPlanRebuild();
+            return MoveTaskDirective.Success();
+        }
+
+        PrepareCarryRescueCommand();
+
+        Vector3 safeZonePosition = safeZone.GetWorldPosition();
+        float distanceToSafeZone = BotCommandAgent.GetHorizontalDistance(transform.position, safeZonePosition);
+        bool hasReachedSafeZone =
+            safeZone.ContainsPoint(transform.position) ||
+            distanceToSafeZone <= rescueSafeZoneArrivalDistance;
+        if (hasReachedSafeZone)
+        {
+            StopNavMeshMovement();
+            return MoveTaskDirective.Success();
+        }
+
+        LogRescueActivityMessage("rescue-carry", "Carrying casualty to safe zone.");
+        return MoveTaskDirective.Running(safeZonePosition);
     }
 
 }

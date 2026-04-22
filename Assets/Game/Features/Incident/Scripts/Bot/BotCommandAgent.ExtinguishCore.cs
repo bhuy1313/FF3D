@@ -4,7 +4,52 @@ using TrueJourney.BotBehavior;
 
 public partial class BotCommandAgent
 {
-    private bool TryEnsureExtinguisherEquipped(IBotExtinguisherItem desiredTool)
+    private bool TryResolveSuppressionTool(
+        Vector3 orderPoint,
+        Vector3 firePosition,
+        IFireGroupTarget fireGroup,
+        IFireTarget fireTarget,
+        BotExtinguishCommandMode orderMode,
+        bool requireNonPreciseTool,
+        out IBotExtinguisherItem plannedTool)
+    {
+        plannedTool = ResolveCommittedExtinguishTool(orderPoint, firePosition, fireGroup, fireTarget, orderMode);
+        return plannedTool != null && (!requireNonPreciseTool || !BotCommandAgent.UsesPreciseAim(plannedTool));
+    }
+
+    private bool TryAdvanceSuppressionToolAcquisition(IBotExtinguisherItem plannedTool, bool resetCrouchState)
+    {
+        if (plannedTool == null)
+        {
+            return false;
+        }
+
+        if (TryEnsureExtinguisherEquipped(plannedTool, false))
+        {
+            return true;
+        }
+
+        ClearHeadAimFocus();
+        ClearHandAimFocus();
+        if (resetCrouchState)
+        {
+            ResetExtinguishCrouchState();
+        }
+
+        return false;
+    }
+
+    private bool TryPrepareSuppressionToolMovePickup(IBotExtinguisherItem desiredTool)
+    {
+        if (desiredTool is not IPickupable pickupable || pickupable.Rigidbody == null)
+        {
+            return false;
+        }
+
+        return TryStartPlanMovePickupTarget(pickupable);
+    }
+
+    private bool TryEnsureExtinguisherEquipped(IBotExtinguisherItem desiredTool, bool allowMoveToToolRoute = true)
     {
         BotToolAcquisitionOptions<IBotExtinguisherItem> options = new BotToolAcquisitionOptions<IBotExtinguisherItem>
         {
@@ -12,7 +57,7 @@ public partial class BotCommandAgent
             InventorySystem = inventorySystem,
             PickupDistance = pickupDistance,
             IsAvailableToBot = tool => tool.IsAvailableTo(gameObject),
-            IsHeldByBot = tool => tool.IsHeld && tool.ClaimOwner == gameObject,
+            IsHeldByBot = tool => tool != null && tool.CurrentHolder == gameObject,
             SetActiveTool = tool => activeExtinguisher = tool,
             OnUnavailable = () => ReleaseCommittedToolIfMatches(desiredTool),
             OnBeforeAcquire = StopExtinguisher,
@@ -31,11 +76,35 @@ public partial class BotCommandAgent
                 SetExtinguishSubtask(BotExtinguishSubtask.MoveToTool, $"Moving to tool '{toolName}'.");
                 UpdateExtinguishDebugStage(ExtinguishDebugStage.MovingToExtinguisher, $"Moving to tool '{toolName}' at {toolPosition}.");
             },
+            OnBeforePickup = TryDropActiveBulkySuppressionToolForReplacement,
             SetPickupWindow = SetPickupWindow,
-            MoveToTool = toolPosition => TrySetDestinationDirect(toolPosition)
+            MoveToTool = toolPosition => MoveTo(toolPosition),
+            AllowMoveToToolRoute = allowMoveToToolRoute
         };
 
         return BotToolAcquisitionUtility.TryEnsureToolEquipped(desiredTool, options);
+    }
+
+    private IBotExtinguisherItem ResolveHeldSuppressionTool()
+    {
+        if (activeExtinguisher != null && activeExtinguisher.CurrentHolder == gameObject)
+        {
+            return activeExtinguisher;
+        }
+
+        if (committedExtinguishTool != null && committedExtinguishTool.CurrentHolder == gameObject)
+        {
+            return committedExtinguishTool;
+        }
+
+        if (inventorySystem != null &&
+            inventorySystem.ActiveItem is IBotExtinguisherItem equippedInventoryTool &&
+            equippedInventoryTool.CurrentHolder == gameObject)
+        {
+            return equippedInventoryTool;
+        }
+
+        return null;
     }
 
     private IBotExtinguisherItem SelectPreferredExtinguishTool(Vector3 orderPoint, Vector3 firePosition, IFireGroupTarget fireGroup, IFireTarget fireTarget, BotExtinguishCommandMode orderMode)
@@ -48,6 +117,11 @@ public partial class BotCommandAgent
         {
             IBotExtinguisherItem candidate = inventoryTools[i];
             if (candidate == null || !candidate.HasUsableCharge || !candidate.IsAvailableTo(gameObject))
+            {
+                continue;
+            }
+
+            if (IsUnsafeSuppressionToolForFire(candidate, fireTarget))
             {
                 continue;
             }
@@ -112,6 +186,11 @@ public partial class BotCommandAgent
             return;
         }
 
+        if (IsUnsafeSuppressionToolForFire(candidate, fireTarget))
+        {
+            return;
+        }
+
         if (!DoesToolMatchExtinguishMode(candidate, orderMode) ||
             !CanToolReachFire(candidate, orderMode, orderPoint, firePosition, fireGroup, fireTarget))
         {
@@ -135,9 +214,9 @@ public partial class BotCommandAgent
     private IBotExtinguisherItem ResolveCommittedExtinguishTool(Vector3 orderPoint, Vector3 firePosition, IFireGroupTarget fireGroup, IFireTarget fireTarget, BotExtinguishCommandMode orderMode)
     {
         if (activeExtinguisher != null &&
-            activeExtinguisher.IsHeld &&
-            activeExtinguisher.ClaimOwner == gameObject &&
+            activeExtinguisher.CurrentHolder == gameObject &&
             activeExtinguisher.HasUsableCharge &&
+            !IsUnsafeSuppressionToolForFire(activeExtinguisher, fireTarget) &&
             DoesToolMatchExtinguishMode(activeExtinguisher, orderMode))
         {
             committedExtinguishTool = activeExtinguisher;
@@ -260,6 +339,11 @@ public partial class BotCommandAgent
             return false;
         }
 
+        if (IsUnsafeSuppressionToolForFire(tool, fireTarget))
+        {
+            return false;
+        }
+
         return CanToolReachFire(tool, orderMode, orderPoint, firePosition, fireGroup, fireTarget);
     }
 
@@ -278,6 +362,136 @@ public partial class BotCommandAgent
             committedExtinguishTool.ReleaseClaim(gameObject);
             committedExtinguishTool = null;
         }
+    }
+
+    private bool TryDropActiveBulkySuppressionToolForReplacement(IBotExtinguisherItem desiredTool)
+    {
+        IBotExtinguisherItem heldTool = ResolveHeldSuppressionTool();
+        if (desiredTool == null ||
+            heldTool == null ||
+            ReferenceEquals(heldTool, desiredTool))
+        {
+            return true;
+        }
+
+        return TryDropBulkySuppressionTool(heldTool, "Switching suppression tool.", true);
+    }
+
+    private bool TryDropBulkySuppressionTool(IBotExtinguisherItem tool, string reason, bool forceDrop = false)
+    {
+        if (!(tool is IBulkyEquipment) ||
+            tool is not IPickupable pickupable ||
+            pickupable.Rigidbody == null ||
+            inventorySystem == null)
+        {
+            return false;
+        }
+
+        if (!forceDrop && tool.HasUsableCharge)
+        {
+            return false;
+        }
+
+        bool wasCommittedTool = ReferenceEquals(committedExtinguishTool, tool);
+        Quaternion dropRotation;
+        Vector3 dropPosition = ResolveBulkyToolDropPosition(pickupable.Rigidbody.transform, out dropRotation);
+
+        if (ReferenceEquals(activeExtinguisher, tool))
+        {
+            StopExtinguisher();
+        }
+
+        bool dropped = inventorySystem.DropItem(pickupable, dropPosition, dropRotation);
+        if (!dropped)
+        {
+            return false;
+        }
+
+        if (wasCommittedTool)
+        {
+            ReleaseCommittedTool();
+        }
+
+        if (ReferenceEquals(activeExtinguisher, tool))
+        {
+            activeExtinguisher = null;
+        }
+
+        if (ReferenceEquals(preferredExtinguishTool, tool))
+        {
+            preferredExtinguishTool = null;
+        }
+
+        SetPickupWindow(false, null);
+        LogVerboseExtinguish(
+            VerboseExtinguishLogCategory.Tooling,
+            $"drop-bulky:{GetToolName(tool)}",
+            $"Dropped bulky suppression tool '{GetToolName(tool)}'. {reason}");
+        return true;
+    }
+
+    private void TryDropTrackedBulkySuppressionTools(string reason, bool forceDrop = true)
+    {
+        IBotExtinguisherItem trackedActiveTool = activeExtinguisher;
+        IBotExtinguisherItem trackedCommittedTool = committedExtinguishTool;
+
+        TryDropBulkySuppressionTool(trackedActiveTool, reason, forceDrop);
+        if (!ReferenceEquals(trackedCommittedTool, trackedActiveTool))
+        {
+            TryDropBulkySuppressionTool(trackedCommittedTool, reason, forceDrop);
+        }
+    }
+
+    private Vector3 ResolveBulkyToolDropPosition(Transform itemTransform, out Quaternion dropRotation)
+    {
+        Vector3 offset = transform.TransformDirection(bulkyToolDropOffset);
+        Vector3 desiredPosition = transform.position + offset;
+        Vector3 rayOrigin = desiredPosition + Vector3.up * 1f;
+        if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, Mathf.Max(0.5f, bulkyToolDropGroundProbeDistance), ~0, QueryTriggerInteraction.Ignore))
+        {
+            desiredPosition = hit.point;
+        }
+        else
+        {
+            desiredPosition.y = transform.position.y;
+        }
+
+        Vector3 flatForward = Vector3.ProjectOnPlane(transform.forward, Vector3.up);
+        if (flatForward.sqrMagnitude <= 0.0001f)
+        {
+            flatForward = Vector3.forward;
+        }
+
+        dropRotation = Quaternion.LookRotation(flatForward.normalized, Vector3.up);
+        if (itemTransform != null)
+        {
+            desiredPosition.y += GetDropGroundOffset(itemTransform);
+        }
+
+        return desiredPosition;
+    }
+
+    private static float GetDropGroundOffset(Transform itemTransform)
+    {
+        if (itemTransform == null)
+        {
+            return 0.05f;
+        }
+
+        float maxExtent = 0.05f;
+        Collider[] colliders = itemTransform.GetComponentsInChildren<Collider>(true);
+        for (int i = 0; i < colliders.Length; i++)
+        {
+            Collider collider = colliders[i];
+            if (collider == null)
+            {
+                continue;
+            }
+
+            maxExtent = Mathf.Max(maxExtent, collider.bounds.extents.y);
+        }
+
+        return maxExtent + 0.02f;
     }
 
     private IFireGroupTarget FindClosestActiveFireGroup(Vector3 orderPoint)

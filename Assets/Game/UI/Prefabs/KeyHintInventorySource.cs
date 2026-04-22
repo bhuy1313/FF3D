@@ -26,11 +26,24 @@ public sealed class KeyHintInventorySource : KeyHintSourceBase
         }
 
         GameObject heldObject = context.HeldObject;
+        GameObject occupyingObject = context.InteractionSystem != null
+            ? context.InteractionSystem.CurrentHandOccupyingObject
+            : heldObject;
         if (heldObject != null)
         {
-            if (KeyHintGameplayUtility.FindComponentInTargetHierarchy<FireHose>(heldObject) != null ||
+            GameObject owner = context.InventorySystem != null ? context.InventorySystem.gameObject : null;
+            if (KeyHintGameplayUtility.IsHandsOccupied(occupyingObject, owner) ||
                 KeyHintGameplayUtility.FindComponentInTargetHierarchy<Tool>(heldObject) != null ||
                 KeyHintGameplayUtility.FindComponentInTargetHierarchy<IUsable>(heldObject) != null)
+            {
+                return;
+            }
+        }
+
+        if (heldObject == null && occupyingObject != null)
+        {
+            GameObject owner = context.InventorySystem != null ? context.InventorySystem.gameObject : null;
+            if (KeyHintGameplayUtility.IsHandsOccupied(occupyingObject, owner))
             {
                 return;
             }

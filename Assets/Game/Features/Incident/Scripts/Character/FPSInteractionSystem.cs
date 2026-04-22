@@ -47,6 +47,13 @@ namespace StarterAssets
         public GameObject CurrentTarget => currentTarget;
         public float InteractDistance => interactDistance;
         public bool IsGrabActive => grabbedBody != null;
+        public GameObject GrabbedObject => grabbedBody != null ? grabbedBody.gameObject : null;
+        public GameObject CurrentHandOccupyingObject => GrabbedObject != null
+            ? GrabbedObject
+            : inventory != null
+                ? inventory.HeldObject
+                : null;
+        public bool AreHandsOccupied => HandOccupancyUtility.IsHandsOccupied(CurrentHandOccupyingObject, gameObject);
         public float CurrentGrabWeightKg => ResolveGrabbedBodyWeightKg(grabbedBody);
         public float CurrentCarryWeightKg => ResolveRescuableCarryWeightKg(FindPlayerCarriedRescuable());
         public float CurrentMovementBurdenKg => CurrentGrabWeightKg + CurrentCarryWeightKg;

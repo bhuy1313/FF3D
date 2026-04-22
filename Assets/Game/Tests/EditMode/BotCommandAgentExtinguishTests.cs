@@ -19,6 +19,7 @@ public class BotCommandAgentExtinguishTests
         public bool RequiresPreciseAim => false;
         public bool HasUsableCharge => true;
         public bool IsHeld => true;
+        public GameObject CurrentHolder => gameObject;
         public GameObject ClaimOwner => gameObject;
         public bool IsAvailableTo(GameObject requester) => true;
         public bool TryClaim(GameObject requester) => true;
@@ -47,6 +48,11 @@ public class BotCommandAgentExtinguishTests
         public void ApplySuppression(float amount, FireSuppressionAgent agent, GameObject sourceUser)
         {
             ApplySuppression(amount, agent);
+        }
+
+        public FireSuppressionOutcome EvaluateSuppressionOutcome(FireSuppressionAgent agent)
+        {
+            return FireSuppressionOutcome.SafeEffective;
         }
 
         public Vector3 GetWorldPosition()

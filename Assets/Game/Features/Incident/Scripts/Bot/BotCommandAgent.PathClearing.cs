@@ -661,7 +661,7 @@ public partial class BotCommandAgent
                 LogPathClearingFlow(
                     $"move-breaktool:{FormatFlowVectorKey(toolPosition)}",
                     "Moving.");
-                TrySetDestinationDirect(toolPosition);
+                MoveToIgnoringBlockedPathInterrupt(toolPosition);
             }
         };
 

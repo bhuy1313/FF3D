@@ -5,6 +5,21 @@ public interface IInteractable
     void Interact(GameObject interactor);
 }
 
+public interface IInventoryStowBlocker
+{
+    bool BlocksInventoryStow(GameObject owner);
+}
+
+public interface IInventorySelectionBlocker
+{
+    bool BlocksInventorySelectionChange(GameObject owner);
+}
+
+public interface IJumpActionBlocker
+{
+    bool BlocksJumpAction(GameObject owner);
+}
+
 public interface IUsable
 {
     void Use(GameObject user);
@@ -28,9 +43,17 @@ public interface IInventoryRuntimeTickable
     void OnInventoryTick(GameObject owner, bool isEquipped, float deltaTime);
 }
 
-public interface IGrabbable
+public interface IHandOccupyingObject
+{
+}
+
+public interface IGrabbable : IHandOccupyingObject
 {
     //None
+}
+
+public interface IBulkyEquipment : IHandOccupyingObject, IInventoryStowBlocker, IInventorySelectionBlocker, IJumpActionBlocker
+{
 }
 
 public interface IMovementWeightSource

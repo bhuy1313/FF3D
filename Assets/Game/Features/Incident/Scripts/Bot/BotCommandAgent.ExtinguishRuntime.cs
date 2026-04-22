@@ -167,6 +167,13 @@ public partial class BotCommandAgent
         return travelToAttack + fitPenalty + rangePenalty + verticalPenalty - throughputBonus;
     }
 
+    private static bool IsUnsafeSuppressionToolForFire(IBotExtinguisherItem tool, IFireTarget fireTarget)
+    {
+        return tool != null &&
+            fireTarget != null &&
+            fireTarget.EvaluateSuppressionOutcome(tool.SuppressionAgent) == FireSuppressionOutcome.UnsafeWorsens;
+    }
+
     private bool CanToolReachFire(IBotExtinguisherItem tool, BotExtinguishCommandMode orderMode, Vector3 orderPoint, Vector3 firePosition, IFireGroupTarget fireGroup, IFireTarget fireTarget)
     {
         if (tool == null)
@@ -976,6 +983,7 @@ public partial class BotCommandAgent
         ClearExtinguisherTargetLock();
         SetPickupWindow(false);
         ReleaseCommittedTool();
+        activeExtinguisher = null;
         preferredExtinguishTool = null;
         SetCurrentFireTarget(null);
         commandedPointFireTarget = null;

@@ -5,7 +5,7 @@ using UnityEngine.Serialization;
 using UnityEngine.InputSystem;
 #endif
 
-public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotExtinguisherItem, IMovementWeightSource, IInventorySelectionBlocker, IJumpActionBlocker
+public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotExtinguisherItem, IMovementWeightSource, IBulkyEquipment
 {
     private enum SprayPattern
     {
@@ -131,6 +131,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
     public bool RequiresPreciseAim => true;
     public bool HasUsableCharge => CanStartSpraying();
     public bool IsHeld => currentHolder != null;
+    public GameObject CurrentHolder => currentHolder;
     public GameObject ClaimOwner => claimOwner;
     public bool IsConnectedToSupply => connectionState.IsConnected;
 
@@ -845,19 +846,19 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         currentUserIsBot = user != null && user.GetComponentInParent<BotBehaviorContext>() != null;
     }
 
-    public bool BlocksInventorySelectionChange(GameObject owner)
+    public bool BlocksInventoryStow(GameObject owner)
     {
         return owner != null && ReferenceEquals(currentHolder, owner);
     }
 
+    public bool BlocksInventorySelectionChange(GameObject owner)
+    {
+        return BlocksInventoryStow(owner);
+    }
+
     public bool BlocksJumpAction(GameObject owner)
     {
-        if (!isSpraying || owner == null)
-        {
-            return false;
-        }
-
-        return ReferenceEquals(currentUser, owner) || ReferenceEquals(currentHolder, owner);
+        return BlocksInventoryStow(owner);
     }
 
     private SprayPatternConfig GetCurrentPatternConfig()

@@ -86,6 +86,11 @@ public class FPSInventorySystem : MonoBehaviour
             return false;
         }
 
+        if (HasItem && HandOccupancyUtility.BlocksInventoryStow(HeldObject, picker))
+        {
+            return false;
+        }
+
         Rigidbody rb = pickupable.Rigidbody;
         InventorySlot slot = new InventorySlot
         {
@@ -104,9 +109,26 @@ public class FPSInventorySystem : MonoBehaviour
         pickupable.OnPickup(picker);
 
         slots.Add(slot);
+        int newSlotIndex = slots.Count - 1;
+        bool pickupableBlocksStow = PickupableBlocksInventoryStow(pickupable, picker);
+
         if (!HasItem)
         {
-            activeIndex = slots.Count - 1;
+            activeIndex = newSlotIndex;
+            EquipSlot(slot);
+        }
+        else if (pickupableBlocksStow)
+        {
+            if (ActiveItemBlocksSelectionChange())
+            {
+                slots.RemoveAt(newSlotIndex);
+                pickupable.OnDrop(picker);
+                RestoreDroppedPickup(slot);
+                return false;
+            }
+
+            StowSlot(slots[activeIndex]);
+            activeIndex = newSlotIndex;
             EquipSlot(slot);
         }
         else
@@ -182,14 +204,15 @@ public class FPSInventorySystem : MonoBehaviour
 
     private bool ActiveItemBlocksSelectionChange()
     {
-        if (!HasItem)
-        {
-            return false;
-        }
+        return HasItem &&
+            HandOccupancyUtility.BlocksInventorySelectionChange(HeldObject, gameObject);
+    }
 
-        IPickupable activeItem = slots[activeIndex].Item;
-        return activeItem is IInventorySelectionBlocker selectionBlocker &&
-            selectionBlocker.BlocksInventorySelectionChange(gameObject);
+    private static bool PickupableBlocksInventoryStow(IPickupable pickupable, GameObject owner)
+    {
+        return pickupable != null &&
+            pickupable.Rigidbody != null &&
+            HandOccupancyUtility.BlocksInventoryStow(pickupable.Rigidbody.gameObject, owner);
     }
 
     private bool ContainsItem(IPickupable pickupable)
@@ -291,6 +314,23 @@ public class FPSInventorySystem : MonoBehaviour
 
         activeIndex = Mathf.Clamp(index, 0, slots.Count - 1);
         EquipSlot(slots[activeIndex]);
+    }
+
+    private static void RestoreDroppedPickup(InventorySlot slot)
+    {
+        if (slot == null || slot.Item == null || slot.Item.Rigidbody == null)
+        {
+            return;
+        }
+
+        Rigidbody rb = slot.Item.Rigidbody;
+        rb.transform.SetParent(slot.OriginalParent, true);
+        rb.isKinematic = slot.WasKinematic;
+        rb.detectCollisions = slot.DetectCollisions;
+        if (slot.WasActive)
+        {
+            rb.gameObject.SetActive(true);
+        }
     }
 
     private static IPickupable FindPickupable(GameObject target)

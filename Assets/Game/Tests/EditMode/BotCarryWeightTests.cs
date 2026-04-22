@@ -23,6 +23,11 @@ public class BotCarryWeightTests
         {
         }
 
+        public FireSuppressionOutcome EvaluateSuppressionOutcome(FireSuppressionAgent agent)
+        {
+            return FireSuppressionOutcome.SafeEffective;
+        }
+
         public Vector3 GetWorldPosition()
         {
             return transform.position;

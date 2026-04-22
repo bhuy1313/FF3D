@@ -5,6 +5,14 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody))]
 public class Tool : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotBreakTool, IMovementWeightSource
 {
+    protected struct UseHit
+    {
+        public Collider Collider;
+        public Vector3 Point;
+        public Vector3 Normal;
+        public float Distance;
+    }
+
     [Header("Tool")]
     [SerializeField] private BreakToolKind toolKind = BreakToolKind.None;
     [SerializeField] private float movementWeightKg = 5f;
@@ -150,12 +158,12 @@ public class Tool : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotBrea
 
     private Breakable FindBreakableInView(GameObject user)
     {
-        if (!TryGetUseHit(user, out RaycastHit hit))
+        if (!TryGetUseHit(user, out UseHit hit))
         {
             return null;
         }
 
-        return FindBreakable(hit.collider);
+        return FindBreakable(hit.Collider);
     }
 
     private void UseDamageableInView(GameObject user)
@@ -165,22 +173,22 @@ public class Tool : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotBrea
             return;
         }
 
-        if (!TryGetUseHit(user, out RaycastHit hit))
+        if (!TryGetUseHit(user, out UseHit hit))
         {
             return;
         }
 
-        IDamageable damageable = FindDamageable(hit.collider);
+        IDamageable damageable = FindDamageable(hit.Collider);
         if (damageable == null)
         {
             return;
         }
 
         GameObject source = user != null ? user : gameObject;
-        damageable.TakeDamage(damagePerUse, source, hit.point, hit.normal);
+        damageable.TakeDamage(damagePerUse, source, hit.Point, hit.Normal);
     }
 
-    protected bool TryGetUseHit(GameObject user, out RaycastHit hit)
+    protected bool TryGetUseHit(GameObject user, out UseHit hit)
     {
         hit = default;
 
@@ -196,8 +204,20 @@ public class Tool : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotBrea
             return false;
         }
 
-        Ray ray = new Ray(aim.position, aim.forward);
-        return Physics.Raycast(ray, out hit, range, hitMask, QueryTriggerInteraction.Ignore);
+        Ray ray = BuildUseRay(aim);
+        if (Physics.Raycast(ray, out RaycastHit raycastHit, range, hitMask, QueryTriggerInteraction.Ignore))
+        {
+            hit = new UseHit
+            {
+                Collider = raycastHit.collider,
+                Point = raycastHit.point,
+                Normal = raycastHit.normal,
+                Distance = raycastHit.distance
+            };
+            return true;
+        }
+
+        return TryGetCloseRangeUseHit(ray, range, out hit);
     }
 
     protected float GetUseRange(GameObject user)
@@ -228,6 +248,88 @@ public class Tool : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotBrea
         }
 
         return transform;
+    }
+
+    private static Ray BuildUseRay(Transform fallbackAim)
+    {
+        Camera activeCamera = Camera.main;
+        if (activeCamera != null)
+        {
+            return activeCamera.ScreenPointToRay(
+                new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 0f));
+        }
+
+        return new Ray(fallbackAim.position, fallbackAim.forward);
+    }
+
+    private bool TryGetCloseRangeUseHit(Ray ray, float range, out UseHit hit)
+    {
+        hit = default;
+
+        const float closeProbeRadius = 0.3f;
+        const float forwardTolerance = 0.2f;
+        const float lateralTolerance = 0.45f;
+
+        Collider[] overlaps = Physics.OverlapSphere(
+            ray.origin,
+            closeProbeRadius,
+            hitMask,
+            QueryTriggerInteraction.Ignore);
+        if (overlaps == null || overlaps.Length == 0)
+        {
+            return false;
+        }
+
+        bool foundHit = false;
+        float bestDistance = float.PositiveInfinity;
+
+        for (int i = 0; i < overlaps.Length; i++)
+        {
+            Collider collider = overlaps[i];
+            if (collider == null)
+            {
+                continue;
+            }
+
+            Vector3 closestPoint = collider.ClosestPoint(ray.origin);
+            Vector3 toPoint = closestPoint - ray.origin;
+            float projectedDistance = Vector3.Dot(toPoint, ray.direction);
+            if (projectedDistance < -forwardTolerance || projectedDistance > range)
+            {
+                continue;
+            }
+
+            Vector3 projectedPoint = ray.origin + (ray.direction * Mathf.Max(0f, projectedDistance));
+            float lateralDistance = (closestPoint - projectedPoint).magnitude;
+            if (lateralDistance > lateralTolerance)
+            {
+                continue;
+            }
+
+            if (projectedDistance >= bestDistance)
+            {
+                continue;
+            }
+
+            Vector3 normal = ray.origin - closestPoint;
+            if (normal.sqrMagnitude <= 0.0001f)
+            {
+                normal = -ray.direction;
+            }
+
+            hit = new UseHit
+            {
+                Collider = collider,
+                Point = closestPoint,
+                Normal = normal.normalized,
+                Distance = Mathf.Max(0f, projectedDistance)
+            };
+
+            bestDistance = projectedDistance;
+            foundHit = true;
+        }
+
+        return foundHit;
     }
 
     private static Breakable FindBreakable(Collider collider)

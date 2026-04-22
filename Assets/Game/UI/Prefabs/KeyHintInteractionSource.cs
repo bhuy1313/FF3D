@@ -21,7 +21,12 @@ public sealed class KeyHintInteractionSource : KeyHintSourceBase
 
         GameObject currentTarget = context.CurrentTarget;
         GameObject heldObject = context.HeldObject;
+        GameObject owner = context.InventorySystem != null ? context.InventorySystem.gameObject : null;
+        GameObject occupyingObject = context.InteractionSystem != null
+            ? context.InteractionSystem.CurrentHandOccupyingObject
+            : heldObject;
         bool canPickupMoreItems = context.InventorySystem != null && context.InventoryItemCount < context.InventoryMaxSlots;
+        bool heldItemBlocksStow = KeyHintGameplayUtility.HeldObjectBlocksInventoryStow(occupyingObject, owner);
 
         bool targetIsPickupable = KeyHintGameplayUtility.FindComponentInTargetHierarchy<IPickupable>(currentTarget) != null;
         bool targetIsGrabbable = KeyHintGameplayUtility.FindComponentInTargetHierarchy<IGrabbable>(currentTarget) != null;
@@ -95,13 +100,13 @@ public sealed class KeyHintInteractionSource : KeyHintSourceBase
             results.Add(CreateHint("Interact", KeyHintGameplayUtility.GetDefaultActionLabelLocalizationKey("Interact"), KeyHintGameplayUtility.GetDefaultActionLabelFallback("Interact"), priorityOffset: 40, sortOrder: 30, groupId: "interaction"));
         }
 
-        if (targetIsPickupable && canPickupMoreItems)
+        if (targetIsPickupable && canPickupMoreItems && !heldItemBlocksStow)
         {
             string label = KeyHintGameplayUtility.ResolvePickupLabelFallback(currentTarget);
             results.Add(CreateHint("Pickup", KeyHintGameplayUtility.GetContextLabelLocalizationKey(label), label, priorityOffset: 50, sortOrder: 40, groupId: "interaction"));
         }
 
-        if (targetIsGrabbable && heldObject == null && !context.IsCarryingRescuable)
+        if (targetIsGrabbable && occupyingObject == null && !context.IsCarryingRescuable)
         {
             results.Add(CreateHint("Grab", KeyHintGameplayUtility.GetContextLabelLocalizationKey("Grab Object"), "Grab Object", priorityOffset: 45, sortOrder: 50, groupId: "interaction"));
         }

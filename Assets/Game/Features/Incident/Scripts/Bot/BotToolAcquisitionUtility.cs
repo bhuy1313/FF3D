@@ -19,8 +19,10 @@ namespace TrueJourney.BotBehavior
         public Action<string> LogHeld;
         public Action<string> LogEquipped;
         public Action<string> LogPickedUp;
+        public Func<TTool, bool> OnBeforePickup;
         public Action<bool, IPickupable> SetPickupWindow;
         public Action<Vector3> MoveToTool;
+        public bool AllowMoveToToolRoute = true;
     }
 
     internal static class BotToolAcquisitionUtility
@@ -93,6 +95,11 @@ namespace TrueJourney.BotBehavior
             if (Vector3.Distance(options.BotTransform.position, toolPosition) <= options.PickupDistance)
             {
                 options.ReportPickingUp?.Invoke(toolName);
+                if (options.OnBeforePickup != null && !options.OnBeforePickup(desiredTool))
+                {
+                    return false;
+                }
+
                 options.SetPickupWindow?.Invoke(true, pickupable);
                 if (!options.InventorySystem.TryPickup(pickupable))
                 {
@@ -107,6 +114,11 @@ namespace TrueJourney.BotBehavior
                     return true;
                 }
 
+                return false;
+            }
+
+            if (!options.AllowMoveToToolRoute)
+            {
                 return false;
             }
 

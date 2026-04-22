@@ -1181,28 +1181,8 @@ namespace StarterAssets
 
 		private bool IsJumpBlockedByHeldItem()
 		{
-			if (_inventorySystem == null)
-			{
-				return false;
-			}
-
-			GameObject heldObject = _inventorySystem.HeldObject;
-			if (heldObject == null)
-			{
-				return false;
-			}
-
-			MonoBehaviour[] components = heldObject.GetComponents<MonoBehaviour>();
-			for (int i = 0; i < components.Length; i++)
-			{
-				if (components[i] is IJumpActionBlocker jumpBlocker &&
-					jumpBlocker.BlocksJumpAction(gameObject))
-				{
-					return true;
-				}
-			}
-
-			return false;
+			return _interactionSystem != null &&
+				HandOccupancyUtility.BlocksJumpAction(_interactionSystem.CurrentHandOccupyingObject, gameObject);
 		}
 
 		private void ClimbMove()

@@ -149,6 +149,18 @@ public class Fire : MonoBehaviour, IFireTarget
         return GetSphereRadiusWorld();
     }
 
+    public FireSuppressionOutcome EvaluateSuppressionOutcome(FireSuppressionAgent agent)
+    {
+        if (WouldSuppressionWorsen(agent))
+        {
+            return FireSuppressionOutcome.UnsafeWorsens;
+        }
+
+        return GetSuppressionEffectiveness(agent) >= 0.75f
+            ? FireSuppressionOutcome.SafeEffective
+            : FireSuppressionOutcome.SafeLimited;
+    }
+
     private void Reset()
     {
         CacheReferences();
@@ -593,7 +605,7 @@ public class Fire : MonoBehaviour, IFireTarget
 
     private bool HandleUnsafeSuppression(float amount, FireSuppressionAgent agent, GameObject sourceUser)
     {
-        if (agent != FireSuppressionAgent.Water)
+        if (!WouldSuppressionWorsen(agent))
         {
             return false;
         }
@@ -611,6 +623,21 @@ public class Fire : MonoBehaviour, IFireTarget
         }
 
         return false;
+    }
+
+    private bool WouldSuppressionWorsen(FireSuppressionAgent agent)
+    {
+        if (agent != FireSuppressionAgent.Water)
+        {
+            return false;
+        }
+
+        if (fireType == FireHazardType.Electrical && !hazardSourceIsolated)
+        {
+            return true;
+        }
+
+        return fireType == FireHazardType.FlammableLiquid;
     }
 
     private void TryApplyElectricalShock(GameObject sourceUser)

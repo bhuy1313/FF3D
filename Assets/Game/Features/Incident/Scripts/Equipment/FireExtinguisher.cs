@@ -1,7 +1,7 @@
 using TrueJourney.BotBehavior;
 using UnityEngine;
 using UnityEngine.Serialization;
-public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotExtinguisherItem, IMovementWeightSource
+public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotExtinguisherItem, IMovementWeightSource, IBulkyEquipment
 {
     [Header("Extinguisher")]
     [SerializeField] private FireExtinguisherType extinguisherType = FireExtinguisherType.DryChemical;
@@ -218,6 +218,21 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
 
     public void ClearExternalAimDirection(GameObject user)
     {
+    }
+
+    public bool BlocksInventoryStow(GameObject owner)
+    {
+        return owner != null && ReferenceEquals(currentHolder, owner);
+    }
+
+    public bool BlocksInventorySelectionChange(GameObject owner)
+    {
+        return BlocksInventoryStow(owner);
+    }
+
+    public bool BlocksJumpAction(GameObject owner)
+    {
+        return BlocksInventoryStow(owner);
     }
 
     private void OnDisable()

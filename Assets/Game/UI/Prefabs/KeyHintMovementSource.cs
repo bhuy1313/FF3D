@@ -33,7 +33,13 @@ public sealed class KeyHintMovementSource : KeyHintSourceBase
             results.Add(CreateHint("Sprint", KeyHintGameplayUtility.GetDefaultActionLabelLocalizationKey("Sprint"), KeyHintGameplayUtility.GetDefaultActionLabelFallback("Sprint"), sortOrder: 110, groupId: "movement"));
         }
 
-        if (includeJump)
+        GameObject owner = context.InventorySystem != null ? context.InventorySystem.gameObject : null;
+        GameObject occupyingObject = context.InteractionSystem != null
+            ? context.InteractionSystem.CurrentHandOccupyingObject
+            : context.HeldObject;
+        bool jumpBlockedByHeldItem = KeyHintGameplayUtility.HeldObjectBlocksJump(occupyingObject, owner);
+
+        if (includeJump && !jumpBlockedByHeldItem)
         {
             results.Add(CreateHint("Jump", KeyHintGameplayUtility.GetDefaultActionLabelLocalizationKey("Jump"), KeyHintGameplayUtility.GetDefaultActionLabelFallback("Jump"), sortOrder: 120, groupId: "movement"));
         }

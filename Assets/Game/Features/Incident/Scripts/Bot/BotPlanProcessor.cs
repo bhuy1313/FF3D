@@ -79,12 +79,17 @@ public sealed class BotPlanProcessor
             currentTask.OnStart(agent);
         }
 
-        BotPlanTaskStatus status = currentTask.OnUpdate(agent);
+        IBotPlanTask executingTask = currentTask;
+        BotPlanTaskStatus status = executingTask.OnUpdate(agent);
         switch (status)
         {
             case BotPlanTaskStatus.Success:
-                currentTask.OnEnd(agent, false);
-                currentTask = null;
+                executingTask?.OnEnd(agent, false);
+                if (ReferenceEquals(currentTask, executingTask))
+                {
+                    currentTask = null;
+                }
+
                 if (pendingTasks.Count == 0)
                 {
                     ActivePlanName = string.Empty;
@@ -92,8 +97,12 @@ public sealed class BotPlanProcessor
 
                 break;
             case BotPlanTaskStatus.Failure:
-                currentTask.OnEnd(agent, false);
-                currentTask = null;
+                executingTask?.OnEnd(agent, false);
+                if (ReferenceEquals(currentTask, executingTask))
+                {
+                    currentTask = null;
+                }
+
                 pendingTasks.Clear();
                 ActivePlanName = string.Empty;
                 break;

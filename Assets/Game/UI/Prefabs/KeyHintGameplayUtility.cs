@@ -121,6 +121,21 @@ public static class KeyHintGameplayUtility
         return "Pick Up";
     }
 
+    public static bool HeldObjectBlocksInventoryStow(GameObject heldObject, GameObject owner)
+    {
+        return HandOccupancyUtility.BlocksInventoryStow(heldObject, owner);
+    }
+
+    public static bool HeldObjectBlocksJump(GameObject heldObject, GameObject owner)
+    {
+        return HandOccupancyUtility.BlocksJumpAction(heldObject, owner);
+    }
+
+    public static bool IsHandsOccupied(GameObject occupyingObject, GameObject owner)
+    {
+        return HandOccupancyUtility.IsHandsOccupied(occupyingObject, owner);
+    }
+
     public static string GetDefaultActionLabelFallback(string actionName)
     {
         return actionName switch

@@ -180,14 +180,6 @@ public partial class BotCommandAgent
     {
         SetCurrentHazardIsolationTarget(null);
         ResetHazardIsolationUnavailableState();
-
-        if (cachedHazardIsolationStoppingDistance >= 0f &&
-            navMeshAgent != null &&
-            navMeshAgent.enabled)
-        {
-            navMeshAgent.stoppingDistance = cachedHazardIsolationStoppingDistance;
-        }
-
-        cachedHazardIsolationStoppingDistance = -1f;
+        RestoreHazardIsolationStoppingDistance();
     }
 }

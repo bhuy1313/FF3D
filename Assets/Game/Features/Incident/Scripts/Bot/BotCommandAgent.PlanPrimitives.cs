@@ -39,12 +39,21 @@ public partial class BotCommandAgent
         Vector3 targetPosition,
         float interactionDistance,
         System.Action<string> failAction,
-        string failReason)
+        string failReason,
+        float stoppingDistanceFactor = 0f)
     {
         if (IsWithinHorizontalDistance(targetPosition, interactionDistance))
         {
             StopNavMeshMovement();
             return true;
+        }
+
+        if (stoppingDistanceFactor > 0f &&
+            navMeshAgent != null &&
+            navMeshAgent.enabled &&
+            navMeshAgent.isOnNavMesh)
+        {
+            navMeshAgent.stoppingDistance = Mathf.Max(navMeshAgent.stoppingDistance, interactionDistance * stoppingDistanceFactor);
         }
 
         return TryMoveToOrFail(targetPosition, failAction, failReason);
@@ -54,5 +63,45 @@ public partial class BotCommandAgent
     {
         StopNavMeshMovement();
         AimTowards(targetPosition);
+    }
+
+    private MoveTaskDirective UpdateMoveIntoHorizontalRange(
+        Vector3 targetPosition,
+        float interactionDistance,
+        System.Action onReached = null)
+    {
+        if (!IsWithinHorizontalDistance(targetPosition, interactionDistance))
+        {
+            return MoveTaskDirective.Running(targetPosition);
+        }
+
+        if (onReached != null)
+        {
+            onReached();
+        }
+        else
+        {
+            StopNavMeshMovement();
+        }
+
+        return MoveTaskDirective.Success();
+    }
+
+    private BotPlanTaskStatus AdvanceOrderPointSearch(
+        Vector3 orderPoint,
+        System.Func<Vector3, bool> hasReachedOrderPoint,
+        System.Action onReachedOrderPoint,
+        System.Action<string> failAction,
+        string failReason)
+    {
+        if (hasReachedOrderPoint != null && hasReachedOrderPoint(orderPoint))
+        {
+            onReachedOrderPoint?.Invoke();
+            return BotPlanTaskStatus.Success;
+        }
+
+        return TryMoveToOrFail(orderPoint, failAction, failReason)
+            ? BotPlanTaskStatus.Running
+            : BotPlanTaskStatus.Failure;
     }
 }

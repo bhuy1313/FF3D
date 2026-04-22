@@ -2,6 +2,77 @@ using UnityEngine;
 
 public partial class BotCommandAgent
 {
+    private readonly struct MoveTaskDirective
+    {
+        public MoveTaskDirective(BotPlanTaskStatus status, bool shouldMove, Vector3 destination)
+        {
+            Status = status;
+            ShouldMove = shouldMove;
+            Destination = destination;
+        }
+
+        public BotPlanTaskStatus Status { get; }
+        public bool ShouldMove { get; }
+        public Vector3 Destination { get; }
+
+        public static MoveTaskDirective Running(Vector3 destination) => new MoveTaskDirective(BotPlanTaskStatus.Running, true, destination);
+        public static MoveTaskDirective Continue() => new MoveTaskDirective(BotPlanTaskStatus.Running, false, default);
+        public static MoveTaskDirective Success() => new MoveTaskDirective(BotPlanTaskStatus.Success, false, default);
+        public static MoveTaskDirective Failure() => new MoveTaskDirective(BotPlanTaskStatus.Failure, false, default);
+    }
+
+    private class MoveToPositionTask : IBotPlanTask
+    {
+        private readonly string name;
+        private readonly System.Action<BotCommandAgent> onStart;
+        private readonly System.Func<BotCommandAgent, MoveTaskDirective> update;
+        private readonly System.Action<BotCommandAgent, bool> onEnd;
+        private readonly System.Func<BotCommandAgent, Vector3, bool> moveAction;
+
+        public MoveToPositionTask(
+            string name,
+            System.Func<BotCommandAgent, MoveTaskDirective> update,
+            System.Action<BotCommandAgent> onStart = null,
+            System.Action<BotCommandAgent, bool> onEnd = null,
+            System.Func<BotCommandAgent, Vector3, bool> moveAction = null)
+        {
+            this.name = string.IsNullOrWhiteSpace(name) ? "Move To Position" : name;
+            this.update = update;
+            this.onStart = onStart;
+            this.onEnd = onEnd;
+            this.moveAction = moveAction;
+        }
+
+        public string Name => name;
+
+        public void OnStart(BotCommandAgent agent)
+        {
+            onStart?.Invoke(agent);
+        }
+
+        public BotPlanTaskStatus OnUpdate(BotCommandAgent agent)
+        {
+            if (update == null)
+            {
+                return BotPlanTaskStatus.Failure;
+            }
+
+            MoveTaskDirective directive = update(agent);
+            System.Func<BotCommandAgent, Vector3, bool> executeMove = moveAction ?? ((owner, destination) => owner.MoveToCommand(destination));
+            if (directive.ShouldMove && !executeMove(agent, directive.Destination))
+            {
+                return BotPlanTaskStatus.Failure;
+            }
+
+            return directive.Status;
+        }
+
+        public void OnEnd(BotCommandAgent agent, bool interrupted)
+        {
+            onEnd?.Invoke(agent, interrupted);
+        }
+    }
+
     private sealed class HoldPositionTask : IBotPlanTask
     {
         public string Name => "Hold Position";
@@ -28,49 +99,6 @@ public partial class BotCommandAgent
             {
                 agent.navMeshAgent.ResetPath();
                 agent.navMeshAgent.isStopped = true;
-            }
-
-            return BotPlanTaskStatus.Running;
-        }
-
-        public void OnEnd(BotCommandAgent agent, bool interrupted)
-        {
-        }
-    }
-
-    private sealed class MoveToIssuedDestinationTask : IBotPlanTask
-    {
-        private readonly BotCommandType commandType;
-
-        public MoveToIssuedDestinationTask(BotCommandType commandType)
-        {
-            this.commandType = commandType;
-        }
-
-        public string Name => commandType == BotCommandType.Search ? "Search Area" : "Move To Destination";
-
-        public void OnStart(BotCommandAgent agent)
-        {
-        }
-
-        public BotPlanTaskStatus OnUpdate(BotCommandAgent agent)
-        {
-            if (!agent.IsMovementCommandStillActive(commandType))
-            {
-                return BotPlanTaskStatus.Success;
-            }
-
-            Vector3 destination = agent.hasIssuedDestination ? agent.lastIssuedDestination : agent.transform.position;
-            if (agent.IsWithinArrivalDistance(destination))
-            {
-                agent.CompleteMovementStyleCommand(commandType);
-                return BotPlanTaskStatus.Success;
-            }
-
-            if (!agent.MoveToCommand(destination))
-            {
-                agent.FailMovementStyleCommand(commandType, "Failed to path to assigned destination.");
-                return BotPlanTaskStatus.Failure;
             }
 
             return BotPlanTaskStatus.Running;
@@ -152,6 +180,13 @@ public partial class BotCommandAgent
                 return true;
             }
 
+            if (IsRouteFireClearingActive())
+            {
+                plan = BuildRouteFireInterruptPlan();
+                planKey = $"RouteFire:{currentRouteFirePhase}";
+                return true;
+            }
+
             if (behaviorContext.HasRescueOrder)
             {
                 plan = BuildRescuePlan();
@@ -203,11 +238,11 @@ public partial class BotCommandAgent
                 switch (payload.CommandType)
                 {
                     case BotCommandType.Move:
-                        plan = new BotPlan("Move").Add(new MoveToIssuedDestinationTask(BotCommandType.Move));
+                        plan = new BotPlan("Move").Add(BuildMovementDestinationTask(BotCommandType.Move));
                         planKey = BuildCommandIntentKey("Move");
                         return true;
                     case BotCommandType.Search:
-                        plan = new BotPlan("Search").Add(new MoveToIssuedDestinationTask(BotCommandType.Search));
+                        plan = new BotPlan("Search").Add(BuildMovementDestinationTask(BotCommandType.Search));
                         planKey = BuildCommandIntentKey("Search");
                         return true;
                     case BotCommandType.Hold:
@@ -308,6 +343,10 @@ public partial class BotCommandAgent
         }
 
         hasIssuedDestination = false;
+        if (commandType == BotCommandType.Move)
+        {
+            TryResumeSuspendedFollow();
+        }
     }
 
     private void FailMovementStyleCommand(BotCommandType commandType, string detail)
@@ -334,6 +373,42 @@ public partial class BotCommandAgent
         }
 
         hasIssuedDestination = false;
+        if (commandType == BotCommandType.Move)
+        {
+            ClearSuspendedFollowResume();
+        }
+    }
+
+    private MoveToPositionTask BuildMovementDestinationTask(BotCommandType commandType)
+    {
+        return new MoveToPositionTask(
+            commandType == BotCommandType.Search ? "Search Area" : "Move To Destination",
+            agent =>
+            {
+                if (!agent.IsMovementCommandStillActive(commandType))
+                {
+                    return MoveTaskDirective.Success();
+                }
+
+                Vector3 destination = agent.hasIssuedDestination ? agent.lastIssuedDestination : agent.transform.position;
+                if (agent.IsWithinArrivalDistance(destination))
+                {
+                    agent.CompleteMovementStyleCommand(commandType);
+                    return MoveTaskDirective.Success();
+                }
+
+                return MoveTaskDirective.Running(destination);
+            },
+            moveAction: (agent, destination) =>
+            {
+                if (agent.MoveToCommand(destination))
+                {
+                    return true;
+                }
+
+                agent.FailMovementStyleCommand(commandType, "Failed to path to assigned destination.");
+                return false;
+            });
     }
 
     private bool forceCommandPlanRebuild;

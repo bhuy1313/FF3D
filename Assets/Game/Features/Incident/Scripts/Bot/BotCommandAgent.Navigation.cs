@@ -9,6 +9,11 @@ public partial class BotCommandAgent
         return navigationModule != null && navigationModule.TryNavigateTo(destination);
     }
 
+    private bool TryNavigateTo(Vector3 destination, bool allowBlockedPathInterrupt, bool allowRouteFireInterrupt)
+    {
+        return navigationModule != null && navigationModule.TryNavigateTo(destination, allowBlockedPathInterrupt, allowRouteFireInterrupt);
+    }
+
     private bool TrySetDestinationDirect(Vector3 destination)
     {
         return navigationModule != null && navigationModule.TrySetDestinationDirect(destination);
@@ -34,6 +39,16 @@ public partial class BotCommandAgent
     private bool MoveTo(Vector3 destination)
     {
         return navigationModule != null && navigationModule.MoveTo(destination);
+    }
+
+    private bool MoveToIgnoringBlockedPathInterrupt(Vector3 destination)
+    {
+        return TryNavigateTo(destination, false, true);
+    }
+
+    private bool MoveToIgnoringRouteFireInterrupt(Vector3 destination)
+    {
+        return TryNavigateTo(destination, true, false);
     }
 
     private bool TryTraverseOffMeshLink()

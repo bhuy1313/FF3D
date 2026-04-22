@@ -41,12 +41,12 @@ public partial class BotCommandAgent
                     return BotPlanTaskStatus.Success;
                 }
 
-                if (!agent.TryMoveToOrFail(orderPoint, agent.AbortHazardIsolationOrder, "Failed to path to isolate point."))
-                {
-                    return BotPlanTaskStatus.Failure;
-                }
-
-                return BotPlanTaskStatus.Running;
+                return agent.AdvanceOrderPointSearch(
+                    orderPoint,
+                    agent.IsNearHazardIsolationPoint,
+                    () => agent.CompleteHazardIsolationOrder("No active hazard device found near the isolate point."),
+                    agent.AbortHazardIsolationOrder,
+                    "Failed to path to isolate point.");
             }
 
             agent.SetCurrentHazardIsolationTarget(target);
@@ -58,58 +58,13 @@ public partial class BotCommandAgent
         }
     }
 
-    private sealed class MoveToHazardIsolationTargetTask : IBotPlanTask
+    private sealed class MoveToHazardIsolationTargetTask : MoveToPositionTask
     {
-        public string Name => "Move To Hazard Device";
-
-        public void OnStart(BotCommandAgent agent)
-        {
-        }
-
-        public BotPlanTaskStatus OnUpdate(BotCommandAgent agent)
-        {
-            IBotHazardIsolationTarget target = agent.currentHazardIsolationTarget;
-            if (target == null)
-            {
-                agent.RequestCommandPlanRebuild();
-                return BotPlanTaskStatus.Success;
-            }
-
-            if (!agent.TryGetHazardIsolationComponent(target, out Component _))
-            {
-                agent.AbortHazardIsolationOrder("Hazard isolation target is missing its runtime component.");
-                return BotPlanTaskStatus.Failure;
-            }
-
-            Vector3 targetPosition = target.GetWorldPosition();
-            float interactionDistance = Mathf.Max(0.5f, agent.hazardIsolationInteractionDistance);
-            if (agent.IsWithinHorizontalDistance(targetPosition, interactionDistance))
-            {
-                agent.StopNavMeshMovement();
-                return BotPlanTaskStatus.Success;
-            }
-
-            if (agent.navMeshAgent == null || !agent.navMeshAgent.enabled || !agent.navMeshAgent.isOnNavMesh)
-            {
-                agent.AbortHazardIsolationOrder("Bot is not on a valid NavMesh to reach the hazard device.");
-                return BotPlanTaskStatus.Failure;
-            }
-
-            if (agent.cachedHazardIsolationStoppingDistance < 0f)
-            {
-                agent.cachedHazardIsolationStoppingDistance = agent.navMeshAgent.stoppingDistance;
-            }
-
-            agent.navMeshAgent.stoppingDistance = Mathf.Max(agent.navMeshAgent.stoppingDistance, interactionDistance * 0.85f);
-            if (!agent.TryMoveIntoHorizontalRangeOrFail(targetPosition, interactionDistance, agent.AbortHazardIsolationOrder, "Failed to path to hazard device."))
-            {
-                return BotPlanTaskStatus.Failure;
-            }
-
-            return BotPlanTaskStatus.Running;
-        }
-
-        public void OnEnd(BotCommandAgent agent, bool interrupted)
+        public MoveToHazardIsolationTargetTask() : base(
+            "Move To Hazard Device",
+            agent => agent.UpdateHazardIsolationTargetMove(),
+            moveAction: (agent, destination) => agent.TryMoveToHazardIsolationTarget(destination),
+            onEnd: (agent, interrupted) => agent.RestoreHazardIsolationStoppingDistance())
         {
         }
     }
@@ -185,5 +140,65 @@ public partial class BotCommandAgent
             .Add(new AcquireHazardIsolationTargetTask())
             .Add(new MoveToHazardIsolationTargetTask())
             .Add(new InteractHazardIsolationTargetTask());
+    }
+
+    private MoveTaskDirective UpdateHazardIsolationTargetMove()
+    {
+        IBotHazardIsolationTarget target = currentHazardIsolationTarget;
+        if (target == null)
+        {
+            RequestCommandPlanRebuild();
+            return MoveTaskDirective.Success();
+        }
+
+        if (!TryGetHazardIsolationComponent(target, out Component _))
+        {
+            AbortHazardIsolationOrder("Hazard isolation target is missing its runtime component.");
+            return MoveTaskDirective.Failure();
+        }
+
+        Vector3 targetPosition = target.GetWorldPosition();
+        float interactionDistance = Mathf.Max(0.5f, hazardIsolationInteractionDistance);
+        if (navMeshAgent == null || !navMeshAgent.enabled || !navMeshAgent.isOnNavMesh)
+        {
+            AbortHazardIsolationOrder("Bot is not on a valid NavMesh to reach the hazard device.");
+            return MoveTaskDirective.Failure();
+        }
+
+        return UpdateMoveIntoHorizontalRange(targetPosition, interactionDistance);
+    }
+
+    private bool TryMoveToHazardIsolationTarget(Vector3 destination)
+    {
+        if (navMeshAgent == null || !navMeshAgent.enabled || !navMeshAgent.isOnNavMesh)
+        {
+            AbortHazardIsolationOrder("Bot is not on a valid NavMesh to reach the hazard device.");
+            return false;
+        }
+
+        if (cachedHazardIsolationStoppingDistance < 0f)
+        {
+            cachedHazardIsolationStoppingDistance = navMeshAgent.stoppingDistance;
+        }
+
+        float interactionDistance = Mathf.Max(0.5f, hazardIsolationInteractionDistance);
+        if (TryMoveIntoHorizontalRangeOrFail(destination, interactionDistance, AbortHazardIsolationOrder, "Failed to path to hazard device.", 0.85f))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private void RestoreHazardIsolationStoppingDistance()
+    {
+        if (cachedHazardIsolationStoppingDistance >= 0f &&
+            navMeshAgent != null &&
+            navMeshAgent.enabled)
+        {
+            navMeshAgent.stoppingDistance = cachedHazardIsolationStoppingDistance;
+        }
+
+        cachedHazardIsolationStoppingDistance = -1f;
     }
 }

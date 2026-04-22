@@ -24,6 +24,41 @@ public partial class BotCommandAgent
             return;
         }
 
+        if (IsRouteFireClearingActive())
+        {
+            Component routeFireComponent = currentRouteBlockingFire as Component;
+            Vector3? routeFirePosition = currentRouteBlockingFire != null
+                ? (Vector3?)currentRouteBlockingFire.GetWorldPosition()
+                : hasIssuedDestination ? (Vector3?)lastIssuedDestination : (Vector3?)null;
+
+            switch (currentRouteFirePhase)
+            {
+                case RouteFirePhase.AcquireTool:
+                    BeginOrRefreshTask(
+                        BotTaskType.AcquireTool,
+                        HasMovePickupTarget
+                            ? "Retrieving suppression tool for route fire."
+                            : "Acquiring suppression tool for route fire.",
+                        routeFireComponent,
+                        routeFirePosition);
+                    return;
+                case RouteFirePhase.ReturnToFire:
+                    BeginOrRefreshTask(
+                        BotTaskType.Move,
+                        "Returning to fire blocking the route.",
+                        routeFireComponent,
+                        routeFirePosition);
+                    return;
+                case RouteFirePhase.Extinguish:
+                    BeginOrRefreshTask(
+                        BotTaskType.Extinguish,
+                        "Clearing fire blocking the route.",
+                        routeFireComponent,
+                        routeFirePosition);
+                    return;
+            }
+        }
+
         if (currentBlockedBreakable != null &&
             !currentBlockedBreakable.IsBroken &&
             currentBlockedBreakable.CanBeClearedByBot)

@@ -83,6 +83,11 @@ public partial class BotCommandAgent
 
             agent.ClearFollowTargetLossState();
             agent.CurrentFollowTarget = target;
+            if (agent.HasActiveTacticalMovementInterrupt())
+            {
+                return BotPlanTaskStatus.Running;
+            }
+
             agent.ProcessFollowOrder();
             return agent.behaviorContext != null && agent.behaviorContext.HasFollowOrder
                 ? BotPlanTaskStatus.Running

@@ -494,7 +494,9 @@ public class KeyHintPanelController_All : MonoBehaviour
         bool isGrabActive = interactionSystem.IsGrabActive;
         bool isCarryingRescuable = interactionSystem.CurrentCarryWeightKg > 0.01f;
         GameObject heldObject = inventorySystem != null ? inventorySystem.HeldObject : null;
+        GameObject occupyingObject = interactionSystem.CurrentHandOccupyingObject;
         bool canPickupMoreItems = inventorySystem != null && inventorySystem.ItemCount < inventorySystem.MaxSlots;
+        bool heldItemBlocksStow = HandOccupancyUtility.BlocksInventoryStow(occupyingObject, inventorySystem != null ? inventorySystem.gameObject : null);
 
         FireHose heldFireHose = FindComponentInTargetHierarchy<FireHose>(heldObject);
         Tool heldTool = FindComponentInTargetHierarchy<Tool>(heldObject);
@@ -584,17 +586,17 @@ public class KeyHintPanelController_All : MonoBehaviour
             AddUniqueHint(hints, "Use", "Use Item");
             AddUniqueHint(hints, "Drop", "Drop Item");
         }
-        else if (inventorySystem != null && inventorySystem.ItemCount > 0)
+        else if (inventorySystem != null && inventorySystem.ItemCount > 0 && !heldItemBlocksStow)
         {
             AppendInventorySelectionHints(hints, inventorySystem.ItemCount, inventorySystem.MaxSlots);
         }
 
-        if (targetIsPickupable && canPickupMoreItems)
+        if (targetIsPickupable && canPickupMoreItems && !heldItemBlocksStow)
         {
             AddUniqueHint(hints, "Pickup", ResolvePickupDisplayName(currentTarget));
         }
 
-        if (targetIsGrabbable && heldObject == null && !isCarryingRescuable)
+        if (targetIsGrabbable && occupyingObject == null && !isCarryingRescuable)
         {
             AddUniqueHint(hints, "Grab", "Grab Object");
         }
@@ -720,6 +722,7 @@ public class KeyHintPanelController_All : MonoBehaviour
 
         GameObject currentTarget = interactionSystem != null ? interactionSystem.CurrentTarget : null;
         GameObject heldObject = inventorySystem != null ? inventorySystem.HeldObject : null;
+        GameObject occupyingObject = interactionSystem != null ? interactionSystem.CurrentHandOccupyingObject : heldObject;
         bool isGrabActive = interactionSystem != null && interactionSystem.IsGrabActive;
         bool isCarryingRescuable = interactionSystem != null && interactionSystem.CurrentCarryWeightKg > 0.01f;
         int inventoryItemCount = inventorySystem != null ? inventorySystem.ItemCount : 0;
@@ -731,7 +734,7 @@ public class KeyHintPanelController_All : MonoBehaviour
             ? commandSystem.SelectedCommandTarget.name
             : string.Empty;
 
-        return $"{missionSystem.State}|{missionSystem.MissionId}|{missionSystem.CurrentStageId}|{scheme}|items:{inventoryItemCount}|grab:{isGrabActive}|carry:{isCarryingRescuable}|cmdAwait:{isAwaitingCommandDestination}|cmdHover:{hoveredCommandTargetName}|cmdSelected:{selectedCommandTargetName}|{BuildTargetContextDescriptor(currentTarget)}|held:{BuildHeldObjectDescriptor(heldObject)}";
+        return $"{missionSystem.State}|{missionSystem.MissionId}|{missionSystem.CurrentStageId}|{scheme}|items:{inventoryItemCount}|grab:{isGrabActive}|carry:{isCarryingRescuable}|cmdAwait:{isAwaitingCommandDestination}|cmdHover:{hoveredCommandTargetName}|cmdSelected:{selectedCommandTargetName}|{BuildTargetContextDescriptor(currentTarget)}|held:{BuildHeldObjectDescriptor(occupyingObject)}";
     }
 
     private static string BuildTargetContextDescriptor(GameObject currentTarget)

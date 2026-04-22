@@ -98,6 +98,14 @@ internal sealed class BotMovePickupController
 
         if (currentMovePickupTarget is IBotExtinguisherItem extinguisherItem)
         {
+            float extinguisherDistance = GetPickupableHorizontalDistance(currentMovePickupTarget, options.BotTransform.position);
+            if (extinguisherDistance > options.PickupDistance)
+            {
+                options.SetPickupWindow?.Invoke(true, currentMovePickupTarget);
+                options.LogPathFlow?.Invoke($"move-pickup-approach:{pickupName}", "Moving.");
+                return false;
+            }
+
             if (options.TryEnsureExtinguisherEquipped != null && options.TryEnsureExtinguisherEquipped(extinguisherItem))
             {
                 options.SetPickupWindow?.Invoke(false, null);
@@ -111,6 +119,14 @@ internal sealed class BotMovePickupController
 
         if (currentMovePickupTarget is IBotBreakTool breakTool)
         {
+            float breakToolDistance = GetPickupableHorizontalDistance(currentMovePickupTarget, options.BotTransform.position);
+            if (breakToolDistance > options.PickupDistance)
+            {
+                options.SetPickupWindow?.Invoke(true, currentMovePickupTarget);
+                options.LogPathFlow?.Invoke($"move-pickup-approach:{pickupName}", "Moving.");
+                return false;
+            }
+
             if (options.TryEnsureBreakToolEquipped != null && options.TryEnsureBreakToolEquipped(breakTool))
             {
                 options.SetPickupWindow?.Invoke(false, null);

@@ -22,6 +22,13 @@ public enum FireExtinguisherType
     CO2 = 2
 }
 
+public enum FireSuppressionOutcome
+{
+    SafeEffective = 0,
+    SafeLimited = 1,
+    UnsafeWorsens = 2
+}
+
 namespace TrueJourney.BotBehavior
 {
     public interface IBotExtinguisherItem
@@ -37,6 +44,7 @@ namespace TrueJourney.BotBehavior
         bool RequiresPreciseAim { get; }
         bool HasUsableCharge { get; }
         bool IsHeld { get; }
+        GameObject CurrentHolder { get; }
         GameObject ClaimOwner { get; }
         bool IsAvailableTo(GameObject requester);
         bool TryClaim(GameObject requester);
@@ -62,6 +70,7 @@ namespace TrueJourney.BotBehavior
         void ApplySuppression(float amount, FireSuppressionAgent agent, GameObject sourceUser);
         bool IsBurning { get; }
         FireHazardType FireType { get; }
+        FireSuppressionOutcome EvaluateSuppressionOutcome(FireSuppressionAgent agent);
         Vector3 GetWorldPosition();
         float GetWorldRadius();
     }

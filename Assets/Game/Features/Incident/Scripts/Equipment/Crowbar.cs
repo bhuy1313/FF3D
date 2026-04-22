@@ -9,8 +9,8 @@ public class Crowbar : Tool
 
     public override void Use(GameObject user)
     {
-        if (TryGetUseHit(user, out RaycastHit hit) &&
-            TryFindPryOpenable(hit.collider, out IPryOpenable pryOpenable) &&
+        if (TryGetUseHit(user, out UseHit hit) &&
+            TryFindPryOpenable(hit.Collider, out IPryOpenable pryOpenable) &&
             pryOpenable.TryPryOpen(user != null ? user : gameObject))
         {
             return;

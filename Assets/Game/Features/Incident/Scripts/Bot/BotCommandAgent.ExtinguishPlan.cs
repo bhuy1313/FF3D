@@ -3,6 +3,12 @@ using TrueJourney.BotBehavior;
 
 public partial class BotCommandAgent
 {
+    private enum SuppressionToolAcquisitionKind
+    {
+        ExtinguishPlan = 0,
+        RouteFireInterrupt = 1
+    }
+
     private sealed class BotExtinguishPlanState
     {
         public Vector3 OrderPoint;
@@ -72,72 +78,41 @@ public partial class BotCommandAgent
 
         public void OnEnd(BotCommandAgent agent, bool interrupted)
         {
+            if (interrupted)
+            {
+                agent.StopExtinguisher();
+                agent.sprayReadyTime = -1f;
+            }
         }
     }
 
-    private sealed class AcquireExtinguishToolTask : IBotPlanTask
+    private sealed class AcquireSuppressionToolTask : IBotPlanTask
     {
+        private readonly SuppressionToolAcquisitionKind kind;
+
+        public AcquireSuppressionToolTask(SuppressionToolAcquisitionKind kind)
+        {
+            this.kind = kind;
+        }
+
         public string Name => "Acquire Suppression Tool";
 
         public void OnStart(BotCommandAgent agent)
         {
+            if (kind == SuppressionToolAcquisitionKind.RouteFireInterrupt)
+            {
+                agent.SetRouteFirePhase(RouteFirePhase.AcquireTool);
+                return;
+            }
+
             agent.SetExtinguishSubtask(BotExtinguishSubtask.AcquireTool, "Acquiring suppression tool.");
         }
 
         public BotPlanTaskStatus OnUpdate(BotCommandAgent agent)
         {
-            if (!agent.TrySyncExtinguishPlanOrder())
-            {
-                return BotPlanTaskStatus.Failure;
-            }
-
-            BotExtinguishPlanState state = agent.extinguishPlanState;
-            state.PlannedTool = agent.ResolveCommittedExtinguishTool(
-                state.OrderPoint,
-                state.FirePosition,
-                state.FireGroup,
-                state.FireTarget,
-                state.Mode);
-
-            if (state.PlannedTool == null)
-            {
-                if (state.Mode == BotExtinguishCommandMode.FireGroup &&
-                    agent.TryFallbackFireGroupOrderToPointFire(state.FireTarget, out Vector3 fallbackDestination))
-                {
-                    agent.SetExtinguishSubtask(BotExtinguishSubtask.Recover, $"Replanning extinguish route through point fire at {fallbackDestination}.");
-                    agent.InvalidateActiveCommandPlan();
-                    return BotPlanTaskStatus.Success;
-                }
-
-                agent.FailActiveExtinguishOrder("No available suppression tool can reach the assigned fire.", BotTaskStatus.Blocked);
-                return BotPlanTaskStatus.Failure;
-            }
-
-            state.UsesPreciseAim = BotCommandAgent.UsesPreciseAim(state.PlannedTool);
-            if (!agent.TryEnsureExtinguisherEquipped(state.PlannedTool))
-            {
-                agent.ClearHeadAimFocus();
-                agent.ClearHandAimFocus();
-                agent.ResetExtinguishCrouchState();
-                return BotPlanTaskStatus.Running;
-            }
-
-            if (agent.extinguishStartupPending)
-            {
-                agent.SetExtinguishSubtask(BotExtinguishSubtask.Recover, "Recovering extinguish order.");
-                agent.ClearHeadAimFocus();
-                agent.ClearHandAimFocus();
-                agent.extinguishStartupPending = false;
-                return BotPlanTaskStatus.Running;
-            }
-
-            if (agent.activeExtinguisher == null || !agent.activeExtinguisher.HasUsableCharge)
-            {
-                agent.FailActiveExtinguishOrder("Active suppression tool is out of charge.", BotTaskStatus.Failed);
-                return BotPlanTaskStatus.Failure;
-            }
-
-            return BotPlanTaskStatus.Success;
+            return kind == SuppressionToolAcquisitionKind.RouteFireInterrupt
+                ? agent.TryUpdateRouteFireSuppressionToolAcquisition()
+                : agent.TryUpdateExtinguishSuppressionToolAcquisition();
         }
 
         public void OnEnd(BotCommandAgent agent, bool interrupted)
@@ -145,87 +120,12 @@ public partial class BotCommandAgent
         }
     }
 
-    private sealed class MoveToExtinguishPositionTask : IBotPlanTask
+    private sealed class MoveToExtinguishPositionTask : MoveToPositionTask
     {
-        public string Name => "Move To Extinguish Position";
-
-        public void OnStart(BotCommandAgent agent)
-        {
-            agent.SetExtinguishSubtask(BotExtinguishSubtask.MoveToFire, "Moving to extinguish position.");
-        }
-
-        public BotPlanTaskStatus OnUpdate(BotCommandAgent agent)
-        {
-            if (!agent.TrySyncExtinguishPlanOrder() || agent.activeExtinguisher == null)
-            {
-                return BotPlanTaskStatus.Failure;
-            }
-
-            BotExtinguishPlanState state = agent.extinguishPlanState;
-            Vector3 botPosition = agent.transform.position;
-
-            if (!state.UsesPreciseAim)
-            {
-                IFireTarget routeFireTarget = agent.ResolveExtinguisherRouteTarget(state.TargetSearchPoint);
-                if (routeFireTarget != null && routeFireTarget.IsBurning)
-                {
-                    state.FireTarget = routeFireTarget;
-                    state.FirePosition = routeFireTarget.GetWorldPosition();
-                    return BotPlanTaskStatus.Success;
-                }
-
-                if (!agent.IsWithinArrivalDistance(state.OrderPoint))
-                {
-                    if (agent.ShouldIssueExtinguisherApproachMove(state.OrderPoint))
-                    {
-                        agent.MoveTo(state.OrderPoint);
-                    }
-
-                    return BotPlanTaskStatus.Running;
-                }
-
-                return BotPlanTaskStatus.Success;
-            }
-
-            IFireGroupTarget fireGroup = state.FireGroup != null && state.FireGroup.HasActiveFires
-                ? state.FireGroup
-                : agent.ResolveIssuedFireGroupTarget(state.TargetSearchPoint);
-            IFireTarget fireTarget = state.FireTarget != null && state.FireTarget.IsBurning
-                ? state.FireTarget
-                : agent.ResolveActiveFireTarget(state.TargetSearchPoint);
-            if ((fireGroup == null || !fireGroup.HasActiveFires) && (fireTarget == null || !fireTarget.IsBurning))
-            {
-                agent.CompleteExtinguishOrder("No active fire target remained near the assigned point.");
-                return BotPlanTaskStatus.Success;
-            }
-
-            state.FireGroup = fireGroup;
-            state.FireTarget = fireTarget;
-            state.FirePosition = fireTarget != null && fireTarget.IsBurning
-                ? fireTarget.GetWorldPosition()
-                : fireGroup.GetWorldCenter();
-
-            float horizontalDistanceToFire = BotCommandAgent.GetHorizontalDistance(botPosition, state.FirePosition);
-            float requiredHorizontalDistance = agent.GetRequiredHorizontalDistanceForAim(agent.activeExtinguisher, state.FirePosition);
-            float desiredHorizontalDistance = Mathf.Max(agent.activeExtinguisher.PreferredSprayDistance, requiredHorizontalDistance);
-            bool shouldReposition =
-                horizontalDistanceToFire > agent.activeExtinguisher.MaxSprayDistance ||
-                horizontalDistanceToFire < desiredHorizontalDistance - 0.35f;
-            if (!shouldReposition)
-            {
-                return BotPlanTaskStatus.Success;
-            }
-
-            Vector3 desiredPosition = agent.ResolveExtinguishPosition(state.TargetSearchPoint, state.FirePosition, desiredHorizontalDistance);
-            if (agent.ShouldIssueExtinguisherApproachMove(desiredPosition))
-            {
-                agent.MoveTo(desiredPosition);
-            }
-
-            return BotPlanTaskStatus.Running;
-        }
-
-        public void OnEnd(BotCommandAgent agent, bool interrupted)
+        public MoveToExtinguishPositionTask() : base(
+            "Move To Extinguish Position",
+            agent => agent.UpdateExtinguishPositionMove(),
+            onStart: agent => agent.SetExtinguishSubtask(BotExtinguishSubtask.MoveToFire, "Moving to extinguish position."))
         {
         }
     }
@@ -261,6 +161,14 @@ public partial class BotCommandAgent
                     : BotPlanTaskStatus.Failure;
             }
 
+            if (BotCommandAgent.IsUnsafeSuppressionToolForFire(agent.activeExtinguisher, state.FireTarget))
+            {
+                agent.HandleUnsafeSuppressionTool(state, state.FireTarget);
+                return agent.behaviorContext != null && agent.behaviorContext.HasExtinguishOrder
+                    ? BotPlanTaskStatus.Success
+                    : BotPlanTaskStatus.Failure;
+            }
+
             if (state.UsesPreciseAim)
             {
                 IFireGroupTarget fireGroup = state.FireGroup != null && state.FireGroup.HasActiveFires
@@ -291,6 +199,14 @@ public partial class BotCommandAgent
                     state.FirePosition = fireTarget.GetWorldPosition();
                 }
 
+                if (BotCommandAgent.IsUnsafeSuppressionToolForFire(agent.activeExtinguisher, state.FireTarget))
+                {
+                    agent.HandleUnsafeSuppressionTool(state, state.FireTarget);
+                    return agent.behaviorContext != null && agent.behaviorContext.HasExtinguishOrder
+                        ? BotPlanTaskStatus.Success
+                        : BotPlanTaskStatus.Failure;
+                }
+
                 agent.ProcessFireExtinguisherExtinguishRoute(
                     state.OrderPoint,
                     state.TargetSearchPoint,
@@ -304,6 +220,13 @@ public partial class BotCommandAgent
                 return BotPlanTaskStatus.Success;
             }
 
+            if (agent.activeExtinguisher == null)
+            {
+                return agent.behaviorContext != null && agent.behaviorContext.HasExtinguishOrder
+                    ? BotPlanTaskStatus.Success
+                    : BotPlanTaskStatus.Failure;
+            }
+
             if (!agent.activeExtinguisher.HasUsableCharge)
             {
                 agent.HandleExtinguishChargeDepleted(state);
@@ -315,11 +238,6 @@ public partial class BotCommandAgent
 
         public void OnEnd(BotCommandAgent agent, bool interrupted)
         {
-            if (interrupted)
-            {
-                agent.StopExtinguisher();
-                agent.sprayReadyTime = -1f;
-            }
         }
     }
 
@@ -331,7 +249,8 @@ public partial class BotCommandAgent
     {
         return new BotPlan("Extinguish")
             .Add(new AcquireExtinguishTargetTask())
-            .Add(new AcquireExtinguishToolTask())
+            .Add(new AcquireSuppressionToolTask(SuppressionToolAcquisitionKind.ExtinguishPlan))
+            .Add(new MovePickupTask())
             .Add(new MoveToExtinguishPositionTask())
             .Add(new SuppressFireTask());
     }
@@ -396,14 +315,179 @@ public partial class BotCommandAgent
         ClearHeadAimFocus();
         ClearHandAimFocus();
         ResetExtinguishCrouchState();
-        ReleaseCommittedToolIfMatches(activeExtinguisher);
-        activeExtinguisher = null;
         preferredExtinguishTool = null;
         planProcessor.InjectFront(
             this,
-            new AcquireExtinguishToolTask(),
+            new AcquireSuppressionToolTask(SuppressionToolAcquisitionKind.ExtinguishPlan),
+            new MovePickupTask(),
             new MoveToExtinguishPositionTask(),
             new SuppressFireTask());
         SetExtinguishSubtask(BotExtinguishSubtask.Recover, "Suppression tool depleted. Acquiring replacement tool.");
+    }
+
+    private void HandleUnsafeSuppressionTool(BotExtinguishPlanState state, IFireTarget fireTarget)
+    {
+        if (state == null)
+        {
+            return;
+        }
+
+        if (fireTarget == null || !fireTarget.IsBurning)
+        {
+            FailActiveExtinguishOrder("Suppression tool is unsafe for the current fire target.", BotTaskStatus.Blocked);
+            return;
+        }
+
+        StopExtinguisher();
+        sprayReadyTime = -1f;
+        ClearHeadAimFocus();
+        ClearHandAimFocus();
+        ResetExtinguishCrouchState();
+        preferredExtinguishTool = null;
+
+        if (!TryResolveSuppressionTool(
+            state.OrderPoint,
+            state.FirePosition,
+            state.FireGroup,
+            fireTarget,
+            state.Mode,
+            false,
+            out IBotExtinguisherItem replacementTool))
+        {
+            FailActiveExtinguishOrder("No safe suppression tool available for the current fire target.", BotTaskStatus.Blocked);
+            return;
+        }
+
+        state.PlannedTool = replacementTool;
+        planProcessor.InjectFront(
+            this,
+            new AcquireSuppressionToolTask(SuppressionToolAcquisitionKind.ExtinguishPlan),
+            new MovePickupTask(),
+            new MoveToExtinguishPositionTask(),
+            new SuppressFireTask());
+        SetExtinguishSubtask(BotExtinguishSubtask.Recover, "Current suppression tool is unsafe. Acquiring a safer replacement.");
+    }
+
+    private BotPlanTaskStatus TryUpdateExtinguishSuppressionToolAcquisition()
+    {
+        if (!TrySyncExtinguishPlanOrder())
+        {
+            return BotPlanTaskStatus.Failure;
+        }
+
+        BotExtinguishPlanState state = extinguishPlanState;
+        if (!TryResolveSuppressionTool(
+            state.OrderPoint,
+            state.FirePosition,
+            state.FireGroup,
+            state.FireTarget,
+            state.Mode,
+            false,
+            out state.PlannedTool))
+        {
+            if (state.Mode == BotExtinguishCommandMode.FireGroup &&
+                TryFallbackFireGroupOrderToPointFire(state.FireTarget, out Vector3 fallbackDestination))
+            {
+                SetExtinguishSubtask(BotExtinguishSubtask.Recover, $"Replanning extinguish route through point fire at {fallbackDestination}.");
+                InvalidateActiveCommandPlan();
+                return BotPlanTaskStatus.Success;
+            }
+
+            FailActiveExtinguishOrder("No available suppression tool can reach the assigned fire.", BotTaskStatus.Blocked);
+            return BotPlanTaskStatus.Failure;
+        }
+
+        state.UsesPreciseAim = BotCommandAgent.UsesPreciseAim(state.PlannedTool);
+        if (!TryAdvanceSuppressionToolAcquisition(state.PlannedTool, true))
+        {
+            if (TryPrepareSuppressionToolMovePickup(state.PlannedTool))
+            {
+                return BotPlanTaskStatus.Success;
+            }
+
+            return BotPlanTaskStatus.Running;
+        }
+
+        if (extinguishStartupPending)
+        {
+            SetExtinguishSubtask(BotExtinguishSubtask.Recover, "Recovering extinguish order.");
+            ClearHeadAimFocus();
+            ClearHandAimFocus();
+            extinguishStartupPending = false;
+            return BotPlanTaskStatus.Running;
+        }
+
+        if (activeExtinguisher == null || !activeExtinguisher.HasUsableCharge)
+        {
+            FailActiveExtinguishOrder("Active suppression tool is out of charge.", BotTaskStatus.Failed);
+            return BotPlanTaskStatus.Failure;
+        }
+
+        return BotPlanTaskStatus.Success;
+    }
+
+    private MoveTaskDirective UpdateExtinguishPositionMove()
+    {
+        if (!TrySyncExtinguishPlanOrder() || activeExtinguisher == null)
+        {
+            return MoveTaskDirective.Failure();
+        }
+
+        BotExtinguishPlanState state = extinguishPlanState;
+        Vector3 botPosition = transform.position;
+
+        if (!state.UsesPreciseAim)
+        {
+            IFireTarget routeFireTarget = ResolveExtinguisherRouteTarget(state.TargetSearchPoint);
+            if (routeFireTarget != null && routeFireTarget.IsBurning)
+            {
+                state.FireTarget = routeFireTarget;
+                state.FirePosition = routeFireTarget.GetWorldPosition();
+                return MoveTaskDirective.Success();
+            }
+
+            if (!IsWithinArrivalDistance(state.OrderPoint))
+            {
+                return ShouldIssueExtinguisherApproachMove(state.OrderPoint)
+                    ? MoveTaskDirective.Running(state.OrderPoint)
+                    : MoveTaskDirective.Continue();
+            }
+
+            return MoveTaskDirective.Success();
+        }
+
+        IFireGroupTarget fireGroup = state.FireGroup != null && state.FireGroup.HasActiveFires
+            ? state.FireGroup
+            : ResolveIssuedFireGroupTarget(state.TargetSearchPoint);
+        IFireTarget fireTarget = state.FireTarget != null && state.FireTarget.IsBurning
+            ? state.FireTarget
+            : ResolveActiveFireTarget(state.TargetSearchPoint);
+        if ((fireGroup == null || !fireGroup.HasActiveFires) && (fireTarget == null || !fireTarget.IsBurning))
+        {
+            CompleteExtinguishOrder("No active fire target remained near the assigned point.");
+            return MoveTaskDirective.Success();
+        }
+
+        state.FireGroup = fireGroup;
+        state.FireTarget = fireTarget;
+        state.FirePosition = fireTarget != null && fireTarget.IsBurning
+            ? fireTarget.GetWorldPosition()
+            : fireGroup.GetWorldCenter();
+
+        float horizontalDistanceToFire = BotCommandAgent.GetHorizontalDistance(botPosition, state.FirePosition);
+        float requiredHorizontalDistance = GetRequiredHorizontalDistanceForAim(activeExtinguisher, state.FirePosition);
+        float desiredHorizontalDistance = Mathf.Max(activeExtinguisher.PreferredSprayDistance, requiredHorizontalDistance);
+        bool shouldReposition =
+            horizontalDistanceToFire > activeExtinguisher.MaxSprayDistance ||
+            horizontalDistanceToFire < desiredHorizontalDistance - 0.35f;
+        if (!shouldReposition)
+        {
+            return MoveTaskDirective.Success();
+        }
+
+        Vector3 desiredPosition = ResolveExtinguishPosition(state.TargetSearchPoint, state.FirePosition, desiredHorizontalDistance);
+        return ShouldIssueExtinguisherApproachMove(desiredPosition)
+            ? MoveTaskDirective.Running(desiredPosition)
+            : MoveTaskDirective.Continue();
     }
 }

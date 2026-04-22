@@ -50,12 +50,12 @@ public partial class BotCommandAgent
                 return BotPlanTaskStatus.Success;
             }
 
-            if (!agent.TryMoveToOrFail(orderPoint, agent.AbortBreachOrder, "Failed to path to breach point."))
-            {
-                return BotPlanTaskStatus.Failure;
-            }
-
-            return BotPlanTaskStatus.Running;
+            return agent.AdvanceOrderPointSearch(
+                orderPoint,
+                agent.IsNearBreachPoint,
+                () => agent.CompleteBreachOrder("No breach target found near the assigned point."),
+                agent.AbortBreachOrder,
+                "Failed to path to breach point.");
         }
 
         public void OnEnd(BotCommandAgent agent, bool interrupted)
@@ -138,7 +138,9 @@ public partial class BotCommandAgent
 
                 Vector3 targetPosition = pryTarget.GetWorldPosition();
                 float interactionDistance = Mathf.Max(0.5f, agent.breachInteractionDistance);
-                if (!agent.IsWithinHorizontalDistance(targetPosition, interactionDistance))
+                MoveTaskDirective moveDirective =
+                    agent.UpdateMoveIntoHorizontalRange(targetPosition, interactionDistance, () => agent.StopAndAimTowards(targetPosition));
+                if (moveDirective.Status != BotPlanTaskStatus.Success)
                 {
                     agent.SetBreakSubtask(BotBreakSubtask.MoveToObstacle, $"Moving to pry target '{BotCommandAgent.GetDebugTargetName(pryTarget)}'.");
                     if (!agent.TryMoveIntoHorizontalRangeOrFail(targetPosition, interactionDistance, agent.AbortBreachOrder, "Failed to path to breach target."))
@@ -149,7 +151,6 @@ public partial class BotCommandAgent
                     return BotPlanTaskStatus.Running;
                 }
 
-                agent.StopAndAimTowards(targetPosition);
                 if (!pryTarget.IsPryInProgress && !pryTarget.CanBePriedOpen)
                 {
                     agent.AbortBreachOrder("Assigned pry target can no longer be breached.");

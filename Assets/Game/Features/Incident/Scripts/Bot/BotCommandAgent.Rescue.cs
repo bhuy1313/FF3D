@@ -145,7 +145,7 @@ public partial class BotCommandAgent
 
         foreach (IBotExtinguisherItem extinguisher in BotRuntimeRegistry.ActiveExtinguisherItems)
         {
-            if (extinguisher == null || !extinguisher.IsHeld || extinguisher.ClaimOwner != gameObject)
+            if (extinguisher == null || extinguisher.CurrentHolder != gameObject)
             {
                 continue;
             }

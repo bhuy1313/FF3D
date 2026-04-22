@@ -230,6 +230,7 @@ public partial class BotCommandAgent
                 return;
             }
 
+            owner.ClearSuspendedFollowResume();
             owner.behaviorContext.ClearOrdersExcept(commandType);
 
             if (commandType != BotCommandType.Extinguish && owner.activityDebug != null && owner.activityDebug.HasExtinguishDebugStage)
@@ -280,16 +281,21 @@ public partial class BotCommandAgent
 
         public bool TryNavigateTo(Vector3 destination)
         {
+            return TryNavigateTo(destination, true, true);
+        }
+
+        public bool TryNavigateTo(Vector3 destination, bool allowBlockedPathInterrupt, bool allowRouteFireInterrupt)
+        {
             owner.LogPathClearingFlow(
                 $"move-destination:{BotCommandAgent.FormatFlowVectorKey(destination)}",
                 $"Received Move order to {destination}.");
 
-            if (owner.TryHandleBlockedPath(destination))
+            if (allowBlockedPathInterrupt && owner.TryHandleBlockedPath(destination))
             {
                 return true;
             }
 
-            if (owner.TryHandleRouteBlockingFire(destination))
+            if (allowRouteFireInterrupt && owner.TryHandleRouteBlockingFire(destination))
             {
                 return true;
             }
@@ -533,7 +539,22 @@ public partial class BotCommandAgent
         public bool IsWithinArrivalDistance(Vector3 destination)
         {
             float threshold = (owner.behaviorContext != null ? owner.behaviorContext.ArrivalDistance : 0.35f) + 0.2f;
-            return (destination - owner.transform.position).sqrMagnitude <= threshold * threshold;
+            if (owner.navMeshAgent != null &&
+                owner.navMeshAgent.enabled &&
+                owner.navMeshAgent.isOnNavMesh &&
+                owner.navMeshAgent.hasPath &&
+                !owner.navMeshAgent.pathPending)
+            {
+                float remainingDistance = owner.navMeshAgent.remainingDistance;
+                if (!float.IsInfinity(remainingDistance) && remainingDistance <= threshold)
+                {
+                    return true;
+                }
+            }
+
+            Vector2 destination2 = new Vector2(destination.x, destination.z);
+            Vector2 current2 = new Vector2(owner.transform.position.x, owner.transform.position.z);
+            return (destination2 - current2).sqrMagnitude <= threshold * threshold;
         }
 
         public void AimTowards(Vector3 worldPoint)

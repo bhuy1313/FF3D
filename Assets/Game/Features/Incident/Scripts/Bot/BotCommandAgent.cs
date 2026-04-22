@@ -102,6 +102,8 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     [SerializeField] private float toolSearchRadius = 30f;
     [SerializeField] private float fireSearchRadius = 12f;
     [SerializeField] private float pickupDistance = 1.5f;
+    [SerializeField] private Vector3 bulkyToolDropOffset = new Vector3(0.65f, 0f, 0.75f);
+    [SerializeField] private float bulkyToolDropGroundProbeDistance = 2f;
     [SerializeField] private float sprayFacingThreshold = 0.9f;
     [SerializeField] private float sprayStartDelay = 0.3f;
     [SerializeField] private bool crouchBeforeFireHoseSpray = true;
@@ -212,6 +214,9 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     private Vector3 lastFollowDestination;
     private int currentEscortSlotIndex = -1;
     private float followTargetLostSinceTime = -1f;
+    private BotFollowOrder suspendedFollowOrder;
+    private BotCommandType suspendedFollowCommandType;
+    private bool hasSuspendedFollowResume;
     private readonly Vector3[] escortSlotOffsets = new Vector3[5];
     private readonly int[] occupiedEscortSlotIndices = new int[5];
     private BotActivityDebug activityDebug;
@@ -574,6 +579,59 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
         return behaviorContext.TryGetFollowOrder(out followOrder);
     }
 
+    private bool TrySuspendFollowIntoMove(Vector3 destination)
+    {
+        if (behaviorContext == null ||
+            hasSuspendedFollowResume ||
+            !behaviorContext.TryGetCommandIntentSnapshot(out BotCommandIntentPayload payload) ||
+            !BotCommandTypeUtility.UsesFollowOrder(payload.CommandType) ||
+            !behaviorContext.TryGetFollowOrder(out BotFollowOrder followOrder))
+        {
+            return false;
+        }
+
+        suspendedFollowOrder = followOrder;
+        suspendedFollowCommandType = payload.CommandType;
+        hasSuspendedFollowResume = true;
+        behaviorContext.ClearFollowOrder();
+        behaviorContext.SetMoveOrder(destination);
+        lastIssuedDestination = destination;
+        hasIssuedDestination = true;
+        return true;
+    }
+
+    private void TryResumeSuspendedFollow()
+    {
+        if (!hasSuspendedFollowResume || behaviorContext == null)
+        {
+            return;
+        }
+
+        BotFollowOrder followOrder = suspendedFollowOrder;
+        BotCommandType commandType = suspendedFollowCommandType;
+        ClearSuspendedFollowResume();
+
+        switch (commandType)
+        {
+            case BotCommandType.Assist:
+                behaviorContext.SetAssistOrder(followOrder);
+                break;
+            case BotCommandType.Regroup:
+                behaviorContext.SetRegroupOrder(followOrder);
+                break;
+            default:
+                behaviorContext.SetFollowOrder(followOrder);
+                break;
+        }
+    }
+
+    private void ClearSuspendedFollowResume()
+    {
+        suspendedFollowOrder = default;
+        suspendedFollowCommandType = BotCommandType.None;
+        hasSuspendedFollowResume = false;
+    }
+
     internal ISafeZoneTarget CurrentSafeZoneTarget
     {
         get => currentSafeZoneTarget;
@@ -654,27 +712,38 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
         return movePickupController != null && movePickupController.TryCompleteMovePickupTarget(CreateMovePickupOptions());
     }
 
-    private BotMovePickupOptions CreateMovePickupOptions()
+    internal bool TryStartPlanMovePickupTarget(IPickupable pickupTarget)
+    {
+        return movePickupController != null &&
+               movePickupController.TryIssueMoveToPickup(pickupTarget, CreateMovePickupOptions(false, false), out _);
+    }
+
+    private BotMovePickupOptions CreateMovePickupOptions(bool prepareIssuedCommand = true, bool allowBehaviorMoveOrders = true)
     {
         return new BotMovePickupOptions
         {
             BotTransform = transform,
             NavMeshAgent = navMeshAgent,
-            BehaviorContext = behaviorContext,
+            BehaviorContext = allowBehaviorMoveOrders ? behaviorContext : null,
             InventorySystem = inventorySystem,
             PickupDistance = pickupDistance,
             NavMeshSampleDistance = navMeshSampleDistance,
-            PrepareForIssuedCommand = PrepareForIssuedCommand,
+            PrepareForIssuedCommand = prepareIssuedCommand ? PrepareForIssuedCommand : null,
             LogPathFlow = LogPathClearingFlow,
             GetPickupableName = GetPickupableName,
             SetPickupWindow = SetPickupWindow,
-            TryEnsureExtinguisherEquipped = TryEnsureExtinguisherEquipped,
+            TryEnsureExtinguisherEquipped = tool => TryEnsureExtinguisherEquipped(tool, false),
             TryEnsureBreakToolEquipped = TryEnsureBreakToolEquipped
         };
     }
 
     private void ProcessFollowOrder()
     {
+        if (HasActiveTacticalMovementInterrupt())
+        {
+            return;
+        }
+
         if (behaviorContext == null || !behaviorContext.TryGetFollowOrder(out BotFollowOrder followOrder))
         {
             return;
@@ -691,6 +760,15 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
             escortSlotPreferenceBias);
     }
 
+    private bool HasActiveTacticalMovementInterrupt()
+    {
+        return HasMovePickupTarget ||
+               IsRouteFireClearingActive() ||
+               (currentBlockedBreakable != null &&
+                !currentBlockedBreakable.IsBroken &&
+                currentBlockedBreakable.CanBeClearedByBot);
+    }
+
     private void CancelFollowCommand()
     {
         if (behaviorContext == null)
@@ -699,6 +777,7 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
         }
 
         behaviorContext.ClearFollowOrder();
+        ClearSuspendedFollowResume();
         ClearFollowTargetLossState();
         followTarget = null;
         lastFollowDestination = Vector3.zero;
