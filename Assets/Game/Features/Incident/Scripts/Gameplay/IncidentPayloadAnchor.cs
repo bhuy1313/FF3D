@@ -18,6 +18,7 @@ public class IncidentPayloadAnchor : MonoBehaviour
     [SerializeField] private HazardIsolationDevice[] hazardIsolationDevices = Array.Empty<HazardIsolationDevice>();
 
     [Header("Secondary Fire Placement")]
+    [Tooltip("Fallback secondary fire count when payload does not specify a valid total fire count.")]
     [SerializeField] [Min(0)] private int secondaryFirePointCount = 3;
     [SerializeField] [Min(0.1f)] private float secondaryFireRange = 3f;
     [SerializeField] [Min(0f)] private float minimumSecondaryFireSpacing = 0.85f;
@@ -91,7 +92,9 @@ public class IncidentPayloadAnchor : MonoBehaviour
     {
         runtimeFires.Clear();
 
-        List<SpawnPlacement> placements = BuildRuntimeFirePlacements();
+        int requestedTotalFireCount = ResolveRequestedTotalFireCount(payload);
+        int requestedSecondaryCount = Mathf.Max(0, requestedTotalFireCount - 1);
+        List<SpawnPlacement> placements = BuildRuntimeFirePlacements(requestedSecondaryCount);
         for (int i = 0; i < placements.Count; i++)
         {
             SpawnPlacement placement = placements[i];
@@ -100,15 +103,30 @@ public class IncidentPayloadAnchor : MonoBehaviour
             ConfigureFireInstance(fireInstance, payload);
             runtimeFires.Add(fireInstance);
         }
+
+        if (runtimeFires.Count != requestedTotalFireCount)
+        {
+            Debug.LogWarning(
+                $"{nameof(IncidentPayloadAnchor)} on '{name}' spawned {runtimeFires.Count}/{requestedTotalFireCount} fires " +
+                $"for payload origin '{ValueOrUnknown(payload != null ? payload.fireOrigin : null)}'. " +
+                $"Requested secondary fires: {requestedSecondaryCount}, placed: {Mathf.Max(0, runtimeFires.Count - 1)}.",
+                this);
+            return;
+        }
+
+        Debug.Log(
+            $"{nameof(IncidentPayloadAnchor)} on '{name}' spawned {runtimeFires.Count} fires for payload origin " +
+            $"'{ValueOrUnknown(payload != null ? payload.fireOrigin : null)}' ({Mathf.Max(0, runtimeFires.Count - 1)} secondary).",
+            this);
     }
 
-    private List<SpawnPlacement> BuildRuntimeFirePlacements()
+    private List<SpawnPlacement> BuildRuntimeFirePlacements(int requestedSecondaryCount)
     {
         List<SpawnPlacement> placements = new List<SpawnPlacement>();
         Vector3 anchorPosition = transform.position;
         placements.Add(new SpawnPlacement(anchorPosition, ResolveFallbackRotation()));
 
-        int requestedSecondaryCount = Mathf.Max(0, secondaryFirePointCount);
+        requestedSecondaryCount = Mathf.Max(0, requestedSecondaryCount);
         if (requestedSecondaryCount <= 0)
         {
             return placements;
@@ -137,6 +155,16 @@ public class IncidentPayloadAnchor : MonoBehaviour
         }
 
         return placements;
+    }
+
+    private int ResolveRequestedTotalFireCount(IncidentWorldSetupPayload payload)
+    {
+        if (payload != null && payload.initialFireCount > 0)
+        {
+            return payload.initialFireCount;
+        }
+
+        return Mathf.Max(1, secondaryFirePointCount + 1);
     }
 
     private void ConfigureFireInstance(Fire fireInstance, IncidentWorldSetupPayload payload)
@@ -382,6 +410,11 @@ public class IncidentPayloadAnchor : MonoBehaviour
         }
 
         return string.Equals(left.Trim(), right.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string ValueOrUnknown(string value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "Unknown" : value.Trim();
     }
 
     private readonly struct SpawnPlacement
