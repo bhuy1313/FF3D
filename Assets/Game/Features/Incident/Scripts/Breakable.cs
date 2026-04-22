@@ -1,5 +1,5 @@
-using TrueJourney.BotBehavior;
 using System.Collections;
+using TrueJourney.BotBehavior;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Events;
@@ -20,15 +20,16 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
     [System.Serializable]
     private class BreakToolRequirement
     {
-        [SerializeField] private BreakToolKind toolKind = BreakToolKind.FireAxe;
-        [SerializeField] private float timeToBreak = 1f;
+        [SerializeField]
+        private BreakToolKind toolKind = BreakToolKind.FireAxe;
+
+        [SerializeField]
+        private float timeToBreak = 1f;
 
         public BreakToolKind ToolKind => toolKind;
         public float TimeToBreak => timeToBreak;
 
-        public BreakToolRequirement()
-        {
-        }
+        public BreakToolRequirement() { }
 
         public BreakToolRequirement(BreakToolKind toolKind, float timeToBreak)
         {
@@ -41,46 +42,80 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
     {
         Wood,
         Stone,
-        Glass
+        Glass,
     }
 
     [Header("Type")]
-    [SerializeField] private BreakableType breakableType = BreakableType.Wood;
+    [SerializeField]
+    private BreakableType breakableType = BreakableType.Wood;
 
     [Header("Requirements")]
-    [SerializeField] private BreakToolRequirement[] breakRequirements;
+    [SerializeField]
+    private BreakToolRequirement[] breakRequirements;
+
     [FormerlySerializedAs("freezePlayerWhileBreaking")]
-    [SerializeField] private bool lockPlayerWhileBreaking = true;
+    [SerializeField]
+    private bool lockPlayerWhileBreaking = true;
 
     [Header("Stand Points")]
-    [SerializeField] private bool useBreakStandPoints = true;
-    [SerializeField] private Transform[] breakStandPoints;
-    [SerializeField] private Transform breakLookTarget;
+    [SerializeField]
+    private bool useBreakStandPoints = true;
+
+    [SerializeField]
+    private Transform[] breakStandPoints;
+
+    [SerializeField]
+    private Transform breakLookTarget;
 
     [Header("Marker")]
-    [SerializeField] private bool showMarkerWhileIntact = true;
-    [SerializeField] private GameObject[] markerObjects;
+    [SerializeField]
+    private bool showMarkerWhileIntact = true;
+
+    [SerializeField]
+    private GameObject[] markerObjects;
 
     [Header("Break Behavior")]
-    [SerializeField] private bool destroyOnBreak = false;
-    [SerializeField] private float destroyDelay = 0f;
-    [SerializeField] private bool deactivateOnBreak = true;
+    [SerializeField]
+    private bool destroyOnBreak = false;
+
+    [SerializeField]
+    private float destroyDelay = 0f;
+
+    [SerializeField]
+    private bool deactivateOnBreak = true;
 
     [Header("Effects")]
-    [SerializeField] private bool disableCollidersOnBreak = true;
-    [SerializeField] private bool disableRenderersOnBreak = true;
-    [SerializeField] private GameObject brokenPrefab;
-    [SerializeField] private Transform brokenSpawnPoint;
+    [SerializeField]
+    private bool disableCollidersOnBreak = true;
+
+    [SerializeField]
+    private bool disableRenderersOnBreak = true;
+
+    [SerializeField]
+    private GameObject brokenPrefab;
+
+    [SerializeField]
+    private Transform brokenSpawnPoint;
 
     [Header("Events")]
-    [SerializeField] private UnityEvent onBreakStarted;
-    [SerializeField] private UnityEvent onBroken;
+    [SerializeField]
+    private UnityEvent onBreakStarted;
+
+    [SerializeField]
+    private UnityEvent onBroken;
 
     [Header("Runtime")]
-    [SerializeField] private bool isBroken;
-    [SerializeField] private bool isBreakInProgress;
-    [SerializeField] private GameObject activeBreaker;
-    [SerializeField] private BreakToolKind activeToolKind = BreakToolKind.None;
+    [SerializeField]
+    private bool isBroken;
+
+    [SerializeField]
+    private bool isBreakInProgress;
+
+    [SerializeField]
+    private GameObject activeBreaker;
+
+    [SerializeField]
+    private BreakToolKind activeToolKind = BreakToolKind.None;
 
     private Coroutine breakRoutine;
     private PlayerActionLock activePlayerLock;
@@ -121,7 +156,11 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
         return transform.position;
     }
 
-    public bool TryGetBreakStandPose(Vector3 breakerPosition, out Vector3 standPosition, out Quaternion standRotation)
+    public bool TryGetBreakStandPose(
+        Vector3 breakerPosition,
+        out Vector3 standPosition,
+        out Quaternion standRotation
+    )
     {
         standPosition = default;
         standRotation = Quaternion.identity;
@@ -192,7 +231,11 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
         activeBreaker = breaker;
         activeToolKind = toolKind;
 
-        if (lockPlayerWhileBreaking && breaker != null && breaker.GetComponent<BotCommandAgent>() == null)
+        if (
+            lockPlayerWhileBreaking
+            && breaker != null
+            && breaker.GetComponent<BotCommandAgent>() == null
+        )
         {
             activePlayerLock = PlayerActionLock.GetOrCreate(breaker);
             activePlayerLock?.AcquireFullLock();
@@ -200,6 +243,10 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
 
         SnapBreakerToStandPose(breaker);
         onBreakStarted?.Invoke();
+        if (breaker != null && breaker.GetComponent<BotCommandAgent>() == null)
+        {
+            PlayerContinuousActionBus.StartAction();
+        }
 
         breakRoutine = StartCoroutine(BreakAfterDelay(Mathf.Max(0.01f, requirement.TimeToBreak)));
         return true;
@@ -214,6 +261,12 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
             {
                 CancelActiveBreak();
                 yield break;
+            }
+
+            float progress = 1f - ((endTime - Time.time) / duration);
+            if (activeBreaker != null && activeBreaker.GetComponent<BotCommandAgent>() == null)
+            {
+                PlayerContinuousActionBus.UpdateProgress(progress);
             }
 
             yield return null;
@@ -287,6 +340,11 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
 
     private void EndActiveBreakInteraction()
     {
+        if (isBreakInProgress && activeBreaker != null && activeBreaker.GetComponent<BotCommandAgent>() == null)
+        {
+            PlayerContinuousActionBus.EndAction(isBroken);
+        }
+
         isBreakInProgress = false;
         activeBreaker = null;
         activeToolKind = BreakToolKind.None;
@@ -319,7 +377,14 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
 
     private void SnapBreakerToStandPose(GameObject breaker)
     {
-        if (breaker == null || !TryGetBreakStandPose(breaker.transform.position, out Vector3 standPosition, out Quaternion standRotation))
+        if (
+            breaker == null
+            || !TryGetBreakStandPose(
+                breaker.transform.position,
+                out Vector3 standPosition,
+                out Quaternion standRotation
+            )
+        )
         {
             return;
         }
@@ -342,8 +407,10 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
         Transform parent = transform.parent;
         while (parent != null)
         {
-            if (parent.TryGetComponent(out IInteractable parentInteractable) &&
-                parentInteractable is not Breakable)
+            if (
+                parent.TryGetComponent(out IInteractable parentInteractable)
+                && parentInteractable is not Breakable
+            )
             {
                 parentInteractable.Interact(interactor);
                 return true;
@@ -377,9 +444,11 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
                 continue;
             }
 
-            if (candidate.name == "BreakableMarker" ||
-                candidate.name == "BreakMarker" ||
-                candidate.name == "CrackMarker")
+            if (
+                candidate.name == "BreakableMarker"
+                || candidate.name == "BreakMarker"
+                || candidate.name == "CrackMarker"
+            )
             {
                 markerObjects = new[] { candidate.gameObject };
                 return;
@@ -429,7 +498,10 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
         }
     }
 
-    private bool TryGetLegacyRequirement(BreakToolKind toolKind, out BreakToolRequirement requirement)
+    private bool TryGetLegacyRequirement(
+        BreakToolKind toolKind,
+        out BreakToolRequirement requirement
+    )
     {
         requirement = null;
         switch (breakableType)
@@ -498,9 +570,10 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
             return;
         }
 
-        Vector3 impactDirection = breaker != null
-            ? (transform.position - breaker.transform.position).normalized
-            : transform.forward;
+        Vector3 impactDirection =
+            breaker != null
+                ? (transform.position - breaker.transform.position).normalized
+                : transform.forward;
 
         for (int i = 0; i < shatterComponents.Length; i++)
         {
@@ -582,7 +655,9 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
                 continue;
             }
 
-            float distanceSq = (ProjectToGround(candidate.position) - flattenedBreakerPosition).sqrMagnitude;
+            float distanceSq = (
+                ProjectToGround(candidate.position) - flattenedBreakerPosition
+            ).sqrMagnitude;
             if (distanceSq < bestDistanceSq)
             {
                 bestDistanceSq = distanceSq;
@@ -606,7 +681,8 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
             return Quaternion.LookRotation(forward, Vector3.up);
         }
 
-        Vector3 lookTargetPosition = breakLookTarget != null ? breakLookTarget.position : transform.position;
+        Vector3 lookTargetPosition =
+            breakLookTarget != null ? breakLookTarget.position : transform.position;
         Vector3 lookDirection = ProjectToGroundDirection(lookTargetPosition - standPoint.position);
         if (lookDirection.sqrMagnitude > 0.001f)
         {
@@ -619,16 +695,32 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
             : Quaternion.identity;
     }
 
-    private bool TrySnapBotBreaker(GameObject breaker, Vector3 standPosition, Quaternion standRotation)
+    private bool TrySnapBotBreaker(
+        GameObject breaker,
+        Vector3 standPosition,
+        Quaternion standRotation
+    )
     {
-        if (breaker == null || !breaker.TryGetComponent(out NavMeshAgent navMeshAgent) || !navMeshAgent.enabled || !navMeshAgent.isOnNavMesh)
+        if (
+            breaker == null
+            || !breaker.TryGetComponent(out NavMeshAgent navMeshAgent)
+            || !navMeshAgent.enabled
+            || !navMeshAgent.isOnNavMesh
+        )
         {
             return false;
         }
 
         Vector3 resolvedPosition = standPosition;
         float sampleDistance = Mathf.Max(navMeshAgent.radius + 0.5f, 1f);
-        if (NavMesh.SamplePosition(standPosition, out NavMeshHit navMeshHit, sampleDistance, navMeshAgent.areaMask))
+        if (
+            NavMesh.SamplePosition(
+                standPosition,
+                out NavMeshHit navMeshHit,
+                sampleDistance,
+                navMeshAgent.areaMask
+            )
+        )
         {
             resolvedPosition = navMeshHit.position;
         }
@@ -644,17 +736,26 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
         return true;
     }
 
-    private bool TrySnapPlayerBreaker(GameObject breaker, Vector3 standPosition, Quaternion standRotation)
+    private bool TrySnapPlayerBreaker(
+        GameObject breaker,
+        Vector3 standPosition,
+        Quaternion standRotation
+    )
     {
-        if (breaker == null ||
-            (breaker.GetComponent<CharacterController>() == null &&
-            breaker.GetComponent<StarterAssets.FirstPersonController>() == null &&
-            breaker.GetComponent<PlayerActionLock>() == null))
+        if (
+            breaker == null
+            || (
+                breaker.GetComponent<CharacterController>() == null
+                && breaker.GetComponent<StarterAssets.FirstPersonController>() == null
+                && breaker.GetComponent<PlayerActionLock>() == null
+            )
+        )
         {
             return false;
         }
 
-        PlayerActionLock breakActionLock = activePlayerLock ?? PlayerActionLock.GetOrCreate(breaker);
+        PlayerActionLock breakActionLock =
+            activePlayerLock ?? PlayerActionLock.GetOrCreate(breaker);
         if (breakActionLock == null)
         {
             return false;

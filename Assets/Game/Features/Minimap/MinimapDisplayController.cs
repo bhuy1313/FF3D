@@ -11,7 +11,7 @@ public class MinimapDisplayController : MonoBehaviour
     private void Awake()
     {
         ResolveReferences();
-        Apply(MinimapDisplaySettings.GetSavedOrDefaultType());
+        Apply(MinimapDisplaySettings.GetSavedOrDefaultType(), MinimapDisplaySettings.GetSavedOrDefaultEnabled());
     }
 
     private void OnEnable()
@@ -19,17 +19,25 @@ public class MinimapDisplayController : MonoBehaviour
         ResolveReferences();
         MinimapDisplayRuntime.DisplayTypeChanged -= HandleDisplayTypeChanged;
         MinimapDisplayRuntime.DisplayTypeChanged += HandleDisplayTypeChanged;
-        Apply(MinimapDisplayRuntime.CurrentType);
+        MinimapDisplayRuntime.EnabledChanged -= HandleEnabledChanged;
+        MinimapDisplayRuntime.EnabledChanged += HandleEnabledChanged;
+        Apply(MinimapDisplayRuntime.CurrentType, MinimapDisplayRuntime.CurrentEnabled);
     }
 
     private void OnDisable()
     {
         MinimapDisplayRuntime.DisplayTypeChanged -= HandleDisplayTypeChanged;
+        MinimapDisplayRuntime.EnabledChanged -= HandleEnabledChanged;
     }
 
     private void HandleDisplayTypeChanged(MinimapDisplayType displayType)
     {
-        Apply(displayType);
+        Apply(displayType, MinimapDisplayRuntime.CurrentEnabled);
+    }
+
+    private void HandleEnabledChanged(bool enabled)
+    {
+        Apply(MinimapDisplayRuntime.CurrentType, enabled);
     }
 
     private void ResolveReferences()
@@ -53,16 +61,16 @@ public class MinimapDisplayController : MonoBehaviour
         }
     }
 
-    private void Apply(MinimapDisplayType displayType)
+    private void Apply(MinimapDisplayType displayType, bool enabled)
     {
         if (minimapSquare != null)
         {
-            minimapSquare.SetActive(displayType == MinimapDisplayType.Square);
+            minimapSquare.SetActive(enabled && displayType == MinimapDisplayType.Square);
         }
 
         if (minimapCircle != null)
         {
-            minimapCircle.SetActive(displayType == MinimapDisplayType.Circle);
+            minimapCircle.SetActive(enabled && displayType == MinimapDisplayType.Circle);
         }
     }
 }

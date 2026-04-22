@@ -1479,12 +1479,26 @@ public partial class LevelSelectSceneController : MonoBehaviour
         if (visible)
         {
             levelInfoPopup.scenarioDropdownRoot.SetAsLastSibling();
+            PositionScenarioDropdown();
         }
 
         levelInfoPopup.scenarioDropdownCanvasGroup.alpha = visible ? 1f : 0f;
         levelInfoPopup.scenarioDropdownCanvasGroup.interactable = visible;
         levelInfoPopup.scenarioDropdownCanvasGroup.blocksRaycasts = visible;
         SetScenarioDropdownToggleProxyVisible(visible);
+    }
+
+    private void PositionScenarioDropdown()
+    {
+        if (levelInfoPopup == null || levelInfoPopup.scenarioDropdownRoot == null)
+        {
+            return;
+        }
+
+        RectTransform dropdownRect = levelInfoPopup.scenarioDropdownRoot;
+        dropdownRect.anchorMin = new Vector2(1f, 1f);
+        dropdownRect.anchorMax = new Vector2(1f, 1f);
+        dropdownRect.anchoredPosition = new Vector2(-120f, -106f);
     }
 
     private void SetScenarioDropdownToggleProxyVisible(bool visible)
