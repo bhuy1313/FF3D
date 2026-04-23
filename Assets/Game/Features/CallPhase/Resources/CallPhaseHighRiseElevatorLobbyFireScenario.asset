@@ -1,0 +1,548 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f14c3d1b58a44b9a8d668ed8888e3fb4, type: 3}
+  m_Name: CallPhaseHighRiseElevatorLobbyFireScenario
+  m_EditorClassIdentifier: 
+  scenarioId: highrise_elevator_lobby_fire
+  displayName: High-Rise Tower - Elevator Lobby Fire
+  displayNameLocalizationKey: 
+  category: High-Rise Fire
+  categoryLocalizationKey: 
+  description: Elevator lobby fire on a residential floor with smoke trapping evacuees,
+    and fire spreading toward stairwell doors.
+  descriptionLocalizationKey: 
+  initialTranscriptLines:
+  - lineId: intro_operator_open
+    speaker: 0
+    text: 911, where is your emergency?
+    textLocalizationKey: 
+    isExtractable: 0
+    startsAsActiveChunk: 0
+    isConfirmationLine: 0
+    extractableSpans: []
+  - lineId: intro_caller_open
+    speaker: 1
+    text: My garage is on fire, please send help now!
+    textLocalizationKey: 
+    isExtractable: 0
+    startsAsActiveChunk: 0
+    isConfirmationLine: 0
+    extractableSpans: []
+  - lineId: intro_operator_fire_location
+    speaker: 0
+    text: Where is the fire right now?
+    textLocalizationKey: 
+    isExtractable: 0
+    startsAsActiveChunk: 0
+    isConfirmationLine: 0
+    extractableSpans: []
+  - lineId: intro_caller_fire_location
+    speaker: 1
+    text: It's at the elevator lobby, the corridor is filling with smoke!
+    textLocalizationKey: 
+    isExtractable: 1
+    startsAsActiveChunk: 1
+    isConfirmationLine: 0
+    extractableSpans:
+    - displayText: elevator lobby
+      displayTextLocalizationKey: 
+      normalizedValue: Elevator Lobby
+      targetFieldId: fire_location
+      infoType: FireLocation
+      exactSelection: 1
+      hasExtraContext: 0
+    - displayText: filling with smoke
+      displayTextLocalizationKey: 
+      normalizedValue: Smoke spreading from garage
+      targetFieldId: hazard
+      infoType: Hazard
+      exactSelection: 1
+      hasExtraContext: 1
+  followUpSteps:
+  - stepId: collect_address
+    stepType: 0
+    triggerFieldId: fire_location
+    triggerValue: Elevator Lobby
+    confirmationFieldId: 
+    expectedConfirmedValue: 
+    operatorLine:
+      lineId: ask_address
+      speaker: 0
+      text: What is the address?
+      textLocalizationKey: 
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 0
+      extractableSpans: []
+    callerLine:
+      lineId: reply_address
+      speaker: 1
+      text: It's at Sunrise Tower, Basement B2!
+      textLocalizationKey: 
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 0
+      extractableSpans:
+      - displayText: Sunrise Tower, Basement B2
+        displayTextLocalizationKey: 
+        normalizedValue: Sunrise Tower, Basement B2
+        targetFieldId: Address
+        infoType: Address
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: collect_occupant_risk
+    stepType: 0
+    triggerFieldId: Address
+    triggerValue: Sunrise Tower, Basement B2
+    confirmationFieldId: 
+    expectedConfirmedValue: 
+    operatorLine:
+      lineId: ask_occupant_risk
+      speaker: 0
+      text: Is anyone still inside?
+      textLocalizationKey: 
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 0
+      extractableSpans: []
+    callerLine:
+      lineId: reply_occupant_risk
+      speaker: 1
+      text: My elderly father is still inside!
+      textLocalizationKey: 
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 0
+      extractableSpans:
+      - displayText: elderly father is still inside
+        displayTextLocalizationKey: 
+        normalizedValue: Elderly parent inside
+        targetFieldId: OccupantRisk
+        infoType: OccupantRisk
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: collect_hazard
+    stepType: 0
+    triggerFieldId: OccupantRisk
+    triggerValue: Elderly parent inside
+    confirmationFieldId: 
+    expectedConfirmedValue: 
+    operatorLine:
+      lineId: ask_hazard
+      speaker: 0
+      text: Are there any fuel containers or hazardous materials near the fire?
+      textLocalizationKey: 
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 0
+      extractableSpans: []
+    callerLine:
+      lineId: reply_hazard
+      speaker: 1
+      text: There are fuel cans near the garage!
+      textLocalizationKey: 
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 0
+      extractableSpans:
+      - displayText: fuel cans near the garage
+        displayTextLocalizationKey: 
+        normalizedValue: Fuel cans near garage
+        targetFieldId: hazard
+        infoType: Hazard
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: collect_spread_status
+    stepType: 0
+    triggerFieldId: hazard
+    triggerValue: Fuel cans near garage
+    confirmationFieldId: 
+    expectedConfirmedValue: 
+    operatorLine:
+      lineId: ask_spread_status
+      speaker: 0
+      text: Is the fire spreading anywhere else?
+      textLocalizationKey: 
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 0
+      extractableSpans: []
+    callerLine:
+      lineId: reply_spread_status
+      speaker: 1
+      text: It's spreading toward the hallway!
+      textLocalizationKey: 
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 0
+      extractableSpans:
+      - displayText: spreading toward the hallway
+        displayTextLocalizationKey: 
+        normalizedValue: Spreading toward hallway
+        targetFieldId: SpreadStatus
+        infoType: SpreadStatus
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: collect_caller_safety
+    stepType: 0
+    triggerFieldId: SpreadStatus
+    triggerValue: Spreading toward hallway
+    confirmationFieldId: 
+    expectedConfirmedValue: 
+    operatorLine:
+      lineId: ask_caller_safety
+      speaker: 0
+      text: Are you somewhere safe right now?
+      textLocalizationKey: 
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 0
+      extractableSpans: []
+    callerLine:
+      lineId: reply_caller_safety
+      speaker: 1
+      text: I'm outside in the driveway now!
+      textLocalizationKey: 
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 0
+      extractableSpans:
+      - displayText: outside in the driveway
+        displayTextLocalizationKey: 
+        normalizedValue: Outside driveway
+        targetFieldId: CallerSafety
+        infoType: CallerSafety
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: confirm_address
+    stepType: 1
+    triggerFieldId: CallerSafety
+    triggerValue: Outside driveway
+    confirmationFieldId: Address
+    expectedConfirmedValue: Sunrise Tower, Basement B2
+    operatorLine:
+      lineId: confirm_address_operator
+      speaker: 0
+      text: Let me confirm the address, Sunrise Tower, Basement B2, correct?
+      textLocalizationKey: 
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 1
+      extractableSpans: []
+    callerLine:
+      lineId: confirm_address_caller
+      speaker: 1
+      text: Yes, that's correct.
+      textLocalizationKey: 
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 1
+      extractableSpans:
+      - displayText: Yes, that's correct.
+        displayTextLocalizationKey: 
+        normalizedValue: Sunrise Tower, Basement B2
+        targetFieldId: Address
+        infoType: Address
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: confirm_occupant_risk
+    stepType: 1
+    triggerFieldId: Address
+    triggerValue: Sunrise Tower, Basement B2
+    confirmationFieldId: OccupantRisk
+    expectedConfirmedValue: Elderly parent inside
+    operatorLine:
+      lineId: confirm_occupant_operator
+      speaker: 0
+      text: Your elderly parent is still inside, correct?
+      textLocalizationKey: 
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 1
+      extractableSpans: []
+    callerLine:
+      lineId: confirm_occupant_caller
+      speaker: 1
+      text: Yes, he is!
+      textLocalizationKey: 
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 1
+      extractableSpans:
+      - displayText: Yes, he is!
+        displayTextLocalizationKey: 
+        normalizedValue: Elderly parent inside
+        targetFieldId: OccupantRisk
+        infoType: OccupantRisk
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: confirm_caller_safety
+    stepType: 1
+    triggerFieldId: OccupantRisk
+    triggerValue: Elderly parent inside
+    confirmationFieldId: CallerSafety
+    expectedConfirmedValue: Outside driveway
+    operatorLine:
+      lineId: confirm_safety_operator
+      speaker: 0
+      text: You are outside in the driveway now, correct?
+      textLocalizationKey: 
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 1
+      extractableSpans: []
+    callerLine:
+      lineId: confirm_safety_caller
+      speaker: 1
+      text: Yes, I'm in the driveway.
+      textLocalizationKey: 
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 1
+      extractableSpans:
+      - displayText: Yes, I'm in the driveway.
+        displayTextLocalizationKey: 
+        normalizedValue: Outside driveway
+        targetFieldId: CallerSafety
+        infoType: CallerSafety
+        exactSelection: 1
+        hasExtraContext: 0
+  followUpQuestionPool:
+  - questionId: garage_q_address_exact
+    questionText: What is the exact address?
+    questionLocalizationKey: 
+    quality: 0
+    relatedFieldId: Address
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_address
+    distractorCallerReplyText: 
+    distractorCallerReplyLocalizationKey: 
+    isDistractorQuestion: 0
+    authorNote: Primary dispatch location question.
+  - questionId: garage_q_anyone_inside
+    questionText: Is anyone still inside?
+    questionLocalizationKey: 
+    quality: 0
+    relatedFieldId: OccupantRisk
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_occupant_risk
+    distractorCallerReplyText: 
+    distractorCallerReplyLocalizationKey: 
+    isDistractorQuestion: 0
+    authorNote: Critical rescue-priority question.
+  - questionId: garage_q_fuel_hazard
+    questionText: Are there any fuel containers or hazardous materials near the fire?
+    questionLocalizationKey: 
+    quality: 0
+    relatedFieldId: hazard
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_hazard
+    distractorCallerReplyText: 
+    distractorCallerReplyLocalizationKey: 
+    isDistractorQuestion: 0
+    authorNote: Important escalation-risk question.
+  - questionId: garage_q_fire_spread
+    questionText: Is the fire spreading anywhere else?
+    questionLocalizationKey: 
+    quality: 1
+    relatedFieldId: SpreadStatus
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_spread_status
+    distractorCallerReplyText: 
+    distractorCallerReplyLocalizationKey: 
+    isDistractorQuestion: 0
+    authorNote: Useful follow-up once core hazards are checked.
+  - questionId: garage_q_caller_safe
+    questionText: Are you somewhere safe right now?
+    questionLocalizationKey: 
+    quality: 1
+    relatedFieldId: CallerSafety
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_caller_safety
+    distractorCallerReplyText: 
+    distractorCallerReplyLocalizationKey: 
+    isDistractorQuestion: 0
+    authorNote: Good scene-safety follow-up.
+  - questionId: garage_q_vehicle_model
+    questionText: What type of car is inside the garage?
+    questionLocalizationKey: 
+    quality: 2
+    relatedFieldId: 
+    suggestedWhenFieldMissing: 0
+    hideIfFieldAlreadyKnown: 0
+    linkedStepId: 
+    distractorCallerReplyText: I don't know, I'm worried about my dad and the fire
+      spreading!
+    distractorCallerReplyLocalizationKey: 
+    isDistractorQuestion: 1
+    authorNote: Low-priority distractor question.
+  - questionId: garage_q_insurance
+    questionText: Do you know whether the garage is insured?
+    questionLocalizationKey: 
+    quality: 2
+    relatedFieldId: 
+    suggestedWhenFieldMissing: 0
+    hideIfFieldAlreadyKnown: 0
+    linkedStepId: 
+    distractorCallerReplyText: I can't think about insurance right now, I just need
+      help here!
+    distractorCallerReplyLocalizationKey: 
+    isDistractorQuestion: 1
+    authorNote: Not useful during emergency intake.
+  - questionId: garage_q_when_started
+    questionText: About what time did the fire start?
+    questionLocalizationKey: 
+    quality: 2
+    relatedFieldId: 
+    suggestedWhenFieldMissing: 0
+    hideIfFieldAlreadyKnown: 0
+    linkedStepId: 
+    distractorCallerReplyText: It happened just now, please send the fire department
+      fast!
+    distractorCallerReplyLocalizationKey: 
+    isDistractorQuestion: 1
+    authorNote: Lower-priority history question for this prototype.
+  incidentSeed:
+    fireOrigin: HighRise_ElevatorLobby_PanelWall
+    hazardType: FlammableLiquid
+    requiresIsolation: 0
+    initialFireIntensity: 0.82
+    initialFireCount: 2
+    fireSpreadPreset: Aggressive
+    startSmokeDensity: 0.41
+    smokeAccumulationMultiplier: 1.45
+    ventilationPreset: ClosedCompartment
+  expectedReport:
+    address: Sunrise Tower, Floor 22 Elevator Lobby
+    fireLocation: Elevator Lobby
+    occupantRisk: Elderly parent inside
+    hazard: Fuel cans near garage
+    spreadStatus: Spreading toward hallway
+    callerSafety: Outside driveway
+    severity: High
+  assessRisk:
+    requiredForAssessRisk:
+    - Address
+    - fire_location
+    recommendedForAssessRisk:
+    - OccupantRisk
+    - hazard
+    - SpreadStatus
+    - CallerSafety
+    minimumRecommendedCount: 1
+    expectedSeverity: High
+  resultReview:
+    correctnessFields:
+    - fieldId: Address
+      displayName: Address
+      scoreWeight: 8
+      issueText: Address was incorrect or missing.
+    - fieldId: fire_location
+      displayName: Fire Location
+      scoreWeight: 6
+      issueText: Fire location was incorrect or missing.
+    - fieldId: OccupantRisk
+      displayName: Occupant Risk
+      scoreWeight: 8
+      issueText: Occupant risk was incomplete.
+    - fieldId: hazard
+      displayName: Hazard
+      scoreWeight: 6
+      issueText: Hazard information was incomplete.
+    - fieldId: SpreadStatus
+      displayName: Spread Status
+      scoreWeight: 6
+      issueText: Spread status was incomplete.
+    - fieldId: CallerSafety
+      displayName: Caller Safety
+      scoreWeight: 6
+      issueText: Caller safety information was incomplete.
+    criticalFieldIds:
+    - Address
+    - fire_location
+    - OccupantRisk
+    expectedConfirmedFields:
+    - fieldId: Address
+      displayName: Address
+      scoreWeight: 8
+      issueText: 
+    - fieldId: OccupantRisk
+      displayName: Occupant Risk
+      scoreWeight: 6
+      issueText: 
+    - fieldId: CallerSafety
+      displayName: Caller Safety
+      scoreWeight: 6
+      issueText: 
+    readinessFields:
+    - fieldId: Address
+      displayName: Address
+      scoreWeight: 4
+      issueText: 
+    - fieldId: fire_location
+      displayName: Fire Location
+      scoreWeight: 3
+      issueText: 
+    - fieldId: OccupantRisk
+      displayName: Occupant Risk
+      scoreWeight: 3
+      issueText: 
+    - fieldId: hazard
+      displayName: Hazard
+      scoreWeight: 3
+      issueText: 
+    - fieldId: SpreadStatus
+      displayName: Spread Status
+      scoreWeight: 3
+      issueText: 
+    - fieldId: CallerSafety
+      displayName: Caller Safety
+      scoreWeight: 2
+      issueText: 
+    - fieldId: Severity
+      displayName: Severity
+      scoreWeight: 2
+      issueText: 
+    severityCorrectScore: 20
+    severityPartialScore: 10
+    severityPartialValue: Medium
+    followUpOptimalScore: 2
+    followUpAcceptableScore: 1
+    followUpPoorPenalty: 1
+    followUpMaxScore: 8
+    followUpGoodThreshold: 4
+    followUpMixedThreshold: 1
+    targetCallTimeSeconds: 100
+    acceptableCallTimeSeconds: 165
+    callTimeMaxScore: 4
+    strongCorrectnessThreshold: 32
+    readySubmissionThreshold: 18
+    feedback:
+      positiveSeverity: Good risk assessment.
+      missingSeverity: Severity assessment was missing.
+      incorrectSeverity: Severity was lower than expected.
+      strongFollowUp: You generally prioritized relevant follow-up questions.
+      mixedFollowUp: Some follow-up questions were useful, but prioritization was
+        uneven.
+      poorFollowUp: Some follow-up questions were lower priority than the situation
+        required.
+      allConfirmed: Address, occupant risk, and caller safety were confirmed.
+      noneConfirmed: No critical facts were confirmed.
+      partialConfirmed: More read-back confirmation was needed for critical facts.
+      strongCorrectness: Key incident details matched the scenario well.
+      readyToSubmit: Report was ready to submit.
+      incompleteSubmission: Some report details were missing at submission.

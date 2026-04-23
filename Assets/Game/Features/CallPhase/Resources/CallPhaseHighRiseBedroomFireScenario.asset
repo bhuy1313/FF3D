@@ -1,0 +1,547 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f14c3d1b58a44b9a8d668ed8888e3fb4, type: 3}
+  m_Name: CallPhaseHighRiseBedroomFireScenario
+  m_EditorClassIdentifier: 
+  scenarioId: highrise_apartment_bedroom_fire
+  displayName: High-Rise Tower - Apartment Bedroom Fire
+  displayNameLocalizationKey: 
+  category: High-Rise Fire
+  categoryLocalizationKey: 
+  description: Bedroom fire in a high-rise apartment with heavy smoke in the hallway,
+    potential occupants asleep nearby, assess-risk, submit, and result review.
+  descriptionLocalizationKey: 
+  initialTranscriptLines:
+  - lineId: intro_operator_open
+    speaker: 0
+    text: 911, where is your emergency?
+    textLocalizationKey: 
+    isExtractable: 0
+    startsAsActiveChunk: 0
+    isConfirmationLine: 0
+    extractableSpans: []
+  - lineId: intro_caller_open
+    speaker: 1
+    text: My house is on fire! Please help!
+    textLocalizationKey: 
+    isExtractable: 0
+    startsAsActiveChunk: 0
+    isConfirmationLine: 0
+    extractableSpans: []
+  - lineId: intro_operator_fire_location
+    speaker: 0
+    text: Where is the fire right now?
+    textLocalizationKey: 
+    isExtractable: 0
+    startsAsActiveChunk: 0
+    isConfirmationLine: 0
+    extractableSpans: []
+  - lineId: intro_caller_fire_location
+    speaker: 1
+    text: It's in the bedroom, smoke is pouring into the hallway!
+    textLocalizationKey: 
+    isExtractable: 1
+    startsAsActiveChunk: 1
+    isConfirmationLine: 0
+    extractableSpans:
+    - displayText: bedroom
+      displayTextLocalizationKey: 
+      normalizedValue: Apartment Bedroom
+      targetFieldId: fire_location
+      infoType: FireLocation
+      exactSelection: 1
+      hasExtraContext: 0
+    - displayText: smoke everywhere
+      displayTextLocalizationKey: 
+      normalizedValue: Smoke Everywhere
+      targetFieldId: hazard
+      infoType: Hazard
+      exactSelection: 1
+      hasExtraContext: 1
+  followUpSteps:
+  - stepId: collect_address
+    stepType: 0
+    triggerFieldId: fire_location
+    triggerValue: Apartment Bedroom
+    confirmationFieldId: 
+    expectedConfirmedValue: 
+    operatorLine:
+      lineId: ask_address
+      speaker: 0
+      text: What is the address?
+      textLocalizationKey: 
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 0
+      extractableSpans: []
+    callerLine:
+      lineId: reply_address
+      speaker: 1
+      text: It's Sunrise Tower, Unit 1208!
+      textLocalizationKey: 
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 0
+      extractableSpans:
+      - displayText: Sunrise Tower, Unit 1208
+        displayTextLocalizationKey: 
+        normalizedValue: Sunrise Tower, Unit 1208
+        targetFieldId: Address
+        infoType: Address
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: collect_occupant_risk
+    stepType: 0
+    triggerFieldId: Address
+    triggerValue: Sunrise Tower, Unit 1208
+    confirmationFieldId: 
+    expectedConfirmedValue: 
+    operatorLine:
+      lineId: ask_occupant_risk
+      speaker: 0
+      text: Is anyone still inside?
+      textLocalizationKey: 
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 0
+      extractableSpans: []
+    callerLine:
+      lineId: reply_occupant_risk
+      speaker: 1
+      text: My child is upstairs!
+      textLocalizationKey: 
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 0
+      extractableSpans:
+      - displayText: child is upstairs
+        displayTextLocalizationKey: 
+        normalizedValue: Child trapped upstairs
+        targetFieldId: OccupantRisk
+        infoType: OccupantRisk
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: collect_hazard
+    stepType: 0
+    triggerFieldId: OccupantRisk
+    triggerValue: Child trapped upstairs
+    confirmationFieldId: 
+    expectedConfirmedValue: 
+    operatorLine:
+      lineId: ask_hazard
+      speaker: 0
+      text: Is there any gas leak or gas cylinder nearby?
+      textLocalizationKey: 
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 0
+      extractableSpans: []
+    callerLine:
+      lineId: reply_hazard
+      speaker: 1
+      text: Yes, there's a gas cylinder near the kitchen!
+      textLocalizationKey: 
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 0
+      extractableSpans:
+      - displayText: gas cylinder near the kitchen
+        displayTextLocalizationKey: 
+        normalizedValue: Gas cylinder near kitchen
+        targetFieldId: hazard
+        infoType: Hazard
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: collect_spread_status
+    stepType: 0
+    triggerFieldId: hazard
+    triggerValue: Gas cylinder near kitchen
+    confirmationFieldId: 
+    expectedConfirmedValue: 
+    operatorLine:
+      lineId: ask_spread_status
+      speaker: 0
+      text: Is the fire spreading anywhere else?
+      textLocalizationKey: 
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 0
+      extractableSpans: []
+    callerLine:
+      lineId: reply_spread_status
+      speaker: 1
+      text: It's spreading toward the dining area!
+      textLocalizationKey: 
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 0
+      extractableSpans:
+      - displayText: spreading toward the dining area
+        displayTextLocalizationKey: 
+        normalizedValue: Spreading toward dining area
+        targetFieldId: SpreadStatus
+        infoType: SpreadStatus
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: collect_caller_safety
+    stepType: 0
+    triggerFieldId: SpreadStatus
+    triggerValue: Spreading toward dining area
+    confirmationFieldId: 
+    expectedConfirmedValue: 
+    operatorLine:
+      lineId: ask_caller_safety
+      speaker: 0
+      text: Are you somewhere safe right now?
+      textLocalizationKey: 
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 0
+      extractableSpans: []
+    callerLine:
+      lineId: reply_caller_safety
+      speaker: 1
+      text: Yes, I'm outside the house now!
+      textLocalizationKey: 
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 0
+      extractableSpans:
+      - displayText: outside the house
+        displayTextLocalizationKey: 
+        normalizedValue: Outside house
+        targetFieldId: CallerSafety
+        infoType: CallerSafety
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: confirm_address
+    stepType: 1
+    triggerFieldId: CallerSafety
+    triggerValue: Outside house
+    confirmationFieldId: Address
+    expectedConfirmedValue: Sunrise Tower, Unit 1208
+    operatorLine:
+      lineId: confirm_address_operator
+      speaker: 0
+      text: 'Let me confirm the address: Sunrise Tower, Unit 1512, correct?'
+      textLocalizationKey: 
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 1
+      extractableSpans: []
+    callerLine:
+      lineId: confirm_address_caller
+      speaker: 1
+      text: Yes, that's correct.
+      textLocalizationKey: 
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 1
+      extractableSpans:
+      - displayText: Yes, that's correct.
+        displayTextLocalizationKey: 
+        normalizedValue: Sunrise Tower, Unit 1208
+        targetFieldId: Address
+        infoType: Address
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: confirm_occupant_risk
+    stepType: 1
+    triggerFieldId: Address
+    triggerValue: Sunrise Tower, Unit 1208
+    confirmationFieldId: OccupantRisk
+    expectedConfirmedValue: Child trapped upstairs
+    operatorLine:
+      lineId: confirm_occupant_operator
+      speaker: 0
+      text: Your child is still upstairs, correct?
+      textLocalizationKey: 
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 1
+      extractableSpans: []
+    callerLine:
+      lineId: confirm_occupant_caller
+      speaker: 1
+      text: Yes!
+      textLocalizationKey: 
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 1
+      extractableSpans:
+      - displayText: Yes!
+        displayTextLocalizationKey: 
+        normalizedValue: Child trapped upstairs
+        targetFieldId: OccupantRisk
+        infoType: OccupantRisk
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: confirm_caller_safety
+    stepType: 1
+    triggerFieldId: OccupantRisk
+    triggerValue: Child trapped upstairs
+    confirmationFieldId: CallerSafety
+    expectedConfirmedValue: Outside house
+    operatorLine:
+      lineId: confirm_safety_operator
+      speaker: 0
+      text: You are outside the house now, correct?
+      textLocalizationKey: 
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 1
+      extractableSpans: []
+    callerLine:
+      lineId: confirm_safety_caller
+      speaker: 1
+      text: Yes, I'm outside.
+      textLocalizationKey: 
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 1
+      extractableSpans:
+      - displayText: Yes, I'm outside.
+        displayTextLocalizationKey: 
+        normalizedValue: Outside house
+        targetFieldId: CallerSafety
+        infoType: CallerSafety
+        exactSelection: 1
+        hasExtraContext: 0
+  followUpQuestionPool:
+  - questionId: kitchen_q_address_exact
+    questionText: What is the exact address?
+    questionLocalizationKey: 
+    quality: 0
+    relatedFieldId: Address
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_address
+    distractorCallerReplyText: 
+    distractorCallerReplyLocalizationKey: 
+    isDistractorQuestion: 0
+    authorNote: Primary location-identification question.
+  - questionId: kitchen_q_anyone_inside
+    questionText: Is anyone still inside?
+    questionLocalizationKey: 
+    quality: 0
+    relatedFieldId: OccupantRisk
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_occupant_risk
+    distractorCallerReplyText: 
+    distractorCallerReplyLocalizationKey: 
+    isDistractorQuestion: 0
+    authorNote: Critical life-safety follow-up.
+  - questionId: kitchen_q_hazard_gas
+    questionText: Is there any gas leak or gas cylinder nearby?
+    questionLocalizationKey: 
+    quality: 0
+    relatedFieldId: hazard
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_hazard
+    distractorCallerReplyText: 
+    distractorCallerReplyLocalizationKey: 
+    isDistractorQuestion: 0
+    authorNote: High-priority hazard-identification question.
+  - questionId: kitchen_q_fire_spread
+    questionText: Is the fire spreading anywhere else?
+    questionLocalizationKey: 
+    quality: 1
+    relatedFieldId: SpreadStatus
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_spread_status
+    distractorCallerReplyText: 
+    distractorCallerReplyLocalizationKey: 
+    isDistractorQuestion: 0
+    authorNote: Useful but secondary to immediate life-safety questions.
+  - questionId: kitchen_q_caller_safe
+    questionText: Are you somewhere safe right now?
+    questionLocalizationKey: 
+    quality: 1
+    relatedFieldId: CallerSafety
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_caller_safety
+    distractorCallerReplyText: 
+    distractorCallerReplyLocalizationKey: 
+    isDistractorQuestion: 0
+    authorNote: Good safety check once core fire details are known.
+  - questionId: kitchen_q_pet_inside
+    questionText: Are any pets still inside the house?
+    questionLocalizationKey: 
+    quality: 2
+    relatedFieldId: 
+    suggestedWhenFieldMissing: 0
+    hideIfFieldAlreadyKnown: 0
+    linkedStepId: 
+    distractorCallerReplyText: I don't know, I ran outside when I saw the flames!
+    distractorCallerReplyLocalizationKey: 
+    isDistractorQuestion: 1
+    authorNote: Lower-priority distractor for the current prototype.
+  - questionId: kitchen_q_damage_cost
+    questionText: Can you estimate how much damage the kitchen already has?
+    questionLocalizationKey: 
+    quality: 2
+    relatedFieldId: 
+    suggestedWhenFieldMissing: 0
+    hideIfFieldAlreadyKnown: 0
+    linkedStepId: 
+    distractorCallerReplyText: I can't tell, the kitchen is burning and there's too
+      much smoke!
+    distractorCallerReplyLocalizationKey: 
+    isDistractorQuestion: 1
+    authorNote: Not operationally useful during urgent intake.
+  - questionId: kitchen_q_smell_food
+    questionText: What were you cooking when the fire started?
+    questionLocalizationKey: 
+    quality: 2
+    relatedFieldId: 
+    suggestedWhenFieldMissing: 0
+    hideIfFieldAlreadyKnown: 0
+    linkedStepId: 
+    distractorCallerReplyText: I was just making dinner, but the fire is what matters
+      right now!
+    distractorCallerReplyLocalizationKey: 
+    isDistractorQuestion: 1
+    authorNote: Low-priority cause question for this phase.
+  incidentSeed:
+    fireOrigin: HighRise_UnitBedroom_PowerStrip
+    hazardType: Gas
+    requiresIsolation: 1
+    initialFireIntensity: 0.78
+    initialFireCount: 2
+    fireSpreadPreset: Moderate
+    startSmokeDensity: 0.34
+    smokeAccumulationMultiplier: 1.25
+    ventilationPreset: OpenKitchen
+  expectedReport:
+    address: Sunrise Tower, Unit 1512
+    fireLocation: Apartment Bedroom
+    occupantRisk: Child trapped upstairs
+    hazard: Gas cylinder near kitchen
+    spreadStatus: Spreading toward dining area
+    callerSafety: Outside house
+    severity: High
+  assessRisk:
+    requiredForAssessRisk:
+    - Address
+    - fire_location
+    recommendedForAssessRisk:
+    - OccupantRisk
+    - hazard
+    - SpreadStatus
+    - CallerSafety
+    minimumRecommendedCount: 1
+    expectedSeverity: High
+  resultReview:
+    correctnessFields:
+    - fieldId: Address
+      displayName: Address
+      scoreWeight: 8
+      issueText: Address was incorrect or missing.
+    - fieldId: fire_location
+      displayName: Fire Location
+      scoreWeight: 6
+      issueText: Fire location was incorrect or missing.
+    - fieldId: OccupantRisk
+      displayName: Occupant Risk
+      scoreWeight: 8
+      issueText: Occupant risk was incomplete.
+    - fieldId: hazard
+      displayName: Hazard
+      scoreWeight: 6
+      issueText: Hazard information was incomplete.
+    - fieldId: SpreadStatus
+      displayName: Spread Status
+      scoreWeight: 6
+      issueText: Spread status was incomplete.
+    - fieldId: CallerSafety
+      displayName: Caller Safety
+      scoreWeight: 6
+      issueText: Caller safety information was incomplete.
+    criticalFieldIds:
+    - Address
+    - fire_location
+    - OccupantRisk
+    expectedConfirmedFields:
+    - fieldId: Address
+      displayName: Address
+      scoreWeight: 8
+      issueText: 
+    - fieldId: OccupantRisk
+      displayName: Occupant Risk
+      scoreWeight: 6
+      issueText: 
+    - fieldId: CallerSafety
+      displayName: Caller Safety
+      scoreWeight: 6
+      issueText: 
+    readinessFields:
+    - fieldId: Address
+      displayName: Address
+      scoreWeight: 4
+      issueText: 
+    - fieldId: fire_location
+      displayName: Fire Location
+      scoreWeight: 3
+      issueText: 
+    - fieldId: OccupantRisk
+      displayName: Occupant Risk
+      scoreWeight: 3
+      issueText: 
+    - fieldId: hazard
+      displayName: Hazard
+      scoreWeight: 3
+      issueText: 
+    - fieldId: SpreadStatus
+      displayName: Spread Status
+      scoreWeight: 3
+      issueText: 
+    - fieldId: CallerSafety
+      displayName: Caller Safety
+      scoreWeight: 2
+      issueText: 
+    - fieldId: Severity
+      displayName: Severity
+      scoreWeight: 2
+      issueText: 
+    severityCorrectScore: 20
+    severityPartialScore: 10
+    severityPartialValue: Medium
+    followUpOptimalScore: 2
+    followUpAcceptableScore: 1
+    followUpPoorPenalty: 1
+    followUpMaxScore: 8
+    followUpGoodThreshold: 4
+    followUpMixedThreshold: 1
+    targetCallTimeSeconds: 90
+    acceptableCallTimeSeconds: 150
+    callTimeMaxScore: 4
+    strongCorrectnessThreshold: 32
+    readySubmissionThreshold: 18
+    feedback:
+      positiveSeverity: Good risk assessment.
+      missingSeverity: Severity assessment was missing.
+      incorrectSeverity: Severity was lower than expected.
+      strongFollowUp: You generally prioritized relevant follow-up questions.
+      mixedFollowUp: Some follow-up questions were useful, but prioritization was
+        uneven.
+      poorFollowUp: Some follow-up questions were lower priority than the situation
+        required.
+      allConfirmed: Address, occupant risk, and caller safety were confirmed.
+      noneConfirmed: No critical facts were confirmed.
+      partialConfirmed: More read-back confirmation was needed for critical facts.
+      strongCorrectness: Key incident details matched the scenario well.
+      readyToSubmit: Report was ready to submit.
+      incompleteSubmission: Some report details were missing at submission.

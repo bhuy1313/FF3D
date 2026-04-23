@@ -1,0 +1,585 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f14c3d1b58a44b9a8d668ed8888e3fb4, type: 3}
+  m_Name: CallPhaseHighRiseElectricalRoomFireScenario
+  m_EditorClassIdentifier: 
+  scenarioId: highrise_electrical_room_fire
+  displayName: High-Rise Tower - Electrical Room Fire
+  displayNameLocalizationKey: 
+  category: High-Rise Fire
+  categoryLocalizationKey: 
+  description: Electrical room fire in a high-rise service core with dense toxic
+    smoke, smoke spreading through utility shafts, and one maintenance worker still
+    inside.
+  descriptionLocalizationKey: 
+  initialTranscriptLines:
+  - lineId: intro_operator_open
+    speaker: 0
+    text: 911, where is your emergency?
+    textLocalizationKey: 
+    isExtractable: 0
+    startsAsActiveChunk: 0
+    isConfirmationLine: 0
+    extractableSpans: []
+  - lineId: intro_caller_open
+    speaker: 1
+    text: There's a fire in my house, please hurry!
+    textLocalizationKey: 
+    isExtractable: 0
+    startsAsActiveChunk: 0
+    isConfirmationLine: 0
+    extractableSpans: []
+  - lineId: intro_operator_fire_location
+    speaker: 0
+    text: Where is the fire right now?
+    textLocalizationKey: 
+    isExtractable: 0
+    startsAsActiveChunk: 0
+    isConfirmationLine: 0
+    extractableSpans: []
+  - lineId: intro_caller_fire_location
+    speaker: 1
+    text: It's in the electrical room near the service core!
+    textLocalizationKey: 
+    isExtractable: 1
+    startsAsActiveChunk: 1
+    isConfirmationLine: 0
+    extractableSpans:
+    - displayText: electrical room
+      displayTextLocalizationKey: 
+      normalizedValue: Electrical Room
+      targetFieldId: fire_location
+      infoType: FireLocation
+      exactSelection: 1
+      hasExtraContext: 0
+  followUpSteps:
+  - stepId: collect_address
+    stepType: 0
+    triggerFieldId: fire_location
+    triggerValue: Electrical Room
+    confirmationFieldId: 
+    expectedConfirmedValue: 
+    operatorLine:
+      lineId: ask_address
+      speaker: 0
+      text: What is the address?
+      textLocalizationKey: 
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 0
+      extractableSpans: []
+    callerLine:
+      lineId: reply_address
+      speaker: 1
+      text: It's Sunrise Tower, Floor 18 Laundry Room!
+      textLocalizationKey: 
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 0
+      extractableSpans:
+      - displayText: Sunrise Tower, Floor 18 Laundry Room
+        displayTextLocalizationKey: 
+        normalizedValue: Sunrise Tower, Floor 18 Laundry Room
+        targetFieldId: Address
+        infoType: Address
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: collect_occupant_risk
+    stepType: 0
+    triggerFieldId: Address
+    triggerValue: Sunrise Tower, Floor 18 Laundry Room
+    confirmationFieldId: 
+    expectedConfirmedValue: 
+    operatorLine:
+      lineId: ask_occupant_risk
+      speaker: 0
+      text: Is anyone still inside?
+      textLocalizationKey: 
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 0
+      extractableSpans: []
+    callerLine:
+      lineId: reply_occupant_risk
+      speaker: 1
+      text: My husband is still inside!
+      textLocalizationKey: 
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 0
+      extractableSpans:
+      - displayText: husband is still inside
+        displayTextLocalizationKey: 
+        normalizedValue: Adult still inside
+        targetFieldId: OccupantRisk
+        infoType: OccupantRisk
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: collect_hazard_gas
+    stepType: 0
+    triggerFieldId: OccupantRisk
+    triggerValue: Adult still inside
+    confirmationFieldId: 
+    expectedConfirmedValue: 
+    operatorLine:
+      lineId: ask_hazard_gas
+      speaker: 0
+      text: Are there any gas appliances or fuel lines in there?
+      textLocalizationKey: 
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 0
+      extractableSpans: []
+    callerLine:
+      lineId: reply_hazard_gas
+      speaker: 1
+      text: Yes, there's a gas dryer line in there!
+      textLocalizationKey: 
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 0
+      extractableSpans:
+      - displayText: gas dryer line
+        displayTextLocalizationKey: 
+        normalizedValue: Gas
+        targetFieldId: hazard
+        infoType: Hazard
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: collect_hazard_electrical
+    stepType: 0
+    triggerFieldId: hazard
+    triggerValue: Gas
+    confirmationFieldId: 
+    expectedConfirmedValue: 
+    operatorLine:
+      lineId: ask_hazard_electrical
+      speaker: 0
+      text: Do you see any electrical danger too?
+      textLocalizationKey: 
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 0
+      extractableSpans: []
+    callerLine:
+      lineId: reply_hazard_electrical
+      speaker: 1
+      text: Yes, there are sparks from exposed wiring!
+      textLocalizationKey: 
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 0
+      extractableSpans:
+      - displayText: exposed wiring
+        displayTextLocalizationKey: 
+        normalizedValue: Electrical
+        targetFieldId: hazard
+        infoType: Hazard
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: collect_spread_status
+    stepType: 0
+    triggerFieldId: hazard
+    triggerValue: Electrical
+    confirmationFieldId: 
+    expectedConfirmedValue: 
+    operatorLine:
+      lineId: ask_spread_status
+      speaker: 0
+      text: Is the fire spreading anywhere else?
+      textLocalizationKey: 
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 0
+      extractableSpans: []
+    callerLine:
+      lineId: reply_spread_status
+      speaker: 1
+      text: It's spreading toward the kitchen!
+      textLocalizationKey: 
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 0
+      extractableSpans:
+      - displayText: spreading toward the kitchen
+        displayTextLocalizationKey: 
+        normalizedValue: Spreading toward kitchen
+        targetFieldId: SpreadStatus
+        infoType: SpreadStatus
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: collect_caller_safety
+    stepType: 0
+    triggerFieldId: SpreadStatus
+    triggerValue: Spreading toward kitchen
+    confirmationFieldId: 
+    expectedConfirmedValue: 
+    operatorLine:
+      lineId: ask_caller_safety
+      speaker: 0
+      text: Are you somewhere safe right now?
+      textLocalizationKey: 
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 0
+      extractableSpans: []
+    callerLine:
+      lineId: reply_caller_safety
+      speaker: 1
+      text: I'm outside in the front yard now!
+      textLocalizationKey: 
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 0
+      extractableSpans:
+      - displayText: outside in the front yard
+        displayTextLocalizationKey: 
+        normalizedValue: Outside front yard
+        targetFieldId: CallerSafety
+        infoType: CallerSafety
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: confirm_address
+    stepType: 1
+    triggerFieldId: CallerSafety
+    triggerValue: Outside front yard
+    confirmationFieldId: Address
+    expectedConfirmedValue: Sunrise Tower, Floor 18 Laundry Room
+    operatorLine:
+      lineId: confirm_address_operator
+      speaker: 0
+      text: Let me confirm the address, Sunrise Tower, Floor 18 Laundry Room, correct?
+      textLocalizationKey: 
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 1
+      extractableSpans: []
+    callerLine:
+      lineId: confirm_address_caller
+      speaker: 1
+      text: Yes, that's correct.
+      textLocalizationKey: 
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 1
+      extractableSpans:
+      - displayText: Yes, that's correct.
+        displayTextLocalizationKey: 
+        normalizedValue: Sunrise Tower, Floor 18 Laundry Room
+        targetFieldId: Address
+        infoType: Address
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: confirm_occupant_risk
+    stepType: 1
+    triggerFieldId: Address
+    triggerValue: Sunrise Tower, Floor 18 Laundry Room
+    confirmationFieldId: OccupantRisk
+    expectedConfirmedValue: Adult still inside
+    operatorLine:
+      lineId: confirm_occupant_operator
+      speaker: 0
+      text: One adult is still inside, correct?
+      textLocalizationKey: 
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 1
+      extractableSpans: []
+    callerLine:
+      lineId: confirm_occupant_caller
+      speaker: 1
+      text: Yes!
+      textLocalizationKey: 
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 1
+      extractableSpans:
+      - displayText: Yes!
+        displayTextLocalizationKey: 
+        normalizedValue: Adult still inside
+        targetFieldId: OccupantRisk
+        infoType: OccupantRisk
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: confirm_caller_safety
+    stepType: 1
+    triggerFieldId: OccupantRisk
+    triggerValue: Adult still inside
+    confirmationFieldId: CallerSafety
+    expectedConfirmedValue: Outside front yard
+    operatorLine:
+      lineId: confirm_safety_operator
+      speaker: 0
+      text: You are outside in the front yard now, correct?
+      textLocalizationKey: 
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 1
+      extractableSpans: []
+    callerLine:
+      lineId: confirm_safety_caller
+      speaker: 1
+      text: Yes, I am.
+      textLocalizationKey: 
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 1
+      extractableSpans:
+      - displayText: Yes, I am.
+        displayTextLocalizationKey: 
+        normalizedValue: Outside front yard
+        targetFieldId: CallerSafety
+        infoType: CallerSafety
+        exactSelection: 1
+        hasExtraContext: 0
+  followUpQuestionPool:
+  - questionId: laundry_q_address_exact
+    questionText: What is the exact address?
+    questionLocalizationKey: 
+    quality: 0
+    relatedFieldId: Address
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_address
+    distractorCallerReplyText: 
+    distractorCallerReplyLocalizationKey: 
+    isDistractorQuestion: 0
+    authorNote: Primary dispatch-location question.
+  - questionId: laundry_q_anyone_inside
+    questionText: Is anyone still inside?
+    questionLocalizationKey: 
+    quality: 0
+    relatedFieldId: OccupantRisk
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_occupant_risk
+    distractorCallerReplyText: 
+    distractorCallerReplyLocalizationKey: 
+    isDistractorQuestion: 0
+    authorNote: Critical life-safety question.
+  - questionId: laundry_q_gas_hazard
+    questionText: Are there any gas appliances or fuel lines in there?
+    questionLocalizationKey: 
+    quality: 0
+    relatedFieldId: hazard
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 0
+    linkedStepId: collect_hazard_gas
+    distractorCallerReplyText: 
+    distractorCallerReplyLocalizationKey: 
+    isDistractorQuestion: 0
+    authorNote: First major hazard question for the laundry scenario.
+  - questionId: laundry_q_electrical_hazard
+    questionText: Do you see any electrical danger too?
+    questionLocalizationKey: 
+    quality: 1
+    relatedFieldId: hazard
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 0
+    linkedStepId: collect_hazard_electrical
+    distractorCallerReplyText: 
+    distractorCallerReplyLocalizationKey: 
+    isDistractorQuestion: 0
+    authorNote: Follow-up hazard question after gas risk is identified.
+  - questionId: laundry_q_fire_spread
+    questionText: Is the fire spreading anywhere else?
+    questionLocalizationKey: 
+    quality: 1
+    relatedFieldId: SpreadStatus
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_spread_status
+    distractorCallerReplyText: 
+    distractorCallerReplyLocalizationKey: 
+    isDistractorQuestion: 0
+    authorNote: Useful scene-development question.
+  - questionId: laundry_q_caller_safe
+    questionText: Are you somewhere safe right now?
+    questionLocalizationKey: 
+    quality: 1
+    relatedFieldId: CallerSafety
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_caller_safety
+    distractorCallerReplyText: 
+    distractorCallerReplyLocalizationKey: 
+    isDistractorQuestion: 0
+    authorNote: Important caller-safety follow-up.
+  - questionId: laundry_q_washer_brand
+    questionText: What brand is the washing machine?
+    questionLocalizationKey: 
+    quality: 2
+    relatedFieldId: 
+    suggestedWhenFieldMissing: 0
+    hideIfFieldAlreadyKnown: 0
+    linkedStepId: 
+    distractorCallerReplyText: I don't know, it's smoking too badly in there to look
+      at that!
+    distractorCallerReplyLocalizationKey: 
+    isDistractorQuestion: 1
+    authorNote: Intentional low-priority distractor question.
+  - questionId: laundry_q_laundry_load
+    questionText: Were you washing clothes or towels at the time?
+    questionLocalizationKey: 
+    quality: 2
+    relatedFieldId: 
+    suggestedWhenFieldMissing: 0
+    hideIfFieldAlreadyKnown: 0
+    linkedStepId: 
+    distractorCallerReplyText: I can't remember, I just know the laundry room is
+      on fire!
+    distractorCallerReplyLocalizationKey: 
+    isDistractorQuestion: 1
+    authorNote: Cause-oriented distractor, not urgent for intake.
+  - questionId: laundry_q_window_open
+    questionText: Did you leave the laundry room window open?
+    questionLocalizationKey: 
+    quality: 2
+    relatedFieldId: 
+    suggestedWhenFieldMissing: 0
+    hideIfFieldAlreadyKnown: 0
+    linkedStepId: 
+    distractorCallerReplyText: I don't know, I'm outside now and there's smoke pushing
+      toward the kitchen!
+    distractorCallerReplyLocalizationKey: 
+    isDistractorQuestion: 1
+    authorNote: Lower-priority contextual distractor.
+  incidentSeed:
+    fireOrigin: HighRise_ElectricalRoom_MainPanel
+    hazardType: Electrical
+    requiresIsolation: 1
+    initialFireIntensity: 0.9
+    initialFireCount: 3
+    fireSpreadPreset: Aggressive
+    startSmokeDensity: 0.53
+    smokeAccumulationMultiplier: 1.7
+    ventilationPreset: OpenEgress
+  expectedReport:
+    address: Sunrise Tower, Floor 20 Electrical Room
+    fireLocation: Electrical Room
+    occupantRisk: Adult still inside
+    hazard: Gas, Electrical
+    spreadStatus: Spreading toward kitchen
+    callerSafety: Outside front yard
+    severity: High
+  assessRisk:
+    requiredForAssessRisk:
+    - Address
+    - fire_location
+    recommendedForAssessRisk:
+    - OccupantRisk
+    - hazard
+    - SpreadStatus
+    - CallerSafety
+    minimumRecommendedCount: 1
+    expectedSeverity: High
+  resultReview:
+    correctnessFields:
+    - fieldId: Address
+      displayName: Address
+      scoreWeight: 8
+      issueText: Address was incorrect or missing.
+    - fieldId: fire_location
+      displayName: Fire Location
+      scoreWeight: 6
+      issueText: Fire location was incorrect or missing.
+    - fieldId: OccupantRisk
+      displayName: Occupant Risk
+      scoreWeight: 8
+      issueText: Occupant risk was incomplete.
+    - fieldId: hazard
+      displayName: Hazard
+      scoreWeight: 6
+      issueText: Hazard information was incomplete.
+    - fieldId: SpreadStatus
+      displayName: Spread Status
+      scoreWeight: 6
+      issueText: Spread status was incomplete.
+    - fieldId: CallerSafety
+      displayName: Caller Safety
+      scoreWeight: 6
+      issueText: Caller safety information was incomplete.
+    criticalFieldIds:
+    - Address
+    - fire_location
+    - OccupantRisk
+    expectedConfirmedFields:
+    - fieldId: Address
+      displayName: Address
+      scoreWeight: 8
+      issueText: 
+    - fieldId: OccupantRisk
+      displayName: Occupant Risk
+      scoreWeight: 6
+      issueText: 
+    - fieldId: CallerSafety
+      displayName: Caller Safety
+      scoreWeight: 6
+      issueText: 
+    readinessFields:
+    - fieldId: Address
+      displayName: Address
+      scoreWeight: 4
+      issueText: 
+    - fieldId: fire_location
+      displayName: Fire Location
+      scoreWeight: 3
+      issueText: 
+    - fieldId: OccupantRisk
+      displayName: Occupant Risk
+      scoreWeight: 3
+      issueText: 
+    - fieldId: hazard
+      displayName: Hazard
+      scoreWeight: 3
+      issueText: 
+    - fieldId: SpreadStatus
+      displayName: Spread Status
+      scoreWeight: 3
+      issueText: 
+    - fieldId: CallerSafety
+      displayName: Caller Safety
+      scoreWeight: 2
+      issueText: 
+    - fieldId: Severity
+      displayName: Severity
+      scoreWeight: 2
+      issueText: 
+    severityCorrectScore: 20
+    severityPartialScore: 10
+    severityPartialValue: Medium
+    followUpOptimalScore: 2
+    followUpAcceptableScore: 1
+    followUpPoorPenalty: 1
+    followUpMaxScore: 8
+    followUpGoodThreshold: 4
+    followUpMixedThreshold: 1
+    targetCallTimeSeconds: 110
+    acceptableCallTimeSeconds: 180
+    callTimeMaxScore: 4
+    strongCorrectnessThreshold: 32
+    readySubmissionThreshold: 18
+    feedback:
+      positiveSeverity: Good risk assessment.
+      missingSeverity: Severity assessment was missing.
+      incorrectSeverity: Severity was lower than expected.
+      strongFollowUp: You generally prioritized relevant follow-up questions.
+      mixedFollowUp: Some follow-up questions were useful, but prioritization was
+        uneven.
+      poorFollowUp: Some follow-up questions were lower priority than the situation
+        required.
+      allConfirmed: Address, occupant risk, and caller safety were confirmed.
+      noneConfirmed: No critical facts were confirmed.
+      partialConfirmed: More read-back confirmation was needed for critical facts.
+      strongCorrectness: Key incident details matched the scenario well.
+      readyToSubmit: Report was ready to submit.
+      incompleteSubmission: Some report details were missing at submission.
