@@ -164,7 +164,16 @@ public class GameMasterUiMovementInputLock : MonoBehaviour
 
             if (disableLookInput)
             {
-                starterAssetsInputs.cursorInputForLook = restoreCursorInputForLook;
+                bool shouldForceGameplayLookRestore =
+                    !restoreCursorInputForLook &&
+                    Cursor.lockState == CursorLockMode.Locked &&
+                    !Cursor.visible;
+
+                starterAssetsInputs.cursorInputForLook = restoreCursorInputForLook || shouldForceGameplayLookRestore;
+                if (shouldForceGameplayLookRestore)
+                {
+                    starterAssetsInputs.cursorLocked = true;
+                }
             }
         }
 

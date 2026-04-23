@@ -50,7 +50,7 @@ public sealed class GameAudioSettingsAsset : ScriptableObject
     private string voiceVolumeParameter = "VoiceVolume";
 
     [SerializeField]
-    private string alertVolumeParameter = "AlertVolume";
+    private string alertVolumeParameter = string.Empty;
 
     [Header("Runtime")]
     [SerializeField, Min(1)]

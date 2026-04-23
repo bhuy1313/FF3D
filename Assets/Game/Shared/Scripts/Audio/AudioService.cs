@@ -729,7 +729,7 @@ public sealed class AudioService : MonoBehaviour
 
         CleanupExternalSourceCache();
 
-        AudioSource[] sceneSources = FindObjectsByType<AudioSource>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        AudioSource[] sceneSources = FindObjectsByType<AudioSource>(FindObjectsInactive.Include);
         for (int i = 0; i < sceneSources.Length; i++)
         {
             AudioSource source = sceneSources[i];

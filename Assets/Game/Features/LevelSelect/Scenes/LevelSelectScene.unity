@@ -2442,7 +2442,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 257516651}
   m_HandleRect: {fileID: 257516650}
   m_Direction: 0
-  m_Value: 1
+  m_Value: 0
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -9633,6 +9633,7 @@ MonoBehaviour:
     objectiveText: {fileID: 0}
     difficultyText: {fileID: 0}
     playButton: {fileID: 0}
+    closeButton: {fileID: 0}
     playButtonLabel: {fileID: 0}
     scenarioDropdownRoot: {fileID: 0}
     scenarioDropdownContentRoot: {fileID: 0}
@@ -9649,6 +9650,15 @@ MonoBehaviour:
   cardSpacing: 0
   panelPadding: {x: 0, y: 0, z: 0, w: 0}
   minimumRegionWidth: 96
+  regionSelectButtonSize: {x: 44, y: 200}
+  regionSelectButtonEdgeInset: 10
+  regionSelectButtonColor: {r: 0.2, g: 0.2, b: 0.2, a: 1}
+  regionSelectButtonTextColor: {r: 1, g: 1, b: 1, a: 0.95}
+  regionSelectButtonOutlineHoverColor: {r: 0.45, g: 1, b: 0.7, a: 0.95}
+  regionSelectButtonHoverScale: 1.06
+  regionSelectButtonHoverDuration: 0.14
+  regionSelectButtonHoverEase: 9
+  regionSelectButtonHoverOutlineDistance: {x: 2, y: -2}
   widthSmoothTime: 0.18
   overlayAlphaIdle: 0.22
   overlayAlphaCollapsed: 0.48
@@ -9680,6 +9690,7 @@ MonoBehaviour:
   popupVerticalOffset: 12
   popupScreenMargin: 24
   animateLevelInfoPopup: 1
+  useDotweenLevelInfoPopup: 1
   levelInfoOpenDuration: 0.26
   levelInfoCloseDuration: 0.16
   levelInfoVerticalIntroOffset: 20
@@ -9687,6 +9698,10 @@ MonoBehaviour:
   levelInfoContentStagger: 0.04
   levelInfoContentFadeDuration: 0.14
   levelInfoButtonsDelay: 0.08
+  levelInfoAnimateFromSourceButton: 1
+  levelInfoSourceStartScale: 0.1
+  levelInfoOpenEase: 12
+  levelInfoCloseEase: 9
 --- !u!1 &2100977624
 GameObject:
   m_ObjectHideFlags: 0

@@ -153,7 +153,11 @@ public class DispatchNotesUIController : MonoBehaviour
     [SerializeField]
     private bool disableLookInputWhileOpen = true;
 
+    [SerializeField]
+    private bool deferLookInputLockToGameplayManager = true;
+
     private StarterAssetsInputs inputState;
+    private GameMasterUiMovementInputLock cachedGameplayInputLock;
     private bool isInitialized;
     [SerializeField]
     private bool isNotesOpenRuntime;
@@ -162,6 +166,7 @@ public class DispatchNotesUIController : MonoBehaviour
     private bool hasCursorSnapshot;
     private bool restoreCursorLocked;
     private bool restoreCursorInputForLook;
+    private bool restoreLookInputByDispatchController;
     private CursorLockMode restoreCursorLockMode;
     private bool restoreCursorVisible;
 
@@ -169,7 +174,7 @@ public class DispatchNotesUIController : MonoBehaviour
 
     private void Awake()
     {
-        inputState = Object.FindFirstObjectByType<StarterAssetsInputs>();
+        inputState = Object.FindAnyObjectByType<StarterAssetsInputs>();
 
         if (uiContainer != null)
         {
@@ -211,7 +216,7 @@ public class DispatchNotesUIController : MonoBehaviour
         }
         else
         {
-            inputState = Object.FindFirstObjectByType<StarterAssetsInputs>();
+            inputState = Object.FindAnyObjectByType<StarterAssetsInputs>();
             if (Input.GetKeyDown(KeyCode.L))
             {
                 togglePressed = true;
@@ -412,7 +417,7 @@ public class DispatchNotesUIController : MonoBehaviour
         notesContentText.lineSpacing = lineSpacing;
         notesContentText.paragraphSpacing = paragraphSpacing;
         notesContentText.margin = textMargins;
-        notesContentText.enableWordWrapping = true;
+        notesContentText.textWrappingMode = TextWrappingModes.Normal;
 
         if (forceTopLeftAlignment)
         {
@@ -668,13 +673,13 @@ public class DispatchNotesUIController : MonoBehaviour
 
             if (inputState == null)
             {
-                inputState = Object.FindFirstObjectByType<StarterAssetsInputs>();
+                inputState = Object.FindAnyObjectByType<StarterAssetsInputs>();
             }
 
             if (inputState != null)
             {
                 inputState.cursorLocked = false;
-                if (disableLookInputWhileOpen)
+                if (restoreLookInputByDispatchController)
                 {
                     inputState.cursorInputForLook = false;
                     inputState.look = Vector2.zero;
@@ -698,13 +703,18 @@ public class DispatchNotesUIController : MonoBehaviour
 
         if (inputState == null)
         {
-            inputState = Object.FindFirstObjectByType<StarterAssetsInputs>();
+            inputState = Object.FindAnyObjectByType<StarterAssetsInputs>();
         }
+
+        restoreLookInputByDispatchController = ShouldDispatchManageLookInputLock();
 
         if (inputState != null)
         {
             restoreCursorLocked = inputState.cursorLocked;
-            restoreCursorInputForLook = inputState.cursorInputForLook;
+            if (restoreLookInputByDispatchController)
+            {
+                restoreCursorInputForLook = inputState.cursorInputForLook;
+            }
         }
 
         restoreCursorLockMode = Cursor.lockState;
@@ -721,19 +731,44 @@ public class DispatchNotesUIController : MonoBehaviour
 
         if (inputState == null)
         {
-            inputState = Object.FindFirstObjectByType<StarterAssetsInputs>();
+            inputState = Object.FindAnyObjectByType<StarterAssetsInputs>();
         }
 
         if (inputState != null)
         {
             inputState.cursorLocked = restoreCursorLocked;
-            inputState.cursorInputForLook = restoreCursorInputForLook;
+            if (restoreLookInputByDispatchController)
+            {
+                inputState.cursorInputForLook = restoreCursorInputForLook;
+            }
             inputState.look = Vector2.zero;
         }
 
         Cursor.lockState = restoreCursorLockMode;
         Cursor.visible = restoreCursorVisible;
+        restoreLookInputByDispatchController = false;
         hasCursorSnapshot = false;
+    }
+
+    private bool ShouldDispatchManageLookInputLock()
+    {
+        if (!disableLookInputWhileOpen)
+        {
+            return false;
+        }
+
+        if (!deferLookInputLockToGameplayManager)
+        {
+            return true;
+        }
+
+        if (cachedGameplayInputLock == null)
+        {
+            cachedGameplayInputLock =
+                Object.FindAnyObjectByType<GameMasterUiMovementInputLock>(FindObjectsInactive.Include);
+        }
+
+        return cachedGameplayInputLock == null || !cachedGameplayInputLock.enabled;
     }
 
     private void PlayToggleAnimation(bool targetOpen)

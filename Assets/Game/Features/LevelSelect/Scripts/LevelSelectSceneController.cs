@@ -1,8 +1,10 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -81,7 +83,10 @@ public partial class LevelSelectSceneController : MonoBehaviour
 
         [NonSerialized] public SlantedPanelGraphic shapeGraphic;
         [NonSerialized] public Mask mask;
-        [NonSerialized] public Button button;
+        [NonSerialized] public Button selectButton;
+        [NonSerialized] public Outline selectButtonOutline;
+        [NonSerialized] public Tween selectButtonHoverTween;
+        [NonSerialized] public CanvasGroup selectButtonCanvasGroup;
         [NonSerialized] public Image mapImage;
         [NonSerialized] public Image dimOverlay;
         [NonSerialized] public RectTransform levelListRoot;
@@ -107,6 +112,7 @@ public partial class LevelSelectSceneController : MonoBehaviour
         public TMP_Text objectiveText;
         public TMP_Text difficultyText;
         public Button playButton;
+        public Button closeButton;
         public TMP_Text playButtonLabel;
         public RectTransform scenarioDropdownRoot;
         public RectTransform scenarioDropdownContentRoot;
@@ -148,6 +154,15 @@ public partial class LevelSelectSceneController : MonoBehaviour
     [SerializeField] private float cardSpacing = 0f;
     [SerializeField] private Vector4 panelPadding = new Vector4(24f, 24f, 24f, 24f);
     [SerializeField] private float minimumRegionWidth = 96f;
+    [SerializeField] private Vector2 regionSelectButtonSize = new Vector2(44f, 84f);
+    [SerializeField] private float regionSelectButtonEdgeInset = 10f;
+    [SerializeField] private Color regionSelectButtonColor = new Color(0f, 0f, 0f, 0.35f);
+    [SerializeField] private Color regionSelectButtonTextColor = new Color(1f, 1f, 1f, 0.95f);
+    [SerializeField] private Color regionSelectButtonOutlineHoverColor = new Color(0.45f, 1f, 0.7f, 0.95f);
+    [SerializeField] private float regionSelectButtonHoverScale = 1.06f;
+    [SerializeField] private float regionSelectButtonHoverDuration = 0.14f;
+    [SerializeField] private Ease regionSelectButtonHoverEase = Ease.OutCubic;
+    [SerializeField] private Vector2 regionSelectButtonHoverOutlineDistance = new Vector2(2f, -2f);
 
     [Header("Animation")]
     [SerializeField] private float widthSmoothTime = 0.18f;
@@ -191,6 +206,7 @@ public partial class LevelSelectSceneController : MonoBehaviour
 
     [Header("Level Info Motion")]
     [SerializeField] private bool animateLevelInfoPopup = true;
+    [SerializeField] private bool useDotweenLevelInfoPopup = true;
     [SerializeField] private float levelInfoOpenDuration = 0.26f;
     [SerializeField] private float levelInfoCloseDuration = 0.16f;
     [SerializeField] private float levelInfoVerticalIntroOffset = 20f;
@@ -198,9 +214,13 @@ public partial class LevelSelectSceneController : MonoBehaviour
     [SerializeField] private float levelInfoContentStagger = 0.04f;
     [SerializeField] private float levelInfoContentFadeDuration = 0.14f;
     [SerializeField] private float levelInfoButtonsDelay = 0.08f;
+    [SerializeField] private bool levelInfoAnimateFromSourceButton = true;
+    [SerializeField] [Range(0.05f, 1f)] private float levelInfoSourceStartScale = 0.1f;
+    [SerializeField] private Ease levelInfoOpenEase = Ease.OutQuart;
+    [SerializeField] private Ease levelInfoCloseEase = Ease.OutCubic;
 
     private const string LoadingSceneName = "LoadingScene";
-    private const string CompletedLevelMarker = "✓";
+    private const string CompletedLevelMarker = "[DONE]";
 
     private float currentLeftRatio;
     private float targetLeftRatio;
@@ -210,6 +230,8 @@ public partial class LevelSelectSceneController : MonoBehaviour
     private LevelDefinition selectedLevelDefinition;
     private RegionCard selectedLevelCard;
     private Button selectedLevelSourceButton;
+    private RectTransform levelInfoOutsideCloseOverlayRoot;
+    private Button levelInfoOutsideCloseOverlayButton;
     private GameObject settingsInstance;
     private CanvasGroup settingsCanvasGroup;
     private Setting_UIScript settingsUI;
@@ -218,6 +240,7 @@ public partial class LevelSelectSceneController : MonoBehaviour
     private CanvasGroup panelCanvasGroup;
     private Coroutine sceneIntroCoroutine;
     private Coroutine levelInfoPopupCoroutine;
+    private Sequence levelInfoPopupSequence;
     private Vector2 panelRootBaseAnchoredPosition;
     private Vector3 panelRootBaseScale = Vector3.one;
     private Vector3 levelInfoPopupBaseScale = Vector3.one;
@@ -251,6 +274,7 @@ public partial class LevelSelectSceneController : MonoBehaviour
 
         currentLeftRatio = neutralRatio;
         targetLeftRatio = neutralRatio;
+        UpdateRegionSelectButtonsVisibility();
         InitializeSceneIntroState();
         ApplyAnimatedState(instant: true);
         RefreshLocalizedContent();
@@ -283,6 +307,8 @@ public partial class LevelSelectSceneController : MonoBehaviour
     {
         LanguageManager.LanguageChanged -= OnLanguageChanged;
         StopLevelInfoPopupAnimation();
+        KillRegionSelectButtonHoverTween(suburbanCard);
+        KillRegionSelectButtonHoverTween(cityCard);
     }
 
     private void Update()
@@ -426,6 +452,7 @@ public partial class LevelSelectSceneController : MonoBehaviour
     {
         CloseLevelInfo();
         currentSelection = selection;
+        UpdateRegionSelectButtonsVisibility();
 
         switch (selection)
         {
@@ -438,6 +465,44 @@ public partial class LevelSelectSceneController : MonoBehaviour
             default:
                 targetLeftRatio = neutralRatio;
                 break;
+        }
+    }
+
+    private void UpdateRegionSelectButtonsVisibility()
+    {
+        SetRegionSelectButtonVisible(suburbanCard, currentSelection != RegionSelection.Suburban);
+        SetRegionSelectButtonVisible(cityCard, currentSelection != RegionSelection.City);
+    }
+
+    private void SetRegionSelectButtonVisible(RegionCard card, bool visible)
+    {
+        if (card == null || card.selectButton == null)
+        {
+            return;
+        }
+
+        if (card.selectButtonCanvasGroup == null)
+        {
+            card.selectButtonCanvasGroup = GetOrAddComponent<CanvasGroup>(card.selectButton.gameObject);
+        }
+
+        if (!visible)
+        {
+            AnimateRegionSelectButtonHover(card, false, instant: true);
+        }
+
+        card.selectButtonCanvasGroup.alpha = visible ? 1f : 0f;
+        card.selectButtonCanvasGroup.interactable = visible;
+        card.selectButtonCanvasGroup.blocksRaycasts = visible;
+
+        if (!visible)
+        {
+            EventSystem eventSystem = EventSystem.current;
+            if (eventSystem != null &&
+                ReferenceEquals(eventSystem.currentSelectedGameObject, card.selectButton.gameObject))
+            {
+                eventSystem.SetSelectedGameObject(null);
+            }
         }
     }
 
@@ -512,24 +577,21 @@ public partial class LevelSelectSceneController : MonoBehaviour
 
         card.shapeGraphic = GetOrAddComponent<SlantedPanelGraphic>(card.root.gameObject);
         card.shapeGraphic.color = new Color(0.08f, 0.1f, 0.12f, 0.96f);
-        card.shapeGraphic.raycastTarget = true;
+        card.shapeGraphic.raycastTarget = false;
         card.isLeftCard = selection == RegionSelection.Suburban;
 
         card.mask = GetOrAddComponent<Mask>(card.root.gameObject);
         card.mask.showMaskGraphic = true;
 
-        card.button = GetOrAddComponent<Button>(card.root.gameObject);
-        card.button.targetGraphic = card.shapeGraphic;
-        card.button.transition = Selectable.Transition.ColorTint;
-        ColorBlock colors = card.button.colors;
-        colors.normalColor = Color.white;
-        colors.highlightedColor = new Color(1f, 1f, 1f, 0.98f);
-        colors.pressedColor = new Color(0.92f, 0.92f, 0.92f, 0.98f);
-        colors.selectedColor = Color.white;
-        colors.disabledColor = new Color(1f, 1f, 1f, 0.45f);
-        card.button.colors = colors;
-        card.button.onClick.RemoveAllListeners();
-        card.button.onClick.AddListener(() => SelectRegion(selection));
+        Button legacyRootButton = card.root.GetComponent<Button>();
+        if (legacyRootButton != null)
+        {
+            legacyRootButton.onClick.RemoveAllListeners();
+            legacyRootButton.interactable = false;
+            legacyRootButton.enabled = false;
+        }
+
+        EnsureRegionSelectButton(card, selection);
 
         card.mapImage = EnsureMapImage(card);
         card.dimOverlay = EnsureDimOverlay(card);
@@ -543,6 +605,174 @@ public partial class LevelSelectSceneController : MonoBehaviour
         EnsureLevelList(card);
         EnsureLevelButtonsPanel(card);
         RegisterLevelButtons(card);
+    }
+
+    private void EnsureRegionSelectButton(RegionCard card, RegionSelection selection)
+    {
+        Transform existing = card.root.Find("RegionSelectButton");
+        RectTransform buttonRect;
+        Image buttonImage;
+        Button button;
+
+        if (existing == null)
+        {
+            GameObject buttonObject = new GameObject("RegionSelectButton", typeof(RectTransform), typeof(Image), typeof(Button));
+            buttonRect = buttonObject.GetComponent<RectTransform>();
+            buttonRect.SetParent(card.root, false);
+            buttonImage = buttonObject.GetComponent<Image>();
+            button = buttonObject.GetComponent<Button>();
+        }
+        else
+        {
+            buttonRect = existing as RectTransform;
+            buttonImage = existing.GetComponent<Image>();
+            button = existing.GetComponent<Button>();
+            if (buttonImage == null)
+            {
+                buttonImage = existing.gameObject.AddComponent<Image>();
+            }
+
+            if (button == null)
+            {
+                button = existing.gameObject.AddComponent<Button>();
+            }
+        }
+
+        bool placeLeft = selection == RegionSelection.Suburban;
+        buttonRect.anchorMin = new Vector2(placeLeft ? 0f : 1f, 0.5f);
+        buttonRect.anchorMax = buttonRect.anchorMin;
+        buttonRect.pivot = new Vector2(placeLeft ? 0f : 1f, 0.5f);
+        buttonRect.anchoredPosition = new Vector2(placeLeft ? regionSelectButtonEdgeInset : -regionSelectButtonEdgeInset, 0f);
+        buttonRect.sizeDelta = regionSelectButtonSize;
+        buttonRect.SetAsLastSibling();
+
+        buttonImage.color = regionSelectButtonColor;
+        buttonImage.raycastTarget = true;
+
+        button.targetGraphic = buttonImage;
+        button.transition = Selectable.Transition.ColorTint;
+        ColorBlock colors = button.colors;
+        colors.normalColor = Color.white;
+        colors.highlightedColor = new Color(1f, 1f, 1f, 0.94f);
+        colors.pressedColor = new Color(0.9f, 0.9f, 0.9f, 0.9f);
+        colors.selectedColor = Color.white;
+        colors.disabledColor = new Color(1f, 1f, 1f, 0.45f);
+        button.colors = colors;
+        button.onClick.RemoveAllListeners();
+        button.onClick.AddListener(() => SelectRegion(selection));
+
+        TMP_Text label = buttonRect.GetComponentInChildren<TMP_Text>(true);
+        if (label == null)
+        {
+            GameObject labelObject = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            RectTransform labelRect = labelObject.GetComponent<RectTransform>();
+            labelRect.SetParent(buttonRect, false);
+            label = labelObject.GetComponent<TextMeshProUGUI>();
+        }
+
+        RectTransform textRect = label.rectTransform;
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = Vector2.zero;
+        textRect.offsetMax = Vector2.zero;
+
+        label.text = placeLeft ? "<" : ">";
+        label.alignment = TextAlignmentOptions.Center;
+        label.color = regionSelectButtonTextColor;
+        label.fontSize = 28f;
+        label.enableAutoSizing = false;
+        label.raycastTarget = false;
+
+        Outline outline = GetOrAddComponent<Outline>(button.gameObject);
+        outline.effectColor = new Color(regionSelectButtonOutlineHoverColor.r, regionSelectButtonOutlineHoverColor.g, regionSelectButtonOutlineHoverColor.b, 0f);
+        outline.effectDistance = Vector2.zero;
+        outline.useGraphicAlpha = true;
+
+        EventTrigger trigger = GetOrAddComponent<EventTrigger>(button.gameObject);
+        trigger.triggers ??= new List<EventTrigger.Entry>();
+        trigger.triggers.Clear();
+        AddRegionSelectButtonTrigger(trigger, EventTriggerType.PointerEnter, () => AnimateRegionSelectButtonHover(card, true));
+        AddRegionSelectButtonTrigger(trigger, EventTriggerType.PointerExit, () => AnimateRegionSelectButtonHover(card, false));
+
+        card.selectButton = button;
+        card.selectButtonOutline = outline;
+        card.selectButtonCanvasGroup = GetOrAddComponent<CanvasGroup>(button.gameObject);
+        AnimateRegionSelectButtonHover(card, false, instant: true);
+    }
+
+    private static void AddRegionSelectButtonTrigger(EventTrigger trigger, EventTriggerType triggerType, Action action)
+    {
+        if (trigger == null || action == null)
+        {
+            return;
+        }
+
+        EventTrigger.Entry entry = new EventTrigger.Entry
+        {
+            eventID = triggerType
+        };
+        entry.callback.AddListener(_ => action.Invoke());
+        trigger.triggers.Add(entry);
+    }
+
+    private void AnimateRegionSelectButtonHover(RegionCard card, bool hovered, bool instant = false)
+    {
+        if (card == null || card.selectButton == null || card.selectButtonOutline == null)
+        {
+            return;
+        }
+
+        KillRegionSelectButtonHoverTween(card);
+
+        RectTransform buttonRect = card.selectButton.transform as RectTransform;
+        Color outlineColor = hovered
+            ? regionSelectButtonOutlineHoverColor
+            : new Color(regionSelectButtonOutlineHoverColor.r, regionSelectButtonOutlineHoverColor.g, regionSelectButtonOutlineHoverColor.b, 0f);
+        Vector2 outlineDistance = hovered ? regionSelectButtonHoverOutlineDistance : Vector2.zero;
+        Vector3 targetScale = Vector3.one * (hovered ? Mathf.Max(1f, regionSelectButtonHoverScale) : 1f);
+
+        if (instant || !Application.isPlaying)
+        {
+            card.selectButtonOutline.effectColor = outlineColor;
+            card.selectButtonOutline.effectDistance = outlineDistance;
+            if (buttonRect != null)
+            {
+                buttonRect.localScale = targetScale;
+            }
+
+            return;
+        }
+
+        float duration = Mathf.Max(0.01f, regionSelectButtonHoverDuration);
+        Sequence sequence = DOTween.Sequence().SetUpdate(true).SetLink(card.selectButton.gameObject);
+        sequence.Join(DOTween.To(
+            () => card.selectButtonOutline.effectColor,
+            color => card.selectButtonOutline.effectColor = color,
+            outlineColor,
+            duration).SetEase(regionSelectButtonHoverEase));
+        sequence.Join(DOTween.To(
+            () => card.selectButtonOutline.effectDistance,
+            distance => card.selectButtonOutline.effectDistance = distance,
+            outlineDistance,
+            duration).SetEase(regionSelectButtonHoverEase));
+
+        if (buttonRect != null)
+        {
+            sequence.Join(buttonRect.DOScale(targetScale, duration).SetEase(regionSelectButtonHoverEase));
+        }
+
+        card.selectButtonHoverTween = sequence;
+    }
+
+    private static void KillRegionSelectButtonHoverTween(RegionCard card)
+    {
+        if (card == null)
+        {
+            return;
+        }
+
+        card.selectButtonHoverTween?.Kill();
+        card.selectButtonHoverTween = null;
     }
 
     private Image EnsureMapImage(RegionCard card)
@@ -1027,6 +1257,15 @@ public partial class LevelSelectSceneController : MonoBehaviour
             levelInfoPopup.playButton = FindNestedButton(levelInfoPopup.root, "BtnPlay");
         }
 
+        if (levelInfoPopup.closeButton == null)
+        {
+            levelInfoPopup.closeButton = FindNestedButton(levelInfoPopup.root, "btnClose");
+            if (levelInfoPopup.closeButton == null)
+            {
+                levelInfoPopup.closeButton = FindNestedButton(levelInfoPopup.root, "BtnClose");
+            }
+        }
+
         if (levelInfoPopup.playButtonLabel == null && levelInfoPopup.playButton != null)
         {
             levelInfoPopup.playButtonLabel = levelInfoPopup.playButton.GetComponentInChildren<TMP_Text>(true);
@@ -1087,6 +1326,12 @@ public partial class LevelSelectSceneController : MonoBehaviour
             levelInfoPopup.playButtonCanvasGroup = GetOrAddComponent<CanvasGroup>(levelInfoPopup.playButton.gameObject);
         }
 
+        if (levelInfoPopup.closeButton != null)
+        {
+            levelInfoPopup.closeButton.onClick.RemoveAllListeners();
+            levelInfoPopup.closeButton.onClick.AddListener(() => CloseLevelInfo());
+        }
+
         levelInfoPopup.levelNameCanvasGroup = GetCanvasGroup(levelInfoPopup.levelNameText);
         levelInfoPopup.areaCanvasGroup = GetCanvasGroup(levelInfoPopup.areaText);
         levelInfoPopup.descriptionCanvasGroup = GetCanvasGroup(levelInfoPopup.descriptionText);
@@ -1097,6 +1342,8 @@ public partial class LevelSelectSceneController : MonoBehaviour
             : null;
 
         EnsureScenarioDropdownToggleProxy();
+        EnsureLevelInfoOutsideCloseOverlay();
+        SetLevelInfoOutsideCloseOverlayVisible(false);
         EnsureScenarioDropdownToggleButton();
         ApplyLevelInfoContentAlpha(0f, 0f);
         RefreshScenarioDropdownToggleVisualState();
@@ -1168,6 +1415,12 @@ public partial class LevelSelectSceneController : MonoBehaviour
             return;
         }
 
+        if (useDotweenLevelInfoPopup)
+        {
+            AnimateOpenLevelInfoPopupDotween(targetPosition, sourceButton);
+            return;
+        }
+
         levelInfoPopupCoroutine = StartCoroutine(AnimateOpenLevelInfoPopup(targetPosition));
     }
 
@@ -1179,6 +1432,7 @@ public partial class LevelSelectSceneController : MonoBehaviour
         }
 
         StopLevelInfoPopupAnimation();
+        SetLevelInfoOutsideCloseOverlayVisible(false);
         levelInfoPopup.canvasGroup.interactable = false;
         levelInfoPopup.canvasGroup.blocksRaycasts = false;
 
@@ -1200,11 +1454,23 @@ public partial class LevelSelectSceneController : MonoBehaviour
             return;
         }
 
+        if (useDotweenLevelInfoPopup)
+        {
+            AnimateCloseLevelInfoPopupDotween();
+            return;
+        }
+
         levelInfoPopupCoroutine = StartCoroutine(AnimateCloseLevelInfoPopup());
     }
 
     private void StopLevelInfoPopupAnimation()
     {
+        if (levelInfoPopupSequence != null)
+        {
+            levelInfoPopupSequence.Kill();
+            levelInfoPopupSequence = null;
+        }
+
         if (levelInfoPopupCoroutine == null)
         {
             return;
@@ -1221,6 +1487,7 @@ public partial class LevelSelectSceneController : MonoBehaviour
             return;
         }
 
+        SetLevelInfoOutsideCloseOverlayVisible(true);
         levelInfoPopup.root.anchoredPosition = targetPosition;
         levelInfoPopup.root.localScale = levelInfoPopupBaseScale;
         levelInfoPopup.canvasGroup.alpha = 1f;
@@ -1236,6 +1503,7 @@ public partial class LevelSelectSceneController : MonoBehaviour
             return;
         }
 
+        SetLevelInfoOutsideCloseOverlayVisible(false);
         levelInfoPopup.root.localScale = levelInfoPopupBaseScale;
         levelInfoPopup.canvasGroup.alpha = 0f;
         levelInfoPopup.canvasGroup.interactable = false;
@@ -1245,6 +1513,7 @@ public partial class LevelSelectSceneController : MonoBehaviour
 
     private IEnumerator AnimateOpenLevelInfoPopup(Vector2 targetPosition)
     {
+        SetLevelInfoOutsideCloseOverlayVisible(true);
         levelInfoPopup.canvasGroup.alpha = 0f;
         levelInfoPopup.canvasGroup.interactable = false;
         levelInfoPopup.canvasGroup.blocksRaycasts = false;
@@ -1301,6 +1570,158 @@ public partial class LevelSelectSceneController : MonoBehaviour
 
         HideLevelInfoImmediately();
         levelInfoPopupCoroutine = null;
+    }
+
+    private void AnimateOpenLevelInfoPopupDotween(Vector2 targetPosition, Button sourceButton)
+    {
+        if (levelInfoPopup.root == null || levelInfoPopup.canvasGroup == null)
+        {
+            return;
+        }
+
+        SetLevelInfoOutsideCloseOverlayVisible(true);
+        Vector2 startPosition = targetPosition + Vector2.down * levelInfoVerticalIntroOffset;
+        Vector3 startScale = levelInfoPopupBaseScale * levelInfoStartScale;
+        if (levelInfoAnimateFromSourceButton && TryGetButtonLocalCenter(sourceButton, out Vector2 sourceLocalCenter))
+        {
+            startPosition = sourceLocalCenter;
+            startScale = levelInfoPopupBaseScale * Mathf.Max(0.05f, levelInfoSourceStartScale);
+        }
+
+        levelInfoPopup.canvasGroup.alpha = 0f;
+        levelInfoPopup.canvasGroup.interactable = false;
+        levelInfoPopup.canvasGroup.blocksRaycasts = false;
+        levelInfoPopup.root.localScale = startScale;
+        levelInfoPopup.root.anchoredPosition = startPosition;
+        ApplyLevelInfoContentAlpha(0f, 0f);
+
+        float duration = Mathf.Max(0.01f, levelInfoOpenDuration);
+        float fadeDuration = Mathf.Max(0.01f, levelInfoContentFadeDuration);
+        float stagger = Mathf.Max(0f, levelInfoContentStagger);
+
+        levelInfoPopupSequence = DOTween.Sequence().SetUpdate(true);
+        levelInfoPopupSequence
+            .Join(levelInfoPopup.canvasGroup.DOFade(1f, duration).SetEase(levelInfoOpenEase))
+            .Join(levelInfoPopup.root.DOScale(levelInfoPopupBaseScale, duration).SetEase(levelInfoOpenEase))
+            .Join(levelInfoPopup.root.DOAnchorPos(targetPosition, duration).SetEase(levelInfoOpenEase));
+
+        AppendGroupFades(levelInfoPopupSequence, GetLevelInfoTextGroups(), 0f, stagger, fadeDuration);
+        AppendGroupFades(levelInfoPopupSequence, GetLevelInfoButtonGroups(), levelInfoButtonsDelay, stagger, fadeDuration);
+
+        levelInfoPopupSequence
+            .OnComplete(() =>
+            {
+                ShowLevelInfoImmediately(targetPosition);
+                levelInfoPopupSequence = null;
+            })
+            .OnKill(() =>
+            {
+                if (levelInfoPopupSequence != null)
+                {
+                    levelInfoPopupSequence = null;
+                }
+            });
+    }
+
+    private bool TryGetButtonLocalCenter(Button sourceButton, out Vector2 localCenter)
+    {
+        localCenter = Vector2.zero;
+
+        if (sourceButton == null)
+        {
+            return false;
+        }
+
+        RectTransform sourceRect = sourceButton.transform as RectTransform;
+        RectTransform canvasRect = GetCanvasRect();
+        if (sourceRect == null || canvasRect == null)
+        {
+            return false;
+        }
+
+        Canvas canvas = canvasRect.GetComponent<Canvas>();
+        Camera eventCamera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
+            ? canvas.worldCamera
+            : null;
+
+        Vector3[] corners = new Vector3[4];
+        sourceRect.GetWorldCorners(corners);
+
+        for (int i = 0; i < corners.Length; i++)
+        {
+            Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(eventCamera, corners[i]);
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPoint, eventCamera, out Vector2 localPoint);
+            localCenter += localPoint;
+        }
+
+        localCenter *= 0.25f;
+        return true;
+    }
+
+    private void AnimateCloseLevelInfoPopupDotween()
+    {
+        if (levelInfoPopup.root == null || levelInfoPopup.canvasGroup == null)
+        {
+            return;
+        }
+
+        Vector2 startPosition = levelInfoPopup.root.anchoredPosition;
+        Vector2 endPosition = startPosition + Vector2.down * (levelInfoVerticalIntroOffset * 0.35f);
+        Vector3 startScale = levelInfoPopup.root.localScale;
+        Vector3 endScale = levelInfoPopupBaseScale * Mathf.Lerp(levelInfoStartScale, 1f, 0.55f);
+        float duration = Mathf.Max(0.01f, levelInfoCloseDuration);
+
+        levelInfoPopupSequence = DOTween.Sequence().SetUpdate(true);
+        levelInfoPopupSequence
+            .Join(levelInfoPopup.canvasGroup.DOFade(0f, duration).SetEase(levelInfoCloseEase))
+            .Join(levelInfoPopup.root.DOScale(endScale, duration).SetEase(levelInfoCloseEase))
+            .Join(levelInfoPopup.root.DOAnchorPos(endPosition, duration).SetEase(levelInfoCloseEase));
+
+        AppendGroupFades(levelInfoPopupSequence, GetLevelInfoTextGroups(), 0f, 0f, duration * 0.7f, 0f);
+        AppendGroupFades(levelInfoPopupSequence, GetLevelInfoButtonGroups(), 0f, 0f, duration * 0.7f, 0f);
+
+        levelInfoPopupSequence
+            .OnComplete(() =>
+            {
+                HideLevelInfoImmediately();
+                levelInfoPopupSequence = null;
+            })
+            .OnKill(() =>
+            {
+                if (levelInfoPopupSequence != null)
+                {
+                    levelInfoPopupSequence = null;
+                }
+            });
+    }
+
+    private static void AppendGroupFades(
+        Sequence sequence,
+        CanvasGroup[] groups,
+        float baseDelay,
+        float stagger,
+        float duration,
+        float endAlpha = 1f)
+    {
+        if (sequence == null || groups == null)
+        {
+            return;
+        }
+
+        float safeDuration = Mathf.Max(0.01f, duration);
+        float safeStagger = Mathf.Max(0f, stagger);
+
+        for (int i = 0; i < groups.Length; i++)
+        {
+            CanvasGroup group = groups[i];
+            if (group == null)
+            {
+                continue;
+            }
+
+            float startAt = Mathf.Max(0f, baseDelay + i * safeStagger);
+            sequence.Insert(startAt, group.DOFade(endAlpha, safeDuration).SetEase(Ease.OutCubic));
+        }
     }
 
     private void ApplyLevelInfoContentAlpha(float textAlpha, float buttonAlpha)
@@ -1378,6 +1799,97 @@ public partial class LevelSelectSceneController : MonoBehaviour
         return levelInfoPopup != null &&
                levelInfoPopup.canvasGroup != null &&
                levelInfoPopup.canvasGroup.alpha > 0.001f;
+    }
+
+    private void EnsureLevelInfoOutsideCloseOverlay()
+    {
+        if (levelInfoPopup == null || levelInfoPopup.root == null)
+        {
+            return;
+        }
+
+        Transform parent = levelInfoPopup.root.parent;
+        if (parent == null)
+        {
+            return;
+        }
+
+        if (levelInfoOutsideCloseOverlayRoot == null)
+        {
+            Transform existing = parent.Find("LevelInfoOutsideCloseOverlay");
+            if (existing != null)
+            {
+                levelInfoOutsideCloseOverlayRoot = existing as RectTransform;
+            }
+        }
+
+        if (levelInfoOutsideCloseOverlayRoot == null)
+        {
+            GameObject overlayObject = new GameObject("LevelInfoOutsideCloseOverlay", typeof(RectTransform), typeof(Image), typeof(Button));
+            levelInfoOutsideCloseOverlayRoot = overlayObject.GetComponent<RectTransform>();
+            levelInfoOutsideCloseOverlayRoot.SetParent(parent, false);
+        }
+
+        Image overlayImage = levelInfoOutsideCloseOverlayRoot.GetComponent<Image>();
+        if (overlayImage == null)
+        {
+            overlayImage = levelInfoOutsideCloseOverlayRoot.gameObject.AddComponent<Image>();
+        }
+
+        levelInfoOutsideCloseOverlayButton = levelInfoOutsideCloseOverlayRoot.GetComponent<Button>();
+        if (levelInfoOutsideCloseOverlayButton == null)
+        {
+            levelInfoOutsideCloseOverlayButton = levelInfoOutsideCloseOverlayRoot.gameObject.AddComponent<Button>();
+        }
+
+        levelInfoOutsideCloseOverlayRoot.anchorMin = Vector2.zero;
+        levelInfoOutsideCloseOverlayRoot.anchorMax = Vector2.one;
+        levelInfoOutsideCloseOverlayRoot.pivot = new Vector2(0.5f, 0.5f);
+        levelInfoOutsideCloseOverlayRoot.offsetMin = Vector2.zero;
+        levelInfoOutsideCloseOverlayRoot.offsetMax = Vector2.zero;
+
+        overlayImage.color = new Color(0f, 0f, 0f, 0f);
+        overlayImage.raycastTarget = true;
+
+        levelInfoOutsideCloseOverlayButton.targetGraphic = overlayImage;
+        levelInfoOutsideCloseOverlayButton.transition = Selectable.Transition.None;
+        levelInfoOutsideCloseOverlayButton.onClick.RemoveAllListeners();
+        levelInfoOutsideCloseOverlayButton.onClick.AddListener(OnLevelInfoOutsideCloseOverlayClicked);
+    }
+
+    private void SetLevelInfoOutsideCloseOverlayVisible(bool visible)
+    {
+        EnsureLevelInfoOutsideCloseOverlay();
+        if (levelInfoOutsideCloseOverlayRoot == null || levelInfoPopup == null || levelInfoPopup.root == null)
+        {
+            return;
+        }
+
+        if (visible)
+        {
+            Transform parent = levelInfoPopup.root.parent;
+            if (parent != null && levelInfoOutsideCloseOverlayRoot.parent != parent)
+            {
+                levelInfoOutsideCloseOverlayRoot.SetParent(parent, false);
+            }
+
+            int popupSiblingIndex = levelInfoPopup.root.GetSiblingIndex();
+            levelInfoOutsideCloseOverlayRoot.SetSiblingIndex(Mathf.Max(0, popupSiblingIndex));
+            levelInfoPopup.root.SetAsLastSibling();
+        }
+
+        levelInfoOutsideCloseOverlayRoot.gameObject.SetActive(visible);
+    }
+
+    private void OnLevelInfoOutsideCloseOverlayClicked()
+    {
+        if (IsScenarioDropdownOpen())
+        {
+            SetScenarioDropdownVisible(false);
+            return;
+        }
+
+        CloseLevelInfo();
     }
 
     private bool IsSubMenuOpen()
