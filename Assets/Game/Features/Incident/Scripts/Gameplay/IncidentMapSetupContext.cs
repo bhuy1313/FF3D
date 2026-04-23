@@ -24,6 +24,7 @@ public sealed class IncidentMapSetupContext
     public IncidentMapSetupRoot SetupRoot { get; }
     public Fire DefaultFirePrefab { get; }
     public IncidentPayloadAnchor ResolvedAnchor { get; set; }
+    public IncidentOriginArea ResolvedOriginArea { get; set; }
 
     public void AddWarning(string message, Object context = null)
     {

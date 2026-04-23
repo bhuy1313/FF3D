@@ -16,6 +16,11 @@ public class IncidentAnchorHazardSetupStep : IncidentMapSetupStep
             yield break;
         }
 
+        if (context.ResolvedAnchor != null)
+        {
+            yield break;
+        }
+
         if (context.DefaultFirePrefab == null)
         {
             context.AddWarning(

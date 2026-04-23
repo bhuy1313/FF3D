@@ -1,13 +1,22 @@
 using UnityEngine;
+using UnityEngine.Serialization;
+
 [ExecuteAlways]
-[DisallowMultipleComponent]
-[RequireComponent(typeof(BoxCollider))]
-[RequireComponent(typeof(SmokeHazard))]
-public class SmokeHazardAutoFit : MonoBehaviour
+public class RoomVolumeAutoFit : MonoBehaviour
 {
+    public enum AutoFitMode
+    {
+        SmokeHazard = 0,
+        RoomArea = 1
+    }
+
     [Header("References")]
+    [SerializeField] private AutoFitMode mode = AutoFitMode.SmokeHazard;
     [SerializeField] private SmokeHazard smokeHazard;
-    [SerializeField] private BoxCollider triggerZone;
+    [SerializeField] private IncidentOriginArea originArea;
+    [SerializeField] private IncidentPayloadAnchor payloadAnchor;
+    [FormerlySerializedAs("triggerZone")]
+    [SerializeField] private BoxCollider targetCollider;
     [SerializeField] private Transform cornerMarkerA;
     [SerializeField] private Transform cornerMarkerB;
 
@@ -23,8 +32,7 @@ public class SmokeHazardAutoFit : MonoBehaviour
 
     private void Reset()
     {
-        smokeHazard = GetComponent<SmokeHazard>();
-        triggerZone = GetComponent<BoxCollider>();
+        ResolveReferences();
     }
 
     private void OnEnable()
@@ -48,41 +56,104 @@ public class SmokeHazardAutoFit : MonoBehaviour
         }
     }
 
-    [ContextMenu("Fit Smoke Hazard")]
+    [ContextMenu("Fit Volume")]
     public void FitNow()
     {
         ResolveReferences();
-        if (smokeHazard == null || triggerZone == null)
+        if (targetCollider == null)
         {
             return;
         }
 
-        if (!TryCalculateCornerBounds(out Bounds localBounds))
+        if (TryCalculateCornerBounds(out Bounds localBounds))
         {
-            return;
+            targetCollider.center = localBounds.center;
+            targetCollider.size = Vector3.Max(localBounds.size + sizePadding, Vector3.one * minimumSize);
         }
 
-        triggerZone.center = localBounds.center;
-        triggerZone.size = Vector3.Max(localBounds.size + sizePadding, Vector3.one * minimumSize);
-        triggerZone.isTrigger = true;
-        smokeHazard.SetTriggerZone(triggerZone);
+        targetCollider.isTrigger = true;
+        ApplyBindings();
+    }
+
+    private void ApplyBindings()
+    {
+        switch (mode)
+        {
+            case AutoFitMode.SmokeHazard:
+                if (smokeHazard != null)
+                {
+                    smokeHazard.SetTriggerZone(targetCollider);
+                }
+
+                break;
+            case AutoFitMode.RoomArea:
+                if (originArea != null)
+                {
+                    originArea.SetAreaVolume(targetCollider);
+                }
+
+                if (smokeHazard != null)
+                {
+                    smokeHazard.SetTriggerZone(targetCollider);
+                }
+
+                if (payloadAnchor != null)
+                {
+                    payloadAnchor.SetSmokeHazard(smokeHazard);
+                }
+
+                break;
+        }
     }
 
     private void ResolveReferences()
     {
-        if (smokeHazard == null)
+        if (mode == AutoFitMode.SmokeHazard && smokeHazard == null)
         {
             smokeHazard = GetComponent<SmokeHazard>();
         }
 
-        if (triggerZone == null)
+        if (mode == AutoFitMode.RoomArea)
         {
-            triggerZone = GetComponent<BoxCollider>();
+            if (originArea == null)
+            {
+                originArea = GetComponent<IncidentOriginArea>();
+            }
+
+            if (originArea == null)
+            {
+                originArea = GetComponentInParent<IncidentOriginArea>(true);
+            }
+
+            if (payloadAnchor == null)
+            {
+                payloadAnchor = GetComponent<IncidentPayloadAnchor>();
+            }
+
+            if (payloadAnchor == null)
+            {
+                payloadAnchor = GetComponentInParent<IncidentPayloadAnchor>(true);
+            }
+
+            if (smokeHazard == null)
+            {
+                smokeHazard = GetComponentInChildren<SmokeHazard>(true);
+            }
+
+            if (smokeHazard == null)
+            {
+                smokeHazard = GetComponentInParent<SmokeHazard>(true);
+            }
         }
 
-        if (triggerZone != null)
+        if (targetCollider == null)
         {
-            triggerZone.isTrigger = true;
+            targetCollider = GetComponent<BoxCollider>();
+        }
+
+        if (targetCollider != null)
+        {
+            targetCollider.isTrigger = true;
         }
     }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
 public class IncidentPayloadAnchor : MonoBehaviour
@@ -14,6 +15,7 @@ public class IncidentPayloadAnchor : MonoBehaviour
     [SerializeField] private Transform runtimeParent;
     [SerializeField] private Vector3 runtimeZoneSize = new Vector3(4f, 2.5f, 4f);
     [SerializeField] private bool createRuntimeSmokeHazard = true;
+    [FormerlySerializedAs("smokeHazard")]
     [SerializeField] private SmokeHazard smokeHazard;
     [SerializeField] private HazardIsolationDevice[] hazardIsolationDevices = Array.Empty<HazardIsolationDevice>();
 
@@ -44,6 +46,15 @@ public class IncidentPayloadAnchor : MonoBehaviour
     public SmokeHazard RuntimeSmokeHazard => runtimeSmokeHazard;
     public IReadOnlyList<Fire> RuntimeFires => runtimeFires;
     public bool HasConfiguredHazardIsolationDevices => hazardIsolationDevices != null && hazardIsolationDevices.Length > 0;
+    public Vector3 RuntimeZoneSize => runtimeZoneSize;
+    public LayerMask FirePlacementMask => firePlacementMask;
+    public QueryTriggerInteraction FirePlacementTriggerInteraction => firePlacementTriggerInteraction;
+    public float SurfaceOffset => surfaceOffset;
+
+    private void OnValidate()
+    {
+        ResolveSmokeHazardReference();
+    }
 
     public bool MatchesFireOrigin(string key)
     {
@@ -56,6 +67,15 @@ public class IncidentPayloadAnchor : MonoBehaviour
     }
 
     public void ApplyPayload(IncidentWorldSetupPayload payload, Fire defaultFirePrefab)
+    {
+        ApplyPayloadFromResolvedSource(payload, defaultFirePrefab, transform.position, ResolveFallbackRotation());
+    }
+
+    public void ApplyPayloadFromResolvedSource(
+        IncidentWorldSetupPayload payload,
+        Fire defaultFirePrefab,
+        Vector3 primaryPosition,
+        Quaternion primaryRotation)
     {
         if (payload == null)
         {
@@ -71,7 +91,7 @@ public class IncidentPayloadAnchor : MonoBehaviour
         ClearRuntimeObjects();
 
         runtimeRoot = CreateRuntimeRoot();
-        SpawnRuntimeFires(payload, defaultFirePrefab, runtimeRoot);
+        SpawnRuntimeFires(payload, defaultFirePrefab, runtimeRoot, primaryPosition, primaryRotation);
         EnsureRuntimeFireGroup(runtimeRoot);
         ConfigureSmoke(payload, runtimeRoot);
         ConfigureHazardIsolationDevices(payload);
@@ -88,13 +108,21 @@ public class IncidentPayloadAnchor : MonoBehaviour
         return runtimeObject.transform;
     }
 
-    private void SpawnRuntimeFires(IncidentWorldSetupPayload payload, Fire defaultFirePrefab, Transform parent)
+    private void SpawnRuntimeFires(
+        IncidentWorldSetupPayload payload,
+        Fire defaultFirePrefab,
+        Transform parent,
+        Vector3 primaryPosition,
+        Quaternion primaryRotation)
     {
         runtimeFires.Clear();
 
         int requestedTotalFireCount = ResolveRequestedTotalFireCount(payload);
         int requestedSecondaryCount = Mathf.Max(0, requestedTotalFireCount - 1);
-        List<SpawnPlacement> placements = BuildRuntimeFirePlacements(requestedSecondaryCount);
+        List<SpawnPlacement> placements = BuildRuntimeFirePlacements(
+            primaryPosition,
+            primaryRotation,
+            requestedSecondaryCount);
         for (int i = 0; i < placements.Count; i++)
         {
             SpawnPlacement placement = placements[i];
@@ -120,11 +148,13 @@ public class IncidentPayloadAnchor : MonoBehaviour
             this);
     }
 
-    private List<SpawnPlacement> BuildRuntimeFirePlacements(int requestedSecondaryCount)
+    private List<SpawnPlacement> BuildRuntimeFirePlacements(
+        Vector3 primaryPosition,
+        Quaternion primaryRotation,
+        int requestedSecondaryCount)
     {
         List<SpawnPlacement> placements = new List<SpawnPlacement>();
-        Vector3 anchorPosition = transform.position;
-        placements.Add(new SpawnPlacement(anchorPosition, ResolveFallbackRotation()));
+        placements.Add(new SpawnPlacement(primaryPosition, primaryRotation));
 
         requestedSecondaryCount = Mathf.Max(0, requestedSecondaryCount);
         if (requestedSecondaryCount <= 0)
@@ -138,7 +168,7 @@ public class IncidentPayloadAnchor : MonoBehaviour
         while (placements.Count - 1 < requestedSecondaryCount && attempts < maxAttempts)
         {
             attempts++;
-            if (!TryFindSecondaryPlacement(random, placements, out SpawnPlacement placement))
+            if (!TryFindSecondaryPlacement(random, primaryPosition, placements, out SpawnPlacement placement))
             {
                 continue;
             }
@@ -213,7 +243,7 @@ public class IncidentPayloadAnchor : MonoBehaviour
 
     private void ConfigureSmoke(IncidentWorldSetupPayload payload, Transform parent)
     {
-        SmokeHazard targetSmokeHazard = smokeHazard;
+        SmokeHazard targetSmokeHazard = ResolveSmokeHazardReference();
         if (targetSmokeHazard == null && createRuntimeSmokeHazard && parent != null)
         {
             Transform existingSmokeObj = parent.Find("RuntimeSmoke");
@@ -244,9 +274,20 @@ public class IncidentPayloadAnchor : MonoBehaviour
             return;
         }
 
+        Collider sharedAreaVolume = GetComponent<Collider>();
+        if (sharedAreaVolume != null)
+        {
+            runtimeSmokeHazard.SetTriggerZone(sharedAreaVolume);
+        }
+
         runtimeSmokeHazard.SetLinkedFires(runtimeFires.ToArray());
         runtimeSmokeHazard.SetStartSmokeDensity(payload.startSmokeDensity, applyImmediately: true);
         runtimeSmokeHazard.SetSmokeAccumulationMultiplier(payload.smokeAccumulationMultiplier);
+    }
+
+    public void SetSmokeHazard(SmokeHazard value)
+    {
+        smokeHazard = value;
     }
 
     private void ConfigureHazardIsolationDevices(IncidentWorldSetupPayload payload)
@@ -274,6 +315,7 @@ public class IncidentPayloadAnchor : MonoBehaviour
 
     private bool TryFindSecondaryPlacement(
         System.Random random,
+        Vector3 primaryPosition,
         List<SpawnPlacement> existingPlacements,
         out SpawnPlacement placement)
     {
@@ -288,9 +330,9 @@ public class IncidentPayloadAnchor : MonoBehaviour
             Mathf.Min(minimumSecondaryFireSpacing, secondaryFireRange),
             Mathf.Max(minimumSecondaryFireSpacing, secondaryFireRange),
             (float)random.NextDouble());
-        Vector3 launchPosition = transform.position + Vector3.up * Mathf.Max(0f, parabolaLaunchHeight);
+        Vector3 launchPosition = primaryPosition + Vector3.up * Mathf.Max(0f, parabolaLaunchHeight);
         Vector3 travelDirection = GetRandomHorizontalDirection(random);
-        Vector3 landingPosition = transform.position + travelDirection * horizontalDistance;
+        Vector3 landingPosition = primaryPosition + travelDirection * horizontalDistance;
         Vector3 controlPoint = Vector3.Lerp(launchPosition, landingPosition, 0.5f) + Vector3.up * Mathf.Max(0.05f, parabolaApexHeight);
 
         Vector3 previousPoint = launchPosition;
@@ -400,6 +442,16 @@ public class IncidentPayloadAnchor : MonoBehaviour
         runtimeFireGroup = null;
         runtimeSmokeHazard = null;
         runtimeFires.Clear();
+    }
+
+    private SmokeHazard ResolveSmokeHazardReference()
+    {
+        if (smokeHazard == null)
+        {
+            smokeHazard = GetComponentInChildren<SmokeHazard>(true);
+        }
+
+        return smokeHazard;
     }
 
     private static bool MatchesKey(string left, string right)

@@ -12,7 +12,6 @@ GameObject:
   - component: {fileID: 6843337656292383356}
   - component: {fileID: 4737069364363785356}
   - component: {fileID: 4536955930849080249}
-  - component: {fileID: 3553583254257902102}
   m_Layer: 0
   m_Name: Smoke Hazard
   m_TagString: Untagged
@@ -146,28 +145,6 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 6.1, y: 3.3, z: 9.1}
   m_Center: {x: 0.0009999275, y: -0.21249998, z: 0.0049991608}
---- !u!114 &3553583254257902102
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5239504675546528037}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 52de16ef65554bfd90b1bfa47789baee, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SmokeHazardAutoFit
-  smokeHazard: {fileID: 4737069364363785356}
-  triggerZone: {fileID: 4536955930849080249}
-  cornerMarkerA: {fileID: 0}
-  cornerMarkerB: {fileID: 0}
-  roomHeight: 3.2
-  bottomOffset: 0
-  sizePadding: {x: 0.1, y: 0.1, z: 0.1}
-  minimumSize: 0.05
-  fitOnEnable: 0
-  fitOnValidate: 1
 --- !u!1001 &6920776110179605006
 PrefabInstance:
   m_ObjectHideFlags: 0
