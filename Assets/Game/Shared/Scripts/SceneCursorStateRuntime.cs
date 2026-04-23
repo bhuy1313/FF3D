@@ -42,7 +42,7 @@ public static class SceneCursorStateRuntime
             return null;
         }
 
-        FirstPersonController[] controllers = Object.FindObjectsByType<FirstPersonController>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        FirstPersonController[] controllers = Object.FindObjectsByType<FirstPersonController>(FindObjectsInactive.Exclude);
         for (int i = 0; i < controllers.Length; i++)
         {
             FirstPersonController controller = controllers[i];

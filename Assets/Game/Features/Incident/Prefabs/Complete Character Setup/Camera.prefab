@@ -53,7 +53,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &8448557170747303481
 Transform:
   m_ObjectHideFlags: 0
@@ -203,15 +203,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 561493385028389453, guid: 6637354f6a1f807429286c160865d406, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -5.920517
+      value: 10.807011
       objectReference: {fileID: 0}
     - target: {fileID: 561493385028389453, guid: 6637354f6a1f807429286c160865d406, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.5920095
+      value: 1.45
       objectReference: {fileID: 0}
     - target: {fileID: 561493385028389453, guid: 6637354f6a1f807429286c160865d406, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 29.068598
+      value: -1.64029
       objectReference: {fileID: 0}
     - target: {fileID: 561493385028389453, guid: 6637354f6a1f807429286c160865d406, type: 3}
       propertyPath: m_LocalRotation.w
@@ -253,6 +253,14 @@ PrefabInstance:
       propertyPath: field of view
       value: 60
       objectReference: {fileID: 0}
+    - target: {fileID: 1500555878580984294, guid: 6637354f6a1f807429286c160865d406, type: 3}
+      propertyPath: far clip plane
+      value: 50
+      objectReference: {fileID: 0}
+    - target: {fileID: 1500555878580984294, guid: 6637354f6a1f807429286c160865d406, type: 3}
+      propertyPath: m_CullingMask.m_Bits
+      value: 2047
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -273,15 +281,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 223710345455192817, guid: ecc7e4d6b4bd3434a9172ff467b8b2cd, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -5.920517
+      value: 10.807011
       objectReference: {fileID: 0}
     - target: {fileID: 223710345455192817, guid: ecc7e4d6b4bd3434a9172ff467b8b2cd, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 1.5920095
+      value: 1.45
       objectReference: {fileID: 0}
     - target: {fileID: 223710345455192817, guid: ecc7e4d6b4bd3434a9172ff467b8b2cd, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 29.068598
+      value: -1.64029
       objectReference: {fileID: 0}
     - target: {fileID: 223710345455192817, guid: ecc7e4d6b4bd3434a9172ff467b8b2cd, type: 3}
       propertyPath: m_LocalRotation.w
@@ -330,6 +338,10 @@ PrefabInstance:
     - target: {fileID: 6815117189166650524, guid: ecc7e4d6b4bd3434a9172ff467b8b2cd, type: 3}
       propertyPath: Lens.FieldOfView
       value: 60
+      objectReference: {fileID: 0}
+    - target: {fileID: 6815117189166650524, guid: ecc7e4d6b4bd3434a9172ff467b8b2cd, type: 3}
+      propertyPath: Lens.FarClipPlane
+      value: 50
       objectReference: {fileID: 0}
     - target: {fileID: 8005953874485947377, guid: ecc7e4d6b4bd3434a9172ff467b8b2cd, type: 3}
       propertyPath: Damping.x
