@@ -154,6 +154,8 @@ public class SubMenuGameplayLock : MonoBehaviour
             Cursor.visible = restoreCursorVisible;
         }
 
+        RestoreGameplayLookIfNeeded(skipCursorRestore);
+
         isGameplayLocked = false;
     }
 
@@ -207,5 +209,27 @@ public class SubMenuGameplayLock : MonoBehaviour
         {
             breakActionLock = PlayerActionLock.GetOrCreate(playerRoot);
         }
+    }
+
+    private void RestoreGameplayLookIfNeeded(bool skipCursorRestore)
+    {
+        if (skipCursorRestore || starterAssetsInputs == null)
+        {
+            return;
+        }
+
+        bool shouldForceGameplayLookRestore =
+            !starterAssetsInputs.cursorInputForLook &&
+            !ShouldLockGameplay() &&
+            Cursor.lockState == CursorLockMode.Locked &&
+            !Cursor.visible;
+
+        if (!shouldForceGameplayLookRestore)
+        {
+            return;
+        }
+
+        starterAssetsInputs.cursorInputForLook = true;
+        starterAssetsInputs.cursorLocked = true;
     }
 }

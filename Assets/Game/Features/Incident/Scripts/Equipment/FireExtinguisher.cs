@@ -66,6 +66,10 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
     public bool IsHeld => currentHolder != null;
     public GameObject ClaimOwner => claimOwner;
     public bool IsBotControlled => currentUser != null && currentUser.GetComponentInParent<BotBehaviorContext>() != null;
+    public FireExtinguisherType ExtinguisherType => extinguisherType;
+    public float CurrentCharge => currentCharge;
+    public float MaxCharge => maxCharge;
+    public float ChargeNormalized => maxCharge > 0f ? Mathf.Clamp01(currentCharge / maxCharge) : 0f;
 
     private void Awake()
     {

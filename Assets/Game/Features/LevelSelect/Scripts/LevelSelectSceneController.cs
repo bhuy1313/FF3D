@@ -2402,7 +2402,7 @@ public partial class LevelSelectSceneController : MonoBehaviour
             return;
         }
 
-        SetText(card.title, ResolveRegionTitle(card));
+        SetText(card.title, ResolveRegionTitleWithProgress(card));
 
         if (card.levelListContentRoot == null || card.levelLabels == null || card.levelLabels.Count <= 0)
         {
@@ -2893,6 +2893,61 @@ public partial class LevelSelectSceneController : MonoBehaviour
             : GetDefaultRegionLocalizationKey(card.name);
         string fallback = card.title != null ? card.title.text : card.name;
         return ResolveLocalizedText(localizationKey, fallback);
+    }
+
+    private string ResolveRegionTitleWithProgress(RegionCard card)
+    {
+        string title = ResolveRegionTitle(card);
+        string progress = ResolveRegionProgressText(card);
+
+        if (string.IsNullOrWhiteSpace(progress))
+        {
+            return title;
+        }
+
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return progress;
+        }
+
+        return $"{title}\n{progress}";
+    }
+
+    private string ResolveRegionProgressText(RegionCard card)
+    {
+        if (card == null || card.levelDefinitions == null)
+        {
+            return "Completed: 0/0";
+        }
+
+        int totalCount = card.levelDefinitions.Length;
+        if (totalCount <= 0)
+        {
+            return "Completed: 0/0";
+        }
+
+        string playerName = LoadingFlowState.GetPlayerName();
+        if (string.IsNullOrWhiteSpace(playerName))
+        {
+            return $"Completed: 0/{totalCount}";
+        }
+
+        int completedCount = 0;
+        for (int i = 0; i < card.levelDefinitions.Length; i++)
+        {
+            LevelDefinition definition = card.levelDefinitions[i];
+            if (definition == null || string.IsNullOrWhiteSpace(definition.levelId))
+            {
+                continue;
+            }
+
+            if (PlayerProgressProfileStore.IsLevelCompleted(playerName, definition.levelId))
+            {
+                completedCount++;
+            }
+        }
+
+        return $"Completed: {completedCount}/{totalCount}";
     }
 
     private string ResolveLevelName(LevelDefinition definition, Button sourceButton)
