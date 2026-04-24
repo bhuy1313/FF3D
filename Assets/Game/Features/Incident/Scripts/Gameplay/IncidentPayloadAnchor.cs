@@ -96,13 +96,9 @@ public class IncidentPayloadAnchor : MonoBehaviour
 
         if (fireSimulationManager != null)
         {
-            if (!fireSimulationManager.IsInitialized)
-            {
-                fireSimulationManager.InitializeRuntimeGraph();
-            }
-
+            runtimeRoot = CreateRuntimeRoot();
             ApplyPayloadToSimulation(payload, fireSimulationManager, primaryPosition, primaryRotation);
-            ConfigureSmoke(payload, null, fireSimulationManager);
+            ConfigureSmoke(payload, runtimeRoot, fireSimulationManager);
         }
         else
         {
@@ -129,7 +125,7 @@ public class IncidentPayloadAnchor : MonoBehaviour
             ConfigureSmoke(payload, runtimeRoot, null);
         }
 
-        ConfigureHazardIsolationDevices(payload);
+        ConfigureHazardIsolationDevices(payload, fireSimulationManager);
         return true;
     }
 
@@ -249,7 +245,6 @@ public class IncidentPayloadAnchor : MonoBehaviour
         Quaternion primaryRotation)
     {
         FireHazardType primaryHazardType = IncidentPayloadStartupTask.ResolveFireHazardType(payload.hazardType);
-        fireSimulationManager.BeginIncident(primaryHazardType, hazardSourceIsolated: false);
 
         int requestedActiveFireCount = ResolveRequestedTotalFireCount(payload);
         int requestedSecondaryCount = Mathf.Max(0, requestedActiveFireCount - 1);
@@ -260,15 +255,15 @@ public class IncidentPayloadAnchor : MonoBehaviour
             primaryPosition,
             primaryRotation,
             requestedSecondaryCount);
-
+        List<FireIncidentPlacement> simulationPlacements = new List<FireIncidentPlacement>(activePlacements.Count);
         if (activePlacements.Count > 0)
         {
-            fireSimulationManager.TrackClosestNode(activePlacements[0].Position, primaryIntensity);
+            simulationPlacements.Add(CreateIncidentPlacement(activePlacements[0], primaryIntensity));
         }
 
         for (int i = 1; i < activePlacements.Count; i++)
         {
-            fireSimulationManager.TrackClosestNode(activePlacements[i].Position, secondaryIntensity);
+            simulationPlacements.Add(CreateIncidentPlacement(activePlacements[i], secondaryIntensity));
         }
 
         if (runtimeSpawnProfile.SpawnLatentSpreadNodes && runtimeSpawnProfile.LatentSpreadNodeCount > 0)
@@ -276,7 +271,17 @@ public class IncidentPayloadAnchor : MonoBehaviour
             List<SpawnPlacement> latentPlacements = BuildLatentSpreadPlacements(activePlacements);
             for (int i = 0; i < latentPlacements.Count; i++)
             {
-                fireSimulationManager.TrackClosestNode(latentPlacements[i].Position, 0f);
+                simulationPlacements.Add(CreateIncidentPlacement(latentPlacements[i], 0f));
+            }
+        }
+
+        if (!fireSimulationManager.ApplyIncidentPlacements(primaryHazardType, hazardSourceIsolated: false, simulationPlacements))
+        {
+            fireSimulationManager.BeginIncident(primaryHazardType, hazardSourceIsolated: false);
+            for (int i = 0; i < simulationPlacements.Count; i++)
+            {
+                FireIncidentPlacement placement = simulationPlacements[i];
+                fireSimulationManager.TrackClosestNode(placement.Position, placement.InitialIntensity01);
             }
         }
     }
@@ -633,7 +638,7 @@ public class IncidentPayloadAnchor : MonoBehaviour
         runtimeSmokeHazard.SetSmokeAccumulationMultiplier(payload.smokeAccumulationMultiplier);
     }
 
-    private void ConfigureHazardIsolationDevices(IncidentWorldSetupPayload payload)
+    private void ConfigureHazardIsolationDevices(IncidentWorldSetupPayload payload, FireSimulationManager fireSimulationManager)
     {
         if (hazardIsolationDevices == null || hazardIsolationDevices.Length == 0 || payload == null)
         {
@@ -651,6 +656,7 @@ public class IncidentPayloadAnchor : MonoBehaviour
             }
 
             device.SetLinkedFires(linkedFires);
+            device.SetFireSimulationManager(fireSimulationManager);
             device.SetRuntimeHazardType(fireHazardType);
             device.SetRuntimeIsolationState(false, invokeEvents: false);
         }
@@ -794,6 +800,14 @@ public class IncidentPayloadAnchor : MonoBehaviour
         }
 
         return (((float)random.NextDouble() * 2f) - 1f) * magnitude;
+    }
+
+    private static FireIncidentPlacement CreateIncidentPlacement(SpawnPlacement placement, float initialIntensity01)
+    {
+        return new FireIncidentPlacement(
+            placement.Position,
+            placement.SurfaceNormal,
+            initialIntensity01);
     }
 
     private void ClearRuntimeObjects()

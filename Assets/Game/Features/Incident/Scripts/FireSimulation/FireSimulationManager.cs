@@ -7,8 +7,16 @@ public sealed class FireSimulationManager : MonoBehaviour
     [Header("References")]
     [SerializeField] private FireSurfaceGraph surfaceGraph;
     [SerializeField] private FireSimulationProfile simulationProfile;
+    [SerializeField] private FireEffectManager effectManager;
     [SerializeField] private FireClusterView clusterViewPrefab;
     [SerializeField] private Transform clusterViewRoot;
+    [Header("Runtime Incident Nodes")]
+    [SerializeField] [Min(0.1f)] private float runtimeNodeInitialFuel = 1.1f;
+    [SerializeField] [Min(0.01f)] private float runtimeNodeIgnitionThresholdMultiplier = 1f;
+    [SerializeField] [Range(0f, 1f)] private float runtimeNodeSpreadResistance = 0.1f;
+    [SerializeField] [Min(0.1f)] private float runtimeNodeAutoConnectRadius = 2.6f;
+    [SerializeField] private bool runtimeNodeDrawGizmos = true;
+    [SerializeField] private Color runtimeNodeGizmoColor = new Color(1f, 0.45f, 0.1f, 0.8f);
 
     [Header("Boot")]
     [SerializeField] private bool initializeOnEnable = true;
@@ -16,9 +24,10 @@ public sealed class FireSimulationManager : MonoBehaviour
     [Header("Debug")]
     [SerializeField] private bool logNodeHeatProgress;
     [SerializeField] [Min(0.1f)] private float nodeHeatLogInterval = 0.5f;
+    [SerializeField] private bool autoBindSceneConsumers = true;
 
     private readonly List<FireClusterSnapshot> clusterSnapshots = new List<FireClusterSnapshot>();
-    private readonly List<FireClusterView> clusterViews = new List<FireClusterView>();
+    private readonly List<FireSurfaceNodeAuthoring> runtimeIncidentNodes = new List<FireSurfaceNodeAuthoring>();
     private FireRuntimeGraph runtimeGraph;
     private float simulationTickAccumulator;
     private float clusterRefreshAccumulator;
@@ -26,6 +35,7 @@ public sealed class FireSimulationManager : MonoBehaviour
     private bool initialized;
     private FireHazardType activeIncidentHazardType = FireHazardType.OrdinaryCombustibles;
     private bool activeHazardSourceIsolated;
+    private Transform runtimeIncidentNodeRoot;
 
     public IReadOnlyList<FireClusterSnapshot> ClusterSnapshots => clusterSnapshots;
     public FireRuntimeGraph RuntimeGraph => runtimeGraph;
@@ -67,7 +77,7 @@ public sealed class FireSimulationManager : MonoBehaviour
         {
             clusterRefreshAccumulator = 0f;
             RebuildClusters();
-            SyncClusterViews();
+            SyncEffects();
         }
 
         if (logNodeHeatProgress && nodeHeatLogAccumulator >= Mathf.Max(0.1f, nodeHeatLogInterval))
@@ -95,12 +105,14 @@ public sealed class FireSimulationManager : MonoBehaviour
             }
 
             runtimeGraph = null;
-            DisableUnusedClusterViews();
+            DisableEffects();
             return;
         }
 
         runtimeGraph = surfaceGraph.BuildRuntimeGraph();
         initialized = runtimeGraph != null;
+        BindSceneConsumers();
+        EnsureEffectManager();
         ResetRuntimeStateToBaseline(useAuthoringIgnition: true);
         if (logNodeHeatProgress)
         {
@@ -108,7 +120,7 @@ public sealed class FireSimulationManager : MonoBehaviour
         }
 
         RebuildClusters();
-        SyncClusterViews();
+        SyncEffects();
         NotifyStateChanged();
     }
 
@@ -162,8 +174,35 @@ public sealed class FireSimulationManager : MonoBehaviour
         activeIncidentHazardType = hazardType;
         activeHazardSourceIsolated = hazardSourceIsolated;
         RebuildClusters();
-        SyncClusterViews();
+        SyncEffects();
         NotifyStateChanged();
+    }
+
+    public bool ApplyIncidentPlacements(
+        FireHazardType hazardType,
+        bool hazardSourceIsolated,
+        IReadOnlyList<FireIncidentPlacement> placements)
+    {
+        if (surfaceGraph == null || placements == null || placements.Count <= 0)
+        {
+            return false;
+        }
+
+        RebuildRuntimeIncidentNodes(placements, hazardType);
+        InitializeRuntimeGraph();
+        if (!initialized || runtimeGraph == null)
+        {
+            return false;
+        }
+
+        BeginIncident(hazardType, hazardSourceIsolated);
+        for (int i = 0; i < placements.Count; i++)
+        {
+            FireIncidentPlacement placement = placements[i];
+            TrackClosestNode(placement.Position, placement.InitialIntensity01);
+        }
+
+        return true;
     }
 
     public int TrackClosestNode(Vector3 worldPosition, float normalizedHeat)
@@ -186,9 +225,18 @@ public sealed class FireSimulationManager : MonoBehaviour
         }
 
         node.IsTrackedByIncident = true;
-        node.HazardType = activeIncidentHazardType;
-        float heat = Mathf.Clamp01(normalizedHeat) * Mathf.Max(0.01f, node.IgnitionThreshold);
+        float clampedHeat01 = Mathf.Clamp01(normalizedHeat);
+        if (clampedHeat01 > 0f)
+        {
+            node.HazardType = activeIncidentHazardType;
+        }
+
+        float heat = clampedHeat01 > 0f
+            ? Mathf.Lerp(node.IgnitionThreshold, node.IgnitionThreshold * 2f, clampedHeat01)
+            : 0f;
         node.Heat = Mathf.Max(node.Heat, heat);
+        RebuildClusters();
+        SyncEffects();
         NotifyStateChanged();
         return nodeIndex;
     }
@@ -585,47 +633,200 @@ public sealed class FireSimulationManager : MonoBehaviour
         }
     }
 
-    private void SyncClusterViews()
+    private void SyncEffects()
     {
-        if (clusterViewPrefab == null)
+        FireEffectManager runtimeEffectManager = EnsureEffectManager();
+        if (runtimeEffectManager == null || simulationProfile == null)
         {
             return;
         }
 
-        int visibleClusterCount = Mathf.Min(clusterSnapshots.Count, simulationProfile.MaxClusterViews);
-        EnsureClusterViewCapacity(visibleClusterCount);
+        runtimeEffectManager.SyncSnapshots(clusterSnapshots, simulationProfile.MaxClusterViews);
+    }
 
-        for (int i = 0; i < visibleClusterCount; i++)
+    private void DisableEffects()
+    {
+        FireEffectManager runtimeEffectManager = EnsureEffectManager();
+        if (runtimeEffectManager != null)
         {
-            FireClusterView view = clusterViews[i];
-            FireClusterSnapshot snapshot = clusterSnapshots[i];
-            view.Bind(snapshot.ClusterId);
-            view.ApplySnapshot(snapshot);
-        }
-
-        for (int i = visibleClusterCount; i < clusterViews.Count; i++)
-        {
-            clusterViews[i].Unbind();
+            runtimeEffectManager.DisableAllViews();
         }
     }
 
-    private void EnsureClusterViewCapacity(int count)
+    private FireEffectManager EnsureEffectManager()
     {
-        while (clusterViews.Count < count)
+        if (effectManager == null)
         {
-            Transform parent = clusterViewRoot != null ? clusterViewRoot : transform;
-            FireClusterView view = Instantiate(clusterViewPrefab, parent);
-            view.Unbind();
-            clusterViews.Add(view);
+            effectManager = GetComponent<FireEffectManager>();
+            if (effectManager == null)
+            {
+                effectManager = gameObject.AddComponent<FireEffectManager>();
+            }
+        }
+
+        effectManager.Configure(clusterViewPrefab, clusterViewRoot);
+        return effectManager;
+    }
+
+    private void BindSceneConsumers()
+    {
+        if (!autoBindSceneConsumers)
+        {
+            return;
+        }
+
+        SmokeHazard[] smokeHazards = FindObjectsByType<SmokeHazard>(FindObjectsInactive.Include);
+        for (int i = 0; i < smokeHazards.Length; i++)
+        {
+            SmokeHazard smokeHazard = smokeHazards[i];
+            if (smokeHazard != null && smokeHazard.gameObject.scene.IsValid())
+            {
+                smokeHazard.SetFireSimulationManager(this);
+            }
+        }
+
+        HazardIsolationDevice[] hazardDevices = FindObjectsByType<HazardIsolationDevice>(FindObjectsInactive.Include);
+        for (int i = 0; i < hazardDevices.Length; i++)
+        {
+            HazardIsolationDevice hazardDevice = hazardDevices[i];
+            if (hazardDevice != null && hazardDevice.gameObject.scene.IsValid())
+            {
+                hazardDevice.SetFireSimulationManager(this);
+            }
+        }
+
+        FireExtinguisher[] extinguishers = FindObjectsByType<FireExtinguisher>(FindObjectsInactive.Include);
+        for (int i = 0; i < extinguishers.Length; i++)
+        {
+            FireExtinguisher extinguisher = extinguishers[i];
+            if (extinguisher != null && extinguisher.gameObject.scene.IsValid())
+            {
+                extinguisher.SetFireSimulationManager(this);
+            }
+        }
+
+        FireHose[] hoses = FindObjectsByType<FireHose>(FindObjectsInactive.Include);
+        for (int i = 0; i < hoses.Length; i++)
+        {
+            FireHose hose = hoses[i];
+            if (hose != null && hose.gameObject.scene.IsValid())
+            {
+                hose.SetFireSimulationManager(this);
+            }
         }
     }
 
-    private void DisableUnusedClusterViews()
+    private void RebuildRuntimeIncidentNodes(IReadOnlyList<FireIncidentPlacement> placements, FireHazardType hazardType)
     {
-        for (int i = 0; i < clusterViews.Count; i++)
+        ClearRuntimeIncidentNodes();
+        if (placements == null || placements.Count <= 0)
         {
-            clusterViews[i].Unbind();
+            surfaceGraph?.ClearRuntimeNodeOverrides();
+            return;
         }
+
+        Transform root = EnsureRuntimeIncidentNodeRoot();
+        for (int i = 0; i < placements.Count; i++)
+        {
+            FireIncidentPlacement placement = placements[i];
+            GameObject nodeObject = new GameObject($"RuntimeFireNode_{i + 1}");
+            nodeObject.transform.SetParent(root, false);
+            nodeObject.transform.position = placement.Position;
+            nodeObject.transform.rotation = ResolveRuntimeNodeRotation(placement.SurfaceNormal);
+            nodeObject.transform.localScale = Vector3.one;
+
+            FireSurfaceNodeAuthoring node = nodeObject.AddComponent<FireSurfaceNodeAuthoring>();
+            FireHazardType nodeHazardType = placement.InitialIntensity01 > 0f
+                ? hazardType
+                : FireHazardType.OrdinaryCombustibles;
+            node.ConfigureRuntimeNode(
+                $"RuntimeIncidentNode_{i + 1}",
+                ResolveRuntimeSurfaceKind(placement.SurfaceNormal),
+                placement.SurfaceNormal,
+                runtimeNodeInitialFuel,
+                runtimeNodeIgnitionThresholdMultiplier,
+                runtimeNodeSpreadResistance,
+                nodeHazardType,
+                runtimeStartIgnited: false,
+                runtimeAutoConnectNearbyNodes: true,
+                runtimeAutoConnectRadius: runtimeNodeAutoConnectRadius,
+                runtimeDrawGizmos: runtimeNodeDrawGizmos,
+                runtimeGizmoColor: runtimeNodeGizmoColor);
+            runtimeIncidentNodes.Add(node);
+        }
+
+        surfaceGraph.SetRuntimeNodeOverrides(runtimeIncidentNodes);
+    }
+
+    private void ClearRuntimeIncidentNodes()
+    {
+        surfaceGraph?.ClearRuntimeNodeOverrides();
+        for (int i = 0; i < runtimeIncidentNodes.Count; i++)
+        {
+            FireSurfaceNodeAuthoring node = runtimeIncidentNodes[i];
+            if (node != null)
+            {
+                Destroy(node.gameObject);
+            }
+        }
+
+        runtimeIncidentNodes.Clear();
+    }
+
+    private Transform EnsureRuntimeIncidentNodeRoot()
+    {
+        if (runtimeIncidentNodeRoot != null)
+        {
+            return runtimeIncidentNodeRoot;
+        }
+
+        Transform parent = surfaceGraph != null ? surfaceGraph.transform : transform;
+        GameObject rootObject = new GameObject("RuntimeIncidentNodes");
+        runtimeIncidentNodeRoot = rootObject.transform;
+        runtimeIncidentNodeRoot.SetParent(parent, false);
+        runtimeIncidentNodeRoot.localPosition = Vector3.zero;
+        runtimeIncidentNodeRoot.localRotation = Quaternion.identity;
+        runtimeIncidentNodeRoot.localScale = Vector3.one;
+        return runtimeIncidentNodeRoot;
+    }
+
+    private static Quaternion ResolveRuntimeNodeRotation(Vector3 surfaceNormal)
+    {
+        Vector3 up = surfaceNormal.sqrMagnitude > 0.0001f ? surfaceNormal.normalized : Vector3.up;
+        Vector3 forward = Vector3.ProjectOnPlane(Vector3.forward, up);
+        if (forward.sqrMagnitude <= 0.0001f)
+        {
+            forward = Vector3.ProjectOnPlane(Vector3.right, up);
+        }
+
+        if (forward.sqrMagnitude <= 0.0001f)
+        {
+            forward = Vector3.Cross(up, Vector3.right);
+        }
+
+        if (forward.sqrMagnitude <= 0.0001f)
+        {
+            forward = Vector3.forward;
+        }
+
+        return Quaternion.LookRotation(forward.normalized, up);
+    }
+
+    private static FireSurfaceNodeAuthoring.SurfaceKind ResolveRuntimeSurfaceKind(Vector3 surfaceNormal)
+    {
+        Vector3 normalizedNormal = surfaceNormal.sqrMagnitude > 0.0001f ? surfaceNormal.normalized : Vector3.up;
+        float upDot = Vector3.Dot(normalizedNormal, Vector3.up);
+        if (upDot >= 0.6f)
+        {
+            return FireSurfaceNodeAuthoring.SurfaceKind.Floor;
+        }
+
+        if (upDot <= -0.35f)
+        {
+            return FireSurfaceNodeAuthoring.SurfaceKind.Ceiling;
+        }
+
+        return FireSurfaceNodeAuthoring.SurfaceKind.Wall;
     }
 
     private static FireHazardType ResolveDominantHazardType(Dictionary<FireHazardType, int> hazardCounts)

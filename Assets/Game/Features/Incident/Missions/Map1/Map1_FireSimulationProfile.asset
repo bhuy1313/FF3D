@@ -14,14 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   simulationTickInterval: 0.1
   clusterRefreshInterval: 0.2
-  ambientCoolingPerSecond: 0.12
-  wetnessCoolingPerSecond: 0.8
+  ambientCoolingPerSecond: 0
+  wetnessCoolingPerSecond: 0
   wetnessRecoveryPerSecond: 0.2
   passiveIgnitionThreshold: 1
   extinguishThreshold: 0.08
-  fuelBurnPerSecond: 0.1
+  fuelBurnPerSecond: 0
   burnedOutHeatRetention: 0.15
-  neighborHeatTransferPerSecond: 0.5
+  neighborHeatTransferPerSecond: 0.08
   sameSurfaceTransferMultiplier: 1.2
   crossSurfaceTransferMultiplier: 0.65
   verticalSpreadBias: 0.85

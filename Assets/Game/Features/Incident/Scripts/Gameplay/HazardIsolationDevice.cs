@@ -156,6 +156,11 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
         ApplyLinkedFireConfiguration();
     }
 
+    public void SetFireSimulationManager(FireSimulationManager manager)
+    {
+        fireSimulationManager = manager;
+    }
+
     public void SetRuntimeHazardType(FireHazardType fireHazardType)
     {
         switch (fireHazardType)

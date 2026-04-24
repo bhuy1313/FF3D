@@ -88,6 +88,11 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
         BotRuntimeRegistry.RegisterExtinguisherItem(this);
     }
 
+    public void SetFireSimulationManager(FireSimulationManager manager)
+    {
+        fireSimulationManager = manager;
+    }
+
     private void Update()
     {
         if (isSpraying)

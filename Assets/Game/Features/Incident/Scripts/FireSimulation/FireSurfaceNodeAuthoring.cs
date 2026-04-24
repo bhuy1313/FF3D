@@ -30,6 +30,7 @@ public sealed class FireSurfaceNodeAuthoring : MonoBehaviour
     [SerializeField] private bool autoConnectNearbyNodes = true;
     [SerializeField] [Min(0.1f)] private float autoConnectRadius = 2.5f;
     [SerializeField] private List<FireSurfaceNodeAuthoring> explicitNeighbors = new List<FireSurfaceNodeAuthoring>();
+    [SerializeField] private List<FireSurfaceNodeAuthoring> resolvedNeighbors = new List<FireSurfaceNodeAuthoring>();
 
     [Header("Debug")]
     [SerializeField] private bool drawGizmos = true;
@@ -46,6 +47,55 @@ public sealed class FireSurfaceNodeAuthoring : MonoBehaviour
     public bool AutoConnectNearbyNodes => autoConnectNearbyNodes;
     public float AutoConnectRadius => Mathf.Max(0.1f, autoConnectRadius);
     public IReadOnlyList<FireSurfaceNodeAuthoring> ExplicitNeighbors => explicitNeighbors;
+    public IReadOnlyList<FireSurfaceNodeAuthoring> ResolvedNeighbors => resolvedNeighbors;
+
+    public void ConfigureRuntimeNode(
+        string runtimeNodeId,
+        SurfaceKind runtimeSurfaceKind,
+        Vector3 runtimeSurfaceNormal,
+        float runtimeInitialFuel,
+        float runtimeIgnitionThresholdMultiplier,
+        float runtimeSpreadResistance,
+        FireHazardType runtimeHazardType,
+        bool runtimeStartIgnited,
+        bool runtimeAutoConnectNearbyNodes,
+        float runtimeAutoConnectRadius,
+        bool runtimeDrawGizmos,
+        Color runtimeGizmoColor)
+    {
+        nodeId = runtimeNodeId;
+        surfaceKind = runtimeSurfaceKind;
+        surfaceNormal = runtimeSurfaceNormal.sqrMagnitude > 0.001f ? runtimeSurfaceNormal.normalized : Vector3.up;
+        initialFuel = Mathf.Max(0.1f, runtimeInitialFuel);
+        ignitionThresholdMultiplier = Mathf.Max(0.01f, runtimeIgnitionThresholdMultiplier);
+        spreadResistance = Mathf.Clamp01(runtimeSpreadResistance);
+        hazardType = runtimeHazardType;
+        startIgnited = runtimeStartIgnited;
+        autoConnectNearbyNodes = runtimeAutoConnectNearbyNodes;
+        autoConnectRadius = Mathf.Max(0.1f, runtimeAutoConnectRadius);
+        explicitNeighbors.Clear();
+        resolvedNeighbors.Clear();
+        drawGizmos = runtimeDrawGizmos;
+        gizmoColor = runtimeGizmoColor;
+    }
+
+    public void SetResolvedNeighbors(IReadOnlyList<FireSurfaceNodeAuthoring> neighbors)
+    {
+        resolvedNeighbors.Clear();
+        if (neighbors == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < neighbors.Count; i++)
+        {
+            FireSurfaceNodeAuthoring neighbor = neighbors[i];
+            if (neighbor != null && neighbor != this && !resolvedNeighbors.Contains(neighbor))
+            {
+                resolvedNeighbors.Add(neighbor);
+            }
+        }
+    }
 
     private void OnValidate()
     {

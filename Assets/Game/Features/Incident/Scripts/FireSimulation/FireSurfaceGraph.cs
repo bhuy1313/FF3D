@@ -7,6 +7,7 @@ public sealed class FireSurfaceGraph : MonoBehaviour
     [SerializeField] private bool collectNodesFromChildren = true;
     [SerializeField] private bool includeInactiveNodes = true;
     [SerializeField] private List<FireSurfaceNodeAuthoring> explicitNodes = new List<FireSurfaceNodeAuthoring>();
+    private readonly List<FireSurfaceNodeAuthoring> runtimeOverrideNodes = new List<FireSurfaceNodeAuthoring>();
 
     public FireRuntimeGraph BuildRuntimeGraph()
     {
@@ -30,6 +31,8 @@ public sealed class FireSurfaceGraph : MonoBehaviour
             AddAutoNeighbors(source, runtimeNode, authoringNodes, indexLookup);
         }
 
+        SyncResolvedNeighborDebug(authoringNodes, runtimeNodes);
+
         return new FireRuntimeGraph(runtimeNodes);
     }
 
@@ -49,6 +52,22 @@ public sealed class FireSurfaceGraph : MonoBehaviour
             results.Add(node);
         }
 
+        if (runtimeOverrideNodes.Count > 0)
+        {
+            for (int i = 0; i < runtimeOverrideNodes.Count; i++)
+            {
+                FireSurfaceNodeAuthoring node = runtimeOverrideNodes[i];
+                if (node == null || !seen.Add(node))
+                {
+                    continue;
+                }
+
+                results.Add(node);
+            }
+
+            return results;
+        }
+
         if (collectNodesFromChildren)
         {
             FireSurfaceNodeAuthoring[] childNodes = GetComponentsInChildren<FireSurfaceNodeAuthoring>(includeInactiveNodes);
@@ -65,6 +84,29 @@ public sealed class FireSurfaceGraph : MonoBehaviour
         }
 
         return results;
+    }
+
+    public void SetRuntimeNodeOverrides(IReadOnlyList<FireSurfaceNodeAuthoring> nodes)
+    {
+        runtimeOverrideNodes.Clear();
+        if (nodes == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < nodes.Count; i++)
+        {
+            FireSurfaceNodeAuthoring node = nodes[i];
+            if (node != null)
+            {
+                runtimeOverrideNodes.Add(node);
+            }
+        }
+    }
+
+    public void ClearRuntimeNodeOverrides()
+    {
+        runtimeOverrideNodes.Clear();
     }
 
     private static void AddExplicitNeighbors(
@@ -127,6 +169,39 @@ public sealed class FireSurfaceGraph : MonoBehaviour
             }
 
             runtimeNode.NeighborIndices.Add(candidateIndex);
+        }
+    }
+
+    private static void SyncResolvedNeighborDebug(
+        List<FireSurfaceNodeAuthoring> authoringNodes,
+        List<FireRuntimeNode> runtimeNodes)
+    {
+        for (int i = 0; i < authoringNodes.Count; i++)
+        {
+            FireSurfaceNodeAuthoring source = authoringNodes[i];
+            if (source == null)
+            {
+                continue;
+            }
+
+            FireRuntimeNode runtimeNode = runtimeNodes[i];
+            List<FireSurfaceNodeAuthoring> resolvedNeighbors = new List<FireSurfaceNodeAuthoring>(runtimeNode.NeighborIndices.Count);
+            for (int neighborListIndex = 0; neighborListIndex < runtimeNode.NeighborIndices.Count; neighborListIndex++)
+            {
+                int neighborIndex = runtimeNode.NeighborIndices[neighborListIndex];
+                if (neighborIndex < 0 || neighborIndex >= authoringNodes.Count)
+                {
+                    continue;
+                }
+
+                FireSurfaceNodeAuthoring neighbor = authoringNodes[neighborIndex];
+                if (neighbor != null)
+                {
+                    resolvedNeighbors.Add(neighbor);
+                }
+            }
+
+            source.SetResolvedNeighbors(resolvedNeighbors);
         }
     }
 }

@@ -198,6 +198,11 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         BotRuntimeRegistry.RegisterExtinguisherItem(this);
     }
 
+    public void SetFireSimulationManager(FireSimulationManager manager)
+    {
+        fireSimulationManager = manager;
+    }
+
     private void Update()
     {
         HandleRuntimeTuningInput();
