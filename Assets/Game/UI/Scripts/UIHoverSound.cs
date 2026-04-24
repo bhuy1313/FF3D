@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 namespace FF3D.UI
 {
@@ -21,6 +22,7 @@ namespace FF3D.UI
         private float volumeScale = 1f;
 
         private AudioSource audioSource;
+        private Selectable selectable;
 
         private void Awake()
         {
@@ -46,10 +48,17 @@ namespace FF3D.UI
             // Configure the AudioSource for UI sounds (2D, no play on awake)
             audioSource.playOnAwake = false;
             audioSource.spatialBlend = 0f; // Ensure it's a 2D sound
+
+            selectable = GetComponent<Selectable>();
         }
 
         public void OnPointerEnter(PointerEventData eventData)
         {
+            if (!CanPlayHoverSound())
+            {
+                return;
+            }
+
             if (hoverAudioId != AudioId.None && AudioService.Play(hoverAudioId) != null)
             {
                 return;
@@ -64,6 +73,36 @@ namespace FF3D.UI
             {
                 audioSource.PlayOneShot(hoverSound, volumeScale);
             }
+        }
+
+        private bool CanPlayHoverSound()
+        {
+            if (!isActiveAndEnabled)
+            {
+                return false;
+            }
+
+            if (selectable != null && !selectable.IsInteractable())
+            {
+                return false;
+            }
+
+            CanvasGroup[] groups = GetComponentsInParent<CanvasGroup>(includeInactive: false);
+            for (int i = 0; i < groups.Length; i++)
+            {
+                CanvasGroup group = groups[i];
+                if (group == null || group.ignoreParentGroups)
+                {
+                    continue;
+                }
+
+                if (!group.interactable || !group.blocksRaycasts)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
     }
 }

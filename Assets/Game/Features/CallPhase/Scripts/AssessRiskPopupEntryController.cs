@@ -1105,13 +1105,6 @@ public class AssessRiskPopupEntryController : MonoBehaviour
 
         PersistIncidentWorldSetupPayload();
 
-        string playerName = LoadingFlowState.GetPlayerName();
-        string currentLevelId = LoadingFlowState.GetCurrentLevelId();
-        if (!string.IsNullOrWhiteSpace(playerName) && !string.IsNullOrWhiteSpace(currentLevelId))
-        {
-            PlayerProgressProfileStore.MarkLevelCompleted(playerName, currentLevelId);
-        }
-
         CloseSubmitPopup();
         OpenResultPopup();
     }

@@ -5,6 +5,13 @@ using UnityEngine.Events;
 [DisallowMultipleComponent]
 public partial class IncidentMissionSystem : MonoBehaviour
 {
+    public enum ObjectivePresentationKind
+    {
+        Generic = 0,
+        Fire = 1,
+        Rescue = 2
+    }
+
     [System.Serializable]
     private class MissionObjectiveStatus
     {
@@ -310,6 +317,94 @@ public partial class IncidentMissionSystem : MonoBehaviour
     public bool TryGetResultObjectiveStatus(int index, out MissionObjectiveStatusSnapshot status)
     {
         return TryGetObjectiveStatus(index, out status);
+    }
+
+    public bool TryGetObjectivePresentationKind(int index, out ObjectivePresentationKind kind)
+    {
+        kind = ObjectivePresentationKind.Generic;
+        if (index < 0 || index >= ObjectiveStatusCount)
+        {
+            return false;
+        }
+
+        if (HasAnyActiveDefinitionObjectives())
+        {
+            MissionProgressSnapshot snapshot = BuildProgressSnapshot();
+            MissionObjectiveContext context = BuildObjectiveContext(snapshot);
+
+            objectiveScratchSet.Clear();
+            int visibleObjectiveIndex = 0;
+            for (int i = 0; i < activePersistentObjectiveDefinitions.Count; i++)
+            {
+                MissionObjectiveDefinition objective = activePersistentObjectiveDefinitions[i];
+                if (objective == null || !objectiveScratchSet.Add(objective))
+                {
+                    continue;
+                }
+
+                MissionObjectiveEvaluation evaluation = objective.Evaluate(context);
+                if (!evaluation.IsRelevant)
+                {
+                    continue;
+                }
+
+                if (visibleObjectiveIndex == index)
+                {
+                    kind = ResolveObjectivePresentationKind(objective);
+                    objectiveScratchSet.Clear();
+                    return true;
+                }
+
+                visibleObjectiveIndex++;
+            }
+
+            objectiveScratchSet.Clear();
+            return false;
+        }
+
+        int legacyObjectiveIndex = 0;
+        if (requireAllFiresExtinguished && totalTrackedFires > 0)
+        {
+            if (legacyObjectiveIndex == index)
+            {
+                kind = ObjectivePresentationKind.Fire;
+                return true;
+            }
+
+            legacyObjectiveIndex++;
+        }
+
+        if (requireAllRescuablesRescued && totalTrackedRescuables > 0)
+        {
+            if (legacyObjectiveIndex == index)
+            {
+                kind = ObjectivePresentationKind.Rescue;
+                return true;
+            }
+
+            legacyObjectiveIndex++;
+        }
+
+        bool usesVictimObjective =
+            totalTrackedVictims > 0 &&
+            (failOnAnyVictimDeath || maxAllowedVictimDeaths >= 0 || requireNoCriticalVictimsAtCompletion || requireAllLivingVictimsStabilized);
+        if (usesVictimObjective && legacyObjectiveIndex == index)
+        {
+            kind = ObjectivePresentationKind.Generic;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static ObjectivePresentationKind ResolveObjectivePresentationKind(MissionObjectiveDefinition objective)
+    {
+        return objective switch
+        {
+            ExtinguishFiresObjectiveDefinition => ObjectivePresentationKind.Fire,
+            RescueTargetsObjectiveDefinition => ObjectivePresentationKind.Rescue,
+            _ => ObjectivePresentationKind.Generic
+        };
     }
 
     public bool TryResolveSceneObject(string key, out GameObject targetObject)

@@ -12,6 +12,10 @@ public class ActionProgressUIController : MonoBehaviour
     [SerializeField] private Image progressFillImage;
     [SerializeField] private TMP_Text timerText;
 
+    [Header("Localization")]
+    [SerializeField] private string progressPercentLocalizationKey = "mission.hud.progress.percent";
+    [SerializeField] private string progressPercentFallbackFormat = "{0:0}%";
+
     private void Start()
     {
         if (uiContainer != null)
@@ -48,7 +52,7 @@ public class ActionProgressUIController : MonoBehaviour
 
         if (timerText != null)
         {
-            timerText.text = "0%";
+            timerText.text = BuildProgressText(0f);
         }
     }
 
@@ -61,7 +65,7 @@ public class ActionProgressUIController : MonoBehaviour
 
         if (timerText != null)
         {
-            timerText.text = $"{Mathf.Clamp01(progress) * 100:F0}%";
+            timerText.text = BuildProgressText(progress);
         }
     }
 
@@ -71,5 +75,11 @@ public class ActionProgressUIController : MonoBehaviour
         {
             uiContainer.SetActive(false);
         }
+    }
+
+    private string BuildProgressText(float progress)
+    {
+        float percent = Mathf.Clamp01(progress) * 100f;
+        return MissionLocalization.Format(progressPercentLocalizationKey, progressPercentFallbackFormat, percent);
     }
 }

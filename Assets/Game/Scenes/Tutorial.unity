@@ -14907,8 +14907,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 52de16ef65554bfd90b1bfa47789baee, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RoomVolumeAutoFit
+  mode: 0
   smokeHazard: {fileID: 429370648}
-  triggerZone: {fileID: 429370647}
+  originArea: {fileID: 0}
+  payloadAnchor: {fileID: 0}
+  targetCollider: {fileID: 429370647}
   cornerMarkerA: {fileID: 1343853075}
   cornerMarkerB: {fileID: 1212586124}
   roomHeight: 3.2
@@ -25427,12 +25430,28 @@ PrefabInstance:
       value: 2047
       objectReference: {fileID: 0}
     - target: {fileID: 6649738444416923539, guid: 4e1533178b34e424c835195b3a59b3f2, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -5.920517
+      objectReference: {fileID: 0}
+    - target: {fileID: 6649738444416923539, guid: 4e1533178b34e424c835195b3a59b3f2, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.5920095
+      objectReference: {fileID: 0}
+    - target: {fileID: 6649738444416923539, guid: 4e1533178b34e424c835195b3a59b3f2, type: 3}
       propertyPath: m_LocalPosition.z
       value: 29.068598
       objectReference: {fileID: 0}
     - target: {fileID: 6794626528649328394, guid: 4e1533178b34e424c835195b3a59b3f2, type: 3}
       propertyPath: m_IsActive
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8092174591577163824, guid: 4e1533178b34e424c835195b3a59b3f2, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -5.920517
+      objectReference: {fileID: 0}
+    - target: {fileID: 8092174591577163824, guid: 4e1533178b34e424c835195b3a59b3f2, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.5920095
       objectReference: {fileID: 0}
     - target: {fileID: 8092174591577163824, guid: 4e1533178b34e424c835195b3a59b3f2, type: 3}
       propertyPath: m_LocalPosition.z
@@ -67374,8 +67393,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 52de16ef65554bfd90b1bfa47789baee, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RoomVolumeAutoFit
+  mode: 0
   smokeHazard: {fileID: 1511512467}
-  triggerZone: {fileID: 1511512466}
+  originArea: {fileID: 0}
+  payloadAnchor: {fileID: 0}
+  targetCollider: {fileID: 1511512466}
   cornerMarkerA: {fileID: 298223766}
   cornerMarkerB: {fileID: 1647465784}
   roomHeight: 3.2
@@ -85357,8 +85379,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 52de16ef65554bfd90b1bfa47789baee, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RoomVolumeAutoFit
+  mode: 0
   smokeHazard: {fileID: 1892995069}
-  triggerZone: {fileID: 1892995068}
+  originArea: {fileID: 0}
+  payloadAnchor: {fileID: 0}
+  targetCollider: {fileID: 1892995068}
   cornerMarkerA: {fileID: 1003771923}
   cornerMarkerB: {fileID: 1815134334}
   roomHeight: 3.2
@@ -105208,6 +105233,14 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4556840999621474007, guid: cf714ff98ba63834587a6e541b44fdf7, type: 3}
+      propertyPath: m_Name
+      value: Border
+      objectReference: {fileID: 0}
+    - target: {fileID: 4598919438652717687, guid: cf714ff98ba63834587a6e541b44fdf7, type: 3}
+      propertyPath: m_Name
+      value: Border
+      objectReference: {fileID: 0}
     - target: {fileID: 4627062690337522519, guid: cf714ff98ba63834587a6e541b44fdf7, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -105351,6 +105384,10 @@ PrefabInstance:
     - target: {fileID: 5000164541847505763, guid: cf714ff98ba63834587a6e541b44fdf7, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5016052754222367890, guid: cf714ff98ba63834587a6e541b44fdf7, type: 3}
+      propertyPath: m_Color.a
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5046361117391636044, guid: cf714ff98ba63834587a6e541b44fdf7, type: 3}
       propertyPath: m_AnchorMax.y
@@ -105600,6 +105637,10 @@ PrefabInstance:
       propertyPath: m_SizeDelta.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6360820398274950575, guid: cf714ff98ba63834587a6e541b44fdf7, type: 3}
+      propertyPath: m_Name
+      value: Border
+      objectReference: {fileID: 0}
     - target: {fileID: 6418474595975555626, guid: cf714ff98ba63834587a6e541b44fdf7, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -105687,6 +105728,10 @@ PrefabInstance:
     - target: {fileID: 6897925213770723420, guid: cf714ff98ba63834587a6e541b44fdf7, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7011957883749015127, guid: cf714ff98ba63834587a6e541b44fdf7, type: 3}
+      propertyPath: m_Name
+      value: Border
       objectReference: {fileID: 0}
     - target: {fileID: 7137822080360964952, guid: cf714ff98ba63834587a6e541b44fdf7, type: 3}
       propertyPath: m_AnchorMax.y

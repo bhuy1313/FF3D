@@ -8,8 +8,8 @@ using DG.Tweening;
 [DisallowMultipleComponent]
 public sealed class HubV2MissionPresenter : MonoBehaviour
 {
-    private const string FireItemName = "ObjectiveItem_Fire";
-    private const string RescueItemName = "ObjectiveItem_Rescue";
+    private const string HubFallbackOperationKey = "mission.hub.fallback_operation";
+    private const string HubObjectivesCompletedFormatKey = "mission.hub.progress.objectives_completed";
 
     private enum ObjectiveVisualState
     {
@@ -23,6 +23,7 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
     private sealed class ObjectiveItemView
     {
         public GameObject Root;
+        public IncidentMissionSystem.ObjectivePresentationKind Kind;
         public Image Icon;
         public TMP_Text Label;
         public RectTransform ProgressFill;
@@ -32,15 +33,18 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
         public List<Image> RescueVictimIcons = new List<Image>();
 
         public bool IsValid => Root != null && Label != null;
-        public bool IsFireItem => Root != null && Root.name.StartsWith(FireItemName, StringComparison.Ordinal);
-        public bool IsRescueItem => Root != null && Root.name.StartsWith(RescueItemName, StringComparison.Ordinal);
+        public bool IsFireItem => Kind == IncidentMissionSystem.ObjectivePresentationKind.Fire;
+        public bool IsRescueItem => Kind == IncidentMissionSystem.ObjectivePresentationKind.Rescue;
 
-        public void SetActive(bool active)
+        public bool SetActive(bool active)
         {
             if (Root != null && Root.activeSelf != active)
             {
                 Root.SetActive(active);
+                return true;
             }
+
+            return false;
         }
     }
 
@@ -53,7 +57,14 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
     [SerializeField] private TMP_Text progressText;
     [SerializeField] private TMP_Text progressValueText;
     [SerializeField] private RectTransform objectivesListRoot;
+    [SerializeField] private RectTransform hubDetailRoot;
+    [SerializeField] private RectTransform hubTitleRoot;
     [SerializeField] private Image accentBarImage;
+    [SerializeField] private GameObject fireObjectiveItemPrefab;
+    [SerializeField] private GameObject rescueObjectiveItemPrefab;
+    [SerializeField] private GameObject genericObjectiveItemPrefab;
+    [SerializeField] private bool rebuildLayoutOnChanges = true;
+    [SerializeField, Min(0f)] private float layoutRebuildThrottleSeconds = 0.05f;
 
     [Header("Display")]
     [SerializeField] private bool hideWhenMissionMissing = true;
@@ -88,6 +99,9 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
 
     private readonly List<ObjectiveItemView> objectiveViews = new List<ObjectiveItemView>();
     private bool objectiveViewsInitialized;
+    private int lastObjectiveLayoutSignature = int.MinValue;
+    private bool layoutRebuildPending;
+    private float nextLayoutRebuildTime;
 
     private float animatedTimerValue = 0f;
     private bool isTimerAnimating = false;
@@ -97,17 +111,22 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
     {
         ResolveReferences();
         RefreshView();
+        RequestLayoutRebuild();
+        ProcessPendingLayoutRebuild(forceImmediate: true);
     }
 
     private void OnEnable()
     {
         ResolveReferences();
         RefreshView();
+        RequestLayoutRebuild();
+        ProcessPendingLayoutRebuild(forceImmediate: true);
     }
 
     private void Update()
     {
         RefreshView();
+        ProcessPendingLayoutRebuild(forceImmediate: false);
     }
 
     private void ResolveReferences()
@@ -143,6 +162,12 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
         timerText ??= FindText("TimerText");
         progressText ??= FindText("ProgressText");
         objectivesListRoot ??= FindRectTransform("ObjectivesList");
+        hubDetailRoot ??= FindRectTransform("HubV2_Detail");
+        hubTitleRoot ??= FindRectTransform("HubV2_Tittle");
+        if (hubTitleRoot == null)
+        {
+            hubTitleRoot = FindRectTransform("HubV2_Title");
+        }
         progressValueText ??= FindTextOutsideObjectives("ProgressValueText");
         accentBarImage ??= FindImage("Bar");
     }
@@ -158,7 +183,7 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
             return;
         }
 
-        SetText(missionTitleText, BuildMissionTitleText());
+        bool titleChanged = SetText(missionTitleText, BuildMissionTitleText());
         SetText(timerText, BuildTimerText());
         if (objectiveCounterText != null)
         {
@@ -170,6 +195,11 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
         if (accentBarImage != null)
         {
             accentBarImage.color = ResolveAccentColor(missionSystem.State);
+        }
+
+        if (titleChanged)
+        {
+            RequestLayoutRebuild();
         }
 
         RefreshObjectiveList();
@@ -199,13 +229,14 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
 
     private string BuildMissionTitleText()
     {
+        string fallbackTitle = LanguageManager.Tr(HubFallbackOperationKey, fallbackMissionTitle);
         if (missionSystem == null)
         {
-            return fallbackMissionTitle;
+            return fallbackTitle;
         }
 
         return string.IsNullOrWhiteSpace(missionSystem.MissionOperationTitle)
-            ? fallbackMissionTitle
+            ? fallbackTitle
             : missionSystem.MissionOperationTitle.Trim();
     }
 
@@ -297,13 +328,16 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
     {
         int totalObjectives = missionSystem != null ? Mathf.Max(0, missionSystem.ObjectiveStatusCount) : 0;
         int completedObjectives = ResolveCompletedObjectiveCount();
-        return string.Format(progressTextFormat, completedObjectives, totalObjectives);
+        return string.Format(
+            LanguageManager.Tr(HubObjectivesCompletedFormatKey, progressTextFormat),
+            completedObjectives,
+            totalObjectives);
     }
 
     private string BuildProgressValueText()
     {
         float progressPercent = BuildProgressNormalized() * 100f;
-        return string.Format(progressValueFormat, progressPercent);
+        return MissionLocalization.Format("mission.hud.progress.percent", progressValueFormat, progressPercent);
     }
 
     private float BuildProgressNormalized()
@@ -377,6 +411,8 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
 
         int visibleCount = 0;
         bool assignedActiveObjective = false;
+        bool layoutChanged = false;
+        int signature = 17;
         for (int i = 0; i < missionSystem.ObjectiveStatusCount; i++)
         {
             if (!missionSystem.TryGetObjectiveStatus(i, out MissionObjectiveStatusSnapshot status))
@@ -384,20 +420,42 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
                 continue;
             }
 
-            EnsureObjectiveViewCapacity(visibleCount + 1);
-            if (visibleCount >= objectiveViews.Count)
+            IncidentMissionSystem.ObjectivePresentationKind presentationKind = ResolveObjectivePresentationKind(i);
+            layoutChanged |= EnsureObjectiveViewCapacity(visibleCount + 1, presentationKind);
+            if (visibleCount >= objectiveViews.Count || objectiveViews[visibleCount] == null)
             {
                 break;
             }
 
             ObjectiveVisualState visualState = ResolveObjectiveVisualState(status, ref assignedActiveObjective);
-            BindObjectiveView(objectiveViews[visibleCount], status, visualState);
+            layoutChanged |= BindObjectiveView(objectiveViews[visibleCount], status, visualState);
+            signature = (signature * 31) + (int)presentationKind;
+            signature = (signature * 31) + (status.Summary?.GetHashCode() ?? 0);
+            signature = (signature * 31) + status.Score;
+            signature = (signature * 31) + status.MaxScore;
+            signature = (signature * 31) + (status.IsComplete ? 1 : 0);
+            signature = (signature * 31) + (status.HasFailed ? 1 : 0);
             visibleCount++;
         }
 
         for (int i = visibleCount; i < objectiveViews.Count; i++)
         {
-            objectiveViews[i].SetActive(false);
+            if (objectiveViews[i].SetActive(false))
+            {
+                layoutChanged = true;
+            }
+        }
+
+        signature = (signature * 31) + visibleCount;
+        if (signature != lastObjectiveLayoutSignature)
+        {
+            lastObjectiveLayoutSignature = signature;
+            layoutChanged = true;
+        }
+
+        if (layoutChanged)
+        {
+            RequestLayoutRebuild();
         }
     }
 
@@ -409,44 +467,118 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
         }
 
         objectiveViews.Clear();
-        for (int i = 0; i < objectivesListRoot.childCount; i++)
+        if (HasObjectivePrefabConfiguration())
         {
-            RegisterObjectiveView(objectivesListRoot.GetChild(i).gameObject);
+            for (int i = 0; i < objectivesListRoot.childCount; i++)
+            {
+                Transform child = objectivesListRoot.GetChild(i);
+                if (child != null && child.gameObject.activeSelf)
+                {
+                    child.gameObject.SetActive(false);
+                }
+            }
+        }
+        else
+        {
+            for (int i = 0; i < objectivesListRoot.childCount; i++)
+            {
+                RegisterObjectiveView(
+                    objectivesListRoot.GetChild(i).gameObject,
+                    IncidentMissionSystem.ObjectivePresentationKind.Generic);
+            }
         }
 
         objectiveViewsInitialized = true;
     }
 
-    private void EnsureObjectiveViewCapacity(int count)
+    private bool EnsureObjectiveViewCapacity(int count, IncidentMissionSystem.ObjectivePresentationKind kind)
     {
+        bool changed = false;
         EnsureObjectiveViewsInitialized();
-        if (objectivesListRoot == null || objectivesListRoot.childCount <= 0)
+        if (objectivesListRoot == null)
         {
-            return;
+            return false;
         }
 
-        GameObject template = objectiveViews.Count > 0
-            ? objectiveViews[objectiveViews.Count - 1].Root
-            : objectivesListRoot.GetChild(0).gameObject;
-
-        while (objectiveViews.Count < count && template != null)
+        while (objectiveViews.Count < count)
         {
-            GameObject clone = Instantiate(template, objectivesListRoot, false);
-            clone.name = $"{template.name}_Clone{objectiveViews.Count}";
-            RegisterObjectiveView(clone);
+            GameObject prefab = ResolveObjectiveItemPrefab(kind);
+            if (prefab == null)
+            {
+                if (objectivesListRoot.childCount > 0)
+                {
+                    GameObject template = objectivesListRoot.GetChild(0).gameObject;
+                    GameObject clone = Instantiate(template, objectivesListRoot, false);
+                    clone.name = $"{template.name}_Clone{objectiveViews.Count}";
+                    RegisterObjectiveView(clone, IncidentMissionSystem.ObjectivePresentationKind.Generic);
+                    changed = true;
+                }
+                else
+                {
+                    break;
+                }
+            }
+            else
+            {
+                GameObject instance = Instantiate(prefab, objectivesListRoot, false);
+                RegisterObjectiveView(instance, kind);
+                changed = true;
+            }
+        }
+
+        int targetIndex = count - 1;
+        if (targetIndex < 0 || targetIndex >= objectiveViews.Count)
+        {
+            return changed;
+        }
+
+        ObjectiveItemView view = objectiveViews[targetIndex];
+        if (view == null || view.Root == null)
+        {
+            return changed;
+        }
+
+        if (view.Kind != kind)
+        {
+            GameObject prefab = ResolveObjectiveItemPrefab(kind);
+            if (prefab != null)
+            {
+                Destroy(view.Root);
+                GameObject replacement = Instantiate(prefab, objectivesListRoot, false);
+                objectiveViews[targetIndex] = CreateObjectiveView(replacement, kind);
+                view = objectiveViews[targetIndex];
+                changed = true;
+            }
+        }
+
+        if (view?.Root != null)
+        {
+            view.Root.transform.SetSiblingIndex(targetIndex);
+        }
+
+        return changed;
+    }
+
+    private void RegisterObjectiveView(GameObject itemRoot, IncidentMissionSystem.ObjectivePresentationKind kind)
+    {
+        ObjectiveItemView view = CreateObjectiveView(itemRoot, kind);
+        if (view != null)
+        {
+            objectiveViews.Add(view);
         }
     }
 
-    private void RegisterObjectiveView(GameObject itemRoot)
+    private ObjectiveItemView CreateObjectiveView(GameObject itemRoot, IncidentMissionSystem.ObjectivePresentationKind kind)
     {
         if (itemRoot == null)
         {
-            return;
+            return null;
         }
 
         ObjectiveItemView view = new ObjectiveItemView
         {
             Root = itemRoot,
+            Kind = kind,
             Icon = FindImage(itemRoot.transform, "Icon"),
             Label = FindText(itemRoot.transform, "ObjectiveLabel"),
             ProgressFill = FindRectTransform(itemRoot.transform, "ProgressBarFill"),
@@ -484,25 +616,37 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
 
         if (view.IsValid)
         {
-            objectiveViews.Add(view);
+            return view;
         }
+
+        return null;
     }
 
-    private void BindObjectiveView(ObjectiveItemView view, MissionObjectiveStatusSnapshot status, ObjectiveVisualState visualState)
+    private bool BindObjectiveView(ObjectiveItemView view, MissionObjectiveStatusSnapshot status, ObjectiveVisualState visualState)
     {
         if (view == null || !view.IsValid)
         {
-            return;
+            return false;
         }
 
-        view.SetActive(true);
-        SetText(view.Label, BuildObjectiveText(status));
+        bool changed = view.SetActive(true);
+        string objectiveText = BuildObjectiveText(status);
+        changed |= SetText(view.Label, objectiveText);
 
         Color color = ResolveObjectiveColor(visualState);
-        view.Label.color = color;
+        if (view.Label.color != color)
+        {
+            view.Label.color = color;
+            changed = true;
+        }
+
         if (view.Icon != null)
         {
-            view.Icon.color = color;
+            if (view.Icon.color != color)
+            {
+                view.Icon.color = color;
+                changed = true;
+            }
         }
 
         float normalized = ResolveObjectiveNormalizedProgress(view, status);
@@ -513,13 +657,16 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
 
         if (view.ProgressValueText != null)
         {
-            view.ProgressValueText.text = string.Format(progressValueFormat, normalized * 100f);
+            string progressValue = MissionLocalization.Format("mission.hud.progress.percent", progressValueFormat, normalized * 100f);
+            changed |= SetText(view.ProgressValueText, progressValue);
         }
 
         if (view.IsRescueItem)
         {
             BindRescueObjectiveView(view);
         }
+
+        return changed;
     }
 
     private float ResolveObjectiveNormalizedProgress(ObjectiveItemView view, MissionObjectiveStatusSnapshot status)
@@ -759,12 +906,21 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
         fill.sizeDelta = new Vector2(0f, fill.sizeDelta.y);
     }
 
-    private static void SetText(TMP_Text textComponent, string value)
+    private static bool SetText(TMP_Text textComponent, string value)
     {
-        if (textComponent != null)
+        if (textComponent == null)
         {
-            textComponent.text = value ?? string.Empty;
+            return false;
         }
+
+        string resolved = value ?? string.Empty;
+        if (string.Equals(textComponent.text, resolved, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        textComponent.text = resolved;
+        return true;
     }
 
     private static string FormatClock(float seconds)
@@ -776,5 +932,132 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
         return hours > 0
             ? $"{hours:00}:{minutes:00}:{secs:00}"
             : $"{minutes:00}:{secs:00}";
+    }
+
+    private IncidentMissionSystem.ObjectivePresentationKind ResolveObjectivePresentationKind(int objectiveIndex)
+    {
+        if (missionSystem != null &&
+            missionSystem.TryGetObjectivePresentationKind(objectiveIndex, out IncidentMissionSystem.ObjectivePresentationKind resolvedKind))
+        {
+            return resolvedKind;
+        }
+
+        return IncidentMissionSystem.ObjectivePresentationKind.Generic;
+    }
+
+    private bool HasObjectivePrefabConfiguration()
+    {
+        return fireObjectiveItemPrefab != null || rescueObjectiveItemPrefab != null || genericObjectiveItemPrefab != null;
+    }
+
+    private GameObject ResolveObjectiveItemPrefab(IncidentMissionSystem.ObjectivePresentationKind kind)
+    {
+        switch (kind)
+        {
+            case IncidentMissionSystem.ObjectivePresentationKind.Fire:
+                return fireObjectiveItemPrefab != null
+                    ? fireObjectiveItemPrefab
+                    : (genericObjectiveItemPrefab != null ? genericObjectiveItemPrefab : rescueObjectiveItemPrefab);
+            case IncidentMissionSystem.ObjectivePresentationKind.Rescue:
+                return rescueObjectiveItemPrefab != null
+                    ? rescueObjectiveItemPrefab
+                    : (genericObjectiveItemPrefab != null ? genericObjectiveItemPrefab : fireObjectiveItemPrefab);
+            default:
+                if (genericObjectiveItemPrefab != null)
+                {
+                    return genericObjectiveItemPrefab;
+                }
+
+                return rescueObjectiveItemPrefab != null ? rescueObjectiveItemPrefab : fireObjectiveItemPrefab;
+        }
+    }
+
+    private void RequestLayoutRebuild()
+    {
+        if (!rebuildLayoutOnChanges)
+        {
+            return;
+        }
+
+        layoutRebuildPending = true;
+    }
+
+    private void ProcessPendingLayoutRebuild(bool forceImmediate)
+    {
+        if (!layoutRebuildPending)
+        {
+            return;
+        }
+
+        float now = Time.unscaledTime;
+        if (!forceImmediate && now < nextLayoutRebuildTime)
+        {
+            return;
+        }
+
+        RectTransform target = hubDetailRoot != null ? hubDetailRoot : FindRectTransform("HubV2_Detail");
+        if (target == null)
+        {
+            target = transform as RectTransform;
+        }
+
+        if (target == null)
+        {
+            layoutRebuildPending = false;
+            return;
+        }
+
+        Canvas.ForceUpdateCanvases();
+        RebuildLayoutRecursive(target);
+        LayoutRebuilder.ForceRebuildLayoutImmediate(target);
+        bool syncedWidth = SyncDetailWidthWithTitle();
+        if (syncedWidth)
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(target);
+        }
+        Canvas.ForceUpdateCanvases();
+
+        layoutRebuildPending = false;
+        nextLayoutRebuildTime = now + Mathf.Max(0f, layoutRebuildThrottleSeconds);
+    }
+
+    private static void RebuildLayoutRecursive(RectTransform rectTransform)
+    {
+        if (rectTransform == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < rectTransform.childCount; i++)
+        {
+            if (rectTransform.GetChild(i) is RectTransform childRect)
+            {
+                RebuildLayoutRecursive(childRect);
+                LayoutRebuilder.ForceRebuildLayoutImmediate(childRect);
+            }
+        }
+    }
+
+    private bool SyncDetailWidthWithTitle()
+    {
+        if (hubDetailRoot == null || hubTitleRoot == null)
+        {
+            return false;
+        }
+
+        float targetWidth = hubTitleRoot.rect.width;
+        if (targetWidth <= 0f)
+        {
+            return false;
+        }
+
+        float currentWidth = hubDetailRoot.rect.width;
+        if (Mathf.Abs(currentWidth - targetWidth) < 0.1f)
+        {
+            return false;
+        }
+
+        hubDetailRoot.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, targetWidth);
+        return true;
     }
 }
