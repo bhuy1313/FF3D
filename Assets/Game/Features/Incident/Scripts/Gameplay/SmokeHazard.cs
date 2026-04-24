@@ -23,6 +23,7 @@ public class SmokeHazard : MonoBehaviour
     [SerializeField] private float autoCollectDelay = 0f;
     [SerializeField] private bool autoCollectChildFires = true;
     [SerializeField] private Fire[] linkedFires = System.Array.Empty<Fire>();
+    [SerializeField] private FireSimulationManager fireSimulationManager;
     [FormerlySerializedAs("autoCollectChildDoors")]
     [FormerlySerializedAs("autoCollectChildVents")]
     [SerializeField] private bool autoCollectChildVentPoints;
@@ -134,6 +135,11 @@ public class SmokeHazard : MonoBehaviour
     public void SetLinkedFires(Fire[] fires)
     {
         linkedFires = fires ?? Array.Empty<Fire>();
+    }
+
+    public void SetFireSimulationManager(FireSimulationManager manager)
+    {
+        fireSimulationManager = manager;
     }
 
     private void Awake()
@@ -266,7 +272,13 @@ public class SmokeHazard : MonoBehaviour
         float density = 0f;
         VentilationResponse ventilation = GetVentilationResponse();
 
-        if (linkedFires != null)
+        if (fireSimulationManager != null && fireSimulationManager.IsInitialized && triggerZone != null)
+        {
+            Bounds bounds = triggerZone.bounds;
+            density += fireSimulationManager.GetBurningTrackedNodeCount(bounds) * smokePerBurningFire;
+            density += fireSimulationManager.GetBurningTrackedIntensitySum(bounds) * smokePerFireIntensity;
+        }
+        else if (linkedFires != null)
         {
             for (int i = 0; i < linkedFires.Length; i++)
             {
@@ -377,6 +389,9 @@ public class SmokeHazard : MonoBehaviour
 
     private void ResolveLinkedObjects(bool forceRefresh)
     {
+        if (fireSimulationManager == null)
+            fireSimulationManager = FindAnyObjectByType<FireSimulationManager>(FindObjectsInactive.Include);
+
         if (autoCollectChildFires && (forceRefresh || linkedFires == null || linkedFires.Length == 0))
             linkedFires = CollectAutoFires();
 
@@ -386,7 +401,7 @@ public class SmokeHazard : MonoBehaviour
 
     private void ApplyVentilationDraftToLinkedFires(float deltaTime)
     {
-        if (linkedFires == null || linkedFires.Length == 0 || fireDraftBoostPerSecond <= 0f)
+        if (fireDraftBoostPerSecond <= 0f)
             return;
 
         float draftRisk = GetVentilationResponse().DraftRisk;
@@ -395,6 +410,15 @@ public class SmokeHazard : MonoBehaviour
 
         float delta = Mathf.Max(0f, deltaTime);
         if (delta <= 0f)
+            return;
+
+        if (fireSimulationManager != null && fireSimulationManager.IsInitialized && triggerZone != null)
+        {
+            fireSimulationManager.ApplyDraftHeatInBounds(triggerZone.bounds, draftRisk * fireDraftBoostPerSecond * delta);
+            return;
+        }
+
+        if (linkedFires == null || linkedFires.Length == 0)
             return;
 
         for (int i = 0; i < linkedFires.Length; i++)

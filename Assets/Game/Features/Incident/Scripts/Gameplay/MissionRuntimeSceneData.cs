@@ -4,12 +4,14 @@ using UnityEngine;
 public sealed class MissionRuntimeSceneData
 {
     private readonly HashSet<Fire> fires = new HashSet<Fire>();
+    private readonly HashSet<FireSimulationManager> fireSimulationManagers = new HashSet<FireSimulationManager>();
     private readonly HashSet<Rescuable> rescuables = new HashSet<Rescuable>();
     private readonly HashSet<VictimCondition> victimConditions = new HashSet<VictimCondition>();
 
     public void CollectSceneFires()
     {
         CollectSceneObjects(fires);
+        CollectSceneObjects(fireSimulationManagers);
     }
 
     public void CollectSceneRescuables()
@@ -35,6 +37,11 @@ public sealed class MissionRuntimeSceneData
     public List<VictimCondition> CreateVictimConditionList()
     {
         return new List<VictimCondition>(victimConditions);
+    }
+
+    public List<FireSimulationManager> CreateFireSimulationManagerList()
+    {
+        return new List<FireSimulationManager>(fireSimulationManagers);
     }
 
     private static void CollectSceneObjects<T>(HashSet<T> targetSet) where T : Component

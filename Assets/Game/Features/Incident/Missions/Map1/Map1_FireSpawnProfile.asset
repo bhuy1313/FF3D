@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c1f46b6d4f634b299c14574b7b70ab12, type: 3}
+  m_Name: Map1_FireSpawnProfile
+  m_EditorClassIdentifier: Assembly-CSharp::IncidentFireSpawnProfile
+  secondaryFirePointCount: 3
+  secondaryFireRange: 1.8
+  minimumSecondaryFireSpacing: 0.85
+  placementAttemptsPerSecondaryFire: 24
+  activeSecondaryIntensityScale: 0.65
+  spawnLatentSpreadNodes: 1
+  latentSpreadNodeCount: 50
+  latentSpreadSeedLimit: 3
+  latentSpreadBranchDepth: 2
+  latentSpreadRange: 2.75
+  minimumLatentNodeSpacing: 1.25
+  parabolaLaunchHeight: 0.35
+  parabolaApexHeight: 1.4
+  parabolaApexHeightJitter: 0.75
+  parabolaLateralOffset: 0.6
+  parabolaSegments: 12
+  parabolaCastRadius: 0.08
+  placementTrajectoryVariants: 4
+  floorPlacementWeight: 0.65
+  wallPlacementWeight: 1.35
+  ceilingPlacementWeight: 0.2

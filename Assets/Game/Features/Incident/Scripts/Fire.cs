@@ -82,6 +82,7 @@ public class Fire : MonoBehaviour, IFireTarget
     [SerializeField] private bool scaleParticleObjectWithIntensity = true;
     [SerializeField] private float minParticleObjectScaleMultiplier = 0.1f;
     [SerializeField] private float maxParticleObjectScaleMultiplier = 1f;
+    [SerializeField] [Min(0.02f)] private float visualUpdateInterval = 0.1f;
     [SerializeField] private Light fireLight;
     [SerializeField] private bool scaleWithIntensity = true;
     [SerializeField] private Vector3 maxScale = Vector3.one;
@@ -90,7 +91,7 @@ public class Fire : MonoBehaviour, IFireTarget
 
     private SphereCollider sphereCollider;
     private NavMeshModifier navMeshModifier;
-    private float spreadTimer;
+    private float nextSpreadAttemptTime;
     private Collider[] spreadBuffer;
     private readonly HashSet<Fire> spreadTargets = new HashSet<Fire>();
     private readonly List<ParticleSystem> managedParticleSystems = new List<ParticleSystem>();
@@ -110,6 +111,13 @@ public class Fire : MonoBehaviour, IFireTarget
     private float spreadLockedUntilTime = float.NegativeInfinity;
     private float lastSuppressionAppliedTime = float.NegativeInfinity;
     private FireSuppressionAgent lastSuppressionAgent = FireSuppressionAgent.Water;
+    private bool colliderDirty = true;
+    private bool navMeshDirty = true;
+    private bool visualsDirty = true;
+    private bool forceVisualPlayState;
+    private bool lastAppliedBurningState;
+    private float lastAppliedVisualHp01 = float.NegativeInfinity;
+    private float nextVisualUpdateTime;
     [SerializeField] private bool hazardSourceIsolated;
 
     public bool IsBurning => currentHp > 0f;
@@ -167,6 +175,7 @@ public class Fire : MonoBehaviour, IFireTarget
         EnsureCollider();
         EnsureNavMeshModifier();
         EnsureSpreadBuffer();
+        ResetOptimizationState(forcePlayState: true);
         SyncRadiusAndCollider();
         SyncNavMeshModifier();
         ApplyVisuals(forcePlayState: true);
@@ -180,6 +189,7 @@ public class Fire : MonoBehaviour, IFireTarget
         EnsureNavMeshModifier();
         EnsureSpreadBuffer();
         ApplyHazardDefaults();
+        ResetOptimizationState(forcePlayState: true);
     }
 
     private void OnEnable()
@@ -192,13 +202,15 @@ public class Fire : MonoBehaviour, IFireTarget
             currentHp = maxHp;
 
         currentHp = Mathf.Clamp(currentHp, 0f, Mathf.Max(0f, maxHp));
-        spreadTimer = 0f;
+        ScheduleNextSpreadAttempt(randomizeOffset: true);
         lastWaterAppliedTime = float.NegativeInfinity;
         lastElectricalWaterShockTime = float.NegativeInfinity;
         lastFlammableLiquidBackfireTime = float.NegativeInfinity;
         spreadLockedUntilTime = float.NegativeInfinity;
         lastSuppressionAppliedTime = float.NegativeInfinity;
         hazardSourceIsolated = startHazardIsolated;
+        ResetOptimizationState(forcePlayState: true);
+        FireSpreadBatchRunner.Register(this);
         SyncRadiusAndCollider();
         SyncNavMeshModifier();
         ApplyVisuals(forcePlayState: true);
@@ -208,6 +220,7 @@ public class Fire : MonoBehaviour, IFireTarget
     {
         BotRuntimeRegistry.UnregisterFireTarget(this);
         BotRuntimeRegistry.UnregisterThermalSignatureSource(this);
+        FireSpreadBatchRunner.Unregister(this);
         if (navMeshModifier != null)
         {
             navMeshModifier.enabled = false;
@@ -231,11 +244,14 @@ public class Fire : MonoBehaviour, IFireTarget
 
     private void Update()
     {
-        RegrowHp();
-        SyncRadiusAndCollider();
-        SyncNavMeshModifier();
-        ApplyVisuals();
-        TrySpreadFire();
+        if (RegrowHp())
+        {
+            MarkStateDirty();
+        }
+
+        SyncRadiusAndColliderIfDirty();
+        SyncNavMeshModifierIfDirty();
+        ApplyVisualsIfDirty();
     }
 
     private void LateUpdate()
@@ -253,6 +269,7 @@ public class Fire : MonoBehaviour, IFireTarget
             gameObject.SetActive(true);
 
         currentHp = Mathf.Clamp(currentHp + amount, 0f, Mathf.Max(0f, maxHp));
+        MarkStateDirty(forcePlayState: true);
         NotifyBurningStateChangeIfNeeded(wasBurning);
     }
 
@@ -291,6 +308,8 @@ public class Fire : MonoBehaviour, IFireTarget
             RecordSuppression(agent);
         }
 
+        MarkStateDirty(forcePlayState: currentHp <= 0f);
+
         if (currentHp <= 0f)
         {
             Extinguish(wasBurning);
@@ -309,23 +328,26 @@ public class Fire : MonoBehaviour, IFireTarget
     {
         requiresIsolationToFullyExtinguish = required;
         ApplyHazardDefaults();
+        MarkStateDirty();
     }
 
     public void SetHazardSourceIsolated(bool isolated)
     {
         hazardSourceIsolated = isolated;
+        MarkStateDirty();
     }
 
     public void SetFireHazardType(FireHazardType type)
     {
         fireType = type;
         ApplyHazardDefaults();
+        MarkStateDirty();
     }
 
     public void SetSpreadEnabled(bool enabled)
     {
         enableSpread = enabled;
-        spreadTimer = 0f;
+        ScheduleNextSpreadAttempt(randomizeOffset: true);
     }
 
     public void ConfigureSpreadProfile(float intervalSeconds, float igniteAmount, float minNormalizedHp)
@@ -333,7 +355,7 @@ public class Fire : MonoBehaviour, IFireTarget
         spreadInterval = Mathf.Max(0.05f, intervalSeconds);
         spreadIgniteAmount = Mathf.Max(0f, igniteAmount);
         spreadMinNormalizedHp = Mathf.Clamp01(minNormalizedHp);
-        spreadTimer = 0f;
+        ScheduleNextSpreadAttempt(randomizeOffset: true);
     }
 
     public void SetBurningLevel01(float intensity01)
@@ -346,10 +368,11 @@ public class Fire : MonoBehaviour, IFireTarget
         }
 
         currentHp = Mathf.Clamp01(intensity01) * Mathf.Max(0f, maxHp);
+        MarkStateDirty(forcePlayState: true);
         NotifyBurningStateChangeIfNeeded(wasBurning);
-        SyncRadiusAndCollider();
-        SyncNavMeshModifier();
-        ApplyVisuals(forcePlayState: true);
+        SyncRadiusAndColliderIfDirty();
+        SyncNavMeshModifierIfDirty();
+        ApplyVisualsIfDirty();
     }
 
     public void ToggleHazardSourceIsolation()
@@ -365,21 +388,24 @@ public class Fire : MonoBehaviour, IFireTarget
     private void Extinguish(bool wasBurning)
     {
         currentHp = 0f;
+        MarkStateDirty(forcePlayState: true);
         NotifyBurningStateChangeIfNeeded(wasBurning);
         if (disableGameObjectOnExtinguish)
             gameObject.SetActive(false);
     }
 
-    private void RegrowHp()
+    private bool RegrowHp()
     {
         bool wasBurning = IsBurning;
-        if (regrowHpPerSecond <= 0f) return;
-        if (!allowRegrowFromZero && currentHp <= 0f) return;
-        if (currentHp >= maxHp) return;
-        if (Time.time < lastWaterAppliedTime + Mathf.Max(0f, regrowResumeDelay)) return;
+        if (regrowHpPerSecond <= 0f) return false;
+        if (!allowRegrowFromZero && currentHp <= 0f) return false;
+        if (currentHp >= maxHp) return false;
+        if (Time.time < lastWaterAppliedTime + Mathf.Max(0f, regrowResumeDelay)) return false;
 
+        float previousHp = currentHp;
         currentHp = Mathf.Min(maxHp, currentHp + regrowHpPerSecond * GetHazardRegrowMultiplier() * Time.deltaTime);
         NotifyBurningStateChangeIfNeeded(wasBurning);
+        return !Mathf.Approximately(previousHp, currentHp);
     }
 
     private void NotifyBurningStateChangeIfNeeded(bool wasBurning)
@@ -401,7 +427,7 @@ public class Fire : MonoBehaviour, IFireTarget
         }
     }
 
-    private void TrySpreadFire()
+    internal void ProcessSpreadBatch()
     {
         if (!enableSpread) return;
         if (Time.time < spreadLockedUntilTime) return;
@@ -411,9 +437,8 @@ public class Fire : MonoBehaviour, IFireTarget
         float normalizedHp = GetNormalizedHp();
         if (normalizedHp < spreadMinNormalizedHp) return;
 
-        spreadTimer -= Time.deltaTime;
-        if (spreadTimer > 0f) return;
-        spreadTimer = spreadInterval;
+        if (Time.time < nextSpreadAttemptTime) return;
+        ScheduleNextSpreadAttempt(randomizeOffset: false);
 
         SpreadToNearbyTargets(spreadIgniteAmount);
     }
@@ -518,6 +543,31 @@ public class Fire : MonoBehaviour, IFireTarget
         UpdateParticleVisualRootScale(t01);
     }
 
+    private void ApplyVisualsIfDirty()
+    {
+        if (!visualsDirty && !forceVisualPlayState)
+        {
+            return;
+        }
+
+        bool isBurning = currentHp > 0f;
+        float currentVisualHp01 = GetNormalizedHp();
+        bool playStateChanged = isBurning != lastAppliedBurningState;
+        bool intervalElapsed = Time.time >= nextVisualUpdateTime;
+        bool valueChanged = Mathf.Abs(currentVisualHp01 - lastAppliedVisualHp01) >= 0.01f;
+        if (!forceVisualPlayState && !playStateChanged && !intervalElapsed && !valueChanged)
+        {
+            return;
+        }
+
+        ApplyVisuals(forceVisualPlayState || playStateChanged);
+        visualsDirty = false;
+        forceVisualPlayState = false;
+        lastAppliedBurningState = isBurning;
+        lastAppliedVisualHp01 = currentVisualHp01;
+        nextVisualUpdateTime = Time.time + Mathf.Max(0.02f, visualUpdateInterval);
+    }
+
     private void KeepParticlesWorldUp()
     {
         if (!keepParticleWorldUp) return;
@@ -584,6 +634,17 @@ public class Fire : MonoBehaviour, IFireTarget
         sphereCollider.radius = currentRadius;
     }
 
+    private void SyncRadiusAndColliderIfDirty()
+    {
+        if (!colliderDirty)
+        {
+            return;
+        }
+
+        SyncRadiusAndCollider();
+        colliderDirty = false;
+    }
+
     private void OnValidate()
     {
         maxHp = Mathf.Max(0.01f, maxHp);
@@ -600,6 +661,7 @@ public class Fire : MonoBehaviour, IFireTarget
         co2RegrowMultiplier = Mathf.Max(0f, co2RegrowMultiplier);
         dryChemicalRegrowMultiplier = Mathf.Max(0f, dryChemicalRegrowMultiplier);
         dryChemicalSpreadLockDuration = Mathf.Max(0f, dryChemicalSpreadLockDuration);
+        visualUpdateInterval = Mathf.Max(0.02f, visualUpdateInterval);
         ApplyHazardDefaults();
     }
 
@@ -661,6 +723,7 @@ public class Fire : MonoBehaviour, IFireTarget
         currentHp = Mathf.Min(
             Mathf.Max(0f, maxHp),
             currentHp + flammableLiquidWaterBackfireIgniteAmount * Mathf.Max(0.5f, amount));
+        MarkStateDirty(forcePlayState: true);
         NotifyBurningStateChangeIfNeeded(wasBurning);
 
         if (!enableSpread) return;
@@ -1125,6 +1188,17 @@ public class Fire : MonoBehaviour, IFireTarget
         navMeshModifier.applyToChildren = navMeshModifierApplyToChildren;
     }
 
+    private void SyncNavMeshModifierIfDirty()
+    {
+        if (!navMeshDirty)
+        {
+            return;
+        }
+
+        SyncNavMeshModifier();
+        navMeshDirty = false;
+    }
+
     private float GetNormalizedHp()
     {
         return maxHp <= 0f ? 0f : Mathf.Clamp01(currentHp / maxHp);
@@ -1182,5 +1256,30 @@ public class Fire : MonoBehaviour, IFireTarget
         }
 
         return current;
+    }
+
+    private void MarkStateDirty(bool forcePlayState = false)
+    {
+        colliderDirty = true;
+        navMeshDirty = true;
+        visualsDirty = true;
+        forceVisualPlayState |= forcePlayState;
+    }
+
+    private void ResetOptimizationState(bool forcePlayState)
+    {
+        colliderDirty = true;
+        navMeshDirty = true;
+        visualsDirty = true;
+        forceVisualPlayState = forcePlayState;
+        lastAppliedBurningState = currentHp > 0f;
+        lastAppliedVisualHp01 = float.NegativeInfinity;
+        nextVisualUpdateTime = 0f;
+    }
+
+    private void ScheduleNextSpreadAttempt(bool randomizeOffset)
+    {
+        float spreadDelay = Mathf.Max(0.05f, spreadInterval);
+        nextSpreadAttemptTime = Time.time + (randomizeOffset ? Random.Range(0f, spreadDelay) : spreadDelay);
     }
 }

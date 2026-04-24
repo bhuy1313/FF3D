@@ -78,6 +78,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
     [Header("References")]
     [SerializeField] private ParticleSystem waterParticles;
     [SerializeField] private AudioSource sprayAudio;
+    [SerializeField] private FireSimulationManager fireSimulationManager;
     [SerializeField] private bool enableParticle = true;
     [SerializeField] private float particleGravityModifier = 0.35f;
     [SerializeField] private string waterTag = "Water";
@@ -186,6 +187,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         RecalculateSprayRuntimeValues();
         CacheWaterParticleDefaults();
         ApplySprayTuningToVfx();
+        ResolveFireSimulationManager();
 
         SetSprayState(false);
         TryApplyWaterTag();
@@ -379,6 +381,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         movementWeightKg = Mathf.Max(0f, movementWeightKg);
         ClampSpraySettings();
         RecalculateSprayRuntimeValues();
+        ResolveFireSimulationManager();
 
         if (!Application.isPlaying)
         {
@@ -605,6 +608,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
 
         float amount = currentApplyWaterRate * Time.deltaTime;
         float timeStep = effectiveLifetime / segments;
+        FireSimulationManager simulationManager = ResolveFireSimulationManager();
 
         System.Collections.Generic.HashSet<FireGroup> processedGroups = new System.Collections.Generic.HashSet<FireGroup>();
         System.Collections.Generic.HashSet<Fire> processedFires = new System.Collections.Generic.HashSet<Fire>();
@@ -628,6 +632,13 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
 
             if (segmentDistance > 0.001f)
             {
+                if (simulationManager != null && simulationManager.IsInitialized)
+                {
+                    simulationManager.ApplySuppressionSphere(nextPos, currentRadius, amount, FireSuppressionAgent.Water);
+                    currentPos = nextPos;
+                    continue;
+                }
+
                 RaycastHit[] hits = Physics.SphereCastAll(
                     currentPos,
                     currentRadius,
@@ -644,6 +655,16 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
 
             currentPos = nextPos;
         }
+    }
+
+    private FireSimulationManager ResolveFireSimulationManager()
+    {
+        if (fireSimulationManager == null)
+        {
+            fireSimulationManager = FindAnyObjectByType<FireSimulationManager>(FindObjectsInactive.Include);
+        }
+
+        return fireSimulationManager;
     }
 
     private int GetEffectiveArcSegments(float effectiveLifetime)

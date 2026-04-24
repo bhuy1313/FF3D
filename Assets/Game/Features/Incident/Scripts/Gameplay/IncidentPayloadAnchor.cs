@@ -19,16 +19,6 @@ public class IncidentPayloadAnchor : MonoBehaviour
     [SerializeField] private SmokeHazard smokeHazard;
     [SerializeField] private HazardIsolationDevice[] hazardIsolationDevices = Array.Empty<HazardIsolationDevice>();
 
-    [Header("Secondary Fire Placement")]
-    [Tooltip("Fallback secondary fire count when payload does not specify a valid total fire count.")]
-    [SerializeField] [Min(0)] private int secondaryFirePointCount = 3;
-    [SerializeField] [Min(0.1f)] private float secondaryFireRange = 3f;
-    [SerializeField] [Min(0f)] private float minimumSecondaryFireSpacing = 0.85f;
-    [SerializeField] [Min(1)] private int placementAttemptsPerSecondaryFire = 8;
-    [SerializeField] [Min(0.05f)] private float parabolaLaunchHeight = 0.35f;
-    [SerializeField] [Min(0.1f)] private float parabolaApexHeight = 1.4f;
-    [SerializeField] [Min(3)] private int parabolaSegments = 12;
-    [SerializeField] [Min(0.01f)] private float parabolaCastRadius = 0.08f;
     [SerializeField] [Min(0f)] private float surfaceOffset = 0.03f;
     [SerializeField] private LayerMask firePlacementMask = ~0;
     [SerializeField] private QueryTriggerInteraction firePlacementTriggerInteraction = QueryTriggerInteraction.Ignore;
@@ -37,6 +27,7 @@ public class IncidentPayloadAnchor : MonoBehaviour
     private Transform runtimeRoot;
     private FireGroup runtimeFireGroup;
     private SmokeHazard runtimeSmokeHazard;
+    private IncidentFireSpawnProfile runtimeSpawnProfile;
 
     public string FireOriginKey => fireOriginKey;
     public string LogicalLocationKey => logicalLocationKey;
@@ -66,35 +57,85 @@ public class IncidentPayloadAnchor : MonoBehaviour
         return MatchesKey(logicalLocationKey, key);
     }
 
-    public void ApplyPayload(IncidentWorldSetupPayload payload, Fire defaultFirePrefab)
+    public bool ApplyPayload(
+        IncidentWorldSetupPayload payload,
+        IncidentFirePrefabLibrary firePrefabLibrary,
+        IncidentFireSpawnProfile fireSpawnProfile = null,
+        FireSimulationManager fireSimulationManager = null)
     {
-        ApplyPayloadFromResolvedSource(payload, defaultFirePrefab, transform.position, ResolveFallbackRotation());
+        return ApplyPayloadFromResolvedSource(
+            payload,
+            firePrefabLibrary,
+            fireSpawnProfile,
+            fireSimulationManager,
+            transform.position,
+            ResolveFallbackRotation());
     }
 
-    public void ApplyPayloadFromResolvedSource(
+    public bool ApplyPayloadFromResolvedSource(
         IncidentWorldSetupPayload payload,
-        Fire defaultFirePrefab,
+        IncidentFirePrefabLibrary firePrefabLibrary,
+        IncidentFireSpawnProfile fireSpawnProfile,
+        FireSimulationManager fireSimulationManager,
         Vector3 primaryPosition,
         Quaternion primaryRotation)
     {
         if (payload == null)
         {
-            return;
+            return false;
         }
 
-        if (defaultFirePrefab == null)
+        if (fireSpawnProfile == null)
         {
-            Debug.LogWarning($"{nameof(IncidentPayloadAnchor)} on '{name}' is missing a default fire prefab.", this);
-            return;
+            Debug.LogWarning($"{nameof(IncidentPayloadAnchor)} on '{name}' requires an {nameof(IncidentFireSpawnProfile)}.", this);
+            return false;
         }
 
+        runtimeSpawnProfile = fireSpawnProfile;
         ClearRuntimeObjects();
 
-        runtimeRoot = CreateRuntimeRoot();
-        SpawnRuntimeFires(payload, defaultFirePrefab, runtimeRoot, primaryPosition, primaryRotation);
-        EnsureRuntimeFireGroup(runtimeRoot);
-        ConfigureSmoke(payload, runtimeRoot);
+        if (fireSimulationManager != null)
+        {
+            if (!fireSimulationManager.IsInitialized)
+            {
+                fireSimulationManager.InitializeRuntimeGraph();
+            }
+
+            ApplyPayloadToSimulation(payload, fireSimulationManager, primaryPosition, primaryRotation);
+            ConfigureSmoke(payload, null, fireSimulationManager);
+        }
+        else
+        {
+            if (firePrefabLibrary == null)
+            {
+                Debug.LogWarning($"{nameof(IncidentPayloadAnchor)} on '{name}' is missing a fire prefab library.", this);
+                return false;
+            }
+
+            Fire primaryPrefab = firePrefabLibrary.ResolvePrefab(IncidentPayloadStartupTask.ResolveFireHazardType(payload.hazardType));
+            Fire ordinaryPrefab = firePrefabLibrary.ResolveOrdinaryPrefab();
+            if (primaryPrefab == null || ordinaryPrefab == null)
+            {
+                Debug.LogWarning(
+                    $"{nameof(IncidentPayloadAnchor)} on '{name}' is missing fire prefabs. " +
+                    $"Primary='{primaryPrefab != null}', Ordinary='{ordinaryPrefab != null}'.",
+                    this);
+                return false;
+            }
+
+            runtimeRoot = CreateRuntimeRoot();
+            SpawnRuntimeFires(payload, firePrefabLibrary, runtimeRoot, primaryPosition, primaryRotation);
+            EnsureRuntimeFireGroup(runtimeRoot);
+            ConfigureSmoke(payload, runtimeRoot, null);
+        }
+
         ConfigureHazardIsolationDevices(payload);
+        return true;
+    }
+
+    public void SetSmokeHazard(SmokeHazard value)
+    {
+        smokeHazard = value;
     }
 
     private Transform CreateRuntimeRoot()
@@ -110,52 +151,200 @@ public class IncidentPayloadAnchor : MonoBehaviour
 
     private void SpawnRuntimeFires(
         IncidentWorldSetupPayload payload,
-        Fire defaultFirePrefab,
+        IncidentFirePrefabLibrary firePrefabLibrary,
         Transform parent,
         Vector3 primaryPosition,
         Quaternion primaryRotation)
     {
         runtimeFires.Clear();
 
-        int requestedTotalFireCount = ResolveRequestedTotalFireCount(payload);
-        int requestedSecondaryCount = Mathf.Max(0, requestedTotalFireCount - 1);
-        List<SpawnPlacement> placements = BuildRuntimeFirePlacements(
-            primaryPosition,
-            primaryRotation,
-            requestedSecondaryCount);
-        for (int i = 0; i < placements.Count; i++)
+        FireHazardType primaryHazardType = IncidentPayloadStartupTask.ResolveFireHazardType(payload.hazardType);
+        Fire primaryPrefab = firePrefabLibrary.ResolvePrefab(primaryHazardType);
+        Fire ordinaryPrefab = firePrefabLibrary.ResolveOrdinaryPrefab();
+        if (primaryPrefab == null || ordinaryPrefab == null)
         {
-            SpawnPlacement placement = placements[i];
-            Fire fireInstance = Instantiate(defaultFirePrefab, placement.Position, placement.Rotation, parent);
-            fireInstance.name = $"{defaultFirePrefab.name}_{i + 1}";
-            ConfigureFireInstance(fireInstance, payload);
-            runtimeFires.Add(fireInstance);
-        }
-
-        if (runtimeFires.Count != requestedTotalFireCount)
-        {
-            Debug.LogWarning(
-                $"{nameof(IncidentPayloadAnchor)} on '{name}' spawned {runtimeFires.Count}/{requestedTotalFireCount} fires " +
-                $"for payload origin '{ValueOrUnknown(payload != null ? payload.fireOrigin : null)}'. " +
-                $"Requested secondary fires: {requestedSecondaryCount}, placed: {Mathf.Max(0, runtimeFires.Count - 1)}.",
-                this);
             return;
         }
 
+        int requestedActiveFireCount = ResolveRequestedTotalFireCount(payload);
+        int requestedSecondaryCount = Mathf.Max(0, requestedActiveFireCount - 1);
+        float primaryIntensity = Mathf.Clamp01(payload.initialFireIntensity);
+        float secondaryIntensity = Mathf.Clamp01(primaryIntensity * Mathf.Clamp01(runtimeSpawnProfile.ActiveSecondaryIntensityScale));
+        float spreadInterval = IncidentPayloadStartupTask.ResolveSpreadInterval(payload.fireSpreadPreset);
+        float spreadIgniteAmount = IncidentPayloadStartupTask.ResolveSpreadIgniteAmount(payload.fireSpreadPreset);
+        float spreadThreshold = IncidentPayloadStartupTask.ResolveSpreadThreshold(payload.fireSpreadPreset);
+
+        List<SpawnPlacement> activePlacements = BuildInitialSecondaryPlacements(
+            primaryPosition,
+            primaryRotation,
+            requestedSecondaryCount);
+        List<FireSpawnRequest> requests = new List<FireSpawnRequest>();
+        requests.Add(CreatePrimaryRequest(primaryPosition, primaryRotation, primaryPrefab, primaryHazardType, primaryIntensity));
+
+        for (int i = 1; i < activePlacements.Count; i++)
+        {
+            SpawnPlacement placement = activePlacements[i];
+            requests.Add(CreateActiveSecondaryRequest(
+                placement.Position,
+                placement.Rotation,
+                primaryPrefab,
+                primaryHazardType,
+                secondaryIntensity));
+        }
+
+        int latentCount = 0;
+        if (runtimeSpawnProfile.SpawnLatentSpreadNodes && runtimeSpawnProfile.LatentSpreadNodeCount > 0)
+        {
+            List<SpawnPlacement> latentPlacements = BuildLatentSpreadPlacements(activePlacements);
+            latentCount = latentPlacements.Count;
+            for (int i = 0; i < latentPlacements.Count; i++)
+            {
+                SpawnPlacement placement = latentPlacements[i];
+                requests.Add(CreateOrdinaryRequest(
+                    placement.Position,
+                    placement.Rotation,
+                    ordinaryPrefab,
+                    startBurning: false,
+                    startIntensity01: 0f));
+            }
+        }
+
+        for (int i = 0; i < requests.Count; i++)
+        {
+            FireSpawnRequest request = requests[i];
+            Fire fireInstance = Instantiate(request.Prefab, request.Position, request.Rotation, parent);
+            fireInstance.name = $"{request.Prefab.name}_{i + 1}";
+            ConfigureFireInstance(
+                fireInstance,
+                payload,
+                request,
+                spreadInterval,
+                spreadIgniteAmount,
+                spreadThreshold);
+            runtimeFires.Add(fireInstance);
+        }
+
+        int spawnedActiveCount = Mathf.Min(requestedActiveFireCount, runtimeFires.Count);
+        if (spawnedActiveCount != requestedActiveFireCount)
+        {
+            Debug.LogWarning(
+                $"{nameof(IncidentPayloadAnchor)} on '{name}' spawned {spawnedActiveCount}/{requestedActiveFireCount} active fires " +
+                $"for payload origin '{ValueOrUnknown(payload.fireOrigin)}'. Payload initialFireCount={payload.initialFireCount}, " +
+                $"requested secondary fires: {requestedSecondaryCount}, placed: {Mathf.Max(0, spawnedActiveCount - 1)}, " +
+                $"latent nodes: {latentCount}.",
+                this);
+        }
+
         Debug.Log(
-            $"{nameof(IncidentPayloadAnchor)} on '{name}' spawned {runtimeFires.Count} fires for payload origin " +
-            $"'{ValueOrUnknown(payload != null ? payload.fireOrigin : null)}' ({Mathf.Max(0, runtimeFires.Count - 1)} secondary).",
+            $"{nameof(IncidentPayloadAnchor)} on '{name}' spawned {spawnedActiveCount} active fires and {latentCount} latent nodes " +
+            $"for payload origin '{ValueOrUnknown(payload.fireOrigin)}'. Payload initialFireCount={payload.initialFireCount}, " +
+            $"requested secondary fires={requestedSecondaryCount}, placed secondary={Mathf.Max(0, spawnedActiveCount - 1)}.",
             this);
     }
 
-    private List<SpawnPlacement> BuildRuntimeFirePlacements(
+    private void ApplyPayloadToSimulation(
+        IncidentWorldSetupPayload payload,
+        FireSimulationManager fireSimulationManager,
+        Vector3 primaryPosition,
+        Quaternion primaryRotation)
+    {
+        FireHazardType primaryHazardType = IncidentPayloadStartupTask.ResolveFireHazardType(payload.hazardType);
+        fireSimulationManager.BeginIncident(primaryHazardType, hazardSourceIsolated: false);
+
+        int requestedActiveFireCount = ResolveRequestedTotalFireCount(payload);
+        int requestedSecondaryCount = Mathf.Max(0, requestedActiveFireCount - 1);
+        float primaryIntensity = Mathf.Clamp01(payload.initialFireIntensity);
+        float secondaryIntensity = Mathf.Clamp01(primaryIntensity * Mathf.Clamp01(runtimeSpawnProfile.ActiveSecondaryIntensityScale));
+
+        List<SpawnPlacement> activePlacements = BuildInitialSecondaryPlacements(
+            primaryPosition,
+            primaryRotation,
+            requestedSecondaryCount);
+
+        if (activePlacements.Count > 0)
+        {
+            fireSimulationManager.TrackClosestNode(activePlacements[0].Position, primaryIntensity);
+        }
+
+        for (int i = 1; i < activePlacements.Count; i++)
+        {
+            fireSimulationManager.TrackClosestNode(activePlacements[i].Position, secondaryIntensity);
+        }
+
+        if (runtimeSpawnProfile.SpawnLatentSpreadNodes && runtimeSpawnProfile.LatentSpreadNodeCount > 0)
+        {
+            List<SpawnPlacement> latentPlacements = BuildLatentSpreadPlacements(activePlacements);
+            for (int i = 0; i < latentPlacements.Count; i++)
+            {
+                fireSimulationManager.TrackClosestNode(latentPlacements[i].Position, 0f);
+            }
+        }
+    }
+
+    private FireSpawnRequest CreatePrimaryRequest(
+        Vector3 position,
+        Quaternion rotation,
+        Fire prefab,
+        FireHazardType hazardType,
+        float startIntensity01)
+    {
+        return new FireSpawnRequest(
+            position,
+            rotation,
+            prefab,
+            hazardType,
+            startBurning: true,
+            startIntensity01,
+            spreadEnabled: true,
+            allowRegrowFromZero: prefab != null && prefab.AllowRegrowFromZero);
+    }
+
+    private FireSpawnRequest CreateOrdinaryRequest(
+        Vector3 position,
+        Quaternion rotation,
+        Fire ordinaryPrefab,
+        bool startBurning,
+        float startIntensity01)
+    {
+        return new FireSpawnRequest(
+            position,
+            rotation,
+            ordinaryPrefab,
+            FireHazardType.OrdinaryCombustibles,
+            startBurning,
+            startBurning ? Mathf.Clamp01(startIntensity01) : 0f,
+            spreadEnabled: true,
+            allowRegrowFromZero: false);
+    }
+
+    private FireSpawnRequest CreateActiveSecondaryRequest(
+        Vector3 position,
+        Quaternion rotation,
+        Fire prefab,
+        FireHazardType hazardType,
+        float startIntensity01)
+    {
+        return new FireSpawnRequest(
+            position,
+            rotation,
+            prefab,
+            hazardType,
+            startBurning: true,
+            Mathf.Clamp01(startIntensity01),
+            spreadEnabled: true,
+            allowRegrowFromZero: prefab != null && prefab.AllowRegrowFromZero);
+    }
+
+    private List<SpawnPlacement> BuildInitialSecondaryPlacements(
         Vector3 primaryPosition,
         Quaternion primaryRotation,
         int requestedSecondaryCount)
     {
-        List<SpawnPlacement> placements = new List<SpawnPlacement>();
-        placements.Add(new SpawnPlacement(primaryPosition, primaryRotation));
-
+        Vector3 primarySurfaceNormal = ResolvePlacementNormal(primaryRotation);
+        List<SpawnPlacement> placements = new List<SpawnPlacement>
+        {
+            new SpawnPlacement(primaryPosition, primaryRotation, primarySurfaceNormal)
+        };
         requestedSecondaryCount = Mathf.Max(0, requestedSecondaryCount);
         if (requestedSecondaryCount <= 0)
         {
@@ -163,12 +352,21 @@ public class IncidentPayloadAnchor : MonoBehaviour
         }
 
         System.Random random = new System.Random(Guid.NewGuid().GetHashCode());
-        int maxAttempts = Mathf.Max(requestedSecondaryCount, requestedSecondaryCount * Mathf.Max(1, placementAttemptsPerSecondaryFire));
+        int maxAttempts = Mathf.Max(
+            requestedSecondaryCount,
+            requestedSecondaryCount * Mathf.Max(1, runtimeSpawnProfile.PlacementAttemptsPerSecondaryFire));
         int attempts = 0;
         while (placements.Count - 1 < requestedSecondaryCount && attempts < maxAttempts)
         {
             attempts++;
-            if (!TryFindSecondaryPlacement(random, primaryPosition, placements, out SpawnPlacement placement))
+            if (!TryFindPlacement(
+                    random,
+                    primaryPosition,
+                    primarySurfaceNormal,
+                    runtimeSpawnProfile.SecondaryFireRange,
+                    Mathf.Max(0f, runtimeSpawnProfile.MinimumSecondaryFireSpacing),
+                    placements,
+                    out SpawnPlacement placement))
             {
                 continue;
             }
@@ -179,12 +377,156 @@ public class IncidentPayloadAnchor : MonoBehaviour
         if (placements.Count - 1 < requestedSecondaryCount)
         {
             Debug.LogWarning(
-                $"{nameof(IncidentPayloadAnchor)} on '{name}' only found {placements.Count - 1}/{requestedSecondaryCount} secondary fire placements " +
-                $"within range {secondaryFireRange:0.##}.",
+                $"{nameof(IncidentPayloadAnchor)} on '{name}' only found {placements.Count - 1}/{requestedSecondaryCount} active secondary placements " +
+                $"within range {runtimeSpawnProfile.SecondaryFireRange:0.##}.",
                 this);
         }
 
         return placements;
+    }
+
+    private List<SpawnPlacement> BuildLatentSpreadPlacements(List<SpawnPlacement> activePlacements)
+    {
+        List<SpawnPlacement> latentPlacements = new List<SpawnPlacement>();
+        if (!runtimeSpawnProfile.SpawnLatentSpreadNodes ||
+            runtimeSpawnProfile.LatentSpreadNodeCount <= 0 ||
+            activePlacements == null ||
+            activePlacements.Count == 0)
+        {
+            return latentPlacements;
+        }
+
+        List<SpawnPlacement> allPlacements = new List<SpawnPlacement>(activePlacements);
+        List<SpawnPlacement> currentFrontier = new List<SpawnPlacement>();
+        int seedCount = Mathf.Min(activePlacements.Count, Mathf.Max(1, runtimeSpawnProfile.LatentSpreadSeedLimit));
+        for (int i = 0; i < seedCount; i++)
+        {
+            currentFrontier.Add(activePlacements[i]);
+        }
+
+        System.Random random = new System.Random(Guid.NewGuid().GetHashCode());
+        int depthLimit = Mathf.Max(1, runtimeSpawnProfile.LatentSpreadBranchDepth);
+        for (int depth = 0; depth < depthLimit && latentPlacements.Count < runtimeSpawnProfile.LatentSpreadNodeCount; depth++)
+        {
+            if (currentFrontier.Count == 0)
+            {
+                break;
+            }
+
+            List<SpawnPlacement> nextFrontier = new List<SpawnPlacement>();
+            int attemptsPerDepth =
+                Mathf.Max(1, currentFrontier.Count) * Mathf.Max(1, runtimeSpawnProfile.PlacementAttemptsPerSecondaryFire);
+            int attempts = 0;
+            while (attempts < attemptsPerDepth && latentPlacements.Count < runtimeSpawnProfile.LatentSpreadNodeCount)
+            {
+                attempts++;
+                SpawnPlacement seed = currentFrontier[random.Next(currentFrontier.Count)];
+                if (!TryFindPlacement(
+                        random,
+                        seed.Position,
+                        seed.SurfaceNormal,
+                        runtimeSpawnProfile.LatentSpreadRange,
+                        Mathf.Max(0f, runtimeSpawnProfile.MinimumLatentNodeSpacing),
+                        allPlacements,
+                        out SpawnPlacement placement))
+                {
+                    continue;
+                }
+
+                latentPlacements.Add(placement);
+                allPlacements.Add(placement);
+                nextFrontier.Add(placement);
+            }
+
+            currentFrontier = nextFrontier;
+        }
+
+        return latentPlacements;
+    }
+
+    private bool TryFindPlacement(
+        System.Random random,
+        Vector3 seedPosition,
+        Vector3 seedSurfaceNormal,
+        float placementRange,
+        float minimumSpacing,
+        List<SpawnPlacement> existingPlacements,
+        out SpawnPlacement placement)
+    {
+        placement = default;
+        if (random == null || existingPlacements == null)
+        {
+            return false;
+        }
+
+        Vector3 surfaceUp = seedSurfaceNormal.sqrMagnitude > 0.0001f ? seedSurfaceNormal.normalized : Vector3.up;
+        int segmentCount = Mathf.Max(3, runtimeSpawnProfile.ParabolaSegments);
+        int variantCount = Mathf.Max(1, runtimeSpawnProfile.PlacementTrajectoryVariants);
+        List<PlacementCandidate> candidates = new List<PlacementCandidate>(variantCount);
+        for (int variantIndex = 0; variantIndex < variantCount; variantIndex++)
+        {
+            BuildSurfaceBasis(surfaceUp, out Vector3 surfaceForward, out Vector3 surfaceRight);
+            float horizontalDistance = Mathf.Lerp(
+                Mathf.Min(minimumSpacing, placementRange),
+                Mathf.Max(minimumSpacing, placementRange),
+                (float)random.NextDouble());
+            float planarAngle = (float)(random.NextDouble() * Math.PI * 2d);
+            Vector3 travelDirection =
+                ((surfaceForward * Mathf.Cos(planarAngle)) + (surfaceRight * Mathf.Sin(planarAngle))).normalized;
+            Vector3 lateralDirection = Vector3.Cross(surfaceUp, travelDirection).normalized;
+            Vector3 launchPosition = seedPosition + surfaceUp * Mathf.Max(0f, runtimeSpawnProfile.ParabolaLaunchHeight);
+            Vector3 landingPosition = seedPosition + travelDirection * horizontalDistance;
+            float apexHeight = Mathf.Max(
+                0.05f,
+                runtimeSpawnProfile.ParabolaApexHeight + GetSignedRandomRange(random, runtimeSpawnProfile.ParabolaApexHeightJitter));
+            float lateralOffset = GetSignedRandomRange(random, runtimeSpawnProfile.ParabolaLateralOffset);
+            Vector3 controlPoint =
+                Vector3.Lerp(launchPosition, landingPosition, 0.5f) +
+                (surfaceUp * apexHeight) +
+                (lateralDirection * lateralOffset);
+
+            Vector3 previousPoint = launchPosition;
+            for (int segmentIndex = 1; segmentIndex <= segmentCount; segmentIndex++)
+            {
+                float t = segmentIndex / (float)segmentCount;
+                Vector3 nextPoint = EvaluateQuadraticBezier(launchPosition, controlPoint, landingPosition, t);
+                Vector3 segment = nextPoint - previousPoint;
+                float segmentLength = segment.magnitude;
+                if (segmentLength <= 0.0001f)
+                {
+                    previousPoint = nextPoint;
+                    continue;
+                }
+
+                if (Physics.SphereCast(
+                        previousPoint,
+                        Mathf.Max(0.01f, runtimeSpawnProfile.ParabolaCastRadius),
+                        segment / segmentLength,
+                        out RaycastHit hit,
+                        segmentLength,
+                        firePlacementMask,
+                        firePlacementTriggerInteraction) &&
+                    IsValidPlacementHit(hit, existingPlacements, minimumSpacing))
+                {
+                    Vector3 position = hit.point + hit.normal * Mathf.Max(0f, surfaceOffset);
+                    float weight = CalculatePlacementSurfaceWeight(hit.normal);
+                    candidates.Add(new PlacementCandidate(
+                        new SpawnPlacement(position, ResolveSurfaceRotation(hit.normal), hit.normal),
+                        weight));
+                    break;
+                }
+
+                previousPoint = nextPoint;
+            }
+        }
+
+        if (candidates.Count == 0)
+        {
+            return false;
+        }
+
+        placement = ChoosePlacementCandidate(random, candidates);
+        return true;
     }
 
     private int ResolveRequestedTotalFireCount(IncidentWorldSetupPayload payload)
@@ -194,25 +536,30 @@ public class IncidentPayloadAnchor : MonoBehaviour
             return payload.initialFireCount;
         }
 
-        return Mathf.Max(1, secondaryFirePointCount + 1);
+        return Mathf.Max(1, runtimeSpawnProfile.SecondaryFirePointCount + 1);
     }
 
-    private void ConfigureFireInstance(Fire fireInstance, IncidentWorldSetupPayload payload)
+    private void ConfigureFireInstance(
+        Fire fireInstance,
+        IncidentWorldSetupPayload payload,
+        FireSpawnRequest request,
+        float spreadInterval,
+        float spreadIgniteAmount,
+        float spreadThreshold)
     {
-        if (fireInstance == null)
+        if (fireInstance == null || payload == null)
         {
             return;
         }
 
-        fireInstance.SetFireHazardType(IncidentPayloadStartupTask.ResolveFireHazardType(payload.hazardType));
-        fireInstance.SetRequiresIsolationToFullyExtinguish(payload.requiresIsolation);
+        fireInstance.SetFireHazardType(request.HazardType);
+        fireInstance.SetRequiresIsolationToFullyExtinguish(
+            request.HazardType != FireHazardType.OrdinaryCombustibles && payload.requiresIsolation);
         fireInstance.SetHazardSourceIsolated(false);
-        fireInstance.SetSpreadEnabled(true);
-        fireInstance.ConfigureSpreadProfile(
-            IncidentPayloadStartupTask.ResolveSpreadInterval(payload.fireSpreadPreset),
-            IncidentPayloadStartupTask.ResolveSpreadIgniteAmount(payload.fireSpreadPreset),
-            IncidentPayloadStartupTask.ResolveSpreadThreshold(payload.fireSpreadPreset));
-        fireInstance.SetBurningLevel01(payload.initialFireIntensity);
+        fireInstance.SetSpreadEnabled(request.SpreadEnabled);
+        fireInstance.ConfigureSpreadProfile(spreadInterval, spreadIgniteAmount, spreadThreshold);
+        fireInstance.SetAllowRegrowFromZero(request.AllowRegrowFromZero);
+        fireInstance.SetBurningLevel01(request.StartBurning ? request.StartIntensity01 : 0f);
     }
 
     private void EnsureRuntimeFireGroup(Transform parent)
@@ -241,7 +588,7 @@ public class IncidentPayloadAnchor : MonoBehaviour
         runtimeFireGroup.CollectFires();
     }
 
-    private void ConfigureSmoke(IncidentWorldSetupPayload payload, Transform parent)
+    private void ConfigureSmoke(IncidentWorldSetupPayload payload, Transform parent, FireSimulationManager fireSimulationManager)
     {
         SmokeHazard targetSmokeHazard = ResolveSmokeHazardReference();
         if (targetSmokeHazard == null && createRuntimeSmokeHazard && parent != null)
@@ -281,18 +628,14 @@ public class IncidentPayloadAnchor : MonoBehaviour
         }
 
         runtimeSmokeHazard.SetLinkedFires(runtimeFires.ToArray());
+        runtimeSmokeHazard.SetFireSimulationManager(fireSimulationManager);
         runtimeSmokeHazard.SetStartSmokeDensity(payload.startSmokeDensity, applyImmediately: true);
         runtimeSmokeHazard.SetSmokeAccumulationMultiplier(payload.smokeAccumulationMultiplier);
     }
 
-    public void SetSmokeHazard(SmokeHazard value)
-    {
-        smokeHazard = value;
-    }
-
     private void ConfigureHazardIsolationDevices(IncidentWorldSetupPayload payload)
     {
-        if (hazardIsolationDevices == null || hazardIsolationDevices.Length == 0)
+        if (hazardIsolationDevices == null || hazardIsolationDevices.Length == 0 || payload == null)
         {
             return;
         }
@@ -313,64 +656,7 @@ public class IncidentPayloadAnchor : MonoBehaviour
         }
     }
 
-    private bool TryFindSecondaryPlacement(
-        System.Random random,
-        Vector3 primaryPosition,
-        List<SpawnPlacement> existingPlacements,
-        out SpawnPlacement placement)
-    {
-        placement = default;
-
-        if (random == null || existingPlacements == null)
-        {
-            return false;
-        }
-
-        float horizontalDistance = Mathf.Lerp(
-            Mathf.Min(minimumSecondaryFireSpacing, secondaryFireRange),
-            Mathf.Max(minimumSecondaryFireSpacing, secondaryFireRange),
-            (float)random.NextDouble());
-        Vector3 launchPosition = primaryPosition + Vector3.up * Mathf.Max(0f, parabolaLaunchHeight);
-        Vector3 travelDirection = GetRandomHorizontalDirection(random);
-        Vector3 landingPosition = primaryPosition + travelDirection * horizontalDistance;
-        Vector3 controlPoint = Vector3.Lerp(launchPosition, landingPosition, 0.5f) + Vector3.up * Mathf.Max(0.05f, parabolaApexHeight);
-
-        Vector3 previousPoint = launchPosition;
-        int segmentCount = Mathf.Max(3, parabolaSegments);
-        for (int segmentIndex = 1; segmentIndex <= segmentCount; segmentIndex++)
-        {
-            float t = segmentIndex / (float)segmentCount;
-            Vector3 nextPoint = EvaluateQuadraticBezier(launchPosition, controlPoint, landingPosition, t);
-            Vector3 segment = nextPoint - previousPoint;
-            float segmentLength = segment.magnitude;
-            if (segmentLength <= 0.0001f)
-            {
-                previousPoint = nextPoint;
-                continue;
-            }
-
-            if (Physics.SphereCast(
-                    previousPoint,
-                    Mathf.Max(0.01f, parabolaCastRadius),
-                    segment / segmentLength,
-                    out RaycastHit hit,
-                    segmentLength,
-                    firePlacementMask,
-                    firePlacementTriggerInteraction) &&
-                IsValidSecondaryHit(hit, existingPlacements))
-            {
-                Vector3 position = hit.point + hit.normal * Mathf.Max(0f, surfaceOffset);
-                placement = new SpawnPlacement(position, ResolveSurfaceRotation(hit.normal));
-                return true;
-            }
-
-            previousPoint = nextPoint;
-        }
-
-        return false;
-    }
-
-    private bool IsValidSecondaryHit(RaycastHit hit, List<SpawnPlacement> existingPlacements)
+    private bool IsValidPlacementHit(RaycastHit hit, List<SpawnPlacement> existingPlacements, float minimumSpacing)
     {
         if (hit.collider == null)
         {
@@ -378,10 +664,10 @@ public class IncidentPayloadAnchor : MonoBehaviour
         }
 
         Vector3 candidatePosition = hit.point + hit.normal * Mathf.Max(0f, surfaceOffset);
-        float minimumSpacing = Mathf.Max(0f, minimumSecondaryFireSpacing);
+        float minSpacing = Mathf.Max(0f, minimumSpacing);
         for (int i = 0; i < existingPlacements.Count; i++)
         {
-            if ((existingPlacements[i].Position - candidatePosition).sqrMagnitude < minimumSpacing * minimumSpacing)
+            if ((existingPlacements[i].Position - candidatePosition).sqrMagnitude < minSpacing * minSpacing)
             {
                 return false;
             }
@@ -418,6 +704,81 @@ public class IncidentPayloadAnchor : MonoBehaviour
         return Quaternion.LookRotation(projectedForward.normalized, up);
     }
 
+    private Vector3 ResolvePlacementNormal(Quaternion rotation)
+    {
+        Vector3 normal = rotation * Vector3.up;
+        return normal.sqrMagnitude > 0.0001f ? normal.normalized : Vector3.up;
+    }
+
+    private static void BuildSurfaceBasis(Vector3 surfaceUp, out Vector3 forward, out Vector3 right)
+    {
+        Vector3 referenceForward = Mathf.Abs(Vector3.Dot(surfaceUp, Vector3.forward)) < 0.95f
+            ? Vector3.forward
+            : Vector3.right;
+        forward = Vector3.ProjectOnPlane(referenceForward, surfaceUp);
+        if (forward.sqrMagnitude < 0.0001f)
+        {
+            forward = Vector3.ProjectOnPlane(Vector3.up, surfaceUp);
+        }
+
+        if (forward.sqrMagnitude < 0.0001f)
+        {
+            forward = Vector3.Cross(surfaceUp, Vector3.right);
+        }
+
+        forward.Normalize();
+        right = Vector3.Cross(surfaceUp, forward);
+        if (right.sqrMagnitude < 0.0001f)
+        {
+            right = Vector3.Cross(surfaceUp, Vector3.forward);
+        }
+
+        right.Normalize();
+    }
+
+    private float CalculatePlacementSurfaceWeight(Vector3 surfaceNormal)
+    {
+        Vector3 normalizedNormal = surfaceNormal.sqrMagnitude > 0.0001f ? surfaceNormal.normalized : Vector3.up;
+        float upDot = Vector3.Dot(normalizedNormal, Vector3.up);
+        if (upDot >= 0.6f)
+        {
+            return Mathf.Max(0.01f, runtimeSpawnProfile.FloorPlacementWeight);
+        }
+
+        if (upDot <= -0.35f)
+        {
+            return Mathf.Max(0.01f, runtimeSpawnProfile.CeilingPlacementWeight);
+        }
+
+        return Mathf.Max(0.01f, runtimeSpawnProfile.WallPlacementWeight);
+    }
+
+    private static SpawnPlacement ChoosePlacementCandidate(System.Random random, List<PlacementCandidate> candidates)
+    {
+        if (random == null || candidates == null || candidates.Count == 0)
+        {
+            return default;
+        }
+
+        float totalWeight = 0f;
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            totalWeight += Mathf.Max(0.01f, candidates[i].Weight);
+        }
+
+        float pick = (float)random.NextDouble() * totalWeight;
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            pick -= Mathf.Max(0.01f, candidates[i].Weight);
+            if (pick <= 0f)
+            {
+                return candidates[i].Placement;
+            }
+        }
+
+        return candidates[candidates.Count - 1].Placement;
+    }
+
     private static Vector3 EvaluateQuadraticBezier(Vector3 start, Vector3 control, Vector3 end, float t)
     {
         float clampedT = Mathf.Clamp01(t);
@@ -425,10 +786,14 @@ public class IncidentPayloadAnchor : MonoBehaviour
         return (invT * invT * start) + (2f * invT * clampedT * control) + (clampedT * clampedT * end);
     }
 
-    private static Vector3 GetRandomHorizontalDirection(System.Random random)
+    private static float GetSignedRandomRange(System.Random random, float magnitude)
     {
-        float angle = (float)(random.NextDouble() * Math.PI * 2d);
-        return new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
+        if (random == null || magnitude <= 0f)
+        {
+            return 0f;
+        }
+
+        return (((float)random.NextDouble() * 2f) - 1f) * magnitude;
     }
 
     private void ClearRuntimeObjects()
@@ -471,13 +836,59 @@ public class IncidentPayloadAnchor : MonoBehaviour
 
     private readonly struct SpawnPlacement
     {
-        public SpawnPlacement(Vector3 position, Quaternion rotation)
+        public SpawnPlacement(Vector3 position, Quaternion rotation, Vector3 surfaceNormal)
         {
             Position = position;
             Rotation = rotation;
+            SurfaceNormal = surfaceNormal.sqrMagnitude > 0.0001f ? surfaceNormal.normalized : Vector3.up;
         }
 
         public Vector3 Position { get; }
         public Quaternion Rotation { get; }
+        public Vector3 SurfaceNormal { get; }
+    }
+
+    private readonly struct PlacementCandidate
+    {
+        public PlacementCandidate(SpawnPlacement placement, float weight)
+        {
+            Placement = placement;
+            Weight = weight;
+        }
+
+        public SpawnPlacement Placement { get; }
+        public float Weight { get; }
+    }
+
+    private readonly struct FireSpawnRequest
+    {
+        public FireSpawnRequest(
+            Vector3 position,
+            Quaternion rotation,
+            Fire prefab,
+            FireHazardType hazardType,
+            bool startBurning,
+            float startIntensity01,
+            bool spreadEnabled,
+            bool allowRegrowFromZero)
+        {
+            Position = position;
+            Rotation = rotation;
+            Prefab = prefab;
+            HazardType = hazardType;
+            StartBurning = startBurning;
+            StartIntensity01 = startIntensity01;
+            SpreadEnabled = spreadEnabled;
+            AllowRegrowFromZero = allowRegrowFromZero;
+        }
+
+        public Vector3 Position { get; }
+        public Quaternion Rotation { get; }
+        public Fire Prefab { get; }
+        public FireHazardType HazardType { get; }
+        public bool StartBurning { get; }
+        public float StartIntensity01 { get; }
+        public bool SpreadEnabled { get; }
+        public bool AllowRegrowFromZero { get; }
     }
 }

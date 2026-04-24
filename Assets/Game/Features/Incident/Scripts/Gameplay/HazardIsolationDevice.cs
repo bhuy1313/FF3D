@@ -21,6 +21,7 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
     [SerializeField] private bool applyHazardTypeToLinkedFires = true;
     [SerializeField] private bool autoCollectChildFires = true;
     [SerializeField] private Fire[] linkedFires = new Fire[0];
+    [SerializeField] private FireSimulationManager fireSimulationManager;
 
     [Header("Interaction")]
     [SerializeField] private float interactionDuration = 0.65f;
@@ -68,6 +69,7 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
 
     private void Awake()
     {
+        ResolveFireSimulationManager();
         ResolveLinkedFires();
         ApplyIsolationState(startsIsolated, invokeEvents: false);
     }
@@ -75,6 +77,7 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
     private void OnEnable()
     {
         BotRuntimeRegistry.RegisterHazardIsolationTarget(this);
+        ResolveFireSimulationManager();
         ResolveLinkedFires();
         ApplyIsolationState(startsIsolated, invokeEvents: false);
     }
@@ -94,6 +97,7 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
 
     private void OnValidate()
     {
+        ResolveFireSimulationManager();
         ResolveLinkedFires();
         ApplyLinkedFireConfiguration();
         interactionDuration = Mathf.Max(0f, interactionDuration);
@@ -168,6 +172,7 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
         }
 
         ApplyLinkedFireConfiguration();
+        fireSimulationManager?.SetActiveIncidentHazardType(fireHazardType);
         RefreshPresentation();
     }
 
@@ -198,6 +203,8 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
                 fire.SetHazardSourceIsolated(isolated);
             }
         }
+
+        fireSimulationManager?.SetRuntimeHazardIsolation(isolated);
 
         RefreshPresentation();
 
@@ -248,6 +255,14 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
 
         linkedFires = resolvedFires.ToArray();
         RefreshPresentation();
+    }
+
+    private void ResolveFireSimulationManager()
+    {
+        if (fireSimulationManager == null)
+        {
+            fireSimulationManager = FindAnyObjectByType<FireSimulationManager>(FindObjectsInactive.Include);
+        }
     }
 
     private void ApplyLinkedFireConfiguration()

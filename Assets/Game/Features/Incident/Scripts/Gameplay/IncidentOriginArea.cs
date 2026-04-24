@@ -154,20 +154,26 @@ public class IncidentOriginArea : MonoBehaviour
         return results.ToArray();
     }
 
-    public bool ApplyPayload(IncidentWorldSetupPayload payload, Fire defaultFirePrefab, ResolvedIgnitionSource source)
+    public bool ApplyPayload(
+        IncidentWorldSetupPayload payload,
+        IncidentFirePrefabLibrary firePrefabLibrary,
+        IncidentFireSpawnProfile fireSpawnProfile,
+        FireSimulationManager fireSimulationManager,
+        ResolvedIgnitionSource source)
     {
         ResolveLegacyAnchor();
-        if (legacyAnchor == null || payload == null || defaultFirePrefab == null || source == null)
+        if (legacyAnchor == null || payload == null || source == null)
         {
             return false;
         }
 
-        legacyAnchor.ApplyPayloadFromResolvedSource(
+        return legacyAnchor.ApplyPayloadFromResolvedSource(
             payload,
-            defaultFirePrefab,
+            firePrefabLibrary,
+            fireSpawnProfile,
+            fireSimulationManager,
             source.Position,
             source.Rotation);
-        return true;
     }
 
     public void SetAreaVolume(Collider volume)

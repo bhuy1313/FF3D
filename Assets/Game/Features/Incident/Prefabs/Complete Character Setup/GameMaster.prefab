@@ -415,6 +415,7 @@ GameObject:
   m_Component:
   - component: {fileID: 642135791357913580}
   - component: {fileID: 642135791357913581}
+  - component: {fileID: 642135791357913590}
   - component: {fileID: 642135791357913582}
   m_Layer: 0
   m_Name: IncidentPayloadStartup
@@ -457,8 +458,24 @@ MonoBehaviour:
   taskNameOverride: Apply Incident Payload
   clearPendingPayloadAfterApply: 1
   logResolvedPayload: 1
-  defaultFirePrefab: {fileID: 1736551855387302899, guid: 1bd6c9fbfcc1b854496830093395e69a, type: 3}
+  firePrefabLibrary: {fileID: 642135791357913590}
   explicitAnchors: []
+--- !u!114 &642135791357913590
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 642135791357913579}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d6f9a6b8d4a4d2d9c0e5f2a7b0c4d12, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IncidentFirePrefabLibrary
+  ordinaryFirePrefab: {fileID: 1624915883206779274, guid: 51d84099765e7ec499301cc4183a5b7a, type: 3}
+  electricalFirePrefab: {fileID: 7295733496887063169, guid: 1e69d87df12eef04689ac0fe6bc45bff, type: 3}
+  gasFirePrefab: {fileID: 3431592730912226741, guid: d0de36439a32b2e4389b1d4d33b704ac, type: 3}
+  flammableLiquidFirePrefab: {fileID: 5051166717590783259, guid: 5b6b56a00dc60f64e880d84b4122e789, type: 3}
 --- !u!114 &642135791357913582
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -35,6 +35,7 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
     [Header("References")]
     [SerializeField] private ParticleSystem sprayParticles;
     [SerializeField] private FireExtinguisherAudioController audioController;
+    [SerializeField] private FireSimulationManager fireSimulationManager;
 
     [Header("Runtime (Debug)")]
     [SerializeField] private float currentCharge;
@@ -76,6 +77,7 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
         }
 
         EnsureAudioController();
+        ResolveFireSimulationManager();
 
         currentCharge = Mathf.Clamp(currentCharge <= 0f ? maxCharge : currentCharge, 0f, maxCharge);
         SetSprayState(false);
@@ -305,6 +307,7 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
 
         float amount = playerDischargePerSecond * Time.deltaTime;
         float segmentLength = maxSprayDistance / Mathf.Max(1, coneSegments);
+        FireSimulationManager simulationManager = ResolveFireSimulationManager();
 
         System.Collections.Generic.HashSet<Fire> processedFires = new System.Collections.Generic.HashSet<Fire>();
 
@@ -313,6 +316,12 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
             float distance = segmentLength * (i + 1);
             float radius = coneBaseRadius + Mathf.Tan(coneHalfAngle * Mathf.Deg2Rad) * distance;
             Vector3 center = start + forward * distance;
+            if (simulationManager != null && simulationManager.IsInitialized)
+            {
+                simulationManager.ApplySuppressionSphere(center, radius, amount, SuppressionAgent);
+                continue;
+            }
+
             int hitCount = Physics.OverlapSphereNonAlloc(center, radius, hitBuffer, sprayMask, QueryTriggerInteraction.Collide);
 
             for (int hitIndex = 0; hitIndex < hitCount; hitIndex++)
@@ -437,6 +446,17 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
         coneHalfAngle = Mathf.Clamp(coneHalfAngle, 0f, 89f);
         coneBaseRadius = Mathf.Max(0f, coneBaseRadius);
         coneSegments = Mathf.Max(1, coneSegments);
+        ResolveFireSimulationManager();
+    }
+
+    private FireSimulationManager ResolveFireSimulationManager()
+    {
+        if (fireSimulationManager == null)
+        {
+            fireSimulationManager = FindAnyObjectByType<FireSimulationManager>(FindObjectsInactive.Include);
+        }
+
+        return fireSimulationManager;
     }
 
 #if UNITY_EDITOR

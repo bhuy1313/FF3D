@@ -1,30 +1,22 @@
+using System;
+using System.Collections;
 using UnityEngine;
 
-/// <summary>
-/// Script dùng để tự động "bơm" (inject) một Incident Payload ảo khi Play thẳng từ scene Map1 (bỏ qua Call Phase).
-/// Do có [DefaultExecutionOrder(-300)], nó sẽ chạy Awake() trước khi hệ thống gốc (SceneStartupFlow, -200) bắt đầu.
-/// </summary>
 [DefaultExecutionOrder(-300)]
+[DisallowMultipleComponent]
 public class Map1DebugIncidentSpawner : MonoBehaviour
 {
     [Header("Debug Settings")]
-    public bool enableDebugSpawning = true;
-    
-    [Tooltip("Dùng tên key khớp với IncidentPayloadAnchor (VD: Laundry_WasherOutlet, Kitchen_StoveTop, Garage_WorkbenchCorner)")]
-    public string debugFireOrigin = "Laundry_WasherOutlet";
-    
-    public string debugLogicalFireLocation = "Laundry";
-    
-    [Tooltip("Ví dụ: Electrical, Gas, FlammableLiquid, OrdinaryCombustibles")]
-    public string debugHazardType = "Electrical";
-    
-    [Range(0.1f, 1f)]
-    public float debugInitialFireIntensity = 0.65f;
-    
-    [Range(1, 5)]
-    public int debugInitialFireCount = 1;
-    
-    public string debugSeverityBand = "Medium";
+    [SerializeField] private bool enableDebugSpawning = true;
+    [SerializeField] private string debugFireOrigin = "Laundry_WasherOutlet";
+    [SerializeField] private string debugLogicalFireLocation = "Laundry";
+    [SerializeField] private string debugHazardType = "Electrical";
+    [SerializeField] [Range(0.1f, 1f)] private float debugInitialFireIntensity = 0.65f;
+    [SerializeField] [Range(1, 5)] private int debugInitialFireCount = 3;
+    [SerializeField] private string debugSeverityBand = "Medium";
+
+    private IncidentWorldSetupPayload pendingDebugPayload;
+    private bool shouldDirectApplyPayload;
 
     private void Awake()
     {
@@ -33,17 +25,13 @@ public class Map1DebugIncidentSpawner : MonoBehaviour
             return;
         }
 
-        // Nếu đã có payload (VD: bạn đi từ Call Phase sang), script này sẽ tự động lui lại để không làm hỏng luồng thật.
         if (LoadingFlowState.TryGetPendingIncidentPayload(out _))
         {
-            Debug.Log("[Map1DebugIncidentSpawner] Tìm thấy payload thật từ Call Phase. Bỏ qua debug spawn.");
+            Debug.Log("[Map1DebugIncidentSpawner] Found pending payload from normal flow. Debug injection skipped.");
             return;
         }
 
-        Debug.Log($"[Map1DebugIncidentSpawner] Không tìm thấy payload (bạn đang chạy thẳng Map1). Đang tự động bơm payload ảo cho origin: '{debugFireOrigin}'.");
-
-        // Tạo cục dữ liệu ảo giống hệt như bộ phân tích của Call Phase tạo ra
-        IncidentWorldSetupPayload debugPayload = new IncidentWorldSetupPayload
+        pendingDebugPayload = new IncidentWorldSetupPayload
         {
             caseId = "debug_case",
             scenarioId = "debug_scenario",
@@ -60,25 +48,73 @@ public class Map1DebugIncidentSpawner : MonoBehaviour
             ventilationPreset = "Neutral",
             occupantRiskPreset = "Manageable",
             severityBand = debugSeverityBand,
-            confidenceScore = 1f
+            confidenceScore = 1f,
         };
 
-        // Lưu vào bộ nhớ tĩnh để IncidentPayloadStartupTask.cs lôi ra xài
-        LoadingFlowState.SetPendingIncidentPayload(debugPayload);
+        LoadingFlowState.SetPendingIncidentPayload(pendingDebugPayload);
+        shouldDirectApplyPayload =
+            FindAnyObjectByType<SceneStartupFlow>(FindObjectsInactive.Include) == null &&
+            FindAnyObjectByType<IncidentPayloadStartupTask>(FindObjectsInactive.Include) == null;
+
+        Debug.Log(
+            $"[Map1DebugIncidentSpawner] Injected debug payload for origin '{debugFireOrigin}'. " +
+            $"DirectApply={shouldDirectApplyPayload}.");
     }
 
-    private string ResolveIsolationType(string hazard)
+    private void Start()
     {
-        if (string.Equals(hazard, "Electrical", System.StringComparison.OrdinalIgnoreCase))
+        if (!enableDebugSpawning || !shouldDirectApplyPayload || pendingDebugPayload == null)
+        {
+            return;
+        }
+
+        StartCoroutine(ApplyPayloadDirectly());
+    }
+
+    private IEnumerator ApplyPayloadDirectly()
+    {
+        yield return null;
+
+        if (!LoadingFlowState.TryGetPendingIncidentPayload(out IncidentWorldSetupPayload payload) || payload == null)
+        {
+            yield break;
+        }
+
+        IncidentMapSetupRoot setupRoot = FindAnyObjectByType<IncidentMapSetupRoot>(FindObjectsInactive.Include);
+        if (setupRoot == null)
+        {
+            Debug.LogWarning("[Map1DebugIncidentSpawner] No IncidentMapSetupRoot found for direct payload apply.", this);
+            yield break;
+        }
+
+        IncidentFirePrefabLibrary firePrefabLibrary =
+            FindAnyObjectByType<IncidentFirePrefabLibrary>(FindObjectsInactive.Include);
+
+        Debug.Log("[Map1DebugIncidentSpawner] Applying debug payload directly through IncidentMapSetupRoot.", this);
+        yield return setupRoot.ApplyPayload(null, payload, firePrefabLibrary);
+
+        if (setupRoot.LastResolvedAnchor != null)
+        {
+            LoadingFlowState.ClearPendingIncidentPayload();
+        }
+        else
+        {
+            Debug.LogWarning("[Map1DebugIncidentSpawner] Debug payload apply did not resolve any anchor.", this);
+        }
+    }
+
+    private static string ResolveIsolationType(string hazard)
+    {
+        if (string.Equals(hazard, "Electrical", StringComparison.OrdinalIgnoreCase))
         {
             return "Electrical";
         }
-        
-        if (string.Equals(hazard, "Gas", System.StringComparison.OrdinalIgnoreCase))
+
+        if (string.Equals(hazard, "Gas", StringComparison.OrdinalIgnoreCase))
         {
             return "Gas";
         }
-        
+
         return "None";
     }
 }

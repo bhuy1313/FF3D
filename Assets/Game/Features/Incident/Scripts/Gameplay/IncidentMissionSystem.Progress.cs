@@ -6,11 +6,16 @@ public partial class IncidentMissionSystem
     private void RefreshProgress()
     {
         RemoveNullEntries(trackedFires);
+        RemoveNullEntries(trackedFireSimulationManagers);
         RemoveNullEntries(trackedRescuables);
         RemoveNullEntries(trackedVictimConditions);
 
-        totalTrackedFires = trackedFires.Count;
-        extinguishedFireCount = CountExtinguishedFires(trackedFires);
+        int legacyTrackedFireCount = trackedFires.Count;
+        int legacyExtinguishedFireCount = CountExtinguishedFires(trackedFires);
+        int simulationTrackedFireCount = CountTrackedSimulationNodes(trackedFireSimulationManagers);
+        int simulationExtinguishedFireCount = CountExtinguishedSimulationNodes(trackedFireSimulationManagers);
+        totalTrackedFires = legacyTrackedFireCount + simulationTrackedFireCount;
+        extinguishedFireCount = legacyExtinguishedFireCount + simulationExtinguishedFireCount;
         totalTrackedRescuables = trackedRescuables.Count;
         rescuedCount = CountRescuedTargets(trackedRescuables);
         totalTrackedVictims = trackedVictimConditions.Count;
@@ -81,6 +86,46 @@ public partial class IncidentMissionSystem
             if (fire == null || !fire.IsBurning)
             {
                 count++;
+            }
+        }
+
+        return count;
+    }
+
+    private static int CountTrackedSimulationNodes(List<FireSimulationManager> managers)
+    {
+        int count = 0;
+        if (managers == null)
+        {
+            return count;
+        }
+
+        for (int i = 0; i < managers.Count; i++)
+        {
+            FireSimulationManager manager = managers[i];
+            if (manager != null && manager.IsInitialized)
+            {
+                count += manager.GetTrackedNodeCount();
+            }
+        }
+
+        return count;
+    }
+
+    private static int CountExtinguishedSimulationNodes(List<FireSimulationManager> managers)
+    {
+        int count = 0;
+        if (managers == null)
+        {
+            return count;
+        }
+
+        for (int i = 0; i < managers.Count; i++)
+        {
+            FireSimulationManager manager = managers[i];
+            if (manager != null && manager.IsInitialized)
+            {
+                count += manager.GetExtinguishedTrackedNodeCount();
             }
         }
 

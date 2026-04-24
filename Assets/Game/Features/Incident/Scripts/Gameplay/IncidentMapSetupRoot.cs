@@ -5,6 +5,10 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class IncidentMapSetupRoot : MonoBehaviour
 {
+    [Header("Fire Spawn")]
+    [SerializeField] private IncidentFireSpawnProfile fireSpawnProfile;
+    [SerializeField] private FireSimulationManager fireSimulationManager;
+
     [Header("Steps")]
     [SerializeField] private bool collectStepsFromChildren = true;
     [SerializeField] private bool includeInactiveSteps = true;
@@ -17,8 +21,13 @@ public class IncidentMapSetupRoot : MonoBehaviour
 
     public IncidentPayloadAnchor LastResolvedAnchor { get; private set; }
     public IReadOnlyList<string> LastWarnings => lastWarnings;
+    public IncidentFireSpawnProfile FireSpawnProfile => fireSpawnProfile;
+    public FireSimulationManager FireSimulationManager => fireSimulationManager;
 
-    public IEnumerator ApplyPayload(SceneStartupFlow startupFlow, IncidentWorldSetupPayload payload, Fire defaultFirePrefab)
+    public IEnumerator ApplyPayload(
+        SceneStartupFlow startupFlow,
+        IncidentWorldSetupPayload payload,
+        IncidentFirePrefabLibrary firePrefabLibrary)
     {
         LastResolvedAnchor = null;
         lastWarnings.Clear();
@@ -33,7 +42,9 @@ public class IncidentMapSetupRoot : MonoBehaviour
             payload,
             startupFlow,
             this,
-            defaultFirePrefab,
+            firePrefabLibrary,
+            fireSpawnProfile,
+            fireSimulationManager,
             lastWarnings);
 
         for (int i = 0; i < steps.Count; i++)

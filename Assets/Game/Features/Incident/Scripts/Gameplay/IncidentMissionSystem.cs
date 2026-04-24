@@ -69,6 +69,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
     [SerializeField] private bool requireNoCriticalVictimsAtCompletion = false;
     [SerializeField] private bool requireAllLivingVictimsStabilized = false;
     [SerializeField] private List<Fire> trackedFires = new List<Fire>();
+    [SerializeField] private List<FireSimulationManager> trackedFireSimulationManagers = new List<FireSimulationManager>();
     [SerializeField] private List<Rescuable> trackedRescuables = new List<Rescuable>();
     [SerializeField] private List<VictimCondition> trackedVictimConditions = new List<VictimCondition>();
 
@@ -524,6 +525,18 @@ public partial class IncidentMissionSystem : MonoBehaviour
 
     private void SubscribeToFireEvents()
     {
+        if (trackedFireSimulationManagers != null)
+        {
+            for (int i = 0; i < trackedFireSimulationManagers.Count; i++)
+            {
+                FireSimulationManager manager = trackedFireSimulationManagers[i];
+                if (manager != null)
+                {
+                    manager.StateChanged += HandleTrackedFireSimulationChanged;
+                }
+            }
+        }
+
         if (trackedFires == null)
         {
             return;
@@ -541,6 +554,18 @@ public partial class IncidentMissionSystem : MonoBehaviour
 
     private void UnsubscribeFromFireEvents()
     {
+        if (trackedFireSimulationManagers != null)
+        {
+            for (int i = 0; i < trackedFireSimulationManagers.Count; i++)
+            {
+                FireSimulationManager manager = trackedFireSimulationManagers[i];
+                if (manager != null)
+                {
+                    manager.StateChanged -= HandleTrackedFireSimulationChanged;
+                }
+            }
+        }
+
         if (trackedFires == null)
         {
             return;
@@ -635,6 +660,11 @@ public partial class IncidentMissionSystem : MonoBehaviour
         MarkProgressDirty();
     }
 
+    private void HandleTrackedFireSimulationChanged()
+    {
+        MarkProgressDirty();
+    }
+
     private void HandleTrackedRescueCompleted()
     {
         MarkProgressDirty();
@@ -678,6 +708,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
     private MissionProgressSnapshot BuildResultPerformanceSnapshot()
     {
         List<Fire> resultFires = null;
+        List<FireSimulationManager> resultSimulationManagers = null;
         List<Rescuable> resultRescuables = null;
         List<VictimCondition> resultVictimConditions = null;
 
@@ -687,6 +718,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
             CollectResultSceneTargets(sceneData);
 
             resultFires = sceneData.CreateFireList();
+            resultSimulationManagers = sceneData.CreateFireSimulationManagerList();
             resultRescuables = sceneData.CreateRescuableList();
             resultVictimConditions = sceneData.CreateVictimConditionList();
             AppendVictimConditionsFromRescuables(resultVictimConditions, resultRescuables);
@@ -709,12 +741,16 @@ public partial class IncidentMissionSystem : MonoBehaviour
         }
 
         RemoveNullEntries(resultFires);
+        RemoveNullEntries(resultSimulationManagers);
         RemoveNullEntries(resultRescuables);
         RemoveNullEntries(resultVictimConditions);
 
+        int resultTrackedFireCount = resultFires.Count + CountTrackedSimulationNodes(resultSimulationManagers);
+        int resultExtinguishedFireCount = CountExtinguishedFires(resultFires) + CountExtinguishedSimulationNodes(resultSimulationManagers);
+
         return new MissionProgressSnapshot(
-            resultFires.Count,
-            CountExtinguishedFires(resultFires),
+            resultTrackedFireCount,
+            resultExtinguishedFireCount,
             resultRescuables.Count,
             CountRescuedTargets(resultRescuables),
             resultVictimConditions.Count,

@@ -9,20 +9,26 @@ public sealed class IncidentMapSetupContext
         IncidentWorldSetupPayload payload,
         SceneStartupFlow startupFlow,
         IncidentMapSetupRoot setupRoot,
-        Fire defaultFirePrefab,
+        IncidentFirePrefabLibrary firePrefabLibrary,
+        IncidentFireSpawnProfile fireSpawnProfile,
+        FireSimulationManager fireSimulationManager,
         List<string> warningSink)
     {
         Payload = payload;
         StartupFlow = startupFlow;
         SetupRoot = setupRoot;
-        DefaultFirePrefab = defaultFirePrefab;
+        FirePrefabLibrary = firePrefabLibrary;
+        FireSpawnProfile = fireSpawnProfile;
+        FireSimulationManager = fireSimulationManager;
         this.warningSink = warningSink ?? new List<string>();
     }
 
     public IncidentWorldSetupPayload Payload { get; }
     public SceneStartupFlow StartupFlow { get; }
     public IncidentMapSetupRoot SetupRoot { get; }
-    public Fire DefaultFirePrefab { get; }
+    public IncidentFirePrefabLibrary FirePrefabLibrary { get; }
+    public IncidentFireSpawnProfile FireSpawnProfile { get; }
+    public FireSimulationManager FireSimulationManager { get; }
     public IncidentPayloadAnchor ResolvedAnchor { get; set; }
     public IncidentOriginArea ResolvedOriginArea { get; set; }
 

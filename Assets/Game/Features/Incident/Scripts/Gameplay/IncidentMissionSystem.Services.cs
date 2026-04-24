@@ -73,6 +73,7 @@ public partial class IncidentMissionSystem
             }
 
             owner.trackedFires = sceneData.CreateFireList();
+            owner.trackedFireSimulationManagers = sceneData.CreateFireSimulationManagerList();
             owner.trackedRescuables = sceneData.CreateRescuableList();
             owner.trackedVictimConditions = sceneData.CreateVictimConditionList();
             return owner.activePersistentObjectiveDefinitions.Count > 0 || owner.activeFailConditionDefinitions.Count > 0;
@@ -86,10 +87,12 @@ public partial class IncidentMissionSystem
             if (owner.autoDiscoverFires)
             {
                 owner.trackedFires = CollectSceneObjects<Fire>();
+                owner.trackedFireSimulationManagers = CollectSceneObjects<FireSimulationManager>();
             }
             else
             {
                 RemoveNullEntries(owner.trackedFires);
+                RemoveNullEntries(owner.trackedFireSimulationManagers);
             }
 
             if (owner.autoDiscoverRescuables)

@@ -10,7 +10,7 @@ public class IncidentPayloadStartupTask : SceneStartupTask
     [SerializeField] private bool logResolvedPayload = true;
 
     [Header("Scene Bindings")]
-    [SerializeField] private Fire defaultFirePrefab;
+    [SerializeField] private IncidentFirePrefabLibrary firePrefabLibrary;
     [SerializeField] private IncidentMapSetupRoot explicitMapSetupRoot;
     [SerializeField] private IncidentPayloadAnchor[] explicitAnchors = Array.Empty<IncidentPayloadAnchor>();
 
@@ -25,11 +25,30 @@ public class IncidentPayloadStartupTask : SceneStartupTask
         IncidentMapSetupRoot setupRoot = ResolveMapSetupRoot(startupFlow);
         if (setupRoot != null)
         {
-            yield return setupRoot.ApplyPayload(startupFlow, payload, defaultFirePrefab);
+            yield return setupRoot.ApplyPayload(startupFlow, payload, ResolveFirePrefabLibrary(startupFlow));
             resolvedAnchor = setupRoot.LastResolvedAnchor;
         }
         else
         {
+            FireSimulationManager resolvedSimulationManager = setupRoot != null ? setupRoot.FireSimulationManager : FindAnyObjectByType<FireSimulationManager>(FindObjectsInactive.Include);
+            IncidentFirePrefabLibrary resolvedLibrary = ResolveFirePrefabLibrary(startupFlow);
+            if (resolvedLibrary == null && resolvedSimulationManager == null)
+            {
+                Debug.LogWarning(
+                    $"{nameof(IncidentPayloadStartupTask)}: Missing both {nameof(IncidentFirePrefabLibrary)} and {nameof(FireSimulationManager)} for payload application.",
+                    this);
+                yield break;
+            }
+
+            IncidentFireSpawnProfile resolvedProfile = setupRoot != null ? setupRoot.FireSpawnProfile : null;
+            if (resolvedProfile == null)
+            {
+                Debug.LogWarning(
+                    $"{nameof(IncidentPayloadStartupTask)}: Missing {nameof(IncidentFireSpawnProfile)} for payload application.",
+                    this);
+                yield break;
+            }
+
             IncidentPayloadAnchor anchor = ResolveAnchor(payload);
             if (anchor == null)
             {
@@ -40,7 +59,14 @@ public class IncidentPayloadStartupTask : SceneStartupTask
                 yield break;
             }
 
-            anchor.ApplyPayload(payload, defaultFirePrefab);
+            if (!anchor.ApplyPayload(payload, resolvedLibrary, resolvedProfile, resolvedSimulationManager))
+            {
+                Debug.LogWarning(
+                    $"{nameof(IncidentPayloadStartupTask)}: Anchor '{anchor.name}' failed to apply payload.",
+                    anchor);
+                yield break;
+            }
+
             resolvedAnchor = anchor;
         }
 
@@ -106,6 +132,31 @@ public class IncidentPayloadStartupTask : SceneStartupTask
         }
 
         return FindAnyObjectByType<IncidentMapSetupRoot>(FindObjectsInactive.Include);
+    }
+
+    private IncidentFirePrefabLibrary ResolveFirePrefabLibrary(SceneStartupFlow startupFlow)
+    {
+        if (firePrefabLibrary != null)
+        {
+            return firePrefabLibrary;
+        }
+
+        IncidentFirePrefabLibrary localLibrary = GetComponent<IncidentFirePrefabLibrary>();
+        if (localLibrary != null)
+        {
+            return localLibrary;
+        }
+
+        if (startupFlow != null)
+        {
+            localLibrary = startupFlow.GetComponentInChildren<IncidentFirePrefabLibrary>(true);
+            if (localLibrary != null)
+            {
+                return localLibrary;
+            }
+        }
+
+        return FindAnyObjectByType<IncidentFirePrefabLibrary>(FindObjectsInactive.Include);
     }
 
     public static FireHazardType ResolveFireHazardType(string hazardType)

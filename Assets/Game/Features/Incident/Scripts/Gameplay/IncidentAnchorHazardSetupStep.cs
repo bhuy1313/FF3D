@@ -21,10 +21,18 @@ public class IncidentAnchorHazardSetupStep : IncidentMapSetupStep
             yield break;
         }
 
-        if (context.DefaultFirePrefab == null)
+        if (context.FirePrefabLibrary == null && context.FireSimulationManager == null)
         {
             context.AddWarning(
-                $"{nameof(IncidentAnchorHazardSetupStep)}: Missing default fire prefab for payload application.",
+                $"{nameof(IncidentAnchorHazardSetupStep)}: Missing both fire prefab library and {nameof(FireSimulationManager)} for payload application.",
+                this);
+            yield break;
+        }
+
+        if (context.FireSpawnProfile == null)
+        {
+            context.AddWarning(
+                $"{nameof(IncidentAnchorHazardSetupStep)}: Missing {nameof(IncidentFireSpawnProfile)} for payload application.",
                 this);
             yield break;
         }
@@ -39,7 +47,18 @@ public class IncidentAnchorHazardSetupStep : IncidentMapSetupStep
             yield break;
         }
 
-        anchor.ApplyPayload(context.Payload, context.DefaultFirePrefab);
+        if (!anchor.ApplyPayload(
+                context.Payload,
+                context.FirePrefabLibrary,
+                context.FireSpawnProfile,
+                context.FireSimulationManager))
+        {
+            context.AddWarning(
+                $"{nameof(IncidentAnchorHazardSetupStep)}: Anchor '{anchor.name}' could not apply payload.",
+                anchor);
+            yield break;
+        }
+
         context.ResolvedAnchor = anchor;
 
         if (warnWhenIsolationDeviceMissing &&
