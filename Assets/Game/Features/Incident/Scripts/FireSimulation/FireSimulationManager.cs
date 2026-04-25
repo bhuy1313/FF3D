@@ -25,9 +25,12 @@ public sealed class FireSimulationManager : MonoBehaviour
     [SerializeField] private bool logNodeHeatProgress;
     [SerializeField] [Min(0.1f)] private float nodeHeatLogInterval = 0.5f;
     [SerializeField] private bool autoBindSceneConsumers = true;
+    [SerializeField] private bool autoRegisterBotFireTargets = true;
 
     private readonly List<FireClusterSnapshot> clusterSnapshots = new List<FireClusterSnapshot>();
     private readonly List<FireSurfaceNodeAuthoring> runtimeIncidentNodes = new List<FireSurfaceNodeAuthoring>();
+    private readonly List<FireSimulationBotTarget> botFireTargets = new List<FireSimulationBotTarget>();
+    private readonly List<FireSimulationAreaGroupTarget> botFireGroups = new List<FireSimulationAreaGroupTarget>();
     private FireRuntimeGraph runtimeGraph;
     private float simulationTickAccumulator;
     private float clusterRefreshAccumulator;
@@ -36,6 +39,7 @@ public sealed class FireSimulationManager : MonoBehaviour
     private FireHazardType activeIncidentHazardType = FireHazardType.OrdinaryCombustibles;
     private bool activeHazardSourceIsolated;
     private Transform runtimeIncidentNodeRoot;
+    private Transform runtimeBotFireTargetRoot;
 
     public IReadOnlyList<FireClusterSnapshot> ClusterSnapshots => clusterSnapshots;
     public FireRuntimeGraph RuntimeGraph => runtimeGraph;
@@ -106,6 +110,8 @@ public sealed class FireSimulationManager : MonoBehaviour
 
             runtimeGraph = null;
             DisableEffects();
+            SyncBotFireTargets();
+            SyncBotFireGroups();
             return;
         }
 
@@ -121,6 +127,8 @@ public sealed class FireSimulationManager : MonoBehaviour
 
         RebuildClusters();
         SyncEffects();
+        SyncBotFireTargets();
+        SyncBotFireGroups();
         NotifyStateChanged();
     }
 
@@ -317,6 +325,45 @@ public sealed class FireSimulationManager : MonoBehaviour
         NotifyStateChanged();
     }
 
+    public bool ApplySuppressionToNode(int nodeIndex, float amount, FireSuppressionAgent agent)
+    {
+        if (!initialized || runtimeGraph == null || amount <= 0f)
+        {
+            return false;
+        }
+
+        FireRuntimeNode node = runtimeGraph.GetNode(nodeIndex);
+        if (node == null || !node.IsTrackedByIncident)
+        {
+            return false;
+        }
+
+        float effectiveness = ResolveSuppressionEffectiveness(agent);
+        bool worsens = agent == FireSuppressionAgent.Water && activeIncidentHazardType == FireHazardType.FlammableLiquid;
+        if (Mathf.Approximately(effectiveness, 0f) && !worsens)
+        {
+            return false;
+        }
+
+        if (worsens)
+        {
+            node.Heat += amount * 0.6f;
+        }
+        else
+        {
+            if (agent == FireSuppressionAgent.Water)
+            {
+                node.Wetness += amount;
+            }
+
+            node.Heat = Mathf.Max(0f, node.Heat - amount * effectiveness);
+            MarkNodeRecentlySuppressed(node);
+        }
+
+        NotifyStateChanged();
+        return true;
+    }
+
     public int ApplySuppressionSphere(
         Vector3 worldCenter,
         float radius,
@@ -365,6 +412,10 @@ public sealed class FireSimulationManager : MonoBehaviour
                 }
 
                 node.Heat = Mathf.Max(0f, node.Heat - heatRemoval);
+                if (heatRemoval > 0f || (agent == FireSuppressionAgent.Water && normalizedFalloff > 0f))
+                {
+                    MarkNodeRecentlySuppressed(node);
+                }
             }
 
             affectedNodeCount++;
@@ -408,6 +459,10 @@ public sealed class FireSimulationManager : MonoBehaviour
             float normalizedFalloff = 1f - Mathf.Clamp01(Mathf.Sqrt(distanceSqr) / radius);
             node.Wetness += wetnessAmount * normalizedFalloff;
             node.Heat = Mathf.Max(0f, node.Heat - heatRemovalAmount * normalizedFalloff);
+            if (wetnessAmount > 0f || heatRemovalAmount > 0f)
+            {
+                MarkNodeRecentlySuppressed(node);
+            }
             affectedNodeCount++;
         }
 
@@ -473,7 +528,9 @@ public sealed class FireSimulationManager : MonoBehaviour
         float previousHeat = node.Heat;
         float previousWetness = node.Wetness;
         float previousFuel = node.RemainingFuel;
+        float previousSuppressionTimer = node.SuppressionRecoveryTimer;
         node.Wetness = Mathf.Max(0f, node.Wetness - simulationProfile.WetnessRecoveryPerSecond * deltaTime);
+        node.SuppressionRecoveryTimer = Mathf.Max(0f, node.SuppressionRecoveryTimer - deltaTime);
         node.Heat = Mathf.Max(0f, node.Heat - simulationProfile.AmbientCoolingPerSecond * deltaTime);
         node.Heat = Mathf.Max(0f, node.Heat - node.Wetness * simulationProfile.WetnessCoolingPerSecond * deltaTime);
 
@@ -486,7 +543,8 @@ public sealed class FireSimulationManager : MonoBehaviour
         return
             !Mathf.Approximately(previousHeat, node.Heat) ||
             !Mathf.Approximately(previousWetness, node.Wetness) ||
-            !Mathf.Approximately(previousFuel, node.RemainingFuel);
+            !Mathf.Approximately(previousFuel, node.RemainingFuel) ||
+            !Mathf.Approximately(previousSuppressionTimer, node.SuppressionRecoveryTimer);
     }
 
     private void SpreadHeatToNeighbors(FireRuntimeNode source, float deltaTime)
@@ -507,6 +565,10 @@ public sealed class FireSimulationManager : MonoBehaviour
 
             float heatTransfer = source.Heat * simulationProfile.NeighborHeatTransferPerSecond * deltaTime;
             heatTransfer *= 1f - target.SpreadResistance;
+            if (target.SuppressionRecoveryTimer > 0f)
+            {
+                heatTransfer *= simulationProfile.SuppressionRecoveryHeatMultiplier;
+            }
             heatTransfer *= source.SurfaceType == target.SurfaceType
                 ? simulationProfile.SameSurfaceTransferMultiplier
                 : simulationProfile.CrossSurfaceTransferMultiplier;
@@ -566,6 +628,7 @@ public sealed class FireSimulationManager : MonoBehaviour
                 float nodeIntensity = Mathf.Clamp01(node.Heat / Mathf.Max(0.01f, node.IgnitionThreshold));
                 intensitySum += nodeIntensity;
                 memberSnapshots.Add(new FireClusterMemberSnapshot(
+                    node.Index,
                     node.Position,
                     node.SurfaceNormal,
                     nodeIntensity,
@@ -869,10 +932,23 @@ public sealed class FireSimulationManager : MonoBehaviour
             node.PendingHeatDelta = 0f;
             node.PendingWetnessDelta = 0f;
             node.IsTrackedByIncident = false;
+            node.SuppressionRecoveryTimer = 0f;
             node.Heat = useAuthoringIgnition && node.AuthoringStartIgnited
                 ? Mathf.Max(0.01f, node.IgnitionThreshold)
                 : 0f;
         }
+    }
+
+    private void MarkNodeRecentlySuppressed(FireRuntimeNode node)
+    {
+        if (node == null || simulationProfile == null)
+        {
+            return;
+        }
+
+        node.SuppressionRecoveryTimer = Mathf.Max(
+            node.SuppressionRecoveryTimer,
+            simulationProfile.SuppressionRecoveryDelaySeconds);
     }
 
     private int FindClosestNodeIndex(Vector3 worldPosition)
@@ -972,7 +1048,164 @@ public sealed class FireSimulationManager : MonoBehaviour
 
     private void NotifyStateChanged()
     {
+        SyncBotFireTargets();
+        SyncBotFireGroups();
         StateChanged?.Invoke();
+    }
+
+    private void SyncBotFireTargets()
+    {
+        if (!autoRegisterBotFireTargets)
+        {
+            DisableBotFireTargets();
+            return;
+        }
+
+        if (runtimeGraph == null)
+        {
+            DisableBotFireTargets();
+            return;
+        }
+
+        EnsureBotFireTargetCapacity(runtimeGraph.Count);
+        for (int i = 0; i < runtimeGraph.Count; i++)
+        {
+            FireSimulationBotTarget target = botFireTargets[i];
+            if (target == null)
+            {
+                continue;
+            }
+
+            if (!target.gameObject.activeSelf)
+            {
+                target.gameObject.SetActive(true);
+            }
+
+            target.Configure(this, i);
+            target.Refresh();
+        }
+
+        for (int i = runtimeGraph.Count; i < botFireTargets.Count; i++)
+        {
+            FireSimulationBotTarget target = botFireTargets[i];
+            if (target != null)
+            {
+                target.gameObject.SetActive(false);
+            }
+        }
+    }
+
+    private void SyncBotFireGroups()
+    {
+        if (!autoRegisterBotFireTargets)
+        {
+            DisableBotFireGroups();
+            return;
+        }
+
+        IncidentOriginArea[] areas = FindObjectsByType<IncidentOriginArea>(FindObjectsInactive.Include);
+        EnsureBotFireGroupCapacity(areas);
+
+        for (int i = 0; i < botFireGroups.Count; i++)
+        {
+            FireSimulationAreaGroupTarget target = botFireGroups[i];
+            if (target == null)
+            {
+                continue;
+            }
+
+            bool shouldEnable = target.gameObject.scene.IsValid();
+            for (int areaIndex = 0; areaIndex < areas.Length; areaIndex++)
+            {
+                if (areas[areaIndex] != null && target.gameObject == areas[areaIndex].gameObject)
+                {
+                    shouldEnable = true;
+                    target.Configure(this, areas[areaIndex]);
+                    target.RefreshMembership();
+                    break;
+                }
+            }
+
+            target.enabled = shouldEnable;
+        }
+    }
+
+    private void EnsureBotFireTargetCapacity(int count)
+    {
+        while (botFireTargets.Count < count)
+        {
+            Transform parent = EnsureRuntimeBotFireTargetRoot();
+            GameObject targetObject = new GameObject($"BotFireTarget_{botFireTargets.Count + 1}");
+            targetObject.transform.SetParent(parent, false);
+            FireSimulationBotTarget target = targetObject.AddComponent<FireSimulationBotTarget>();
+            botFireTargets.Add(target);
+        }
+    }
+
+    private void EnsureBotFireGroupCapacity(IReadOnlyList<IncidentOriginArea> areas)
+    {
+        botFireGroups.Clear();
+        if (areas == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < areas.Count; i++)
+        {
+            IncidentOriginArea area = areas[i];
+            if (area == null || !area.gameObject.scene.IsValid())
+            {
+                continue;
+            }
+
+            FireSimulationAreaGroupTarget target = area.GetComponent<FireSimulationAreaGroupTarget>();
+            if (target == null)
+            {
+                target = area.gameObject.AddComponent<FireSimulationAreaGroupTarget>();
+            }
+
+            botFireGroups.Add(target);
+        }
+    }
+
+    private void DisableBotFireTargets()
+    {
+        for (int i = 0; i < botFireTargets.Count; i++)
+        {
+            FireSimulationBotTarget target = botFireTargets[i];
+            if (target != null)
+            {
+                target.gameObject.SetActive(false);
+            }
+        }
+    }
+
+    private void DisableBotFireGroups()
+    {
+        for (int i = 0; i < botFireGroups.Count; i++)
+        {
+            FireSimulationAreaGroupTarget target = botFireGroups[i];
+            if (target != null)
+            {
+                target.enabled = false;
+            }
+        }
+    }
+
+    private Transform EnsureRuntimeBotFireTargetRoot()
+    {
+        if (runtimeBotFireTargetRoot != null)
+        {
+            return runtimeBotFireTargetRoot;
+        }
+
+        GameObject rootObject = new GameObject("RuntimeBotFireTargets");
+        runtimeBotFireTargetRoot = rootObject.transform;
+        runtimeBotFireTargetRoot.SetParent(transform, false);
+        runtimeBotFireTargetRoot.localPosition = Vector3.zero;
+        runtimeBotFireTargetRoot.localRotation = Quaternion.identity;
+        runtimeBotFireTargetRoot.localScale = Vector3.one;
+        return runtimeBotFireTargetRoot;
     }
 
     private void LogNodeHeatProgress()

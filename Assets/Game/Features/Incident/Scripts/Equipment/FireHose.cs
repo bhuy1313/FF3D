@@ -614,7 +614,6 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         float amount = currentApplyWaterRate * Time.deltaTime;
         float timeStep = effectiveLifetime / segments;
         FireSimulationManager simulationManager = ResolveFireSimulationManager();
-
         System.Collections.Generic.HashSet<FireGroup> processedGroups = new System.Collections.Generic.HashSet<FireGroup>();
         System.Collections.Generic.HashSet<Fire> processedFires = new System.Collections.Generic.HashSet<Fire>();
 

@@ -4,17 +4,20 @@ using UnityEngine;
 public readonly struct FireClusterMemberSnapshot
 {
     public FireClusterMemberSnapshot(
+        int nodeIndex,
         Vector3 position,
         Vector3 surfaceNormal,
         float intensity,
         FireHazardType hazardType)
     {
+        NodeIndex = nodeIndex;
         Position = position;
         SurfaceNormal = surfaceNormal;
         Intensity = intensity;
         HazardType = hazardType;
     }
 
+    public int NodeIndex { get; }
     public Vector3 Position { get; }
     public Vector3 SurfaceNormal { get; }
     public float Intensity { get; }
@@ -53,6 +56,7 @@ public sealed class FireRuntimeNode
     public float PendingWetnessDelta { get; set; }
     public float RemainingFuel { get; set; }
     public float Wetness { get; set; }
+    public float SuppressionRecoveryTimer { get; set; }
     public float IgnitionThreshold { get; }
     public float SpreadResistance { get; }
     public bool IsTrackedByIncident { get; set; }

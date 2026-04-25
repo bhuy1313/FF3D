@@ -10,19 +10,19 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c1f46b6d4f634b299c14574b7b70ab12, type: 3}
-  m_Name: Map1_FireSpawnProfile
+  m_Name: Map3_FireSpawnProfile
   m_EditorClassIdentifier: Assembly-CSharp::IncidentFireSpawnProfile
-  secondaryFirePointCount: 5
-  secondaryFireRange: 1.8
-  minimumSecondaryFireSpacing: 0.85
+  secondaryFirePointCount: 3
+  secondaryFireRange: 4.2
+  minimumSecondaryFireSpacing: 2.2
   placementAttemptsPerSecondaryFire: 24
   activeSecondaryIntensityScale: 0.65
   spawnLatentSpreadNodes: 1
-  latentSpreadNodeCount: 5
+  latentSpreadNodeCount: 50
   latentSpreadSeedLimit: 3
   latentSpreadBranchDepth: 2
-  latentSpreadRange: 2.6
-  minimumLatentNodeSpacing: 1.25
+  latentSpreadRange: 4.2
+  minimumLatentNodeSpacing: 2.2
   parabolaLaunchHeight: 0.35
   parabolaApexHeight: 1.4
   parabolaApexHeightJitter: 0.75

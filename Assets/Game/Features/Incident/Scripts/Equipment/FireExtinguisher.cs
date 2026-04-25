@@ -317,7 +317,6 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
         float amount = playerDischargePerSecond * Time.deltaTime;
         float segmentLength = maxSprayDistance / Mathf.Max(1, coneSegments);
         FireSimulationManager simulationManager = ResolveFireSimulationManager();
-
         System.Collections.Generic.HashSet<Fire> processedFires = new System.Collections.Generic.HashSet<Fire>();
 
         for (int i = 0; i < coneSegments; i++)

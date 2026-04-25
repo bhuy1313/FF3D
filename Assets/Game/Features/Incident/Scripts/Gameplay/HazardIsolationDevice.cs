@@ -19,8 +19,6 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
     [SerializeField] private bool allowToggleAfterIsolation;
     [SerializeField] private IsolationHazardType hazardType = IsolationHazardType.None;
     [SerializeField] private bool applyHazardTypeToLinkedFires = true;
-    [SerializeField] private bool autoCollectChildFires = true;
-    [SerializeField] private Fire[] linkedFires = new Fire[0];
     [SerializeField] private FireSimulationManager fireSimulationManager;
 
     [Header("Interaction")]
@@ -70,7 +68,6 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
     private void Awake()
     {
         ResolveFireSimulationManager();
-        ResolveLinkedFires();
         ApplyIsolationState(startsIsolated, invokeEvents: false);
     }
 
@@ -78,7 +75,6 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
     {
         BotRuntimeRegistry.RegisterHazardIsolationTarget(this);
         ResolveFireSimulationManager();
-        ResolveLinkedFires();
         ApplyIsolationState(startsIsolated, invokeEvents: false);
     }
 
@@ -98,7 +94,6 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
     private void OnValidate()
     {
         ResolveFireSimulationManager();
-        ResolveLinkedFires();
         ApplyLinkedFireConfiguration();
         interactionDuration = Mathf.Max(0f, interactionDuration);
         activeLightIntensity = Mathf.Max(0f, activeLightIntensity);
@@ -150,12 +145,6 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
         return transform.position;
     }
 
-    public void SetLinkedFires(Fire[] fires)
-    {
-        linkedFires = fires ?? Array.Empty<Fire>();
-        ApplyLinkedFireConfiguration();
-    }
-
     public void SetFireSimulationManager(FireSimulationManager manager)
     {
         fireSimulationManager = manager;
@@ -195,20 +184,6 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
         isTransitionInProgress = false;
         ApplyLinkedFireConfiguration();
 
-        if (linkedFires == null)
-        {
-            linkedFires = new Fire[0];
-        }
-
-        for (int i = 0; i < linkedFires.Length; i++)
-        {
-            Fire fire = linkedFires[i];
-            if (fire != null)
-            {
-                fire.SetHazardSourceIsolated(isolated);
-            }
-        }
-
         fireSimulationManager?.SetRuntimeHazardIsolation(isolated);
 
         RefreshPresentation();
@@ -247,21 +222,6 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
         ApplyIsolationState(nextState, invokeEvents: true);
     }
 
-    private void ResolveLinkedFires()
-    {
-        System.Collections.Generic.List<Fire> resolvedFires = new System.Collections.Generic.List<Fire>();
-        AddUniqueNonNullFires(linkedFires, resolvedFires);
-
-        if (autoCollectChildFires)
-        {
-            Fire[] childFires = GetComponentsInChildren<Fire>(true);
-            AddUniqueNonNullFires(childFires, resolvedFires);
-        }
-
-        linkedFires = resolvedFires.ToArray();
-        RefreshPresentation();
-    }
-
     private void ResolveFireSimulationManager()
     {
         if (fireSimulationManager == null)
@@ -272,19 +232,9 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
 
     private void ApplyLinkedFireConfiguration()
     {
-        if (!applyHazardTypeToLinkedFires || hazardType == IsolationHazardType.None || linkedFires == null)
+        if (fireSimulationManager != null || !applyHazardTypeToLinkedFires || hazardType == IsolationHazardType.None)
         {
             return;
-        }
-
-        FireHazardType fireHazardType = ResolveFireHazardType();
-        for (int i = 0; i < linkedFires.Length; i++)
-        {
-            Fire fire = linkedFires[i];
-            if (fire != null)
-            {
-                fire.SetFireHazardType(fireHazardType);
-            }
         }
     }
 
@@ -464,24 +414,4 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
         }
     }
 
-    private static void AddUniqueNonNullFires(
-        Fire[] source,
-        System.Collections.Generic.List<Fire> destination)
-    {
-        if (source == null || destination == null)
-        {
-            return;
-        }
-
-        for (int i = 0; i < source.Length; i++)
-        {
-            Fire fire = source[i];
-            if (fire == null || destination.Contains(fire))
-            {
-                continue;
-            }
-
-            destination.Add(fire);
-        }
-    }
 }

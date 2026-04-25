@@ -51,6 +51,17 @@ public class IncidentOriginArea : MonoBehaviour
         legacyAnchor != null ? legacyAnchor.FirePlacementTriggerInteraction : QueryTriggerInteraction.Ignore;
     public float SurfaceOffset => legacyAnchor != null ? legacyAnchor.SurfaceOffset : 0.03f;
     public bool HasConfiguredHazardIsolationDevices => legacyAnchor != null && legacyAnchor.HasConfiguredHazardIsolationDevices;
+    public float FloorPlacementWeight => ResolvePlacementSurfaceWeight(profile => profile.FloorPlacementWeight, 0.65f);
+    public float WallPlacementWeight => ResolvePlacementSurfaceWeight(profile => profile.WallPlacementWeight, 1.35f);
+    public float CeilingPlacementWeight => ResolvePlacementSurfaceWeight(profile => profile.CeilingPlacementWeight, 0.2f);
+    public Collider AreaCollider
+    {
+        get
+        {
+            ResolveAreaVolume();
+            return areaVolume;
+        }
+    }
 
     private void Reset()
     {
@@ -115,6 +126,23 @@ public class IncidentOriginArea : MonoBehaviour
         }
 
         return new Bounds(transform.position, Vector3.Max(size, Vector3.one));
+    }
+
+    public Vector3 GetAreaCenter()
+    {
+        return GetAreaBounds().center;
+    }
+
+    public bool ContainsWorldPosition(Vector3 worldPosition)
+    {
+        ResolveAreaVolume();
+        if (areaVolume == null)
+        {
+            return GetAreaBounds().Contains(worldPosition);
+        }
+
+        Vector3 closestPoint = areaVolume.ClosestPoint(worldPosition);
+        return (closestPoint - worldPosition).sqrMagnitude <= 0.0001f;
     }
 
     public IncidentPossibleFireCause[] CollectPossibleCauses(bool includeInactive)
@@ -195,6 +223,20 @@ public class IncidentOriginArea : MonoBehaviour
         {
             areaVolume = GetComponent<Collider>();
         }
+    }
+
+    private float ResolvePlacementSurfaceWeight(Func<IncidentFireSpawnProfile, float> selector, float fallback)
+    {
+        if (selector == null)
+        {
+            return Mathf.Max(0.01f, fallback);
+        }
+
+        IncidentMapSetupRoot setupRoot = GetComponentInParent<IncidentMapSetupRoot>(true);
+        IncidentFireSpawnProfile profile = setupRoot != null ? setupRoot.FireSpawnProfile : null;
+        return profile != null
+            ? Mathf.Max(0.01f, selector(profile))
+            : Mathf.Max(0.01f, fallback);
     }
 
     private static string Normalize(string value)

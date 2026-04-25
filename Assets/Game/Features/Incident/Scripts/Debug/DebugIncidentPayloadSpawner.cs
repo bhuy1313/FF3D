@@ -5,7 +5,7 @@ using UnityEngine.Serialization;
 
 [DefaultExecutionOrder(-300)]
 [DisallowMultipleComponent]
-public class Map1DebugIncidentSpawner : MonoBehaviour
+public class DebugIncidentPayloadSpawner : MonoBehaviour
 {
     private enum DebugOriginPreset
     {
@@ -93,7 +93,7 @@ public class Map1DebugIncidentSpawner : MonoBehaviour
 
         if (LoadingFlowState.TryGetPendingIncidentPayload(out _))
         {
-            Debug.Log("[Map1DebugIncidentSpawner] Found pending payload from normal flow. Debug injection skipped.");
+            Debug.Log("[DebugIncidentPayloadSpawner] Found pending payload from normal flow. Debug injection skipped.");
             return;
         }
 
@@ -131,7 +131,7 @@ public class Map1DebugIncidentSpawner : MonoBehaviour
             FindAnyObjectByType<IncidentPayloadStartupTask>(FindObjectsInactive.Include) == null;
 
         Debug.Log(
-            $"[Map1DebugIncidentSpawner] Injected debug payload for origin '{resolvedFireOrigin}'. " +
+            $"[DebugIncidentPayloadSpawner] Injected debug payload for origin '{resolvedFireOrigin}'. " +
             $"DirectApply={shouldDirectApplyPayload}.");
     }
 
@@ -157,15 +157,12 @@ public class Map1DebugIncidentSpawner : MonoBehaviour
         IncidentMapSetupRoot setupRoot = FindAnyObjectByType<IncidentMapSetupRoot>(FindObjectsInactive.Include);
         if (setupRoot == null)
         {
-            Debug.LogWarning("[Map1DebugIncidentSpawner] No IncidentMapSetupRoot found for direct payload apply.", this);
+            Debug.LogWarning("[DebugIncidentPayloadSpawner] No IncidentMapSetupRoot found for direct payload apply.", this);
             yield break;
         }
 
-        IncidentFirePrefabLibrary firePrefabLibrary =
-            FindAnyObjectByType<IncidentFirePrefabLibrary>(FindObjectsInactive.Include);
-
-        Debug.Log("[Map1DebugIncidentSpawner] Applying debug payload directly through IncidentMapSetupRoot.", this);
-        yield return setupRoot.ApplyPayload(null, payload, firePrefabLibrary);
+        Debug.Log("[DebugIncidentPayloadSpawner] Applying debug payload directly through IncidentMapSetupRoot.", this);
+        yield return setupRoot.ApplyPayload(null, payload, firePrefabLibrary: null);
 
         if (setupRoot.LastResolvedAnchor != null)
         {
@@ -173,7 +170,7 @@ public class Map1DebugIncidentSpawner : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("[Map1DebugIncidentSpawner] Debug payload apply did not resolve any anchor.", this);
+            Debug.LogWarning("[DebugIncidentPayloadSpawner] Debug payload apply did not resolve any anchor.", this);
         }
     }
 

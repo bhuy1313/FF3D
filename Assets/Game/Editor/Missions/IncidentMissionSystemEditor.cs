@@ -92,7 +92,7 @@ public class IncidentMissionSystemEditor : Editor
         DrawProperty("maxAllowedVictimDeaths");
         DrawProperty("requireNoCriticalVictimsAtCompletion");
         DrawProperty("requireAllLivingVictimsStabilized");
-        DrawProperty("trackedFires");
+        DrawProperty("trackedFireSimulationManagers");
         DrawProperty("trackedRescuables");
         DrawProperty("trackedVictimConditions");
     }

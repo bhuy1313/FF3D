@@ -23,9 +23,7 @@ public class IncidentPayloadAnchor : MonoBehaviour
     [SerializeField] private LayerMask firePlacementMask = ~0;
     [SerializeField] private QueryTriggerInteraction firePlacementTriggerInteraction = QueryTriggerInteraction.Ignore;
 
-    private readonly List<Fire> runtimeFires = new List<Fire>();
     private Transform runtimeRoot;
-    private FireGroup runtimeFireGroup;
     private SmokeHazard runtimeSmokeHazard;
     private IncidentFireSpawnProfile runtimeSpawnProfile;
 
@@ -33,9 +31,7 @@ public class IncidentPayloadAnchor : MonoBehaviour
     public string LogicalLocationKey => logicalLocationKey;
     public bool IsDefaultAnchor => isDefaultAnchor;
     public Transform RuntimeRoot => runtimeRoot;
-    public FireGroup RuntimeFireGroup => runtimeFireGroup;
     public SmokeHazard RuntimeSmokeHazard => runtimeSmokeHazard;
-    public IReadOnlyList<Fire> RuntimeFires => runtimeFires;
     public bool HasConfiguredHazardIsolationDevices => hazardIsolationDevices != null && hazardIsolationDevices.Length > 0;
     public Vector3 RuntimeZoneSize => runtimeZoneSize;
     public LayerMask FirePlacementMask => firePlacementMask;
@@ -94,37 +90,18 @@ public class IncidentPayloadAnchor : MonoBehaviour
         runtimeSpawnProfile = fireSpawnProfile;
         ClearRuntimeObjects();
 
-        if (fireSimulationManager != null)
+        if (fireSimulationManager == null)
         {
-            runtimeRoot = CreateRuntimeRoot();
-            ApplyPayloadToSimulation(payload, fireSimulationManager, primaryPosition, primaryRotation);
-            ConfigureSmoke(payload, runtimeRoot, fireSimulationManager);
-        }
-        else
-        {
-            if (firePrefabLibrary == null)
-            {
-                Debug.LogWarning($"{nameof(IncidentPayloadAnchor)} on '{name}' is missing a fire prefab library.", this);
-                return false;
-            }
-
-            Fire primaryPrefab = firePrefabLibrary.ResolvePrefab(IncidentPayloadStartupTask.ResolveFireHazardType(payload.hazardType));
-            Fire ordinaryPrefab = firePrefabLibrary.ResolveOrdinaryPrefab();
-            if (primaryPrefab == null || ordinaryPrefab == null)
-            {
-                Debug.LogWarning(
-                    $"{nameof(IncidentPayloadAnchor)} on '{name}' is missing fire prefabs. " +
-                    $"Primary='{primaryPrefab != null}', Ordinary='{ordinaryPrefab != null}'.",
-                    this);
-                return false;
-            }
-
-            runtimeRoot = CreateRuntimeRoot();
-            SpawnRuntimeFires(payload, firePrefabLibrary, runtimeRoot, primaryPosition, primaryRotation);
-            EnsureRuntimeFireGroup(runtimeRoot);
-            ConfigureSmoke(payload, runtimeRoot, null);
+            Debug.LogWarning(
+                $"{nameof(IncidentPayloadAnchor)} on '{name}' requires a {nameof(FireSimulationManager)}. " +
+                "Legacy Fire-prefab spawning has been removed.",
+                this);
+            return false;
         }
 
+        runtimeRoot = CreateRuntimeRoot();
+        ApplyPayloadToSimulation(payload, fireSimulationManager, primaryPosition, primaryRotation);
+        ConfigureSmoke(payload, runtimeRoot, fireSimulationManager);
         ConfigureHazardIsolationDevices(payload, fireSimulationManager);
         return true;
     }
@@ -143,99 +120,6 @@ public class IncidentPayloadAnchor : MonoBehaviour
         runtimeObject.transform.localRotation = Quaternion.identity;
         runtimeObject.transform.localScale = Vector3.one;
         return runtimeObject.transform;
-    }
-
-    private void SpawnRuntimeFires(
-        IncidentWorldSetupPayload payload,
-        IncidentFirePrefabLibrary firePrefabLibrary,
-        Transform parent,
-        Vector3 primaryPosition,
-        Quaternion primaryRotation)
-    {
-        runtimeFires.Clear();
-
-        FireHazardType primaryHazardType = IncidentPayloadStartupTask.ResolveFireHazardType(payload.hazardType);
-        Fire primaryPrefab = firePrefabLibrary.ResolvePrefab(primaryHazardType);
-        Fire ordinaryPrefab = firePrefabLibrary.ResolveOrdinaryPrefab();
-        if (primaryPrefab == null || ordinaryPrefab == null)
-        {
-            return;
-        }
-
-        int requestedActiveFireCount = ResolveRequestedTotalFireCount(payload);
-        int requestedSecondaryCount = Mathf.Max(0, requestedActiveFireCount - 1);
-        float primaryIntensity = Mathf.Clamp01(payload.initialFireIntensity);
-        float secondaryIntensity = Mathf.Clamp01(primaryIntensity * Mathf.Clamp01(runtimeSpawnProfile.ActiveSecondaryIntensityScale));
-        float spreadInterval = IncidentPayloadStartupTask.ResolveSpreadInterval(payload.fireSpreadPreset);
-        float spreadIgniteAmount = IncidentPayloadStartupTask.ResolveSpreadIgniteAmount(payload.fireSpreadPreset);
-        float spreadThreshold = IncidentPayloadStartupTask.ResolveSpreadThreshold(payload.fireSpreadPreset);
-
-        List<SpawnPlacement> activePlacements = BuildInitialSecondaryPlacements(
-            primaryPosition,
-            primaryRotation,
-            requestedSecondaryCount);
-        List<FireSpawnRequest> requests = new List<FireSpawnRequest>();
-        requests.Add(CreatePrimaryRequest(primaryPosition, primaryRotation, primaryPrefab, primaryHazardType, primaryIntensity));
-
-        for (int i = 1; i < activePlacements.Count; i++)
-        {
-            SpawnPlacement placement = activePlacements[i];
-            requests.Add(CreateActiveSecondaryRequest(
-                placement.Position,
-                placement.Rotation,
-                primaryPrefab,
-                primaryHazardType,
-                secondaryIntensity));
-        }
-
-        int latentCount = 0;
-        if (runtimeSpawnProfile.SpawnLatentSpreadNodes && runtimeSpawnProfile.LatentSpreadNodeCount > 0)
-        {
-            List<SpawnPlacement> latentPlacements = BuildLatentSpreadPlacements(activePlacements);
-            latentCount = latentPlacements.Count;
-            for (int i = 0; i < latentPlacements.Count; i++)
-            {
-                SpawnPlacement placement = latentPlacements[i];
-                requests.Add(CreateOrdinaryRequest(
-                    placement.Position,
-                    placement.Rotation,
-                    ordinaryPrefab,
-                    startBurning: false,
-                    startIntensity01: 0f));
-            }
-        }
-
-        for (int i = 0; i < requests.Count; i++)
-        {
-            FireSpawnRequest request = requests[i];
-            Fire fireInstance = Instantiate(request.Prefab, request.Position, request.Rotation, parent);
-            fireInstance.name = $"{request.Prefab.name}_{i + 1}";
-            ConfigureFireInstance(
-                fireInstance,
-                payload,
-                request,
-                spreadInterval,
-                spreadIgniteAmount,
-                spreadThreshold);
-            runtimeFires.Add(fireInstance);
-        }
-
-        int spawnedActiveCount = Mathf.Min(requestedActiveFireCount, runtimeFires.Count);
-        if (spawnedActiveCount != requestedActiveFireCount)
-        {
-            Debug.LogWarning(
-                $"{nameof(IncidentPayloadAnchor)} on '{name}' spawned {spawnedActiveCount}/{requestedActiveFireCount} active fires " +
-                $"for payload origin '{ValueOrUnknown(payload.fireOrigin)}'. Payload initialFireCount={payload.initialFireCount}, " +
-                $"requested secondary fires: {requestedSecondaryCount}, placed: {Mathf.Max(0, spawnedActiveCount - 1)}, " +
-                $"latent nodes: {latentCount}.",
-                this);
-        }
-
-        Debug.Log(
-            $"{nameof(IncidentPayloadAnchor)} on '{name}' spawned {spawnedActiveCount} active fires and {latentCount} latent nodes " +
-            $"for payload origin '{ValueOrUnknown(payload.fireOrigin)}'. Payload initialFireCount={payload.initialFireCount}, " +
-            $"requested secondary fires={requestedSecondaryCount}, placed secondary={Mathf.Max(0, spawnedActiveCount - 1)}.",
-            this);
     }
 
     private void ApplyPayloadToSimulation(
@@ -284,60 +168,6 @@ public class IncidentPayloadAnchor : MonoBehaviour
                 fireSimulationManager.TrackClosestNode(placement.Position, placement.InitialIntensity01);
             }
         }
-    }
-
-    private FireSpawnRequest CreatePrimaryRequest(
-        Vector3 position,
-        Quaternion rotation,
-        Fire prefab,
-        FireHazardType hazardType,
-        float startIntensity01)
-    {
-        return new FireSpawnRequest(
-            position,
-            rotation,
-            prefab,
-            hazardType,
-            startBurning: true,
-            startIntensity01,
-            spreadEnabled: true,
-            allowRegrowFromZero: prefab != null && prefab.AllowRegrowFromZero);
-    }
-
-    private FireSpawnRequest CreateOrdinaryRequest(
-        Vector3 position,
-        Quaternion rotation,
-        Fire ordinaryPrefab,
-        bool startBurning,
-        float startIntensity01)
-    {
-        return new FireSpawnRequest(
-            position,
-            rotation,
-            ordinaryPrefab,
-            FireHazardType.OrdinaryCombustibles,
-            startBurning,
-            startBurning ? Mathf.Clamp01(startIntensity01) : 0f,
-            spreadEnabled: true,
-            allowRegrowFromZero: false);
-    }
-
-    private FireSpawnRequest CreateActiveSecondaryRequest(
-        Vector3 position,
-        Quaternion rotation,
-        Fire prefab,
-        FireHazardType hazardType,
-        float startIntensity01)
-    {
-        return new FireSpawnRequest(
-            position,
-            rotation,
-            prefab,
-            hazardType,
-            startBurning: true,
-            Mathf.Clamp01(startIntensity01),
-            spreadEnabled: true,
-            allowRegrowFromZero: prefab != null && prefab.AllowRegrowFromZero);
     }
 
     private List<SpawnPlacement> BuildInitialSecondaryPlacements(
@@ -544,55 +374,6 @@ public class IncidentPayloadAnchor : MonoBehaviour
         return Mathf.Max(1, runtimeSpawnProfile.SecondaryFirePointCount + 1);
     }
 
-    private void ConfigureFireInstance(
-        Fire fireInstance,
-        IncidentWorldSetupPayload payload,
-        FireSpawnRequest request,
-        float spreadInterval,
-        float spreadIgniteAmount,
-        float spreadThreshold)
-    {
-        if (fireInstance == null || payload == null)
-        {
-            return;
-        }
-
-        fireInstance.SetFireHazardType(request.HazardType);
-        fireInstance.SetRequiresIsolationToFullyExtinguish(
-            request.HazardType != FireHazardType.OrdinaryCombustibles && payload.requiresIsolation);
-        fireInstance.SetHazardSourceIsolated(false);
-        fireInstance.SetSpreadEnabled(request.SpreadEnabled);
-        fireInstance.ConfigureSpreadProfile(spreadInterval, spreadIgniteAmount, spreadThreshold);
-        fireInstance.SetAllowRegrowFromZero(request.AllowRegrowFromZero);
-        fireInstance.SetBurningLevel01(request.StartBurning ? request.StartIntensity01 : 0f);
-    }
-
-    private void EnsureRuntimeFireGroup(Transform parent)
-    {
-        if (parent == null)
-        {
-            return;
-        }
-
-        BoxCollider boxCollider = parent.GetComponent<BoxCollider>();
-        if (boxCollider == null)
-        {
-            boxCollider = parent.gameObject.AddComponent<BoxCollider>();
-        }
-
-        boxCollider.isTrigger = true;
-        boxCollider.center = Vector3.zero;
-        boxCollider.size = Vector3.Max(runtimeZoneSize, new Vector3(1f, 1f, 1f));
-
-        runtimeFireGroup = parent.GetComponent<FireGroup>();
-        if (runtimeFireGroup == null)
-        {
-            runtimeFireGroup = parent.gameObject.AddComponent<FireGroup>();
-        }
-
-        runtimeFireGroup.CollectFires();
-    }
-
     private void ConfigureSmoke(IncidentWorldSetupPayload payload, Transform parent, FireSimulationManager fireSimulationManager)
     {
         SmokeHazard targetSmokeHazard = ResolveSmokeHazardReference();
@@ -632,7 +413,6 @@ public class IncidentPayloadAnchor : MonoBehaviour
             runtimeSmokeHazard.SetTriggerZone(sharedAreaVolume);
         }
 
-        runtimeSmokeHazard.SetLinkedFires(runtimeFires.ToArray());
         runtimeSmokeHazard.SetFireSimulationManager(fireSimulationManager);
         runtimeSmokeHazard.SetStartSmokeDensity(payload.startSmokeDensity, applyImmediately: true);
         runtimeSmokeHazard.SetSmokeAccumulationMultiplier(payload.smokeAccumulationMultiplier);
@@ -645,7 +425,6 @@ public class IncidentPayloadAnchor : MonoBehaviour
             return;
         }
 
-        Fire[] linkedFires = runtimeFires.ToArray();
         FireHazardType fireHazardType = IncidentPayloadStartupTask.ResolveFireHazardType(payload.hazardType);
         for (int i = 0; i < hazardIsolationDevices.Length; i++)
         {
@@ -655,7 +434,6 @@ public class IncidentPayloadAnchor : MonoBehaviour
                 continue;
             }
 
-            device.SetLinkedFires(linkedFires);
             device.SetFireSimulationManager(fireSimulationManager);
             device.SetRuntimeHazardType(fireHazardType);
             device.SetRuntimeIsolationState(false, invokeEvents: false);
@@ -818,9 +596,7 @@ public class IncidentPayloadAnchor : MonoBehaviour
         }
 
         runtimeRoot = null;
-        runtimeFireGroup = null;
         runtimeSmokeHazard = null;
-        runtimeFires.Clear();
     }
 
     private SmokeHazard ResolveSmokeHazardReference()
@@ -874,35 +650,4 @@ public class IncidentPayloadAnchor : MonoBehaviour
         public float Weight { get; }
     }
 
-    private readonly struct FireSpawnRequest
-    {
-        public FireSpawnRequest(
-            Vector3 position,
-            Quaternion rotation,
-            Fire prefab,
-            FireHazardType hazardType,
-            bool startBurning,
-            float startIntensity01,
-            bool spreadEnabled,
-            bool allowRegrowFromZero)
-        {
-            Position = position;
-            Rotation = rotation;
-            Prefab = prefab;
-            HazardType = hazardType;
-            StartBurning = startBurning;
-            StartIntensity01 = startIntensity01;
-            SpreadEnabled = spreadEnabled;
-            AllowRegrowFromZero = allowRegrowFromZero;
-        }
-
-        public Vector3 Position { get; }
-        public Quaternion Rotation { get; }
-        public Fire Prefab { get; }
-        public FireHazardType HazardType { get; }
-        public bool StartBurning { get; }
-        public float StartIntensity01 { get; }
-        public bool SpreadEnabled { get; }
-        public bool AllowRegrowFromZero { get; }
-    }
 }

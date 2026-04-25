@@ -5,17 +5,14 @@ public partial class IncidentMissionSystem
 {
     private void RefreshProgress()
     {
-        RemoveNullEntries(trackedFires);
         RemoveNullEntries(trackedFireSimulationManagers);
         RemoveNullEntries(trackedRescuables);
         RemoveNullEntries(trackedVictimConditions);
 
-        int legacyTrackedFireCount = trackedFires.Count;
-        int legacyExtinguishedFireCount = CountExtinguishedFires(trackedFires);
         int simulationTrackedFireCount = CountTrackedSimulationNodes(trackedFireSimulationManagers);
         int simulationExtinguishedFireCount = CountExtinguishedSimulationNodes(trackedFireSimulationManagers);
-        totalTrackedFires = legacyTrackedFireCount + simulationTrackedFireCount;
-        extinguishedFireCount = legacyExtinguishedFireCount + simulationExtinguishedFireCount;
+        totalTrackedFires = simulationTrackedFireCount;
+        extinguishedFireCount = simulationExtinguishedFireCount;
         totalTrackedRescuables = trackedRescuables.Count;
         rescuedCount = CountRescuedTargets(trackedRescuables);
         totalTrackedVictims = trackedVictimConditions.Count;
@@ -75,21 +72,6 @@ public partial class IncidentMissionSystem
         }
 
         return results;
-    }
-
-    private static int CountExtinguishedFires(List<Fire> fires)
-    {
-        int count = 0;
-        for (int i = 0; i < fires.Count; i++)
-        {
-            Fire fire = fires[i];
-            if (fire == null || !fire.IsBurning)
-            {
-                count++;
-            }
-        }
-
-        return count;
     }
 
     private static int CountTrackedSimulationNodes(List<FireSimulationManager> managers)

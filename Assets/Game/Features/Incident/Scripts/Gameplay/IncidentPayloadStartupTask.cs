@@ -10,7 +10,6 @@ public class IncidentPayloadStartupTask : SceneStartupTask
     [SerializeField] private bool logResolvedPayload = true;
 
     [Header("Scene Bindings")]
-    [SerializeField] private IncidentFirePrefabLibrary firePrefabLibrary;
     [SerializeField] private IncidentMapSetupRoot explicitMapSetupRoot;
     [SerializeField] private IncidentPayloadAnchor[] explicitAnchors = Array.Empty<IncidentPayloadAnchor>();
 
@@ -25,17 +24,16 @@ public class IncidentPayloadStartupTask : SceneStartupTask
         IncidentMapSetupRoot setupRoot = ResolveMapSetupRoot(startupFlow);
         if (setupRoot != null)
         {
-            yield return setupRoot.ApplyPayload(startupFlow, payload, ResolveFirePrefabLibrary(startupFlow));
+            yield return setupRoot.ApplyPayload(startupFlow, payload, firePrefabLibrary: null);
             resolvedAnchor = setupRoot.LastResolvedAnchor;
         }
         else
         {
             FireSimulationManager resolvedSimulationManager = setupRoot != null ? setupRoot.FireSimulationManager : FindAnyObjectByType<FireSimulationManager>(FindObjectsInactive.Include);
-            IncidentFirePrefabLibrary resolvedLibrary = ResolveFirePrefabLibrary(startupFlow);
-            if (resolvedLibrary == null && resolvedSimulationManager == null)
+            if (resolvedSimulationManager == null)
             {
                 Debug.LogWarning(
-                    $"{nameof(IncidentPayloadStartupTask)}: Missing both {nameof(IncidentFirePrefabLibrary)} and {nameof(FireSimulationManager)} for payload application.",
+                    $"{nameof(IncidentPayloadStartupTask)}: Missing {nameof(FireSimulationManager)} for payload application.",
                     this);
                 yield break;
             }
@@ -59,7 +57,7 @@ public class IncidentPayloadStartupTask : SceneStartupTask
                 yield break;
             }
 
-            if (!anchor.ApplyPayload(payload, resolvedLibrary, resolvedProfile, resolvedSimulationManager))
+            if (!anchor.ApplyPayload(payload, firePrefabLibrary: null, resolvedProfile, resolvedSimulationManager))
             {
                 Debug.LogWarning(
                     $"{nameof(IncidentPayloadStartupTask)}: Anchor '{anchor.name}' failed to apply payload.",
@@ -133,32 +131,6 @@ public class IncidentPayloadStartupTask : SceneStartupTask
 
         return FindAnyObjectByType<IncidentMapSetupRoot>(FindObjectsInactive.Include);
     }
-
-    private IncidentFirePrefabLibrary ResolveFirePrefabLibrary(SceneStartupFlow startupFlow)
-    {
-        if (firePrefabLibrary != null)
-        {
-            return firePrefabLibrary;
-        }
-
-        IncidentFirePrefabLibrary localLibrary = GetComponent<IncidentFirePrefabLibrary>();
-        if (localLibrary != null)
-        {
-            return localLibrary;
-        }
-
-        if (startupFlow != null)
-        {
-            localLibrary = startupFlow.GetComponentInChildren<IncidentFirePrefabLibrary>(true);
-            if (localLibrary != null)
-            {
-                return localLibrary;
-            }
-        }
-
-        return FindAnyObjectByType<IncidentFirePrefabLibrary>(FindObjectsInactive.Include);
-    }
-
     public static FireHazardType ResolveFireHazardType(string hazardType)
     {
         if (string.Equals(hazardType, "Electrical", StringComparison.OrdinalIgnoreCase))

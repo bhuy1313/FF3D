@@ -2,8 +2,8 @@ using UnityEngine;
 
 public static class IncidentNormalFirePlacementUtility
 {
-    private const int SampleCount = 12;
-    private const float VerticalMargin = 0.35f;
+    private const int SampleCount = 24;
+    private const float RaycastDistancePadding = 1f;
 
     public static bool TryResolvePlacement(IncidentOriginArea area, out Vector3 position, out Quaternion rotation)
     {
@@ -15,24 +15,29 @@ public static class IncidentNormalFirePlacementUtility
         }
 
         Bounds bounds = area.GetAreaBounds();
-        float halfHeight = Mathf.Max(0.5f, bounds.extents.y + VerticalMargin);
         LayerMask mask = area.SurfacePlacementMask;
         QueryTriggerInteraction triggerInteraction = area.SurfacePlacementTriggerInteraction;
+        Vector3 center = bounds.center;
+        float rayDistance = bounds.extents.magnitude + RaycastDistancePadding;
 
         for (int i = 0; i < SampleCount; i++)
         {
-            Vector3 start = new Vector3(
-                Random.Range(bounds.min.x, bounds.max.x),
-                bounds.center.y + halfHeight,
-                Random.Range(bounds.min.z, bounds.max.z));
-            if (TryResolveHit(area, start, (halfHeight * 2f) + 1f, mask, triggerInteraction, out position, out rotation))
+            Vector3 direction = Random.onUnitSphere;
+            if (direction.sqrMagnitude <= 0.0001f)
+            {
+                continue;
+            }
+
+            if (TryResolveHit(area, bounds, center, direction.normalized, rayDistance, mask, triggerInteraction, out position, out rotation))
             {
                 return true;
             }
         }
 
-        Vector3 centerStart = new Vector3(bounds.center.x, bounds.center.y + halfHeight, bounds.center.z);
-        if (TryResolveHit(area, centerStart, (halfHeight * 2f) + 1f, mask, triggerInteraction, out position, out rotation))
+        Vector3 fallbackDirection = area.transform.forward.sqrMagnitude > 0.0001f
+            ? area.transform.forward.normalized
+            : Vector3.forward;
+        if (TryResolveHit(area, bounds, center, fallbackDirection, rayDistance, mask, triggerInteraction, out position, out rotation))
         {
             return true;
         }
@@ -44,7 +49,9 @@ public static class IncidentNormalFirePlacementUtility
 
     private static bool TryResolveHit(
         IncidentOriginArea area,
+        Bounds bounds,
         Vector3 start,
+        Vector3 direction,
         float distance,
         LayerMask mask,
         QueryTriggerInteraction triggerInteraction,
@@ -53,30 +60,45 @@ public static class IncidentNormalFirePlacementUtility
     {
         position = start;
         rotation = area.transform.rotation;
+        if (!Physics.Raycast(start, direction, out RaycastHit hit, distance, mask, triggerInteraction))
+        {
+            return false;
+        }
 
-        if (!Physics.Raycast(start, Vector3.down, out RaycastHit hit, distance, mask, triggerInteraction))
+        if (!bounds.Contains(hit.point))
         {
             return false;
         }
 
         position = hit.point + (hit.normal * area.SurfaceOffset);
-        Vector3 projectedForward = Vector3.ProjectOnPlane(area.transform.forward, hit.normal);
-        if (projectedForward.sqrMagnitude < 0.0001f)
+        if (!bounds.Contains(position))
         {
-            projectedForward = Vector3.ProjectOnPlane(Vector3.forward, hit.normal);
+            position = hit.point;
         }
 
-        if (projectedForward.sqrMagnitude < 0.0001f)
-        {
-            projectedForward = Vector3.Cross(hit.normal, Vector3.right);
-        }
-
-        if (projectedForward.sqrMagnitude < 0.0001f)
-        {
-            projectedForward = Vector3.Cross(hit.normal, Vector3.up);
-        }
-
-        rotation = Quaternion.LookRotation(projectedForward.normalized, hit.normal);
+        rotation = ResolveSurfaceRotation(area.transform, hit.normal);
         return true;
+    }
+
+    private static Quaternion ResolveSurfaceRotation(Transform areaTransform, Vector3 surfaceNormal)
+    {
+        Vector3 up = surfaceNormal.sqrMagnitude > 0.0001f ? surfaceNormal.normalized : Vector3.up;
+        Vector3 projectedForward = Vector3.ProjectOnPlane(areaTransform.forward, up);
+        if (projectedForward.sqrMagnitude < 0.0001f)
+        {
+            projectedForward = Vector3.ProjectOnPlane(Vector3.forward, up);
+        }
+
+        if (projectedForward.sqrMagnitude < 0.0001f)
+        {
+            projectedForward = Vector3.Cross(up, Vector3.right);
+        }
+
+        if (projectedForward.sqrMagnitude < 0.0001f)
+        {
+            projectedForward = Vector3.Cross(up, Vector3.up);
+        }
+
+        return Quaternion.LookRotation(projectedForward.normalized, up);
     }
 }

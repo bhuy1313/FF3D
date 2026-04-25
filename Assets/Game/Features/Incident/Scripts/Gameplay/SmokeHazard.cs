@@ -21,8 +21,6 @@ public class SmokeHazard : MonoBehaviour
     [Header("Smoke Sources")]
     [SerializeField] private AutoCollectMode autoCollectMode = AutoCollectMode.ChildHierarchy;
     [SerializeField] private float autoCollectDelay = 0f;
-    [SerializeField] private bool autoCollectChildFires = true;
-    [SerializeField] private Fire[] linkedFires = System.Array.Empty<Fire>();
     [SerializeField] private FireSimulationManager fireSimulationManager;
     [FormerlySerializedAs("autoCollectChildDoors")]
     [FormerlySerializedAs("autoCollectChildVents")]
@@ -130,11 +128,6 @@ public class SmokeHazard : MonoBehaviour
     public void SetSmokeAccumulationMultiplier(float multiplier)
     {
         runtimeSmokeAccumulationMultiplier = Mathf.Max(0f, multiplier);
-    }
-
-    public void SetLinkedFires(Fire[] fires)
-    {
-        linkedFires = fires ?? Array.Empty<Fire>();
     }
 
     public void SetFireSimulationManager(FireSimulationManager manager)
@@ -278,18 +271,6 @@ public class SmokeHazard : MonoBehaviour
             density += fireSimulationManager.GetBurningTrackedNodeCount(bounds) * smokePerBurningFire;
             density += fireSimulationManager.GetBurningTrackedIntensitySum(bounds) * smokePerFireIntensity;
         }
-        else if (linkedFires != null)
-        {
-            for (int i = 0; i < linkedFires.Length; i++)
-            {
-                Fire fire = linkedFires[i];
-                if (fire == null || !fire.IsBurning)
-                    continue;
-
-                density += smokePerBurningFire + fire.NormalizedHp * smokePerFireIntensity;
-            }
-        }
-
         density -= passiveVentilationRelief;
         density -= ventilation.Relief;
         return Mathf.Clamp01(density);
@@ -392,9 +373,6 @@ public class SmokeHazard : MonoBehaviour
         if (fireSimulationManager == null)
             fireSimulationManager = FindAnyObjectByType<FireSimulationManager>(FindObjectsInactive.Include);
 
-        if (autoCollectChildFires && (forceRefresh || linkedFires == null || linkedFires.Length == 0))
-            linkedFires = CollectAutoFires();
-
         if (autoCollectChildVentPoints && (forceRefresh || linkedVentPoints == null || linkedVentPoints.Length == 0))
             linkedVentPoints = CollectAutoVentPoints();
     }
@@ -415,20 +393,6 @@ public class SmokeHazard : MonoBehaviour
         if (fireSimulationManager != null && fireSimulationManager.IsInitialized && triggerZone != null)
         {
             fireSimulationManager.ApplyDraftHeatInBounds(triggerZone.bounds, draftRisk * fireDraftBoostPerSecond * delta);
-            return;
-        }
-
-        if (linkedFires == null || linkedFires.Length == 0)
-            return;
-
-        for (int i = 0; i < linkedFires.Length; i++)
-        {
-            Fire fire = linkedFires[i];
-            if (fire == null || !fire.IsBurning)
-                continue;
-
-            float intensityScale = Mathf.Max(0.35f, fire.NormalizedHp);
-            fire.Ignite(draftRisk * fireDraftBoostPerSecond * intensityScale * delta);
         }
     }
 
@@ -517,34 +481,12 @@ public class SmokeHazard : MonoBehaviour
         return controller != null && controller.IsCrouching;
     }
 
-    private Fire[] CollectAutoFires()
-    {
-        if (autoCollectMode == AutoCollectMode.TriggerVolume)
-            return CollectVolumeFires();
-
-        return GetComponentsInChildren<Fire>(true);
-    }
-
     private MonoBehaviour[] CollectAutoVentPoints()
     {
         if (autoCollectMode == AutoCollectMode.TriggerVolume)
             return CollectVolumeVentPoints();
 
         return CollectChildVentPoints();
-    }
-
-    private Fire[] CollectVolumeFires()
-    {
-        Fire[] fires = FindObjectsByType<Fire>(FindObjectsInactive.Include);
-        List<Fire> results = new List<Fire>();
-        for (int i = 0; i < fires.Length; i++)
-        {
-            Fire fire = fires[i];
-            if (fire != null && IsComponentWithinTriggerVolume(fire))
-                results.Add(fire);
-        }
-
-        return results.ToArray();
     }
 
     private MonoBehaviour[] CollectVolumeVentPoints()

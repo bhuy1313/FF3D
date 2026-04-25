@@ -19,10 +19,10 @@ public class IncidentOriginAreaSetupStep : IncidentMapSetupStep
             yield break;
         }
 
-        if (context.FirePrefabLibrary == null && context.FireSimulationManager == null)
+        if (context.FireSimulationManager == null)
         {
             context.AddWarning(
-                $"{nameof(IncidentOriginAreaSetupStep)}: Missing both fire prefab library and {nameof(FireSimulationManager)} for payload application.",
+                $"{nameof(IncidentOriginAreaSetupStep)}: Missing {nameof(FireSimulationManager)} for payload application.",
                 this);
             yield break;
         }
@@ -52,7 +52,7 @@ public class IncidentOriginAreaSetupStep : IncidentMapSetupStep
 
         if (!area.ApplyPayload(
                 context.Payload,
-                context.FirePrefabLibrary,
+                firePrefabLibrary: null,
                 context.FireSpawnProfile,
                 context.FireSimulationManager,
                 source))

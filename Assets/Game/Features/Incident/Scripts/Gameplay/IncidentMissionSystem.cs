@@ -75,7 +75,6 @@ public partial class IncidentMissionSystem : MonoBehaviour
     [SerializeField] private int maxAllowedVictimDeaths = -1;
     [SerializeField] private bool requireNoCriticalVictimsAtCompletion = false;
     [SerializeField] private bool requireAllLivingVictimsStabilized = false;
-    [SerializeField] private List<Fire> trackedFires = new List<Fire>();
     [SerializeField] private List<FireSimulationManager> trackedFireSimulationManagers = new List<FireSimulationManager>();
     [SerializeField] private List<Rescuable> trackedRescuables = new List<Rescuable>();
     [SerializeField] private List<VictimCondition> trackedVictimConditions = new List<VictimCondition>();
@@ -632,19 +631,6 @@ public partial class IncidentMissionSystem : MonoBehaviour
             }
         }
 
-        if (trackedFires == null)
-        {
-            return;
-        }
-
-        for (int i = 0; i < trackedFires.Count; i++)
-        {
-            Fire fire = trackedFires[i];
-            if (fire != null)
-            {
-                fire.BurningStateChanged += HandleTrackedFireBurningStateChanged;
-            }
-        }
     }
 
     private void UnsubscribeFromFireEvents()
@@ -661,19 +647,6 @@ public partial class IncidentMissionSystem : MonoBehaviour
             }
         }
 
-        if (trackedFires == null)
-        {
-            return;
-        }
-
-        for (int i = 0; i < trackedFires.Count; i++)
-        {
-            Fire fire = trackedFires[i];
-            if (fire != null)
-            {
-                fire.BurningStateChanged -= HandleTrackedFireBurningStateChanged;
-            }
-        }
     }
 
     private void SubscribeToRescuableEvents()
@@ -750,11 +723,6 @@ public partial class IncidentMissionSystem : MonoBehaviour
         }
     }
 
-    private void HandleTrackedFireBurningStateChanged(bool isBurning)
-    {
-        MarkProgressDirty();
-    }
-
     private void HandleTrackedFireSimulationChanged()
     {
         MarkProgressDirty();
@@ -802,7 +770,6 @@ public partial class IncidentMissionSystem : MonoBehaviour
 
     private MissionProgressSnapshot BuildResultPerformanceSnapshot()
     {
-        List<Fire> resultFires = null;
         List<FireSimulationManager> resultSimulationManagers = null;
         List<Rescuable> resultRescuables = null;
         List<VictimCondition> resultVictimConditions = null;
@@ -812,16 +779,10 @@ public partial class IncidentMissionSystem : MonoBehaviour
             MissionRuntimeSceneData sceneData = new MissionRuntimeSceneData();
             CollectResultSceneTargets(sceneData);
 
-            resultFires = sceneData.CreateFireList();
             resultSimulationManagers = sceneData.CreateFireSimulationManagerList();
             resultRescuables = sceneData.CreateRescuableList();
             resultVictimConditions = sceneData.CreateVictimConditionList();
             AppendVictimConditionsFromRescuables(resultVictimConditions, resultRescuables);
-        }
-
-        if (resultFires == null || resultFires.Count == 0)
-        {
-            resultFires = CollectSceneObjectsIncludingInactive<Fire>();
         }
 
         if (resultRescuables == null || resultRescuables.Count == 0)
@@ -835,13 +796,12 @@ public partial class IncidentMissionSystem : MonoBehaviour
             AppendVictimConditionsFromRescuables(resultVictimConditions, resultRescuables);
         }
 
-        RemoveNullEntries(resultFires);
         RemoveNullEntries(resultSimulationManagers);
         RemoveNullEntries(resultRescuables);
         RemoveNullEntries(resultVictimConditions);
 
-        int resultTrackedFireCount = resultFires.Count + CountTrackedSimulationNodes(resultSimulationManagers);
-        int resultExtinguishedFireCount = CountExtinguishedFires(resultFires) + CountExtinguishedSimulationNodes(resultSimulationManagers);
+        int resultTrackedFireCount = CountTrackedSimulationNodes(resultSimulationManagers);
+        int resultExtinguishedFireCount = CountExtinguishedSimulationNodes(resultSimulationManagers);
 
         return new MissionProgressSnapshot(
             resultTrackedFireCount,
