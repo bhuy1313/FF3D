@@ -88,6 +88,28 @@ public class ThreeStepSlider : MonoBehaviour
         SnapAndRefresh(true, false);
     }
 
+    public void AddStepChangedListener(UnityAction<int> listener)
+    {
+        if (listener == null)
+        {
+            return;
+        }
+
+        onStepChanged ??= new IntEvent();
+        onStepChanged.RemoveListener(listener);
+        onStepChanged.AddListener(listener);
+    }
+
+    public void RemoveStepChangedListener(UnityAction<int> listener)
+    {
+        if (listener == null || onStepChanged == null)
+        {
+            return;
+        }
+
+        onStepChanged.RemoveListener(listener);
+    }
+
     public int GetCurrentStep()
     {
         if (slider == null)

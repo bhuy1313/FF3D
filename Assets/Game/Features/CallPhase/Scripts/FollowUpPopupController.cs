@@ -10,7 +10,7 @@ using UnityEngine.UI;
 public class FollowUpPopupController : MonoBehaviour
 {
     [Header("References")]
-    [SerializeField] private CallPhasePrototypeFollowUpController followUpController;
+    [SerializeField] private CallPhaseScenarioRuntimeController followUpController;
     [SerializeField] private Button askFollowUpButton;
     [SerializeField] private GameObject followUpPopupRootObject;
     [SerializeField] private Button cancelButton;
@@ -412,7 +412,7 @@ public class FollowUpPopupController : MonoBehaviour
     {
         if (followUpController == null)
         {
-            followUpController = GetComponent<CallPhasePrototypeFollowUpController>();
+            followUpController = GetComponent<CallPhaseScenarioRuntimeController>();
         }
 
         if (askFollowUpButton == null)
@@ -647,3 +647,4 @@ public class FollowUpPopupController : MonoBehaviour
         button.onClick.Invoke();
     }
 }
+

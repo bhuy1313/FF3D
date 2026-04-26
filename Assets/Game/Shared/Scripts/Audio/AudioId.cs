@@ -19,4 +19,5 @@ public enum AudioId
     FireLoop = 16,
     ExtinguisherSprayStart = 17,
     ExtinguisherSprayEnd = 18,
+    DefaultRunning = 19,
 }

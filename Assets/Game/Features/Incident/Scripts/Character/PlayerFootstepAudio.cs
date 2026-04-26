@@ -12,6 +12,7 @@ namespace StarterAssets
 
         [Header("Audio")]
         [SerializeField] private AudioId walkingAudioId = AudioId.DefaultWalking;
+        [SerializeField] private AudioId runningAudioId = AudioId.DefaultRunning;
         [SerializeField] private float stopFadeDuration = 0.08f;
         [SerializeField] private Vector3 sourceLocalOffset = new Vector3(0f, -0.9f, 0f);
 
@@ -26,6 +27,7 @@ namespace StarterAssets
         [SerializeField] private float maxLoopPitch = 1.05f;
 
         private AudioSource walkingLoopSource;
+        private AudioId activeLoopAudioId = AudioId.None;
         private float startTimer;
         private float stopTimer;
         private bool isWalkingEligible;
@@ -54,7 +56,7 @@ namespace StarterAssets
 
         private void Update()
         {
-            bool shouldWalk = TryGetStepContext(out float horizontalSpeed);
+            bool shouldWalk = TryGetStepContext(out float horizontalSpeed, out bool isSprinting);
 
             if (shouldWalk)
             {
@@ -62,12 +64,12 @@ namespace StarterAssets
                 startTimer += Time.deltaTime;
                 isWalkingEligible = true;
 
-                if (walkingLoopSource == null && startTimer >= startDelay)
+                if (startTimer >= startDelay)
                 {
-                    EnsureWalkingLoop();
+                    EnsureWalkingLoop(isSprinting);
                 }
 
-                UpdateWalkingLoop(horizontalSpeed);
+                UpdateWalkingLoop(horizontalSpeed, isSprinting);
                 return;
             }
 
@@ -92,9 +94,10 @@ namespace StarterAssets
             firstPersonController ??= GetComponent<FirstPersonController>();
         }
 
-        private bool TryGetStepContext(out float horizontalSpeed)
+        private bool TryGetStepContext(out float horizontalSpeed, out bool isSprinting)
         {
             horizontalSpeed = 0f;
+            isSprinting = false;
 
             if (characterController == null)
             {
@@ -103,10 +106,12 @@ namespace StarterAssets
 
             if (firstPersonController != null)
             {
-                if (firstPersonController.IsClimbing || firstPersonController.IsCrouching || firstPersonController.WantsSprint)
+                if (firstPersonController.IsClimbing || firstPersonController.IsCrouching)
                 {
                     return false;
                 }
+
+                isSprinting = firstPersonController.WantsSprint;
             }
 
             bool grounded = firstPersonController != null
@@ -123,26 +128,36 @@ namespace StarterAssets
             return horizontalSpeed >= requiredThreshold;
         }
 
-        private void EnsureWalkingLoop()
+        private void EnsureWalkingLoop(bool isSprinting)
         {
-            if (walkingLoopSource != null)
+            AudioId targetAudioId = ResolveMovementAudioId(isSprinting);
+            if (targetAudioId == AudioId.None)
+            {
+                StopWalkingLoop();
+                return;
+            }
+
+            if (walkingLoopSource != null && activeLoopAudioId == targetAudioId)
             {
                 return;
             }
 
-            if (walkingAudioId == AudioId.None)
-            {
-                return;
-            }
-
-            walkingLoopSource = AudioService.PlayLoop(walkingAudioId, transform);
             if (walkingLoopSource != null)
             {
+                AudioService.Stop(walkingLoopSource, stopFadeDuration);
+                walkingLoopSource = null;
+            }
+
+            activeLoopAudioId = AudioId.None;
+            walkingLoopSource = AudioService.PlayLoop(targetAudioId, transform);
+            if (walkingLoopSource != null)
+            {
+                activeLoopAudioId = targetAudioId;
                 walkingLoopSource.transform.localPosition = sourceLocalOffset;
             }
         }
 
-        private void UpdateWalkingLoop(float horizontalSpeed)
+        private void UpdateWalkingLoop(float horizontalSpeed, bool isSprinting)
         {
             if (walkingLoopSource == null)
             {
@@ -152,7 +167,8 @@ namespace StarterAssets
             float referenceSpeed = 4f;
             if (firstPersonController != null)
             {
-                referenceSpeed = Mathf.Max(firstPersonController.MoveSpeed, movementThreshold + 0.01f);
+                float targetSpeed = isSprinting ? firstPersonController.SprintSpeed : firstPersonController.MoveSpeed;
+                referenceSpeed = Mathf.Max(targetSpeed, movementThreshold + 0.01f);
             }
 
             float normalizedSpeed = Mathf.InverseLerp(movementStopThreshold, referenceSpeed, horizontalSpeed);
@@ -170,7 +186,18 @@ namespace StarterAssets
 
             AudioService.Stop(walkingLoopSource, stopFadeDuration);
             walkingLoopSource = null;
+            activeLoopAudioId = AudioId.None;
             stopTimer = 0f;
+        }
+
+        private AudioId ResolveMovementAudioId(bool isSprinting)
+        {
+            if (isSprinting && runningAudioId != AudioId.None)
+            {
+                return runningAudioId;
+            }
+
+            return walkingAudioId;
         }
 
         private void OnDisable()

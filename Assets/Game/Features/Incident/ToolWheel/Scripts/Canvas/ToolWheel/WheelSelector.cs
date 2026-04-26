@@ -16,6 +16,8 @@ public class WheelSelector : MonoBehaviour
     [SerializeField] private CanvasGroup selectionWheelCanvasGroup;
     [SerializeField] private GraphicRaycaster graphicRaycaster;
     [SerializeField] private RectTransform menuItemsParent;
+    [SerializeField] private bool autoAssignSelectionWheelCanvas = true;
+    [SerializeField] private string selectionWheelCanvasName = "CanvasSelectionWheel";
     [SerializeField] private GameObject menuItemPrefab;
     [SerializeField, Range(1, 16)] private int menuItemCount = 4;
     [SerializeField] private Vector2 slotSize = new Vector2(400f, 400f);
@@ -135,6 +137,8 @@ public class WheelSelector : MonoBehaviour
 
     private void ResolveReferences()
     {
+        TryAutoAssignSelectionWheelCanvas();
+
         if (selectionWheelCanvasGroup == null && selectionWheelCanvas != null)
         {
             selectionWheelCanvasGroup = selectionWheelCanvas.GetComponent<CanvasGroup>();
@@ -154,6 +158,90 @@ public class WheelSelector : MonoBehaviour
                 menuItemsParent = pieMenu as RectTransform;
             }
         }
+    }
+
+    private void TryAutoAssignSelectionWheelCanvas()
+    {
+        if (!autoAssignSelectionWheelCanvas || selectionWheelCanvas != null)
+        {
+            return;
+        }
+
+        CanvasGroup[] allCanvasGroups = FindObjectsByType<CanvasGroup>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+        if (allCanvasGroups == null || allCanvasGroups.Length == 0)
+        {
+            return;
+        }
+
+        GameObject sameSceneExactMatch = null;
+        GameObject anySceneExactMatch = null;
+        GameObject sameSceneFallback = null;
+        GameObject anySceneFallback = null;
+
+        for (int i = 0; i < allCanvasGroups.Length; i++)
+        {
+            CanvasGroup canvasGroup = allCanvasGroups[i];
+            if (canvasGroup == null)
+            {
+                continue;
+            }
+
+            GameObject candidate = canvasGroup.gameObject;
+            if (!IsValidWheelCanvasCandidate(candidate))
+            {
+                continue;
+            }
+
+            bool isSameScene = candidate.scene == gameObject.scene;
+            bool isExactNameMatch = string.IsNullOrWhiteSpace(selectionWheelCanvasName) ||
+                candidate.name == selectionWheelCanvasName;
+
+            if (isSameScene && isExactNameMatch)
+            {
+                sameSceneExactMatch = candidate;
+                break;
+            }
+
+            if (!isSameScene && isExactNameMatch && anySceneExactMatch == null)
+            {
+                anySceneExactMatch = candidate;
+                continue;
+            }
+
+            if (isSameScene && sameSceneFallback == null)
+            {
+                sameSceneFallback = candidate;
+                continue;
+            }
+
+            if (!isSameScene && anySceneFallback == null)
+            {
+                anySceneFallback = candidate;
+            }
+        }
+
+        selectionWheelCanvas = sameSceneExactMatch ??
+            anySceneExactMatch ??
+            sameSceneFallback ??
+            anySceneFallback;
+    }
+
+    private static bool IsValidWheelCanvasCandidate(GameObject candidate)
+    {
+        if (candidate == null)
+        {
+            return false;
+        }
+
+        if (candidate.GetComponent<RectTransform>() == null ||
+            candidate.GetComponent<GraphicRaycaster>() == null)
+        {
+            return false;
+        }
+
+        return candidate.transform.Find("PieMenu") != null;
     }
 
     private void RebuildMenuItems()

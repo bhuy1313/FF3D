@@ -37,10 +37,10 @@ RectTransform:
   - {fileID: 5572731651018605787}
   m_Father: {fileID: 8262346576503245774}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 0, y: -0.4149933}
-  m_SizeDelta: {x: 463, y: 0}
+  m_AnchorMin: {x: 0, y: 0.5}
+  m_AnchorMax: {x: 0, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 77.35}
+  m_SizeDelta: {x: 500, y: 0}
   m_Pivot: {x: 0, y: 1}
 --- !u!222 &4054494913174378240
 CanvasRenderer:
@@ -843,7 +843,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 463.02, y: 162.53}
+  m_SizeDelta: {x: 500, y: 155}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &5032538411299890408
 GameObject:
@@ -1344,7 +1344,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_SizeDelta: {x: 500, y: 0}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!222 &3510991166059217772
 CanvasRenderer:
@@ -1422,7 +1422,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3245ec927659c4140ac4f8d17403cc18, type: 3}
   m_Name: Icon
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ContentSizeFitter
-  m_HorizontalFit: 2
+  m_HorizontalFit: 0
   m_VerticalFit: 2
 --- !u!1 &7326411779242431161
 GameObject:
@@ -1458,7 +1458,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 463.02, y: 150}
+  m_SizeDelta: {x: 500, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &7392497228290814579
 GameObject:
@@ -1502,7 +1502,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 312.6, y: -214.4}
-  m_SizeDelta: {x: 463.02, y: 310.5686}
+  m_SizeDelta: {x: 500, y: 305}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2095293782024111532
 MonoBehaviour:
@@ -1524,10 +1524,14 @@ MonoBehaviour:
   progressText: {fileID: 0}
   progressValueText: {fileID: 0}
   objectivesListRoot: {fileID: 6433117932687010100}
+  hubDetailRoot: {fileID: 0}
+  hubTitleRoot: {fileID: 0}
   accentBarImage: {fileID: 0}
   fireObjectiveItemPrefab: {fileID: 828223198733460608, guid: fefb8cbfd3f56344fbb4270c5bad6f48, type: 3}
   rescueObjectiveItemPrefab: {fileID: 5995057946825289723, guid: 3ec747f1e8b582b489fe6f7dbba5c781, type: 3}
   genericObjectiveItemPrefab: {fileID: 0}
+  rebuildLayoutOnChanges: 1
+  layoutRebuildThrottleSeconds: 0.05
   hideWhenMissionMissing: 1
   hideWhenMissionIdle: 0
   showObjectiveScores: 1
@@ -1622,7 +1626,7 @@ MonoBehaviour:
     m_Top: 0
     m_Bottom: 0
   m_ChildAlignment: 0
-  m_Spacing: 0
+  m_Spacing: 1
   m_ChildForceExpandWidth: 1
   m_ChildForceExpandHeight: 1
   m_ChildControlWidth: 0
@@ -2384,6 +2388,10 @@ PrefabInstance:
     - target: {fileID: 828223198733460608, guid: fefb8cbfd3f56344fbb4270c5bad6f48, type: 3}
       propertyPath: m_Name
       value: ObjectiveItem_Fire
+      objectReference: {fileID: 0}
+    - target: {fileID: 828223198733460608, guid: fefb8cbfd3f56344fbb4270c5bad6f48, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2557495006603188164, guid: fefb8cbfd3f56344fbb4270c5bad6f48, type: 3}
       propertyPath: m_AnchorMax.y

@@ -169,7 +169,14 @@ namespace StarterAssets
 
             if (WasCommandActionPressedThisFrame("CommandCancel", cancelCommandKey))
             {
+                bool consumedEscapeForCommand =
+                    isAwaitingCommandSelection ||
+                    commandState.IsAwaitingTarget;
                 CancelPendingCommand();
+                if (consumedEscapeForCommand)
+                {
+                    SubMenuEscapeHost.SuppressEscapeForCurrentFrame();
+                }
                 return;
             }
 

@@ -4,7 +4,10 @@ using UnityEngine.UI;
 [DisallowMultipleComponent]
 public class SubMenuEscapeHost : MonoBehaviour
 {
+    private static int suppressEscapeFrame = -1;
+
     [SerializeField] private SubMenuPanelController subMenuPanelController;
+    [SerializeField] private WheelSelector wheelSelector;
     [SerializeField] private bool closePanelOnStart = true;
     [SerializeField] private GameObject settingPanelPrefab;
     [SerializeField] private GameObject toastPrefab;
@@ -33,6 +36,17 @@ public class SubMenuEscapeHost : MonoBehaviour
     private void Update()
     {
         if (!Input.GetKeyDown(KeyCode.Escape))
+        {
+            return;
+        }
+
+        if (IsEscapeSuppressedForCurrentFrame())
+        {
+            return;
+        }
+
+        ResolveWheelSelector();
+        if (wheelSelector != null && wheelSelector.IsSelectionWheelActive)
         {
             return;
         }
@@ -77,6 +91,16 @@ public class SubMenuEscapeHost : MonoBehaviour
         {
             subMenuPanelController = panel.GetComponent<SubMenuPanelController>();
         }
+    }
+
+    private void ResolveWheelSelector()
+    {
+        if (wheelSelector != null)
+        {
+            return;
+        }
+
+        wheelSelector = FindAnyObjectByType<WheelSelector>(FindObjectsInactive.Include);
     }
 
     private void BindSubMenuActions()
@@ -288,5 +312,15 @@ public class SubMenuEscapeHost : MonoBehaviour
         }
 
         return null;
+    }
+
+    public static void SuppressEscapeForCurrentFrame()
+    {
+        suppressEscapeFrame = Time.frameCount;
+    }
+
+    private static bool IsEscapeSuppressedForCurrentFrame()
+    {
+        return suppressEscapeFrame == Time.frameCount;
     }
 }

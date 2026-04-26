@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6f6b1f97046549cb912e706efde6d069, type: 3}
+  m_Name: CallPhaseFollowUpScoringConfig
+  m_EditorClassIdentifier: 
+  optimalQuestionScore: 2
+  acceptableQuestionScore: 1
+  poorQuestionPenalty: 1
+  followUpMaxScore: 8
+  followUpGoodThreshold: 4
+  followUpMixedThreshold: 1
+  currentLinkedWeight: 100
+  unresolvedLinkedWeight: 50
+  missingRelatedFieldWeight: 20
+  suggestedWhenMissingWeight: 20
+  nonDistractorWeight: 8
+  rememberedQuestionCount: 8
+  repeatPenaltyMinimum: 10
+  repeatPenaltyMaximum: 40
+  repeatPenaltyDistanceStep: 5

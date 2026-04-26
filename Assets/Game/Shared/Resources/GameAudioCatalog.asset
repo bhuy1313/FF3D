@@ -27,24 +27,24 @@ MonoBehaviour:
   - id: 15
     bus: 2
     clips:
-    - {fileID: 8300000, guid: 851a6b4f0da28544cba5434e959b97a3, type: 3}
-    volume: 1
+    - {fileID: 8300000, guid: f1b309f3c763e7d4891ca389d5fc952d, type: 3}
+    volume: 0.25
     pitch: 1
     randomVolume: 0
     randomPitch: 0.04
     spatialBlend: 1
     loop: 0
     outputMixerGroup: {fileID: 0}
-  - id: 13
+  - id: 19
     bus: 2
     clips:
-    - {fileID: 8300000, guid: 75270495159250546bfd940f3d539b03, type: 3}
-    volume: 0.9
+    - {fileID: 8300000, guid: 8a9ae461b19f7d54b8cf922f623898c8, type: 3}
+    volume: 0.25
     pitch: 1
     randomVolume: 0
-    randomPitch: 0.02
+    randomPitch: 0.04
     spatialBlend: 1
-    loop: 1
+    loop: 0
     outputMixerGroup: {fileID: 0}
   - id: 16
     bus: 4
@@ -68,10 +68,21 @@ MonoBehaviour:
     spatialBlend: 1
     loop: 0
     outputMixerGroup: {fileID: 0}
+  - id: 13
+    bus: 2
+    clips:
+    - {fileID: 8300000, guid: 75270495159250546bfd940f3d539b03, type: 3}
+    volume: 0.9
+    pitch: 1
+    randomVolume: 0
+    randomPitch: 0.02
+    spatialBlend: 1
+    loop: 1
+    outputMixerGroup: {fileID: 0}
   - id: 18
     bus: 2
     clips:
-    - {fileID: 8300000, guid: fb91d7c8cc53a4245a996396fcbbbac7, type: 3}
+    - {fileID: 8300000, guid: e466ce64f77b9f745a793a2eac48ba4e, type: 3}
     volume: 1
     pitch: 1
     randomVolume: 0
