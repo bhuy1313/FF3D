@@ -7,6 +7,7 @@ public class PlayerHazardExposure : MonoBehaviour
 {
     private const float SmokeSubmissionGraceSeconds = 0.1f;
     private const int MaxTrackedFireGlareTargets = 4;
+    private static readonly RaycastHit[] FireGlareHitBuffer = new RaycastHit[32];
 
     [Header("Smoke")]
     [SerializeField] private float smokeRiseSpeed = 2.5f;
@@ -21,14 +22,14 @@ public class PlayerHazardExposure : MonoBehaviour
     [SerializeField] private float fireGlareMaxDistance = 16f;
     [SerializeField, Range(0f, 1f)] private float fireMinimumViewDot = 0.05f;
     [SerializeField] private float fireViewportEdgeFade = 0.12f;
+    [SerializeField] private bool requireLineOfSightForFireGlare = true;
     [SerializeField] private LayerMask fireGlareObstacleMask = ~0;
     [SerializeField, Range(1, MaxTrackedFireGlareTargets)] private int simultaneousFireOverlayCount = 2;
 
     [Header("Runtime")]
     [SerializeField, Range(0f, 1f)] private float smokeDensity01;
     [SerializeField] private bool isInSmoke;
-    [SerializeField, Range(0f, 1f)] private float fireGlare01;
-    [SerializeField] private Vector2 fireGlareViewportPosition = new Vector2(0.5f, 0.5f);
+    [SerializeField] private int inSightFireCount;
     [SerializeField, Range(0f, 1f)] private float[] fireGlareBySlot = new float[MaxTrackedFireGlareTargets];
     [SerializeField] private Vector2[] fireGlareViewportPositions = CreateDefaultFireViewportPositions();
 
@@ -37,8 +38,12 @@ public class PlayerHazardExposure : MonoBehaviour
 
     public float SmokeDensity01 => smokeDensity01;
     public bool IsInSmoke => isInSmoke;
-    public float FireGlare01 => fireGlare01;
-    public Vector2 FireGlareViewportPosition => fireGlareViewportPosition;
+    public float FireGlare01 => fireGlareBySlot != null && fireGlareBySlot.Length > 0 ? fireGlareBySlot[0] : 0f;
+    public Vector2 FireGlareViewportPosition =>
+        fireGlareViewportPositions != null && fireGlareViewportPositions.Length > 0
+            ? fireGlareViewportPositions[0]
+            : new Vector2(0.5f, 0.5f);
+    public int InSightFireCount => inSightFireCount;
     public int SimultaneousFireOverlayCount => Mathf.Clamp(simultaneousFireOverlayCount, 1, MaxTrackedFireGlareTargets);
     public Vector3 SmokeExposureSamplePoint => ResolveSmokeExposureSamplePoint();
 
@@ -56,9 +61,7 @@ public class PlayerHazardExposure : MonoBehaviour
         fireViewportEdgeFade = Mathf.Max(0.01f, fireViewportEdgeFade);
         simultaneousFireOverlayCount = Mathf.Clamp(simultaneousFireOverlayCount, 1, MaxTrackedFireGlareTargets);
         smokeDensity01 = Mathf.Clamp01(smokeDensity01);
-        fireGlare01 = Mathf.Clamp01(fireGlare01);
-        fireGlareViewportPosition.x = Mathf.Clamp01(fireGlareViewportPosition.x);
-        fireGlareViewportPosition.y = Mathf.Clamp01(fireGlareViewportPosition.y);
+        inSightFireCount = Mathf.Max(0, inSightFireCount);
 
         for (int i = 0; i < MaxTrackedFireGlareTargets; i++)
         {
@@ -169,6 +172,7 @@ public class PlayerHazardExposure : MonoBehaviour
         Vector2[] targetPositions = CreateDefaultFireViewportPositions();
         float[] targetDistances = new float[MaxTrackedFireGlareTargets];
         int trackedSlotCount = SimultaneousFireOverlayCount;
+        int visibleFireCount = 0;
 
         for (int i = 0; i < targetDistances.Length; i++)
         {
@@ -190,6 +194,7 @@ public class PlayerHazardExposure : MonoBehaviour
                     continue;
                 }
 
+                visibleFireCount++;
                 InsertFireCandidate(
                     trackedSlotCount,
                     candidateDistance,
@@ -200,6 +205,8 @@ public class PlayerHazardExposure : MonoBehaviour
                     targetPositions);
             }
         }
+
+        inSightFireCount = visibleFireCount;
 
         for (int i = 0; i < MaxTrackedFireGlareTargets; i++)
         {
@@ -219,9 +226,6 @@ public class PlayerHazardExposure : MonoBehaviour
                 fireGlareViewportPositions[i] = new Vector2(0.5f, 0.5f);
             }
         }
-
-        fireGlare01 = fireGlareBySlot[0];
-        fireGlareViewportPosition = fireGlareViewportPositions[0];
     }
 
     private bool TryEvaluateFireTarget(
@@ -272,9 +276,27 @@ public class PlayerHazardExposure : MonoBehaviour
             return false;
         }
 
-        if (Physics.Linecast(origin, fireWorldPosition, out RaycastHit hit, fireGlareObstacleMask, QueryTriggerInteraction.Ignore))
+        if (requireLineOfSightForFireGlare)
         {
-            return false;
+            float visibilityTolerance = Mathf.Max(0.2f, fireTarget.GetWorldRadius() * 1.25f);
+            int hitCount = Physics.RaycastNonAlloc(
+                origin,
+                direction,
+                FireGlareHitBuffer,
+                distance,
+                fireGlareObstacleMask,
+                QueryTriggerInteraction.Ignore);
+
+            for (int i = 0; i < hitCount; i++)
+            {
+                RaycastHit hit = FireGlareHitBuffer[i];
+                if (ShouldIgnoreFireGlareOccluder(hit, fireTarget, distance, visibilityTolerance))
+                {
+                    continue;
+                }
+
+                return false;
+            }
         }
 
         float distanceFactor = Mathf.Clamp01(1f - distance / fireGlareMaxDistance);
@@ -396,5 +418,49 @@ public class PlayerHazardExposure : MonoBehaviour
         }
 
         return Mathf.Clamp01(Mathf.Max(0.5f, fireTarget.GetWorldRadius()));
+    }
+
+    private bool ShouldIgnoreFireGlareOccluder(
+        RaycastHit hit,
+        IFireTarget fireTarget,
+        float targetDistance,
+        float visibilityTolerance)
+    {
+        if (hit.collider == null)
+        {
+            return true;
+        }
+
+        if (hit.distance >= targetDistance - visibilityTolerance)
+        {
+            return true;
+        }
+
+        Transform hitTransform = hit.collider.transform;
+        if (hitTransform == null)
+        {
+            return false;
+        }
+
+        if (hitTransform.IsChildOf(transform))
+        {
+            return true;
+        }
+
+        if (targetCamera != null && hitTransform.IsChildOf(targetCamera.transform))
+        {
+            return true;
+        }
+
+        if (fireTarget is Component fireTargetComponent)
+        {
+            Transform targetTransform = fireTargetComponent.transform;
+            if (targetTransform != null && hitTransform.IsChildOf(targetTransform))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

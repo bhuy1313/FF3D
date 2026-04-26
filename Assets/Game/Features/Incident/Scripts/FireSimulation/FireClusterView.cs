@@ -10,6 +10,8 @@ public sealed class FireClusterView : MonoBehaviour
     [SerializeField] private float maxVisualRadius = 2.5f;
     [SerializeField] private float maxLightIntensity = 2f;
     [SerializeField] private Vector2 flameScaleRange = new Vector2(0.7f, 1.35f);
+    [SerializeField] private Vector3 memberVisualOffset = Vector3.zero;
+    [SerializeField] private Vector3 clusterLightLocalOffset = Vector3.zero;
     [Header("Cluster Visual Prefabs")]
     [SerializeField] private GameObject ordinaryFireVisualPrefab;
     [SerializeField] private GameObject electricalFireVisualPrefab;
@@ -92,15 +94,20 @@ public sealed class FireClusterView : MonoBehaviour
         EnsureFallbackVisual();
         EnsureFlameEmitterCapacity(snapshot.Members.Count);
 
+        transform.position = snapshot.Center;
+        transform.rotation = ResolveVisualRotation(snapshot.AverageNormal);
+        transform.localScale = Vector3.one;
+
         if (visualRoot != null)
         {
-            visualRoot.position = snapshot.Center;
-            visualRoot.rotation = ResolveVisualRotation(snapshot.AverageNormal);
+            visualRoot.localPosition = Vector3.zero;
+            visualRoot.localRotation = Quaternion.identity;
             visualRoot.localScale = Vector3.one;
         }
 
         if (clusterLight != null)
         {
+            clusterLight.transform.localPosition = clusterLightLocalOffset;
             clusterLight.enabled = snapshot.Intensity > 0.01f;
             clusterLight.intensity = snapshot.Intensity * maxLightIntensity;
         }
@@ -121,7 +128,7 @@ public sealed class FireClusterView : MonoBehaviour
             SyncEmitterVisual(emitter, member.HazardType);
 
             emitter.Root.SetParent(root, false);
-            emitter.Root.position = member.Position;
+            emitter.Root.position = member.Position + memberVisualOffset;
             emitter.Root.rotation = ResolveVisualRotation(member.SurfaceNormal);
             emitter.Root.localScale = Vector3.one * Mathf.Lerp(
                 flameScaleRange.x,

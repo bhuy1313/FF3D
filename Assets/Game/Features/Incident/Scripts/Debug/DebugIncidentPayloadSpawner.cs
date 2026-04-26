@@ -213,6 +213,25 @@ public class DebugIncidentPayloadSpawner : MonoBehaviour
 
     private string ResolveHazardType()
     {
+        if (debugHazardPreset == DebugHazardPreset.Electrical &&
+            !string.IsNullOrWhiteSpace(legacyDebugHazardType))
+        {
+            if (string.Equals(legacyDebugHazardType, "Gas", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Gas";
+            }
+
+            if (string.Equals(legacyDebugHazardType, "FlammableLiquid", StringComparison.OrdinalIgnoreCase))
+            {
+                return "FlammableLiquid";
+            }
+
+            if (string.Equals(legacyDebugHazardType, "OrdinaryCombustibles", StringComparison.OrdinalIgnoreCase))
+            {
+                return "OrdinaryCombustibles";
+            }
+        }
+
         return debugHazardPreset switch
         {
             DebugHazardPreset.OrdinaryCombustibles => "OrdinaryCombustibles",
@@ -234,6 +253,25 @@ public class DebugIncidentPayloadSpawner : MonoBehaviour
 
     private string ResolveSeverityBand()
     {
+        if (debugSeverityPreset == DebugSeverityPreset.Medium &&
+            !string.IsNullOrWhiteSpace(legacyDebugSeverityBand))
+        {
+            if (string.Equals(legacyDebugSeverityBand, "Low", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Low";
+            }
+
+            if (string.Equals(legacyDebugSeverityBand, "High", StringComparison.OrdinalIgnoreCase))
+            {
+                return "High";
+            }
+
+            if (string.Equals(legacyDebugSeverityBand, "Critical", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Critical";
+            }
+        }
+
         return debugSeverityPreset switch
         {
             DebugSeverityPreset.Low => "Low",
@@ -245,6 +283,12 @@ public class DebugIncidentPayloadSpawner : MonoBehaviour
 
     private float ResolveInitialFireIntensity()
     {
+        if (debugIntensityPreset == DebugIntensityPreset.Medium &&
+            legacyDebugInitialFireIntensity > 0f)
+        {
+            return Mathf.Clamp(legacyDebugInitialFireIntensity, 0.1f, 1f);
+        }
+
         return debugIntensityPreset switch
         {
             DebugIntensityPreset.Low => 0.35f,
@@ -256,6 +300,12 @@ public class DebugIncidentPayloadSpawner : MonoBehaviour
 
     private int ResolveInitialFireCount()
     {
+        if (debugFireCountPreset == DebugFireCountPreset.MediumCluster &&
+            legacyDebugInitialFireCount > 0)
+        {
+            return Mathf.Clamp(legacyDebugInitialFireCount, 1, 5);
+        }
+
         return debugFireCountPreset switch
         {
             DebugFireCountPreset.Single => 1,

@@ -9,6 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7935787890807124668}
+  - component: {fileID: 8596336254356662735}
   m_Layer: 0
   m_Name: 1.01
   m_TagString: Untagged
@@ -26,14 +27,42 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
+  m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 5879642968923773693}
   - {fileID: 4515429126581942567}
   - {fileID: 2674597815127621238}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8596336254356662735
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2159288919570338537}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2e54f0b3903d42d39dbed8f2897e9197, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Window
+  singleSashTransform: {fileID: 0}
+  openLocalEulerOffset: {x: 0, y: 0, z: -65}
+  leftSashTransform: {fileID: 4515429126581942567}
+  leftOpenLocalEulerOffset: {x: 0, y: 0, z: 65}
+  rightSashTransform: {fileID: 5879642968923773693}
+  rightOpenLocalEulerOffset: {x: 0, y: 0, z: -65}
+  animationSpeed: 6
+  startsOpen: 0
+  startsBroken: 0
+  allowToggle: 1
+  breakOnInteract: 0
+  smokeVentilationReliefWhenOpen: 0.28
+  smokeVentilationReliefWhenBroken: 0.48
+  fireDraftRiskWhenOpen: 0.08
+  fireDraftRiskWhenBroken: 0.2
+  breakDamageThreshold: 0.1
 --- !u!1 &2529068132785715841
 GameObject:
   m_ObjectHideFlags: 0
@@ -45,6 +74,7 @@ GameObject:
   - component: {fileID: 5879642968923773693}
   - component: {fileID: 275256620783152505}
   - component: {fileID: 4275887551440740471}
+  - component: {fileID: 3684208334517686747}
   m_Layer: 0
   m_Name: casement_panelL
   m_TagString: Untagged
@@ -126,6 +156,28 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!64 &3684208334517686747
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2529068132785715841}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 1
+  m_CookingOptions: 30
+  m_Mesh: {fileID: -4254460416821270464, guid: 4714c1b0c6421724fb84de55b2841dea, type: 3}
 --- !u!1 &5169291294110306272
 GameObject:
   m_ObjectHideFlags: 0
@@ -137,6 +189,7 @@ GameObject:
   - component: {fileID: 4515429126581942567}
   - component: {fileID: 5031816267491099817}
   - component: {fileID: 2316186390941560098}
+  - component: {fileID: 1719022696925686427}
   m_Layer: 0
   m_Name: casement_panelR
   m_TagString: Untagged
@@ -218,6 +271,28 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!64 &1719022696925686427
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5169291294110306272}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 1
+  m_CookingOptions: 30
+  m_Mesh: {fileID: -6038672555466937350, guid: 4714c1b0c6421724fb84de55b2841dea, type: 3}
 --- !u!1 &6399075560873877869
 GameObject:
   m_ObjectHideFlags: 0
