@@ -45,7 +45,9 @@ public partial class Setting_UIScript : MonoBehaviour
 
     [Header("Graphics Settings")]
     [SerializeField] private TMP_Dropdown resolutionDropdown;
+    [SerializeField] private TMP_Dropdown antiAliasingDropdown;
     [SerializeField] private Toggle vsyncToggle;
+    [SerializeField] private ThreeStepSlider shadowQualitySlider;
     [SerializeField] private Toggle fpsToggle;
     [SerializeField] private Slider fovSlider;
     [SerializeField] private SliderPercentText fovSliderValueText;
@@ -118,6 +120,7 @@ public partial class Setting_UIScript : MonoBehaviour
     private readonly Dictionary<InputField, string> inputFieldDefaults = new Dictionary<InputField, string>();
     private readonly Dictionary<TMP_InputField, string> tmpInputFieldDefaults = new Dictionary<TMP_InputField, string>();
     private readonly List<DisplaySettingsService.ResolutionOption> supportedResolutions = new List<DisplaySettingsService.ResolutionOption>();
+    private readonly List<DisplaySettingsService.AntiAliasingOption> antiAliasingOptions = new List<DisplaySettingsService.AntiAliasingOption>();
     private Coroutine saveFinalizeCoroutine;
     private bool isFinalizingSave;
     private void Awake()
@@ -130,6 +133,7 @@ public partial class Setting_UIScript : MonoBehaviour
         ResolveRuntimeReferences();
         InitializeControlsSettings();
         ConfigureResolutionDropdown(useSavedSelection: false);
+        ConfigureAntiAliasingDropdown();
         ConfigureFovSlider();
         ConfigureMouseSensitivitySlider();
         ConfigureAudioSliders();
@@ -164,7 +168,9 @@ public partial class Setting_UIScript : MonoBehaviour
         if (btnRestoreDefault != null) btnRestoreDefault.onClick.AddListener(OnRestoreDefaultsClicked);
         if (btnSave != null) btnSave.onClick.AddListener(OnSaveButtonClicked);
         if (btnExit != null) btnExit.onClick.AddListener(OnExitButtonClicked);
+        if (antiAliasingDropdown != null) antiAliasingDropdown.onValueChanged.AddListener(OnAntiAliasingDropdownValueChanged);
         if (fpsToggle != null) fpsToggle.onValueChanged.AddListener(OnFpsToggleValueChanged);
+        if (shadowQualitySlider != null) shadowQualitySlider.AddStepChangedListener(OnShadowQualityStepChanged);
         if (fovSlider != null) fovSlider.onValueChanged.AddListener(OnFovSliderValueChanged);
         if (mouseSensitivitySlider != null) mouseSensitivitySlider.onValueChanged.AddListener(OnMouseSensitivitySliderValueChanged);
         RegisterAudioSliderListener(masterVolumeSlider, AudioBus.Master);
@@ -206,7 +212,9 @@ public partial class Setting_UIScript : MonoBehaviour
         else if (cgCont != null) SelectOnly(cgCont);
 
         LoadSavedResolutionSelection();
+        LoadSavedAntiAliasingSelection();
         LoadSavedVSyncSelection();
+        LoadSavedShadowQualitySelection();
         LoadSavedFpsSelection();
         LoadSavedFovSelection();
         LoadSavedMouseSensitivitySelection();
@@ -467,6 +475,18 @@ public partial class Setting_UIScript : MonoBehaviour
             resolutionDropdown = FindResolutionDropdown();
         }
 
+        antiAliasingDropdown ??= FindTmpDropdownInNamedPanelChild(panelGrap, "DropdownAniDropdownAntiAliasing");
+        antiAliasingDropdown ??= FindTmpDropdownByObjectName("DropdownAniDropdownAntiAliasing");
+        antiAliasingDropdown ??= FindTmpDropdownInNamedPanelChild(panelGrap, "DropdownAntiAliasing");
+        antiAliasingDropdown ??= FindTmpDropdownByObjectName("DropdownAntiAliasing");
+        antiAliasingDropdown ??= FindTmpDropdownInNamedPanelChild(panelGrap, "AntiAliasing");
+        antiAliasingDropdown ??= FindTmpDropdownByKeyword(panelGrap, "anti");
+
+        if (resolutionDropdown != null && antiAliasingDropdown != null && ReferenceEquals(resolutionDropdown, antiAliasingDropdown))
+        {
+            resolutionDropdown = FindResolutionDropdownExcluding(antiAliasingDropdown);
+        }
+
         if (vsyncToggle == null)
         {
             vsyncToggle = FindToggleByName("ToggVsync");
@@ -476,6 +496,9 @@ public partial class Setting_UIScript : MonoBehaviour
         {
             fpsToggle = FindToggleByName("ToggFPS");
         }
+
+        shadowQualitySlider ??= FindThreeStepSliderInNamedPanelChild(panelGrap, "ShadowSlider");
+        shadowQualitySlider ??= FindThreeStepSliderByObjectName("ShadowSlider");
 
         fovSlider = FindSliderInNamedPanelChild(panelGrap, "FOV");
         fovSliderValueText = FindSliderPercentTextInNamedPanelChild(panelGrap, "FOV");
@@ -531,6 +554,11 @@ public partial class Setting_UIScript : MonoBehaviour
             Debug.LogWarning("Setting_UIScript: Resolution dropdown could not be resolved from the graphics panel.", this);
         }
 
+        if (panelGrap != null && antiAliasingDropdown == null)
+        {
+            Debug.LogWarning("Setting_UIScript: Anti-aliasing dropdown could not be resolved from the graphics panel.", this);
+        }
+
         if (panelGrap != null && vsyncToggle == null)
         {
             Debug.LogWarning("Setting_UIScript: VSync toggle could not be resolved from the graphics panel.", this);
@@ -539,6 +567,11 @@ public partial class Setting_UIScript : MonoBehaviour
         if (fpsToggle == null)
         {
             Debug.LogWarning("Setting_UIScript: FPS toggle could not be resolved from the settings UI.", this);
+        }
+
+        if (panelGrap != null && shadowQualitySlider == null)
+        {
+            Debug.LogWarning("Setting_UIScript: Shadow quality slider could not be resolved from the graphics panel.", this);
         }
 
         if (panelGrap != null && fovSlider == null)
@@ -688,6 +721,101 @@ public partial class Setting_UIScript : MonoBehaviour
         }
 
         return panelGen.GetComponentInChildren<ThreeStepSlider>(true);
+    }
+
+    private ThreeStepSlider FindThreeStepSliderInNamedPanelChild(GameObject panelRoot, string childName)
+    {
+        Transform namedChild = FindNamedPanelChild(panelRoot, childName);
+        return namedChild != null ? namedChild.GetComponentInChildren<ThreeStepSlider>(true) : null;
+    }
+
+    private ThreeStepSlider FindThreeStepSliderByObjectName(string objectName)
+    {
+        if (string.IsNullOrWhiteSpace(objectName))
+        {
+            return null;
+        }
+
+        ThreeStepSlider[] sliders = GetComponentsInChildren<ThreeStepSlider>(true);
+        foreach (ThreeStepSlider candidate in sliders)
+        {
+            if (candidate != null && string.Equals(candidate.gameObject.name, objectName, StringComparison.OrdinalIgnoreCase))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private TMP_Dropdown FindResolutionDropdownExcluding(TMP_Dropdown excludedDropdown)
+    {
+        if (panelGrap == null)
+        {
+            return null;
+        }
+
+        TMP_Dropdown[] dropdowns = panelGrap.GetComponentsInChildren<TMP_Dropdown>(true);
+        foreach (TMP_Dropdown dropdown in dropdowns)
+        {
+            if (dropdown != null && !ReferenceEquals(dropdown, excludedDropdown))
+            {
+                return dropdown;
+            }
+        }
+
+        return null;
+    }
+
+    private TMP_Dropdown FindTmpDropdownInNamedPanelChild(GameObject panelRoot, string childName)
+    {
+        Transform namedChild = FindNamedPanelChild(panelRoot, childName);
+        return namedChild != null ? namedChild.GetComponentInChildren<TMP_Dropdown>(true) : null;
+    }
+
+    private TMP_Dropdown FindTmpDropdownByObjectName(string objectName)
+    {
+        if (string.IsNullOrWhiteSpace(objectName))
+        {
+            return null;
+        }
+
+        TMP_Dropdown[] dropdowns = GetComponentsInChildren<TMP_Dropdown>(true);
+        foreach (TMP_Dropdown candidate in dropdowns)
+        {
+            if (candidate != null && string.Equals(candidate.gameObject.name, objectName, StringComparison.OrdinalIgnoreCase))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private TMP_Dropdown FindTmpDropdownByKeyword(GameObject panelRoot, string keyword)
+    {
+        if (panelRoot == null || string.IsNullOrWhiteSpace(keyword))
+        {
+            return null;
+        }
+
+        TMP_Dropdown[] dropdowns = panelRoot.GetComponentsInChildren<TMP_Dropdown>(true);
+        for (int index = 0; index < dropdowns.Length; index++)
+        {
+            TMP_Dropdown dropdown = dropdowns[index];
+            if (dropdown == null)
+            {
+                continue;
+            }
+
+            string objectName = dropdown.gameObject.name;
+            if (objectName != null && objectName.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return dropdown;
+            }
+        }
+
+        return null;
     }
 
     private Toggle FindFirstToggleInNamedPanelChild(string childName)
@@ -948,10 +1076,12 @@ public partial class Setting_UIScript : MonoBehaviour
 
     private bool IsGraphicsPanelCandidate(GameObject candidate)
     {
-        return ContainsNamedTransform(candidate.transform, "Toggle_Graphic_Low") ||
-               ContainsNamedTransform(candidate.transform, "Toggle_Graphic_Medium") ||
-               ContainsNamedTransform(candidate.transform, "Toggle_Graphic_High") ||
-               ContainsNamedTransform(candidate.transform, "Toggle_Graphic_Ultra");
+        return ContainsNamedTransform(candidate.transform, "ShadowSlider") ||
+               ContainsNamedTransform(candidate.transform, "DropdownAniDropdownAntiAliasing") ||
+               ContainsNamedTransform(candidate.transform, "DropdownAntiAliasing") ||
+               ContainsNamedTransform(candidate.transform, "AntiAliasing") ||
+               ContainsNamedTransform(candidate.transform, "FOV") ||
+               ContainsNamedTransform(candidate.transform, "ToggVsync");
     }
 
     private bool IsAudioPanelCandidate(GameObject candidate)

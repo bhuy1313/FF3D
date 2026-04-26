@@ -15,7 +15,9 @@ public partial class Setting_UIScript
         Debug.Log($"Setting_UIScript[{GetInstanceLabel()}]: SaveChanges start.", this);
 
         SaveResolutionSelection();
+        SaveAntiAliasingSelection();
         SaveVSyncSelection();
+        SaveShadowQualitySelection();
         SaveFpsSelection();
         SaveFovSelection();
         SaveMouseSensitivitySelection();
@@ -78,6 +80,39 @@ public partial class Setting_UIScript
         SetResolutionDropdownValue(selectedIndex);
     }
 
+    private void ConfigureAntiAliasingDropdown()
+    {
+        antiAliasingOptions.Clear();
+
+        if (antiAliasingDropdown == null)
+        {
+            return;
+        }
+
+        antiAliasingOptions.AddRange(DisplaySettingsService.GetAvailableAntiAliasingOptions());
+        if (antiAliasingOptions.Count == 0)
+        {
+            return;
+        }
+
+        List<TMP_Dropdown.OptionData> options = new List<TMP_Dropdown.OptionData>(antiAliasingOptions.Count);
+        for (int index = 0; index < antiAliasingOptions.Count; index++)
+        {
+            options.Add(new TMP_Dropdown.OptionData(antiAliasingOptions[index].Label));
+        }
+
+        antiAliasingDropdown.ClearOptions();
+        antiAliasingDropdown.AddOptions(options);
+
+        int selectedIndex = GetAntiAliasingOptionIndex(DisplaySettingsService.GetCurrentAntiAliasingMode());
+        if (DisplaySettingsService.TryGetSavedAntiAliasingMode(out DisplaySettingsService.AntiAliasingMode savedMode))
+        {
+            selectedIndex = GetAntiAliasingOptionIndex(savedMode);
+        }
+
+        SetAntiAliasingDropdownValue(selectedIndex);
+    }
+
     private void LoadSavedResolutionSelection()
     {
         if (resolutionDropdown == null || supportedResolutions.Count == 0)
@@ -118,6 +153,39 @@ public partial class Setting_UIScript
         }
     }
 
+    private void LoadSavedAntiAliasingSelection()
+    {
+        if (antiAliasingDropdown == null || antiAliasingOptions.Count == 0)
+        {
+            return;
+        }
+
+        DisplaySettingsService.AntiAliasingMode mode = DisplaySettingsService.GetCurrentAntiAliasingMode();
+        DisplaySettingsService.TryGetSavedAntiAliasingMode(out mode);
+        SetAntiAliasingDropdownValue(GetAntiAliasingOptionIndex(mode));
+        DisplaySettingsService.ApplyAntiAliasingMode(mode);
+    }
+
+    private void SaveAntiAliasingSelection()
+    {
+        if (antiAliasingDropdown == null || antiAliasingOptions.Count == 0)
+        {
+            return;
+        }
+
+        DisplaySettingsService.AntiAliasingMode selectedMode = GetSelectedAntiAliasingMode();
+        bool hasSavedValue = DisplaySettingsService.TryGetSavedAntiAliasingMode(out DisplaySettingsService.AntiAliasingMode savedMode);
+        if (!hasSavedValue || savedMode != selectedMode)
+        {
+            DisplaySettingsService.SaveAntiAliasingMode(selectedMode);
+        }
+
+        if (DisplaySettingsService.GetCurrentAntiAliasingMode() != selectedMode)
+        {
+            DisplaySettingsService.ApplyAntiAliasingMode(selectedMode);
+        }
+    }
+
     private void LoadSavedVSyncSelection()
     {
         if (vsyncToggle == null)
@@ -146,6 +214,39 @@ public partial class Setting_UIScript
         if (DisplaySettingsService.GetCurrentVSyncEnabled() != vsyncToggle.isOn)
         {
             DisplaySettingsService.ApplyVSync(vsyncToggle.isOn);
+        }
+    }
+
+    private void LoadSavedShadowQualitySelection()
+    {
+        if (shadowQualitySlider == null)
+        {
+            return;
+        }
+
+        DisplaySettingsService.ShadowQualityLevel level = DisplaySettingsService.GetCurrentShadowQuality();
+        DisplaySettingsService.TryGetSavedShadowQuality(out level);
+        shadowQualitySlider.SetStep(ShadowQualityToStep(level), false);
+        DisplaySettingsService.ApplyShadowQuality(level);
+    }
+
+    private void SaveShadowQualitySelection()
+    {
+        if (shadowQualitySlider == null)
+        {
+            return;
+        }
+
+        DisplaySettingsService.ShadowQualityLevel selectedLevel = StepToShadowQuality(shadowQualitySlider.GetCurrentStep());
+        bool hasSavedValue = DisplaySettingsService.TryGetSavedShadowQuality(out DisplaySettingsService.ShadowQualityLevel savedLevel);
+        if (!hasSavedValue || savedLevel != selectedLevel)
+        {
+            DisplaySettingsService.SaveShadowQuality(selectedLevel);
+        }
+
+        if (DisplaySettingsService.GetCurrentShadowQuality() != selectedLevel)
+        {
+            DisplaySettingsService.ApplyShadowQuality(selectedLevel);
         }
     }
 
@@ -668,6 +769,17 @@ public partial class Setting_UIScript
         ApplyFpsTogglePreview();
     }
 
+    private void OnAntiAliasingDropdownValueChanged(int _)
+    {
+        ApplyAntiAliasingPreview();
+    }
+
+    private void OnShadowQualityStepChanged(int _)
+    {
+        ApplyShadowQualityPreview();
+        MarkDirty();
+    }
+
     private void OnFovSliderValueChanged(float _)
     {
         ApplyFovSliderPreview();
@@ -696,6 +808,27 @@ public partial class Setting_UIScript
         }
 
         FPSOverlayRuntimeController.SetOverlayVisible(fpsToggle.isOn);
+    }
+
+    private void ApplyAntiAliasingPreview()
+    {
+        if (antiAliasingDropdown == null || antiAliasingOptions.Count == 0)
+        {
+            return;
+        }
+
+        DisplaySettingsService.ApplyAntiAliasingMode(GetSelectedAntiAliasingMode());
+    }
+
+    private void ApplyShadowQualityPreview()
+    {
+        if (shadowQualitySlider == null)
+        {
+            return;
+        }
+
+        DisplaySettingsService.ShadowQualityLevel selectedLevel = StepToShadowQuality(shadowQualitySlider.GetCurrentStep());
+        DisplaySettingsService.ApplyShadowQuality(selectedLevel);
     }
 
     private void ApplyFovSliderPreview()
@@ -772,6 +905,18 @@ public partial class Setting_UIScript
         resolutionDropdown.RefreshShownValue();
     }
 
+    private void SetAntiAliasingDropdownValue(int index)
+    {
+        if (antiAliasingDropdown == null || antiAliasingOptions.Count == 0)
+        {
+            return;
+        }
+
+        int clampedIndex = Mathf.Clamp(index, 0, antiAliasingOptions.Count - 1);
+        antiAliasingDropdown.SetValueWithoutNotify(clampedIndex);
+        antiAliasingDropdown.RefreshShownValue();
+    }
+
     private void RefreshMinimapTypeDropdownOptions()
     {
         if (minimapTypeDropdown == null)
@@ -812,5 +957,54 @@ public partial class Setting_UIScript
         }
 
         return MinimapDisplaySettings.ClampType(minimapTypeDropdown.value);
+    }
+
+    private DisplaySettingsService.AntiAliasingMode GetSelectedAntiAliasingMode()
+    {
+        if (antiAliasingDropdown == null || antiAliasingOptions.Count == 0)
+        {
+            return DisplaySettingsService.AntiAliasingMode.None;
+        }
+
+        int index = Mathf.Clamp(antiAliasingDropdown.value, 0, antiAliasingOptions.Count - 1);
+        return antiAliasingOptions[index].Mode;
+    }
+
+    private int GetAntiAliasingOptionIndex(DisplaySettingsService.AntiAliasingMode mode)
+    {
+        for (int index = 0; index < antiAliasingOptions.Count; index++)
+        {
+            if (antiAliasingOptions[index].Mode == mode)
+            {
+                return index;
+            }
+        }
+
+        return 0;
+    }
+
+    private static int ShadowQualityToStep(DisplaySettingsService.ShadowQualityLevel level)
+    {
+        return level switch
+        {
+            DisplaySettingsService.ShadowQualityLevel.Low => 0,
+            DisplaySettingsService.ShadowQualityLevel.Medium => 1,
+            _ => 2
+        };
+    }
+
+    private static DisplaySettingsService.ShadowQualityLevel StepToShadowQuality(int step)
+    {
+        if (step <= 0)
+        {
+            return DisplaySettingsService.ShadowQualityLevel.Low;
+        }
+
+        if (step == 1)
+        {
+            return DisplaySettingsService.ShadowQualityLevel.Medium;
+        }
+
+        return DisplaySettingsService.ShadowQualityLevel.High;
     }
 }

@@ -1,9 +1,25 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 
 public static class DisplaySettingsService
 {
+    public enum AntiAliasingMode
+    {
+        None = 0,
+        FXAA = 1,
+        SMAA = 2,
+        TAA = 3
+    }
+
+    public enum ShadowQualityLevel
+    {
+        Low = 0,
+        Medium = 1,
+        High = 2
+    }
+
     public readonly struct ResolutionOption
     {
         public ResolutionOption(int width, int height, string label)
@@ -18,17 +34,39 @@ public static class DisplaySettingsService
         public string Label { get; }
     }
 
+    public readonly struct AntiAliasingOption
+    {
+        public AntiAliasingOption(AntiAliasingMode mode, string label)
+        {
+            Mode = mode;
+            Label = label;
+        }
+
+        public AntiAliasingMode Mode { get; }
+        public string Label { get; }
+    }
+
     public const string ResolutionWidthKey = "settings.graphics.resolution.width";
     public const string ResolutionHeightKey = "settings.graphics.resolution.height";
     public const string FullScreenModeKey = "settings.graphics.fullscreenMode";
     public const string VSyncEnabledKey = "settings.graphics.vsync";
+    public const string ShadowQualityKey = "settings.graphics.shadowQuality";
+    public const string AntiAliasingModeKey = "settings.graphics.antiAliasingMode";
     public const string ShowFpsOverlayKey = "settings.graphics.showFps";
 
     private static readonly ResolutionOption[] FallbackResolutions =
     {
-        new ResolutionOption(3840, 2160, "3840 x 2160 (4K)"),
-        new ResolutionOption(1920, 1080, "1920 x 1080 (FHD)"),
-        new ResolutionOption(1280, 720, "1280 x 720 (HD)")
+        new ResolutionOption(3840, 2160, "3840 x 2160"),
+        new ResolutionOption(1920, 1080, "1920 x 1080"),
+        new ResolutionOption(1280, 720, "1280 x 720")
+    };
+
+    private static readonly AntiAliasingOption[] AntiAliasingOptions =
+    {
+        new AntiAliasingOption(AntiAliasingMode.None, "OFF"),
+        new AntiAliasingOption(AntiAliasingMode.FXAA, "FXAA"),
+        new AntiAliasingOption(AntiAliasingMode.SMAA, "SMAA"),
+        new AntiAliasingOption(AntiAliasingMode.TAA, "TAA")
     };
 
     public static List<ResolutionOption> GetSupportedResolutions()
@@ -55,6 +93,11 @@ public static class DisplaySettingsService
 
         options.Sort(CompareResolutionOptions);
         return options;
+    }
+
+    public static IReadOnlyList<AntiAliasingOption> GetAvailableAntiAliasingOptions()
+    {
+        return AntiAliasingOptions;
     }
 
     public static int GetRecommendedIndex(IReadOnlyList<ResolutionOption> options)
@@ -168,6 +211,165 @@ public static class DisplaySettingsService
         return QualitySettings.vSyncCount > 0;
     }
 
+    public static AntiAliasingMode GetCurrentAntiAliasingMode()
+    {
+        Camera[] cameras = UnityEngine.Object.FindObjectsByType<Camera>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        for (int index = 0; index < cameras.Length; index++)
+        {
+            Camera camera = cameras[index];
+            if (camera == null || !camera.TryGetComponent(out UniversalAdditionalCameraData cameraData))
+            {
+                continue;
+            }
+
+            return FromUrpAntiAliasing(cameraData.antialiasing);
+        }
+
+        return AntiAliasingMode.None;
+    }
+
+    public static bool TryGetSavedAntiAliasingMode(out AntiAliasingMode mode)
+    {
+        mode = GetCurrentAntiAliasingMode();
+        if (!PlayerPrefs.HasKey(AntiAliasingModeKey))
+        {
+            return false;
+        }
+
+        int rawValue = PlayerPrefs.GetInt(AntiAliasingModeKey, (int)mode);
+        if (rawValue < (int)AntiAliasingMode.None || rawValue > (int)AntiAliasingMode.TAA)
+        {
+            mode = AntiAliasingMode.None;
+            return false;
+        }
+
+        mode = (AntiAliasingMode)rawValue;
+        return true;
+    }
+
+    public static void SaveAntiAliasingMode(AntiAliasingMode mode)
+    {
+        PlayerPrefs.SetInt(AntiAliasingModeKey, (int)mode);
+    }
+
+    public static void ApplyAntiAliasingMode(AntiAliasingMode mode)
+    {
+        AntialiasingMode urpMode = ToUrpAntiAliasing(mode);
+        Camera[] cameras = UnityEngine.Object.FindObjectsByType<Camera>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        bool applied = false;
+
+        for (int index = 0; index < cameras.Length; index++)
+        {
+            Camera camera = cameras[index];
+            if (camera == null || !camera.TryGetComponent(out UniversalAdditionalCameraData cameraData))
+            {
+                continue;
+            }
+
+            cameraData.antialiasing = urpMode;
+            if (mode != AntiAliasingMode.None)
+            {
+                cameraData.renderPostProcessing = true;
+            }
+
+            applied = true;
+        }
+
+        if (!applied)
+        {
+            Debug.LogWarning("DisplaySettingsService: No URP camera data found to apply anti-aliasing.");
+        }
+    }
+
+    public static bool ApplySavedAntiAliasingMode()
+    {
+        if (!TryGetSavedAntiAliasingMode(out AntiAliasingMode mode))
+        {
+            return false;
+        }
+
+        ApplyAntiAliasingMode(mode);
+        return true;
+    }
+
+    public static void ApplySavedAntiAliasingModeForCurrentScene()
+    {
+        if (TryGetSavedAntiAliasingMode(out AntiAliasingMode mode))
+        {
+            ApplyAntiAliasingMode(mode);
+        }
+    }
+
+    public static ShadowQualityLevel GetCurrentShadowQuality()
+    {
+        LightShadows currentLightShadows = GetCurrentDirectionalLightShadows();
+        return currentLightShadows switch
+        {
+            LightShadows.None => ShadowQualityLevel.Low,
+            LightShadows.Hard => ShadowQualityLevel.Medium,
+            _ => ShadowQualityLevel.High
+        };
+    }
+
+    public static bool TryGetSavedShadowQuality(out ShadowQualityLevel level)
+    {
+        level = GetCurrentShadowQuality();
+        if (!PlayerPrefs.HasKey(ShadowQualityKey))
+        {
+            return false;
+        }
+
+        int rawValue = PlayerPrefs.GetInt(ShadowQualityKey, (int)level);
+        if (rawValue < (int)ShadowQualityLevel.Low || rawValue > (int)ShadowQualityLevel.High)
+        {
+            // Backward compatibility: old "Ultra" or invalid values collapse to High.
+            level = ShadowQualityLevel.High;
+            return false;
+        }
+
+        level = (ShadowQualityLevel)rawValue;
+        return true;
+    }
+
+    public static void SaveShadowQuality(ShadowQualityLevel level)
+    {
+        PlayerPrefs.SetInt(ShadowQualityKey, (int)level);
+    }
+
+    public static void ApplyShadowQuality(ShadowQualityLevel level)
+    {
+        LightShadows targetLightShadows = level switch
+        {
+            ShadowQualityLevel.Low => LightShadows.None,
+            ShadowQualityLevel.Medium => LightShadows.Hard,
+            _ => LightShadows.Soft
+        };
+
+        if (!ApplyDirectionalLightShadows(targetLightShadows))
+        {
+            Debug.LogWarning("DisplaySettingsService: No active Directional Light found to apply shadow quality.");
+        }
+    }
+
+    public static bool ApplySavedShadowQuality()
+    {
+        if (!TryGetSavedShadowQuality(out ShadowQualityLevel level))
+        {
+            return false;
+        }
+
+        ApplyShadowQuality(level);
+        return true;
+    }
+
+    public static void ApplySavedShadowQualityForCurrentScene()
+    {
+        if (TryGetSavedShadowQuality(out ShadowQualityLevel level))
+        {
+            ApplyShadowQuality(level);
+        }
+    }
+
     public static bool TryGetSavedVSyncEnabled(out bool enabled)
     {
         enabled = GetCurrentVSyncEnabled();
@@ -243,6 +445,8 @@ public static class DisplaySettingsService
     public static bool ApplySavedDisplaySettings()
     {
         ApplySavedVSync();
+        ApplySavedShadowQuality();
+        ApplySavedAntiAliasingMode();
 
         FullScreenMode fullScreenMode = GetSavedOrCurrentFullScreenMode();
         if (TryGetSavedResolution(out int savedWidth, out int savedHeight))
@@ -331,26 +535,88 @@ public static class DisplaySettingsService
 
     private static string FormatResolutionLabel(int width, int height)
     {
-        if (width >= 3840 && height >= 2160)
-        {
-            return width + " x " + height + " (4K)";
-        }
-
-        if (width >= 2560 && height >= 1440)
-        {
-            return width + " x " + height + " (QHD)";
-        }
-
-        if (width >= 1920 && height >= 1080)
-        {
-            return width + " x " + height + " (FHD)";
-        }
-
-        if (width >= 1280 && height >= 720)
-        {
-            return width + " x " + height + " (HD)";
-        }
-
         return width + " x " + height;
+    }
+
+    private static LightShadows GetCurrentDirectionalLightShadows()
+    {
+        Light directionalLight = FindDirectionalLight();
+        if (directionalLight == null)
+        {
+            return LightShadows.None;
+        }
+
+        return directionalLight.shadows;
+    }
+
+    private static bool ApplyDirectionalLightShadows(LightShadows shadows)
+    {
+        bool applied = false;
+        Light[] lights = UnityEngine.Object.FindObjectsByType<Light>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        for (int index = 0; index < lights.Length; index++)
+        {
+            Light light = lights[index];
+            if (light == null || light.type != LightType.Directional)
+            {
+                continue;
+            }
+
+            light.shadows = shadows;
+            applied = true;
+        }
+
+        if (!applied)
+        {
+            Light fallbackLight = FindDirectionalLight();
+            if (fallbackLight != null)
+            {
+                fallbackLight.shadows = shadows;
+                applied = true;
+            }
+        }
+
+        return applied;
+    }
+
+    private static Light FindDirectionalLight()
+    {
+        if (RenderSettings.sun != null && RenderSettings.sun.type == LightType.Directional)
+        {
+            return RenderSettings.sun;
+        }
+
+        Light[] lights = UnityEngine.Object.FindObjectsByType<Light>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        for (int index = 0; index < lights.Length; index++)
+        {
+            Light light = lights[index];
+            if (light != null && light.type == LightType.Directional)
+            {
+                return light;
+            }
+        }
+
+        return null;
+    }
+
+    private static AntialiasingMode ToUrpAntiAliasing(AntiAliasingMode mode)
+    {
+        return mode switch
+        {
+            AntiAliasingMode.FXAA => AntialiasingMode.FastApproximateAntialiasing,
+            AntiAliasingMode.SMAA => AntialiasingMode.SubpixelMorphologicalAntiAliasing,
+            AntiAliasingMode.TAA => AntialiasingMode.TemporalAntiAliasing,
+            _ => AntialiasingMode.None
+        };
+    }
+
+    private static AntiAliasingMode FromUrpAntiAliasing(AntialiasingMode mode)
+    {
+        return mode switch
+        {
+            AntialiasingMode.FastApproximateAntialiasing => AntiAliasingMode.FXAA,
+            AntialiasingMode.SubpixelMorphologicalAntiAliasing => AntiAliasingMode.SMAA,
+            AntialiasingMode.TemporalAntiAliasing => AntiAliasingMode.TAA,
+            _ => AntiAliasingMode.None
+        };
     }
 }

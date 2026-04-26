@@ -189,8 +189,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 221.24998, y: -74.705215}
-  m_SizeDelta: {x: 410.49997, y: 25}
+  m_AnchoredPosition: {x: 210.7143, y: -72.933334}
+  m_SizeDelta: {x: 389.4286, y: 25}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &1913256
 MonoBehaviour:
@@ -836,6 +836,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
   hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+  hoverAudioId: 1
+  useAudioService: 1
+  volumeScale: 1
 --- !u!4 &35394126 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 402354, guid: 9e2e17fdb01b85349a2b8ba3c9e349fb, type: 3}
@@ -906,8 +909,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 889.99994, y: -483.45517}
-  m_SizeDelta: {x: 1779.9999, y: 819.69336}
+  m_AnchoredPosition: {x: 890, y: -470.0533}
+  m_SizeDelta: {x: 1780, y: 797.0133}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &36160979
 MonoBehaviour:
@@ -1140,6 +1143,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
   hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+  hoverAudioId: 1
+  useAudioService: 1
+  volumeScale: 1
 --- !u!1 &38952919
 GameObject:
   m_ObjectHideFlags: 0
@@ -1715,8 +1721,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 336.0526, y: -51.45954}
-  m_SizeDelta: {x: 232.89473, y: 102.91908}
+  m_AnchoredPosition: {x: 382.63156, y: -47.892853}
+  m_SizeDelta: {x: 266.1654, y: 95.785706}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &52640903
 MonoBehaviour:
@@ -2125,15 +2131,20 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8cb4d4376ee046f6a7219f8ea59b0f48, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CallPhasePrototypeFollowUpController
+  m_EditorClassIdentifier: Assembly-CSharp::CallPhaseScenarioRuntimeController
   logsController: {fileID: 1831466436}
   autoExtractEntry: {fileID: 1831466438}
   extractionController: {fileID: 0}
   stateController: {fileID: 1831466437}
   incidentReportController: {fileID: 0}
   scenarioData: {fileID: 0}
+  followUpScoringConfig: {fileID: 0}
   followUpMode: 1
   askFollowUpButton: {fileID: 1414320347}
+  allowDevelopmentFallbackScenario: 0
+  allowDevelopmentFallbackSteps: 0
+  developmentFallbackScenarioData: {fileID: 0}
+  allowDevelopmentFallbackPendingQuestion: 0
   followUpLineDelaySeconds: 1
   fireLocationFieldId: fire_location
   fireLocationValue: Kitchen
@@ -2402,7 +2413,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 78417555}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
@@ -3089,6 +3100,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
   hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+  hoverAudioId: 1
+  useAudioService: 1
+  volumeScale: 1
 --- !u!1 &123398436
 GameObject:
   m_ObjectHideFlags: 0
@@ -3475,6 +3489,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
   hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+  hoverAudioId: 1
+  useAudioService: 1
+  volumeScale: 1
 --- !u!1 &136549041
 GameObject:
   m_ObjectHideFlags: 0
@@ -3574,8 +3591,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 1334.9999, y: -36.804245}
-  m_SizeDelta: {x: 889.99994, y: 73.60849}
+  m_AnchoredPosition: {x: 1335, y: -35.77333}
+  m_SizeDelta: {x: 890, y: 71.54666}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &141323032
 MonoBehaviour:
@@ -3770,6 +3787,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
   hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+  hoverAudioId: 1
+  useAudioService: 1
+  volumeScale: 1
 --- !u!1 &143387645
 GameObject:
   m_ObjectHideFlags: 0
@@ -4520,8 +4540,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 663.74994, y: -25.615417}
-  m_SizeDelta: {x: 1327.4999, y: 51.230835}
+  m_AnchoredPosition: {x: 632.1429, y: -24.906666}
+  m_SizeDelta: {x: 1264.2858, y: 49.81333}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &185475421
 MonoBehaviour:
@@ -5417,8 +5437,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 221.24998, y: -175.26303}
-  m_SizeDelta: {x: 410.49997, y: 25}
+  m_AnchoredPosition: {x: 210.7143, y: -170.83333}
+  m_SizeDelta: {x: 389.4286, y: 25}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &268079643
 MonoBehaviour:
@@ -6541,6 +6561,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
   hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+  hoverAudioId: 1
+  useAudioService: 1
+  volumeScale: 1
 --- !u!114 &305353197
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6554,6 +6577,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
   hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+  hoverAudioId: 1
+  useAudioService: 1
+  volumeScale: 1
 --- !u!114 &305353198
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6567,6 +6593,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
   hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+  hoverAudioId: 1
+  useAudioService: 1
+  volumeScale: 1
 --- !u!114 &305353199
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6580,6 +6609,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
   hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+  hoverAudioId: 1
+  useAudioService: 1
+  volumeScale: 1
 --- !u!1 &317684062
 GameObject:
   m_ObjectHideFlags: 0
@@ -6753,8 +6785,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 663.74994, y: -288.17346}
-  m_SizeDelta: {x: 1327.4999, y: 576.3469}
+  m_AnchoredPosition: {x: 632.1429, y: -280.19998}
+  m_SizeDelta: {x: 1264.2858, y: 560.39996}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &317687533
 MonoBehaviour:
@@ -7136,8 +7168,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 126.447365, y: -51.45954}
-  m_SizeDelta: {x: 186.31578, y: 102.91908}
+  m_AnchoredPosition: {x: 143.0827, y: -47.892853}
+  m_SizeDelta: {x: 212.93233, y: 95.785706}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &367903004
 MonoBehaviour:
@@ -7478,7 +7510,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 376273890}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
@@ -7866,8 +7898,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 336.0526, y: -51.45954}
-  m_SizeDelta: {x: 232.89473, y: 102.91908}
+  m_AnchoredPosition: {x: 382.63156, y: -47.892853}
+  m_SizeDelta: {x: 266.1654, y: 95.785706}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &398542383
 MonoBehaviour:
@@ -8775,6 +8807,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
   hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+  hoverAudioId: 1
+  useAudioService: 1
+  volumeScale: 1
 --- !u!1 &445973255
 GameObject:
   m_ObjectHideFlags: 0
@@ -9423,8 +9458,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 663.74994, y: -409.84668}
-  m_SizeDelta: {x: 1327.4999, y: 819.69336}
+  m_AnchoredPosition: {x: 632.1429, y: -398.50665}
+  m_SizeDelta: {x: 1264.2858, y: 797.0133}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &495977363
 MonoBehaviour:
@@ -9481,7 +9516,7 @@ MonoBehaviour:
   m_MinHeight: -1
   m_PreferredWidth: -1
   m_PreferredHeight: -1
-  m_FlexibleWidth: 3
+  m_FlexibleWidth: 2.5
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
 --- !u!1 &500106431
@@ -9906,8 +9941,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 226.24998, y: -668.974}
-  m_SizeDelta: {x: 452.49997, y: 102.91908}
+  m_AnchoredPosition: {x: 257.85715, y: -652.60706}
+  m_SizeDelta: {x: 515.7143, y: 95.785706}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &542187502
 MonoBehaviour:
@@ -10307,8 +10342,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 226.24998, y: -744.44806}
-  m_SizeDelta: {x: 452.49997, y: 48.028908}
+  m_AnchoredPosition: {x: 257.85715, y: -723.8499}
+  m_SizeDelta: {x: 515.7143, y: 46.699997}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &562830790
 MonoBehaviour:
@@ -10404,8 +10439,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 126.447365, y: -51.45954}
-  m_SizeDelta: {x: 186.31578, y: 102.91908}
+  m_AnchoredPosition: {x: 143.0827, y: -47.892853}
+  m_SizeDelta: {x: 212.93233, y: 95.785706}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &565317742
 MonoBehaviour:
@@ -10853,8 +10888,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 221.24998, y: -16}
-  m_SizeDelta: {x: 410.49997, y: 25}
+  m_AnchoredPosition: {x: 210.7143, y: -16}
+  m_SizeDelta: {x: 389.4286, y: 25}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &585284079
 MonoBehaviour:
@@ -11058,8 +11093,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 221.24998, y: -162.76303}
-  m_SizeDelta: {x: 410.49997, y: 25}
+  m_AnchoredPosition: {x: 210.7143, y: -158.33333}
+  m_SizeDelta: {x: 389.4286, y: 25}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &588368828
 MonoBehaviour:
@@ -11667,6 +11702,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
   hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+  hoverAudioId: 1
+  useAudioService: 1
+  volumeScale: 1
 --- !u!1 &626095234
 GameObject:
   m_ObjectHideFlags: 0
@@ -11824,8 +11862,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 148.33333, y: -36.804245}
-  m_SizeDelta: {x: 296.66666, y: 73.60849}
+  m_AnchoredPosition: {x: 148.33333, y: -35.77333}
+  m_SizeDelta: {x: 296.66666, y: 71.54666}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &628744359
 MonoBehaviour:
@@ -12285,8 +12323,76 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 9005220659476430823, guid: 2d3a85ecde41a8246a79669975912b74, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 663969422}
   m_SourcePrefab: {fileID: 100100000, guid: 2d3a85ecde41a8246a79669975912b74, type: 3}
+--- !u!1 &663969421 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 9005220659476430823, guid: 2d3a85ecde41a8246a79669975912b74, type: 3}
+  m_PrefabInstance: {fileID: 663969420}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &663969422
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 663969421}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 948f4100a11a5c24981795d21301da5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Postprocessing.Runtime::UnityEngine.Rendering.PostProcessing.PostProcessLayer
+  volumeTrigger: {fileID: 480412791}
+  volumeLayer:
+    serializedVersion: 2
+    m_Bits: 4096
+  stopNaNPropagation: 1
+  finalBlitToCameraTarget: 0
+  antialiasingMode: 0
+  temporalAntialiasing:
+    jitterSpread: 0.75
+    sharpness: 0.25
+    stationaryBlending: 0.95
+    motionBlending: 0.85
+  subpixelMorphologicalAntialiasing:
+    quality: 2
+  fastApproximateAntialiasing:
+    fastMode: 0
+    keepAlpha: 0
+  fog:
+    enabled: 1
+    excludeSkybox: 1
+  debugLayer:
+    lightMeter:
+      width: 512
+      height: 256
+      showCurves: 1
+    histogram:
+      width: 512
+      height: 256
+      channel: 3
+    waveform:
+      exposure: 0.12
+      height: 256
+    vectorscope:
+      size: 256
+      exposure: 0.12
+    overlaySettings:
+      linearDepth: 0
+      motionColorIntensity: 4
+      motionGridSize: 64
+      colorBlindnessType: 0
+      colorBlindnessStrength: 1
+  m_Resources: {fileID: 11400000, guid: d82512f9c8e5d4a4d938b575d47f88d4, type: 2}
+  m_ShowToolkit: 0
+  m_ShowCustomSorter: 0
+  breakBeforeColorGrading: 0
+  m_BeforeTransparentBundles: []
+  m_BeforeStackBundles: []
+  m_AfterStackBundles: []
 --- !u!1 &664078169
 GameObject:
   m_ObjectHideFlags: 0
@@ -13248,8 +13354,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 1110, y: -31.804245}
-  m_SizeDelta: {x: 220, y: 63.60849}
+  m_AnchoredPosition: {x: 1110, y: -30.77333}
+  m_SizeDelta: {x: 220, y: 61.54666}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &715719597
 MonoBehaviour:
@@ -13372,6 +13478,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
   hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+  hoverAudioId: 1
+  useAudioService: 1
+  volumeScale: 1
 --- !u!1 &717615651
 GameObject:
   m_ObjectHideFlags: 0
@@ -14540,8 +14649,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 221.24998, y: -45.352608}
-  m_SizeDelta: {x: 410.49997, y: 25}
+  m_AnchoredPosition: {x: 210.7143, y: -44.466667}
+  m_SizeDelta: {x: 389.4286, y: 25}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &763127302
 MonoBehaviour:
@@ -14848,8 +14957,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 226.24998, y: -360.2168}
-  m_SizeDelta: {x: 452.49997, y: 102.91908}
+  m_AnchoredPosition: {x: 257.85715, y: -350.24997}
+  m_SizeDelta: {x: 515.7143, y: 95.785706}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &782344580
 MonoBehaviour:
@@ -15393,8 +15502,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 444.99997, y: -36.804245}
-  m_SizeDelta: {x: 889.99994, y: 73.60849}
+  m_AnchoredPosition: {x: 445, y: -35.77333}
+  m_SizeDelta: {x: 890, y: 71.54666}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &793886489
 MonoBehaviour:
@@ -16185,8 +16294,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 1165, y: -36.804245}
-  m_SizeDelta: {x: 1230, y: 73.60849}
+  m_AnchoredPosition: {x: 1165, y: -35.77333}
+  m_SizeDelta: {x: 1230, y: 71.54666}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &834031124
 MonoBehaviour:
@@ -16625,7 +16734,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDraggableWindow
   windowRoot: {fileID: 1620667321}
   boundsRoot: {fileID: 1677707921}
-  parentCanvas: {fileID: 1337606232}
+  parentCanvas: {fileID: 1350446082}
   bringToFrontOnDrag: 1
   enableDebugLogs: 0
 --- !u!1 &862579205
@@ -16760,8 +16869,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 221.24998, y: -96.057816}
-  m_SizeDelta: {x: 442.49997, y: 192.11563}
+  m_AnchoredPosition: {x: 210.7143, y: -93.399994}
+  m_SizeDelta: {x: 421.4286, y: 186.79999}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &866509041
 CanvasRenderer:
@@ -16856,8 +16965,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 221.24998, y: -16}
-  m_SizeDelta: {x: 410.49997, y: 25}
+  m_AnchoredPosition: {x: 210.7143, y: -16}
+  m_SizeDelta: {x: 389.4286, y: 25}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!222 &866509103
 CanvasRenderer:
@@ -17014,8 +17123,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 221.24998, y: -45.352608}
-  m_SizeDelta: {x: 410.49997, y: 25}
+  m_AnchoredPosition: {x: 210.7143, y: -44.466667}
+  m_SizeDelta: {x: 389.4286, y: 25}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!222 &866509113
 CanvasRenderer:
@@ -17172,8 +17281,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 221.24998, y: -74.705215}
-  m_SizeDelta: {x: 410.49997, y: 25}
+  m_AnchoredPosition: {x: 210.7143, y: -72.933334}
+  m_SizeDelta: {x: 389.4286, y: 25}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!222 &866509123
 CanvasRenderer:
@@ -17330,8 +17439,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 221.24998, y: -104.05782}
-  m_SizeDelta: {x: 410.49997, y: 25}
+  m_AnchoredPosition: {x: 210.7143, y: -101.4}
+  m_SizeDelta: {x: 389.4286, y: 25}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!222 &866509133
 CanvasRenderer:
@@ -17577,8 +17686,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 100.12499, y: -12.5}
-  m_SizeDelta: {x: 200.24998, y: 25}
+  m_AnchoredPosition: {x: 94.85715, y: -12.5}
+  m_SizeDelta: {x: 189.7143, y: 25}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &866509153
 CanvasRenderer:
@@ -17695,6 +17804,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
   hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+  hoverAudioId: 1
+  useAudioService: 1
+  volumeScale: 1
 --- !u!1 &866509161
 GameObject:
   m_ObjectHideFlags: 0
@@ -17870,8 +17982,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 310.37497, y: -12.5}
-  m_SizeDelta: {x: 200.24998, y: 25}
+  m_AnchoredPosition: {x: 294.57144, y: -12.5}
+  m_SizeDelta: {x: 189.7143, y: 25}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &866509173
 CanvasRenderer:
@@ -17988,6 +18100,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
   hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+  hoverAudioId: 1
+  useAudioService: 1
+  volumeScale: 1
 --- !u!1 &866509181
 GameObject:
   m_ObjectHideFlags: 0
@@ -18281,6 +18396,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
   hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+  hoverAudioId: 1
+  useAudioService: 1
+  volumeScale: 1
 --- !u!1 &866509201
 GameObject:
   m_ObjectHideFlags: 0
@@ -18455,7 +18573,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: -7, y: 20}
+  m_SizeDelta: {x: -2, y: 20}
   m_Pivot: {x: 0, y: 0}
 --- !u!114 &871088850
 MonoBehaviour:
@@ -18500,7 +18618,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 376273892}
   m_HandleRect: {fileID: 376273891}
   m_Direction: 0
-  m_Value: 1
+  m_Value: 0
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -18513,7 +18631,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 871088848}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
@@ -18998,8 +19116,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 126.447365, y: -51.45954}
-  m_SizeDelta: {x: 186.31578, y: 102.91908}
+  m_AnchoredPosition: {x: 143.0827, y: -47.892853}
+  m_SizeDelta: {x: 212.93233, y: 95.785706}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &888956046
 MonoBehaviour:
@@ -19309,6 +19427,55 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 897319702}
   m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &907552912
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 907552914}
+  - component: {fileID: 907552913}
+  m_Layer: 0
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &907552913
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 907552912}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b9a305e18de0c04dbd257a21cd47087, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Postprocessing.Runtime::UnityEngine.Rendering.PostProcessing.PostProcessVolume
+  sharedProfile: {fileID: 11400000, guid: 97438c5f621db554b80e6ba750f36a6a, type: 2}
+  isGlobal: 0
+  blendDistance: 0
+  weight: 1
+  priority: 0
+--- !u!4 &907552914
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 907552912}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 703.72015, y: 382.34512, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &911969211
 GameObject:
   m_ObjectHideFlags: 0
@@ -19407,7 +19574,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: -7, y: -17}
+  m_SizeDelta: {x: -2, y: -17}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &916093987
 MonoBehaviour:
@@ -19572,8 +19739,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 226.24998, y: -360.2168}
-  m_SizeDelta: {x: 452.49997, y: 720.4336}
+  m_AnchoredPosition: {x: 257.85715, y: -350.24997}
+  m_SizeDelta: {x: 515.7143, y: 700.49994}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &933871955
 MonoBehaviour:
@@ -20158,8 +20325,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 226.24998, y: -566.05493}
-  m_SizeDelta: {x: 452.49997, y: 102.91908}
+  m_AnchoredPosition: {x: 257.85715, y: -551.8214}
+  m_SizeDelta: {x: 515.7143, y: 95.785706}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &955236313
 MonoBehaviour:
@@ -20506,7 +20673,7 @@ MonoBehaviour:
     m_Top: 0
     m_Bottom: 0
   m_ChildAlignment: 0
-  m_Spacing: 0
+  m_Spacing: 5
   m_ChildForceExpandWidth: 1
   m_ChildForceExpandHeight: 1
   m_ChildControlWidth: 1
@@ -22257,8 +22424,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 226.24998, y: -51.45954}
-  m_SizeDelta: {x: 452.49997, y: 102.91908}
+  m_AnchoredPosition: {x: 257.85715, y: -47.892853}
+  m_SizeDelta: {x: 515.7143, y: 95.785706}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1064736683
 MonoBehaviour:
@@ -22343,8 +22510,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 889.99994, y: -930.10614}
-  m_SizeDelta: {x: 1779.9999, y: 73.60849}
+  m_AnchoredPosition: {x: 890, y: -904.33325}
+  m_SizeDelta: {x: 1780, y: 71.54666}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1065907658
 MonoBehaviour:
@@ -24174,7 +24341,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.VerticalLayoutGroup
   m_Padding:
     m_Left: 0
-    m_Right: 0
+    m_Right: 5
     m_Top: 10
     m_Bottom: 0
   m_ChildAlignment: 0
@@ -24472,8 +24639,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 445, y: -36.804245}
-  m_SizeDelta: {x: 296.66666, y: 73.60849}
+  m_AnchoredPosition: {x: 445, y: -35.77333}
+  m_SizeDelta: {x: 296.66666, y: 71.54666}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1270474646
 MonoBehaviour:
@@ -25057,6 +25224,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
   hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+  hoverAudioId: 1
+  useAudioService: 1
+  volumeScale: 1
 --- !u!1 &1295496444
 GameObject:
   m_ObjectHideFlags: 0
@@ -25365,8 +25535,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 226.24998, y: -435.4621}
-  m_SizeDelta: {x: 452.49997, y: 768.4625}
+  m_AnchoredPosition: {x: 257.85715, y: -423.4133}
+  m_SizeDelta: {x: 515.7143, y: 747.19995}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1306049385
 MonoBehaviour:
@@ -25450,8 +25620,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 336.0526, y: -51.45954}
-  m_SizeDelta: {x: 232.89473, y: 102.91908}
+  m_AnchoredPosition: {x: 382.63156, y: -47.892853}
+  m_SizeDelta: {x: 266.1654, y: 95.785706}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1310184050
 MonoBehaviour:
@@ -25547,8 +25717,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 336.0526, y: -51.45954}
-  m_SizeDelta: {x: 232.89473, y: 102.91908}
+  m_AnchoredPosition: {x: 382.63156, y: -47.892853}
+  m_SizeDelta: {x: 266.1654, y: 95.785706}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1315393230
 MonoBehaviour:
@@ -26300,8 +26470,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 126.447365, y: -51.45954}
-  m_SizeDelta: {x: 186.31578, y: 102.91908}
+  m_AnchoredPosition: {x: 143.0827, y: -47.892853}
+  m_SizeDelta: {x: 212.93233, y: 95.785706}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1333942397
 MonoBehaviour:
@@ -26370,12 +26540,12 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1337606233}
-  - component: {fileID: 1337606232}
-  - component: {fileID: 1337606230}
   - component: {fileID: 1337606234}
   - component: {fileID: 1337606235}
   - component: {fileID: 1337606236}
   - component: {fileID: 1337606237}
+  - component: {fileID: 1337606239}
+  - component: {fileID: 1337606238}
   m_Layer: 5
   m_Name: CallPhaseCanvas
   m_TagString: Untagged
@@ -26383,47 +26553,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1337606230
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1337606229}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: dc42784cf147c0c48a680349fa168899, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.GraphicRaycaster
-  m_IgnoreReversedGraphics: 1
-  m_BlockingObjects: 0
-  m_BlockingMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
---- !u!223 &1337606232
-Canvas:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1337606229}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_RenderMode: 0
-  m_Camera: {fileID: 0}
-  m_PlaneDistance: 100
-  m_PixelPerfect: 0
-  m_ReceivesEvents: 1
-  m_OverrideSorting: 0
-  m_OverridePixelPerfect: 0
-  m_SortingBucketNormalizedSize: 0
-  m_VertexColorAlwaysGammaSpace: 0
-  m_UseReflectionProbes: 0
-  m_AdditionalShaderChannelsFlag: 25
-  m_UpdateRectTransformForStandalone: 0
-  m_SortingLayerID: 0
-  m_SortingOrder: 0
-  m_TargetDisplay: 0
 --- !u!224 &1337606233
 RectTransform:
   m_ObjectHideFlags: 0
@@ -26471,7 +26600,7 @@ MonoBehaviour:
   viewportRoot: {fileID: 1440124460}
   contentRoot: {fileID: 1440124460}
   applyZoomOnEnable: 1
-  zoomScale: 1.2
+  zoomScale: 1
   enableCtrlScrollZoom: 1
   ctrlScrollZoomStep: 0.03
   minZoomScale: 1
@@ -26536,6 +26665,44 @@ MonoBehaviour:
   onSkipUsed:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &1337606238
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1337606229}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 0, g: 0, b: 0, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 0}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &1337606239
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1337606229}
+  m_CullTransparentMesh: 1
 --- !u!1 &1342830064
 GameObject:
   m_ObjectHideFlags: 0
@@ -26854,8 +27021,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 264.99997, y: -36.804245}
-  m_SizeDelta: {x: 529.99994, y: 73.60849}
+  m_AnchoredPosition: {x: 265, y: -35.77333}
+  m_SizeDelta: {x: 530, y: 71.54666}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1351639175
 MonoBehaviour:
@@ -27055,8 +27222,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 110, y: -31.804245}
-  m_SizeDelta: {x: 210, y: 53.60849}
+  m_AnchoredPosition: {x: 110, y: -30.77333}
+  m_SizeDelta: {x: 210, y: 51.54666}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1355491876
 MonoBehaviour:
@@ -27600,8 +27767,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 126.447365, y: -51.45954}
-  m_SizeDelta: {x: 186.31578, y: 102.91908}
+  m_AnchoredPosition: {x: 143.0827, y: -47.892853}
+  m_SizeDelta: {x: 212.93233, y: 95.785706}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1369221198
 MonoBehaviour:
@@ -27881,6 +28048,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
   hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+  hoverAudioId: 1
+  useAudioService: 1
+  volumeScale: 1
 --- !u!1001 &1378861419
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -28396,8 +28566,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 221.24998, y: -104.05782}
-  m_SizeDelta: {x: 410.49997, y: 25}
+  m_AnchoredPosition: {x: 210.7143, y: -101.4}
+  m_SizeDelta: {x: 389.4286, y: 25}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &1402868489
 MonoBehaviour:
@@ -28535,8 +28705,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 663.74994, y: -96.057816}
-  m_SizeDelta: {x: 442.49997, y: 192.11563}
+  m_AnchoredPosition: {x: 632.1429, y: -93.399994}
+  m_SizeDelta: {x: 421.4286, y: 186.79999}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1405228853
 MonoBehaviour:
@@ -28758,8 +28928,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 630, y: -31.804245}
-  m_SizeDelta: {x: 220, y: 63.60849}
+  m_AnchoredPosition: {x: 630, y: -30.77333}
+  m_SizeDelta: {x: 220, y: 61.54666}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1414320344
 MonoBehaviour:
@@ -28882,6 +29052,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
   hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+  hoverAudioId: 1
+  useAudioService: 1
+  volumeScale: 1
 --- !u!1 &1414542995
 GameObject:
   m_ObjectHideFlags: 0
@@ -29340,7 +29513,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1440124459}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
@@ -29362,7 +29535,7 @@ MonoBehaviour:
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
+  m_PixelsPerUnitMultiplier: 10
 --- !u!222 &1440124462
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -29476,8 +29649,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 336.0526, y: -51.45954}
-  m_SizeDelta: {x: 232.89473, y: 102.91908}
+  m_AnchoredPosition: {x: 382.63156, y: -47.892853}
+  m_SizeDelta: {x: 266.1654, y: 95.785706}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1449652161
 MonoBehaviour:
@@ -29975,6 +30148,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
   hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+  hoverAudioId: 1
+  useAudioService: 1
+  volumeScale: 1
 --- !u!1 &1496666917
 GameObject:
   m_ObjectHideFlags: 0
@@ -30007,8 +30183,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 221.24998, y: -145.91043}
-  m_SizeDelta: {x: 410.49997, y: 25}
+  m_AnchoredPosition: {x: 210.7143, y: -142.36667}
+  m_SizeDelta: {x: 389.4286, y: 25}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1502976430
 GameObject:
@@ -30636,8 +30812,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 226.24998, y: -25.615417}
-  m_SizeDelta: {x: 452.49997, y: 51.230835}
+  m_AnchoredPosition: {x: 257.85715, y: -24.906666}
+  m_SizeDelta: {x: 515.7143, y: 49.81333}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1519047189
 MonoBehaviour:
@@ -30732,8 +30908,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 110, y: -31.804245}
-  m_SizeDelta: {x: 210, y: 53.60849}
+  m_AnchoredPosition: {x: 110, y: -30.77333}
+  m_SizeDelta: {x: 210, y: 51.54666}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1520308613
 MonoBehaviour:
@@ -30970,8 +31146,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 110, y: -31.804245}
-  m_SizeDelta: {x: 210, y: 53.60849}
+  m_AnchoredPosition: {x: 110, y: -30.77333}
+  m_SizeDelta: {x: 210, y: 51.54666}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1525807225
 MonoBehaviour:
@@ -31295,8 +31471,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 741.6666, y: -36.804245}
-  m_SizeDelta: {x: 296.66666, y: 73.60849}
+  m_AnchoredPosition: {x: 741.6666, y: -35.77333}
+  m_SizeDelta: {x: 296.66666, y: 71.54666}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1549913187
 MonoBehaviour:
@@ -31727,7 +31903,7 @@ RectTransform:
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 10, y: -17}
+  m_SizeDelta: {x: 5, y: -17}
   m_Pivot: {x: 1, y: 1}
 --- !u!114 &1576318547
 MonoBehaviour:
@@ -31785,7 +31961,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1576318545}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
@@ -31951,6 +32127,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
   hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+  hoverAudioId: 1
+  useAudioService: 1
+  volumeScale: 1
 --- !u!1 &1577897557
 GameObject:
   m_ObjectHideFlags: 0
@@ -32111,8 +32290,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 1106.2499, y: -96.057816}
-  m_SizeDelta: {x: 442.49997, y: 192.11563}
+  m_AnchoredPosition: {x: 1053.5715, y: -93.399994}
+  m_SizeDelta: {x: 421.4286, y: 186.79999}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1580305030
 MonoBehaviour:
@@ -32237,8 +32416,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 870, y: -31.804245}
-  m_SizeDelta: {x: 220, y: 63.60849}
+  m_AnchoredPosition: {x: 870, y: -30.77333}
+  m_SizeDelta: {x: 220, y: 61.54666}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1609755403
 MonoBehaviour:
@@ -32361,6 +32540,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
   hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+  hoverAudioId: 1
+  useAudioService: 1
+  volumeScale: 1
 --- !u!1 &1611082368
 GameObject:
   m_ObjectHideFlags: 0
@@ -33136,8 +33318,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 226.24998, y: -463.13586}
-  m_SizeDelta: {x: 452.49997, y: 102.91908}
+  m_AnchoredPosition: {x: 257.85715, y: -451.03568}
+  m_SizeDelta: {x: 515.7143, y: 95.785706}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1636367431
 MonoBehaviour:
@@ -33418,8 +33600,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 221.24998, y: -133.41043}
-  m_SizeDelta: {x: 410.49997, y: 25}
+  m_AnchoredPosition: {x: 210.7143, y: -129.86667}
+  m_SizeDelta: {x: 389.4286, y: 25}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &1645061007
 MonoBehaviour:
@@ -33872,6 +34054,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
   hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+  hoverAudioId: 1
+  useAudioService: 1
+  volumeScale: 1
 --- !u!1 &1658379348
 GameObject:
   m_ObjectHideFlags: 0
@@ -33965,8 +34150,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 663.74994, y: -435.4621}
-  m_SizeDelta: {x: 1327.4999, y: 768.4625}
+  m_AnchoredPosition: {x: 632.1429, y: -423.4133}
+  m_SizeDelta: {x: 1264.2858, y: 747.19995}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1664040875
 MonoBehaviour:
@@ -34651,8 +34836,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 1553.7499, y: -409.84668}
-  m_SizeDelta: {x: 452.49997, y: 819.69336}
+  m_AnchoredPosition: {x: 1522.143, y: -398.50665}
+  m_SizeDelta: {x: 515.7143, y: 797.0133}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1691022610
 MonoBehaviour:
@@ -34750,8 +34935,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 889.99994, y: -36.804245}
-  m_SizeDelta: {x: 1779.9999, y: 73.60849}
+  m_AnchoredPosition: {x: 890, y: -35.77333}
+  m_SizeDelta: {x: 1780, y: 71.54666}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1693262442
 MonoBehaviour:
@@ -35406,8 +35591,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 336.0526, y: -51.45954}
-  m_SizeDelta: {x: 232.89473, y: 102.91908}
+  m_AnchoredPosition: {x: 382.63156, y: -47.892853}
+  m_SizeDelta: {x: 266.1654, y: 95.785706}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1710002657
 MonoBehaviour:
@@ -35628,6 +35813,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
   hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+  hoverAudioId: 1
+  useAudioService: 1
+  volumeScale: 1
 --- !u!1 &1731144609
 GameObject:
   m_ObjectHideFlags: 0
@@ -36059,8 +36247,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 126.447365, y: -51.45954}
-  m_SizeDelta: {x: 186.31578, y: 102.91908}
+  m_AnchoredPosition: {x: 143.0827, y: -47.892853}
+  m_SizeDelta: {x: 212.93233, y: 95.785706}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1743192664
 MonoBehaviour:
@@ -36489,8 +36677,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 336.0526, y: -51.45954}
-  m_SizeDelta: {x: 232.89473, y: 102.91908}
+  m_AnchoredPosition: {x: 382.63156, y: -47.892853}
+  m_SizeDelta: {x: 266.1654, y: 95.785706}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1770966531
 MonoBehaviour:
@@ -37103,8 +37291,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 126.447365, y: -51.45954}
-  m_SizeDelta: {x: 186.31578, y: 102.91908}
+  m_AnchoredPosition: {x: 143.0827, y: -47.892853}
+  m_SizeDelta: {x: 212.93233, y: 95.785706}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1791763745
 MonoBehaviour:
@@ -39284,6 +39472,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
   hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+  hoverAudioId: 1
+  useAudioService: 1
+  volumeScale: 1
 --- !u!1 &1895641728
 GameObject:
   m_ObjectHideFlags: 0
@@ -39839,6 +40030,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
   hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+  hoverAudioId: 1
+  useAudioService: 1
+  volumeScale: 1
 --- !u!1 &1921601928
 GameObject:
   m_ObjectHideFlags: 0
@@ -39878,8 +40072,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 663.74994, y: -672.4047}
-  m_SizeDelta: {x: 1327.4999, y: 192.11563}
+  m_AnchoredPosition: {x: 632.1429, y: -653.7999}
+  m_SizeDelta: {x: 1264.2858, y: 186.79999}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1921601930
 MonoBehaviour:
@@ -40831,8 +41025,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 226.24998, y: -257.2977}
-  m_SizeDelta: {x: 452.49997, y: 102.91908}
+  m_AnchoredPosition: {x: 257.85715, y: -249.46426}
+  m_SizeDelta: {x: 515.7143, y: 95.785706}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1965887619
 MonoBehaviour:
@@ -41426,6 +41620,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
   hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+  hoverAudioId: 1
+  useAudioService: 1
+  volumeScale: 1
 --- !u!1 &2002733896
 GameObject:
   m_ObjectHideFlags: 0
@@ -42395,8 +42592,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 226.24998, y: -154.37863}
-  m_SizeDelta: {x: 452.49997, y: 102.91908}
+  m_AnchoredPosition: {x: 257.85715, y: -148.67856}
+  m_SizeDelta: {x: 515.7143, y: 95.785706}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2055917739
 MonoBehaviour:
@@ -43149,6 +43346,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
   hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+  hoverAudioId: 1
+  useAudioService: 1
+  volumeScale: 1
 --- !u!1 &2086439617
 GameObject:
   m_ObjectHideFlags: 0
@@ -43312,8 +43512,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 16.644737, y: -51.45954}
-  m_SizeDelta: {x: 33.289474, y: 102.91908}
+  m_AnchoredPosition: {x: 18.30827, y: -47.892853}
+  m_SizeDelta: {x: 36.61654, y: 95.785706}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2101000002
 CanvasRenderer:
@@ -43408,8 +43608,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 16.644737, y: -51.45954}
-  m_SizeDelta: {x: 33.289474, y: 102.91908}
+  m_AnchoredPosition: {x: 18.30827, y: -47.892853}
+  m_SizeDelta: {x: 36.61654, y: 95.785706}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2101000007
 CanvasRenderer:
@@ -43504,8 +43704,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 16.644737, y: -51.45954}
-  m_SizeDelta: {x: 33.289474, y: 102.91908}
+  m_AnchoredPosition: {x: 18.30827, y: -47.892853}
+  m_SizeDelta: {x: 36.61654, y: 95.785706}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2101000012
 CanvasRenderer:
@@ -43600,8 +43800,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 16.644737, y: -51.45954}
-  m_SizeDelta: {x: 33.289474, y: 102.91908}
+  m_AnchoredPosition: {x: 18.30827, y: -47.892853}
+  m_SizeDelta: {x: 36.61654, y: 95.785706}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2101000017
 CanvasRenderer:
@@ -43696,8 +43896,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 16.644737, y: -51.45954}
-  m_SizeDelta: {x: 33.289474, y: 102.91908}
+  m_AnchoredPosition: {x: 18.30827, y: -47.892853}
+  m_SizeDelta: {x: 36.61654, y: 95.785706}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2101000022
 CanvasRenderer:
@@ -43792,8 +43992,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 16.644737, y: -51.45954}
-  m_SizeDelta: {x: 33.289474, y: 102.91908}
+  m_AnchoredPosition: {x: 18.30827, y: -47.892853}
+  m_SizeDelta: {x: 36.61654, y: 95.785706}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2101000027
 CanvasRenderer:
@@ -43888,8 +44088,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 16.644737, y: -51.45954}
-  m_SizeDelta: {x: 33.289474, y: 102.91908}
+  m_AnchoredPosition: {x: 18.30827, y: -47.892853}
+  m_SizeDelta: {x: 36.61654, y: 95.785706}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2101000032
 CanvasRenderer:
@@ -44250,6 +44450,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FF3D.UI.UIHoverSound
   hoverSound: {fileID: 8300000, guid: 87475ad6c4bc2af4a98dc12339d05958, type: 3}
+  hoverAudioId: 1
+  useAudioService: 1
+  volumeScale: 1
 --- !u!1 &2131831639
 GameObject:
   m_ObjectHideFlags: 0
@@ -44692,17 +44895,71 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::StarterAssets.FirstPersonAnimatorParameterDriver
   animator: {fileID: 0}
   characterController: {fileID: 7310261293481946438}
+  firstPersonController: {fileID: 4862395984821301080}
+  inventorySystem: {fileID: 6787578420165760925}
   velocityReference: {fileID: 6898180819982771496}
+  movingThreshold: 0.1
+  directionalMoveThreshold: 0.05
+  jumpVerticalVelocityThreshold: 0.1
+  fallVerticalVelocityThreshold: -0.1
+  parameterDampTime: 0.1
   speedParameter: Speed
   horizontalSpeedParameter: HorizontalSpeed
   velocityXParameter: VelocityX
   velocityYParameter: VelocityY
   velocityZParameter: VelocityZ
-  parameterDampTime: 0.1
+  moveXParameter: MoveX
+  moveYParameter: MoveY
+  moveForwardParameter: MoveForward
+  moveRightParameter: MoveRight
+  upwardSpeedParameter: UpwardSpeed
+  downwardSpeedParameter: DownwardSpeed
+  movementBurdenParameter: MovementBurden
+  fallDistanceParameter: FallDistance
+  landingSpeedParameter: LandingSpeed
+  isGroundedParameter: IsGrounded
+  isMovingParameter: IsMoving
+  isIdleParameter: IsIdle
+  isStrafingParameter: IsStrafing
+  isMovingForwardParameter: IsMovingForward
+  isMovingBackwardParameter: IsMovingBackward
+  isMovingRightParameter: IsMovingRight
+  isMovingLeftParameter: IsMovingLeft
+  isSprintingParameter: IsSprinting
+  isCrouchingParameter: IsCrouching
+  isJumpingParameter: IsJumping
+  isFallingParameter: IsFalling
+  isClimbingParameter: IsClimbing
+  isHoldingParameter: IsHolding
+  hasItemParameter: HasItem
+  itemCountParameter: ItemCount
+  heldItemNameHashParameter: HeldItemNameHash
+  heldItemTypeHashParameter: HeldItemTypeHash
+  holdingNamePrefix: IsHolding_
+  holdingTypePrefix: IsHoldingType_
   worldVelocity: {x: 0, y: 0, z: 0}
   localVelocity: {x: 0, y: 0, z: 0}
   speed: 0
   horizontalSpeed: 0
+  upwardSpeed: 0
+  downwardSpeed: 0
+  isGrounded: 0
+  isMoving: 0
+  isIdle: 0
+  isStrafing: 0
+  isMovingForward: 0
+  isMovingBackward: 0
+  isMovingRight: 0
+  isMovingLeft: 0
+  isSprinting: 0
+  isCrouching: 0
+  isJumping: 0
+  isFalling: 0
+  isClimbing: 0
+  isHolding: 0
+  itemCount: 0
+  heldItemName: 
+  heldItemTypeName: 
 --- !u!114 &1343230104845753118
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -44745,6 +45002,7 @@ MonoBehaviour:
   use: 0
   drop: 0
   grab: 0
+  dispatchNotes: 0
   slot: -1
   analogMovement: 0
   cursorLocked: 1
@@ -45152,13 +45410,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FPSInventorySystem
   allowPickup: 1
   maxSlots: 6
-  viewPointTransform: {fileID: 5943277004946092438}
+  equipRoot: {fileID: 0}
   inventoryRoot: {fileID: 5778681288834251850}
-  viewPoint: {x: 0.5, y: -0.5, z: 1}
   hideStoredItems: 1
-  useViewPointRotationLag: 1
-  viewPointRotationFollowSpeed: 15
-  viewPointRotationMaxAngle: 5
+  useEquipRootRotationLag: 1
+  equipRootRotationFollowSpeed: 12
+  equipRootRotationMaxAngle: 8
   createRuntimeLagPivot: 1
 --- !u!4 &6898180819982771496
 Transform:
@@ -45481,3 +45738,4 @@ SceneRoots:
   - {fileID: 1350446083}
   - {fileID: 1173102498}
   - {fileID: 911969212}
+  - {fileID: 907552914}

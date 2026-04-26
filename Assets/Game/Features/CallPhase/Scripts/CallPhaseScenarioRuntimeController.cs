@@ -6,9 +6,9 @@ using UnityEngine.UI;
 /// <summary>
 /// Attach to MainCallPhaseRoot or another parent above SelectableSpan objects.
 /// This listens to OnExtractionConfirmed(SelectableSpan span) and advances follow-up progression
-/// from scenario data, with a small serialized fallback for prototype safety.
+/// from scenario data, with optional development-only fallback guards.
 /// </summary>
-public class CallPhasePrototypeFollowUpController : MonoBehaviour
+public class CallPhaseScenarioRuntimeController : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private TranscriptLogsController logsController;
@@ -19,12 +19,19 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
 
     [Header("Scenario")]
     [SerializeField] private CallPhaseScenarioData scenarioData;
+    [SerializeField] private CallPhaseFollowUpScoringConfig followUpScoringConfig;
 
     [Header("Follow-Up Mode")]
     [SerializeField] private CallPhaseFollowUpMode followUpMode = CallPhaseFollowUpMode.Auto;
     [SerializeField] private Button askFollowUpButton;
 
-    [Header("Prototype Follow-Up Fallback")]
+    [Header("Development Fallback (Editor/Dev Only)")]
+    [SerializeField] private bool allowDevelopmentFallbackScenario = false;
+    [SerializeField] private bool allowDevelopmentFallbackSteps = false;
+    [SerializeField] private CallPhaseScenarioData developmentFallbackScenarioData;
+    [SerializeField] private bool allowDevelopmentFallbackPendingQuestion = false;
+
+    [Header("Development Follow-Up Step Fallback")]
     [SerializeField] private float followUpLineDelaySeconds = 1f;
     [SerializeField] private string fireLocationFieldId = "fire_location";
     [SerializeField] private string fireLocationValue = "Kitchen";
@@ -49,7 +56,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
     [SerializeField] private string callerSafetyFollowUpQuestion = "Are you somewhere safe right now?";
     [SerializeField] private string callerSafetyFollowUpReply = "Yes, I'm outside the house now!";
 
-    [Header("Read-Back Confirmation Fallback")]
+    [Header("Development Read-Back Confirmation Fallback")]
     [SerializeField] private string addressConfirmationQuestion = "Let me confirm the address: 27 Maple Street, correct?";
     [SerializeField] private string addressConfirmationReply = "Yes, that's correct.";
     [SerializeField] private string occupantRiskConfirmationQuestion = "Your child is still upstairs, correct?";
@@ -78,12 +85,14 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
     private int optimalFollowUpCount;
     private int acceptableFollowUpCount;
     private int poorFollowUpCount;
-    private const int MaxRecentShownQuestions = 8;
     private bool lastCanAskFollowUp;
+    private bool runtimeLocked;
+    private string runtimeLockReason;
 
     public CallPhaseFollowUpMode FollowUpMode => followUpMode;
     public bool IsWaitingForManualFollowUp => waitingForManualFollowUp && pendingManualStep != null;
     public bool CanAskFollowUp => followUpMode == CallPhaseFollowUpMode.ManualPopup
+                                  && !runtimeLocked
                                   && IsWaitingForManualFollowUp
                                   && pendingManualStep != null
                                   && pendingManualStep.stepType == CallPhaseScenarioStepType.InformationCollection
@@ -95,6 +104,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
     public int OptimalFollowUpCount => optimalFollowUpCount;
     public int AcceptableFollowUpCount => acceptableFollowUpCount;
     public int PoorFollowUpCount => poorFollowUpCount;
+    public CallPhaseFollowUpScoringConfig ActiveFollowUpScoringConfig => GetResolvedFollowUpScoringConfig();
     public bool HasResolvedFollowUpStep(string stepId) => !string.IsNullOrWhiteSpace(stepId) && resolvedFollowUpStepIds.Contains(stepId);
     public event System.Action ManualFollowUpAvailable;
 
@@ -102,6 +112,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
     {
         ResolveReferences();
         ResolveScenarioData();
+        ResolveFollowUpScoringConfig();
         RebuildRuntimeSteps();
         ResetRuntimeState();
         RefreshAskFollowUpAvailability();
@@ -130,7 +141,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
 
     public void OnExtractionConfirmed(SelectableSpan span)
     {
-        if (span == null || progressionCompleted)
+        if (runtimeLocked || span == null || progressionCompleted)
         {
             return;
         }
@@ -152,7 +163,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
         {
             finalStepAwaitingCompletion = false;
             progressionCompleted = true;
-            StartManagedRoutine(FinishPrototypeLoopRoutine(GetStepDebugName(lastStartedStep)));
+            StartManagedRoutine(FinishScenarioLoopRoutine(GetStepDebugName(lastStartedStep)));
             return;
         }
 
@@ -221,13 +232,13 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
 
         if (enableDebugLogs)
         {
-            Debug.Log($"{nameof(CallPhasePrototypeFollowUpController)}: Started scenario step '{GetStepDebugName(step)}'.", this);
+            Debug.Log($"{nameof(CallPhaseScenarioRuntimeController)}: Started scenario step '{GetStepDebugName(step)}'.", this);
         }
 
         RefreshAskFollowUpAvailability();
     }
 
-    private IEnumerator BeginInitialPrototypeLoopRoutine()
+    private IEnumerator BeginInitialScenarioLoopRoutine()
     {
         if (progressionCompleted)
         {
@@ -252,7 +263,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
         initialLoopCoroutine = null;
     }
 
-    private IEnumerator FinishPrototypeLoopRoutine(string loopName)
+    private IEnumerator FinishScenarioLoopRoutine(string loopName)
     {
         yield return null;
 
@@ -268,7 +279,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
 
         if (enableDebugLogs)
         {
-            Debug.Log($"{nameof(CallPhasePrototypeFollowUpController)}: Completed scenario progression at '{loopName}'.", this);
+            Debug.Log($"{nameof(CallPhaseScenarioRuntimeController)}: Completed scenario progression at '{loopName}'.", this);
         }
 
         RefreshAskFollowUpAvailability();
@@ -309,6 +320,9 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
 
     private void ResolveScenarioData()
     {
+        runtimeLocked = false;
+        runtimeLockReason = string.Empty;
+
         if (scenarioData == null)
         {
             scenarioData = CallPhaseScenarioContext.ResolveFrom(this);
@@ -316,8 +330,124 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
 
         if (scenarioData == null)
         {
-            scenarioData = Resources.Load<CallPhaseScenarioData>(CallPhaseScenarioData.DefaultScenarioResourcePath);
+            if (ShouldUseDevelopmentFallbackScenario())
+            {
+                scenarioData = developmentFallbackScenarioData;
+                if (scenarioData == null)
+                {
+                    scenarioData = Resources.Load<CallPhaseScenarioData>(CallPhaseScenarioData.DefaultScenarioResourcePath);
+                }
+
+                if (scenarioData != null)
+                {
+                    Debug.LogWarning(
+                        $"{nameof(CallPhaseScenarioRuntimeController)}: Using development fallback scenario data. This fallback is disabled in release builds.",
+                        this);
+                }
+            }
+            else
+            {
+                LockRuntimeFlow(
+                    "Missing scenario data. Assign CallPhaseScenarioData via context or inspector. Runtime flow has been locked (fail-fast).");
+            }
         }
+    }
+
+    private void ResolveFollowUpScoringConfig()
+    {
+        if (followUpScoringConfig != null)
+        {
+            return;
+        }
+
+        if (scenarioData != null && scenarioData.followUpScoringConfig != null)
+        {
+            followUpScoringConfig = scenarioData.followUpScoringConfig;
+            return;
+        }
+
+        followUpScoringConfig = Resources.Load<CallPhaseFollowUpScoringConfig>(CallPhaseFollowUpScoringConfig.DefaultResourcePath);
+    }
+
+    private CallPhaseFollowUpScoringConfig GetResolvedFollowUpScoringConfig()
+    {
+        if (followUpScoringConfig == null)
+        {
+            ResolveFollowUpScoringConfig();
+        }
+
+        return followUpScoringConfig;
+    }
+
+    private bool ShouldUseDevelopmentFallbackScenario()
+    {
+        return allowDevelopmentFallbackScenario && IsDevelopmentRuntime();
+    }
+
+    private bool ShouldUseDevelopmentFallbackSteps()
+    {
+        return allowDevelopmentFallbackSteps && IsDevelopmentRuntime();
+    }
+
+    private bool ShouldUseDevelopmentFallbackPendingQuestion()
+    {
+        return allowDevelopmentFallbackPendingQuestion && IsDevelopmentRuntime();
+    }
+
+    private static bool IsDevelopmentRuntime()
+    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        return true;
+#else
+        return Debug.isDebugBuild;
+#endif
+    }
+
+    private void LockRuntimeFlow(string reason)
+    {
+        runtimeLocked = true;
+        runtimeLockReason = string.IsNullOrWhiteSpace(reason) ? "Unknown runtime lock reason." : reason;
+
+        progressionCompleted = true;
+        pendingManualStep = null;
+        selectedManualFollowUpStep = null;
+        waitingForManualFollowUp = false;
+        pendingManualStepIsFinal = false;
+        finalStepAwaitingCompletion = false;
+        returnPendingStepAfterOutOfOrder = null;
+        returnPendingStepAfterOutOfOrderIsFinal = false;
+        isExecutingOutOfOrderRealStep = false;
+
+        if (activeStepRoutine != null)
+        {
+            StopCoroutine(activeStepRoutine);
+            activeStepRoutine = null;
+        }
+
+        if (initialLoopCoroutine != null)
+        {
+            StopCoroutine(initialLoopCoroutine);
+            initialLoopCoroutine = null;
+        }
+
+        if (deferredProgressionCoroutine != null)
+        {
+            StopCoroutine(deferredProgressionCoroutine);
+            deferredProgressionCoroutine = null;
+        }
+
+        if (incidentReportController != null)
+        {
+            incidentReportController.ClearConfirmationContext();
+        }
+
+        if (stateController != null)
+        {
+            stateController.EnterNormalMode();
+        }
+
+        Debug.LogError($"{nameof(CallPhaseScenarioRuntimeController)}: {runtimeLockReason}", this);
+        RefreshAskFollowUpAvailability();
     }
 
     private void RebuildRuntimeSteps()
@@ -336,9 +466,25 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
             }
         }
 
+        if (runtimeLocked)
+        {
+            return;
+        }
+
         if (runtimeSteps.Count <= 0)
         {
-            BuildFallbackRuntimeSteps();
+            if (ShouldUseDevelopmentFallbackSteps())
+            {
+                BuildFallbackRuntimeSteps();
+                Debug.LogWarning(
+                    $"{nameof(CallPhaseScenarioRuntimeController)}: Using development fallback runtime steps. This fallback is disabled in release builds.",
+                    this);
+            }
+            else
+            {
+                LockRuntimeFlow(
+                    "Scenario has no valid follow-up runtime steps. Runtime flow has been locked (fail-fast).");
+            }
         }
     }
 
@@ -346,7 +492,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
     {
         nextStepIndex = 0;
         finalStepAwaitingCompletion = false;
-        progressionCompleted = runtimeSteps.Count <= 0;
+        progressionCompleted = runtimeLocked || runtimeSteps.Count <= 0;
         lastStartedStep = null;
         pendingManualStep = null;
         selectedManualFollowUpStep = null;
@@ -385,6 +531,8 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
 
         scenarioData = null;
         ResolveScenarioData();
+        followUpScoringConfig = null;
+        ResolveFollowUpScoringConfig();
         RebuildRuntimeSteps();
         ResetRuntimeState();
 
@@ -398,22 +546,42 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
             stateController.EnterNormalMode();
         }
 
+        if (runtimeLocked)
+        {
+            if (enableDebugLogs)
+            {
+                Debug.LogWarning(
+                    $"{nameof(CallPhaseScenarioRuntimeController)}: Scenario reset completed in locked state. Reason: {runtimeLockReason}",
+                    this);
+            }
+        }
+
         RefreshAskFollowUpAvailability();
     }
 
     public void BeginScenarioRun()
     {
+        if (runtimeLocked)
+        {
+            return;
+        }
+
         if (initialLoopCoroutine != null)
         {
             StopCoroutine(initialLoopCoroutine);
         }
 
-        initialLoopCoroutine = StartCoroutine(BeginInitialPrototypeLoopRoutine());
+        initialLoopCoroutine = StartCoroutine(BeginInitialScenarioLoopRoutine());
         RefreshAskFollowUpAvailability();
     }
 
     public bool TryStartPendingManualFollowUpStep()
     {
+        if (runtimeLocked)
+        {
+            return false;
+        }
+
         if (!CanAskFollowUp || pendingManualStep == null)
         {
             return false;
@@ -433,7 +601,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
     public List<CallPhaseFollowUpQuestionOptionData> GetManualFollowUpQuestionCandidates()
     {
         List<CallPhaseFollowUpQuestionOptionData> candidates = new List<CallPhaseFollowUpQuestionOptionData>();
-        if (!IsWaitingForManualFollowUp || pendingManualStep == null || scenarioData == null)
+        if (runtimeLocked || !IsWaitingForManualFollowUp || pendingManualStep == null || scenarioData == null)
         {
             return candidates;
         }
@@ -470,7 +638,16 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
 
         if (candidates.Count <= 0 && pendingManualStep != null)
         {
-            AddQuestionCandidate(candidates, CreateFallbackPendingQuestionOption(), usedQuestionIds, usedQuestionTexts);
+            if (ShouldUseDevelopmentFallbackPendingQuestion())
+            {
+                AddQuestionCandidate(candidates, CreateFallbackPendingQuestionOption(), usedQuestionIds, usedQuestionTexts);
+            }
+            else
+            {
+                LockRuntimeFlow(
+                    $"No follow-up question candidate available for pending step '{GetStepDebugName(pendingManualStep)}'. Runtime flow has been locked (fail-fast).");
+                return candidates;
+            }
         }
 
         RememberShownQuestions(candidates);
@@ -504,6 +681,11 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
 
     public bool TryExecuteManualFollowUpQuestion(CallPhaseFollowUpQuestionOptionData questionOption)
     {
+        if (runtimeLocked)
+        {
+            return false;
+        }
+
         if (questionOption == null || !IsWaitingForManualFollowUp || pendingManualStep == null)
         {
             return false;
@@ -539,7 +721,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
     public List<CallPhaseScenarioStepData> GetManualFollowUpOptionCandidates()
     {
         List<CallPhaseScenarioStepData> options = new List<CallPhaseScenarioStepData>();
-        if (!IsWaitingForManualFollowUp || pendingManualStep == null)
+        if (runtimeLocked || !IsWaitingForManualFollowUp || pendingManualStep == null)
         {
             return options;
         }
@@ -555,6 +737,12 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
 
     public void SetSelectedManualFollowUpStep(CallPhaseScenarioStepData step)
     {
+        if (runtimeLocked)
+        {
+            selectedManualFollowUpStep = null;
+            return;
+        }
+
         if (step == null)
         {
             selectedManualFollowUpStep = null;
@@ -566,7 +754,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
         if (enableDebugLogs)
         {
             Debug.Log(
-                $"{nameof(CallPhasePrototypeFollowUpController)}: Selected manual follow-up option '{GetStepDebugName(step)}'.",
+                $"{nameof(CallPhaseScenarioRuntimeController)}: Selected manual follow-up option '{GetStepDebugName(step)}'.",
                 this);
         }
     }
@@ -771,6 +959,11 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
 
     private void TryAdvanceLinearProgression(SelectableSpan latestSpan)
     {
+        if (runtimeLocked)
+        {
+            return;
+        }
+
         while (nextStepIndex >= 0 && nextStepIndex < runtimeSteps.Count)
         {
             CallPhaseScenarioStepData step = runtimeSteps[nextStepIndex];
@@ -785,7 +978,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
                 if (enableDebugLogs)
                 {
                     Debug.Log(
-                        $"{nameof(CallPhasePrototypeFollowUpController)}: Skipping already resolved step '{GetStepDebugName(step)}'.",
+                        $"{nameof(CallPhaseScenarioRuntimeController)}: Skipping already resolved step '{GetStepDebugName(step)}'.",
                         this);
                 }
 
@@ -837,6 +1030,11 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
 
     private void StartScenarioStep(CallPhaseScenarioStepData step, bool isFinalStep)
     {
+        if (runtimeLocked)
+        {
+            return;
+        }
+
         lastStartedStep = step;
         finalStepAwaitingCompletion = isFinalStep;
         pendingManualStep = null;
@@ -867,7 +1065,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
         if (enableDebugLogs)
         {
             Debug.Log(
-                $"{nameof(CallPhasePrototypeFollowUpController)}: Waiting for manual follow-up selection at '{GetStepDebugName(step)}'.",
+                $"{nameof(CallPhaseScenarioRuntimeController)}: Waiting for manual follow-up selection at '{GetStepDebugName(step)}'.",
                 this);
         }
 
@@ -907,7 +1105,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
         if (enableDebugLogs)
         {
             Debug.Log(
-                $"{nameof(CallPhasePrototypeFollowUpController)}: Executing out-of-order real follow-up step '{GetStepDebugName(linkedStep)}'.",
+                $"{nameof(CallPhaseScenarioRuntimeController)}: Executing out-of-order real follow-up step '{GetStepDebugName(linkedStep)}'.",
                 this);
         }
 
@@ -939,7 +1137,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
             if (enableDebugLogs)
             {
                 Debug.Log(
-                    $"{nameof(CallPhasePrototypeFollowUpController)}: Suspended pending step '{GetStepDebugName(pendingManualStep)}' was already resolved, advancing instead of restoring it.",
+                    $"{nameof(CallPhaseScenarioRuntimeController)}: Suspended pending step '{GetStepDebugName(pendingManualStep)}' was already resolved, advancing instead of restoring it.",
                     this);
             }
 
@@ -953,7 +1151,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
         if (enableDebugLogs)
         {
             Debug.Log(
-                $"{nameof(CallPhasePrototypeFollowUpController)}: Out-of-order real follow-up completed and waiting state restored.",
+                $"{nameof(CallPhaseScenarioRuntimeController)}: Out-of-order real follow-up completed and waiting state restored.",
                 this);
         }
 
@@ -983,7 +1181,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
         if (enableDebugLogs)
         {
             Debug.Log(
-                $"{nameof(CallPhasePrototypeFollowUpController)}: Follow-up quality tracked. Optimal={optimalFollowUpCount}, Acceptable={acceptableFollowUpCount}, Poor={poorFollowUpCount}.",
+                $"{nameof(CallPhaseScenarioRuntimeController)}: Follow-up quality tracked. Optimal={optimalFollowUpCount}, Acceptable={acceptableFollowUpCount}, Poor={poorFollowUpCount}.",
                 this);
         }
     }
@@ -1026,7 +1224,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
         if (enableDebugLogs)
         {
             Debug.Log(
-                $"{nameof(CallPhasePrototypeFollowUpController)}: Played distractor follow-up '{GetQuestionDebugName(questionOption)}' and returned to waiting state.",
+                $"{nameof(CallPhaseScenarioRuntimeController)}: Played distractor follow-up '{GetQuestionDebugName(questionOption)}' and returned to waiting state.",
                 this);
         }
 
@@ -1237,6 +1435,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
             return int.MinValue;
         }
 
+        CallPhaseFollowUpScoringConfig scoringConfig = GetResolvedFollowUpScoringConfig();
         int score = 0;
         bool hasRelatedField = !string.IsNullOrWhiteSpace(questionOption.relatedFieldId);
         bool fieldKnown = hasRelatedField
@@ -1249,29 +1448,29 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
 
         if (isCurrentLinked)
         {
-            score += 100;
+            score += GetCurrentLinkedWeight(scoringConfig);
         }
         else if (isRealUnresolvedLinked)
         {
-            score += 50;
+            score += GetUnresolvedLinkedWeight(scoringConfig);
         }
 
         if (hasRelatedField && !fieldKnown)
         {
-            score += 20;
+            score += GetMissingRelatedFieldWeight(scoringConfig);
         }
 
         if (questionOption.suggestedWhenFieldMissing && hasRelatedField && !fieldKnown)
         {
-            score += 20;
+            score += GetSuggestedWhenMissingWeight(scoringConfig);
         }
 
         if (!questionOption.isDistractorQuestion)
         {
-            score += 8;
+            score += GetNonDistractorWeight(scoringConfig);
         }
 
-        score -= GetRecentQuestionPenalty(questionOption.questionId);
+        score -= GetRecentQuestionPenalty(questionOption.questionId, scoringConfig);
         return score;
     }
 
@@ -1297,7 +1496,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
         return linkedStep != null && linkedStep.stepType == CallPhaseScenarioStepType.InformationCollection;
     }
 
-    private int GetRecentQuestionPenalty(string questionId)
+    private int GetRecentQuestionPenalty(string questionId, CallPhaseFollowUpScoringConfig scoringConfig)
     {
         if (string.IsNullOrWhiteSpace(questionId))
         {
@@ -1311,7 +1510,10 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
                 continue;
             }
 
-            return Mathf.Max(10, 40 - (distance * 5));
+            int minimumPenalty = GetRepeatPenaltyMinimum(scoringConfig);
+            int maximumPenalty = GetRepeatPenaltyMaximum(scoringConfig);
+            int penaltyStep = GetRepeatPenaltyDistanceStep(scoringConfig);
+            return Mathf.Max(minimumPenalty, maximumPenalty - (distance * penaltyStep));
         }
 
         return 0;
@@ -1335,10 +1537,62 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
             recentShownQuestionIds.Add(question.questionId);
         }
 
-        while (recentShownQuestionIds.Count > MaxRecentShownQuestions)
+        int rememberedCount = GetRememberedQuestionCount(GetResolvedFollowUpScoringConfig());
+        while (recentShownQuestionIds.Count > rememberedCount)
         {
             recentShownQuestionIds.RemoveAt(0);
         }
+    }
+
+    private int GetCurrentLinkedWeight(CallPhaseFollowUpScoringConfig scoringConfig)
+    {
+        return scoringConfig != null ? scoringConfig.currentLinkedWeight : 100;
+    }
+
+    private int GetUnresolvedLinkedWeight(CallPhaseFollowUpScoringConfig scoringConfig)
+    {
+        return scoringConfig != null ? scoringConfig.unresolvedLinkedWeight : 50;
+    }
+
+    private int GetMissingRelatedFieldWeight(CallPhaseFollowUpScoringConfig scoringConfig)
+    {
+        return scoringConfig != null ? scoringConfig.missingRelatedFieldWeight : 20;
+    }
+
+    private int GetSuggestedWhenMissingWeight(CallPhaseFollowUpScoringConfig scoringConfig)
+    {
+        return scoringConfig != null ? scoringConfig.suggestedWhenMissingWeight : 20;
+    }
+
+    private int GetNonDistractorWeight(CallPhaseFollowUpScoringConfig scoringConfig)
+    {
+        return scoringConfig != null ? scoringConfig.nonDistractorWeight : 8;
+    }
+
+    private int GetRememberedQuestionCount(CallPhaseFollowUpScoringConfig scoringConfig)
+    {
+        return scoringConfig != null ? Mathf.Max(1, scoringConfig.rememberedQuestionCount) : 8;
+    }
+
+    private int GetRepeatPenaltyMinimum(CallPhaseFollowUpScoringConfig scoringConfig)
+    {
+        return scoringConfig != null ? Mathf.Max(0, scoringConfig.repeatPenaltyMinimum) : 10;
+    }
+
+    private int GetRepeatPenaltyMaximum(CallPhaseFollowUpScoringConfig scoringConfig)
+    {
+        int minimumPenalty = GetRepeatPenaltyMinimum(scoringConfig);
+        if (scoringConfig == null)
+        {
+            return 40;
+        }
+
+        return Mathf.Max(minimumPenalty, scoringConfig.repeatPenaltyMaximum);
+    }
+
+    private int GetRepeatPenaltyDistanceStep(CallPhaseFollowUpScoringConfig scoringConfig)
+    {
+        return scoringConfig != null ? Mathf.Max(1, scoringConfig.repeatPenaltyDistanceStep) : 5;
     }
 
     private bool TryResolveLinkedRealStep(
@@ -1529,7 +1783,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
 
         deferredProgressionCoroutine = null;
 
-        if (progressionCompleted || isExecutingOutOfOrderRealStep)
+        if (runtimeLocked || progressionCompleted || isExecutingOutOfOrderRealStep)
         {
             yield break;
         }
@@ -1544,7 +1798,7 @@ public class CallPhasePrototypeFollowUpController : MonoBehaviour
             if (enableDebugLogs)
             {
                 Debug.Log(
-                    $"{nameof(CallPhasePrototypeFollowUpController)}: Deferred sweep cleared stale waiting step '{GetStepDebugName(pendingManualStep)}' after it was resolved in report state.",
+                    $"{nameof(CallPhaseScenarioRuntimeController)}: Deferred sweep cleared stale waiting step '{GetStepDebugName(pendingManualStep)}' after it was resolved in report state.",
                     this);
             }
 
@@ -1605,3 +1859,4 @@ public enum CallPhaseFollowUpMode
     Auto,
     ManualPopup
 }
+

@@ -24,6 +24,7 @@ public partial class LevelSelectSceneController : MonoBehaviour
     private const string PossibleIncidentsLocalizationKey = "levelselect.info.possible_incidents";
     private const string SelectedScenarioLocalizationKey = "levelselect.info.selected_scenario";
     private const string SelectedScenarioObjectiveLocalizationKey = "levelselect.info.selected_scenario_objective";
+    private const string CompletedProgressLocalizationKey = "levelselect.progress.completed";
     private const float ScenarioDropdownDoubleClickWindow = 0.35f;
     private static readonly Color ScenarioDropdownItemColor = new Color(0f, 0f, 0f, 1f);
     private static readonly Color ScenarioDropdownSelectedItemColor = new Color(0.15f, 0.58f, 0.22f, 1f);
@@ -2917,19 +2918,19 @@ public partial class LevelSelectSceneController : MonoBehaviour
     {
         if (card == null || card.levelDefinitions == null)
         {
-            return "Completed: 0/0";
+            return FormatCompletedProgressText(0, 0);
         }
 
         int totalCount = card.levelDefinitions.Length;
         if (totalCount <= 0)
         {
-            return "Completed: 0/0";
+            return FormatCompletedProgressText(0, 0);
         }
 
         string playerName = LoadingFlowState.GetPlayerName();
         if (string.IsNullOrWhiteSpace(playerName))
         {
-            return $"Completed: 0/{totalCount}";
+            return FormatCompletedProgressText(0, totalCount);
         }
 
         int completedCount = 0;
@@ -2947,7 +2948,13 @@ public partial class LevelSelectSceneController : MonoBehaviour
             }
         }
 
-        return $"Completed: {completedCount}/{totalCount}";
+        return FormatCompletedProgressText(completedCount, totalCount);
+    }
+
+    private static string FormatCompletedProgressText(int completedCount, int totalCount)
+    {
+        string format = LanguageManager.Tr(CompletedProgressLocalizationKey, "Completed: {0}/{1}");
+        return string.Format(format, Mathf.Max(0, completedCount), Mathf.Max(0, totalCount));
     }
 
     private string ResolveLevelName(LevelDefinition definition, Button sourceButton)

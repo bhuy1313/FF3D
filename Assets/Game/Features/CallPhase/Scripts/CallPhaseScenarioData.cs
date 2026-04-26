@@ -26,6 +26,7 @@ public class CallPhaseScenarioData : ScriptableObject
     [Header("Follow-Up Flow")]
     public List<CallPhaseScenarioStepData> followUpSteps = new List<CallPhaseScenarioStepData>();
     public List<CallPhaseFollowUpQuestionOptionData> followUpQuestionPool = new List<CallPhaseFollowUpQuestionOptionData>();
+    public CallPhaseFollowUpScoringConfig followUpScoringConfig;
 
     [Header("Incident Seed")]
     public CallPhaseScenarioIncidentSeedData incidentSeed = new CallPhaseScenarioIncidentSeedData();

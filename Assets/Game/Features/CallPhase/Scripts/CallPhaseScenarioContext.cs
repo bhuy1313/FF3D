@@ -19,7 +19,7 @@ public class CallPhaseScenarioContext : MonoBehaviour
     private TranscriptStateController transcriptStateController;
     private IncidentReportController incidentReportController;
     private AssessRiskPopupEntryController assessRiskPopupEntryController;
-    private CallPhasePrototypeFollowUpController callPhasePrototypeFollowUpController;
+    private CallPhaseScenarioRuntimeController CallPhaseScenarioRuntimeController;
     private FollowUpPopupController followUpPopupController;
     private Coroutine scenarioInitializationCoroutine;
     private string currentCaseId = string.Empty;
@@ -158,9 +158,9 @@ public class CallPhaseScenarioContext : MonoBehaviour
             assessRiskPopupEntryController.ResetForScenarioRun();
         }
 
-        if (callPhasePrototypeFollowUpController != null)
+        if (CallPhaseScenarioRuntimeController != null)
         {
-            callPhasePrototypeFollowUpController.ResetForScenarioRun();
+            CallPhaseScenarioRuntimeController.ResetForScenarioRun();
         }
 
         if (followUpPopupController != null)
@@ -175,9 +175,9 @@ public class CallPhaseScenarioContext : MonoBehaviour
             transcriptLogsController.BeginScenarioRun();
         }
 
-        if (callPhasePrototypeFollowUpController != null)
+        if (CallPhaseScenarioRuntimeController != null)
         {
-            callPhasePrototypeFollowUpController.BeginScenarioRun();
+            CallPhaseScenarioRuntimeController.BeginScenarioRun();
         }
 
         scenarioInitializationCoroutine = null;
@@ -210,9 +210,9 @@ public class CallPhaseScenarioContext : MonoBehaviour
             assessRiskPopupEntryController = GetComponent<AssessRiskPopupEntryController>();
         }
 
-        if (callPhasePrototypeFollowUpController == null)
+        if (CallPhaseScenarioRuntimeController == null)
         {
-            callPhasePrototypeFollowUpController = GetComponent<CallPhasePrototypeFollowUpController>();
+            CallPhaseScenarioRuntimeController = GetComponent<CallPhaseScenarioRuntimeController>();
         }
 
         if (followUpPopupController == null)
@@ -352,3 +352,4 @@ public class CallPhaseScenarioContext : MonoBehaviour
         return null;
     }
 }
+
