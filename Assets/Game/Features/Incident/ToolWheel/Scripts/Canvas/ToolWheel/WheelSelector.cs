@@ -167,9 +167,7 @@ public class WheelSelector : MonoBehaviour
             return;
         }
 
-        CanvasGroup[] allCanvasGroups = FindObjectsByType<CanvasGroup>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
+        CanvasGroup[] allCanvasGroups = FindObjectsByType<CanvasGroup>(FindObjectsInactive.Include);
         if (allCanvasGroups == null || allCanvasGroups.Length == 0)
         {
             return;

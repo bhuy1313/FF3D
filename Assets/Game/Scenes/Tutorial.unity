@@ -14811,8 +14811,6 @@ MonoBehaviour:
   triggerBody: {fileID: 429370649}
   autoCollectMode: 1
   autoCollectDelay: 0
-  autoCollectChildFires: 1
-  linkedFires: []
   fireSimulationManager: {fileID: 0}
   autoCollectChildVentPoints: 1
   linkedVentPoints: []
@@ -25370,6 +25368,10 @@ PrefabInstance:
       propertyPath: target
       value: 
       objectReference: {fileID: 1240930828}
+    - target: {fileID: 2540845165027092112, guid: 4e1533178b34e424c835195b3a59b3f2, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 3297692986873615965, guid: 4e1533178b34e424c835195b3a59b3f2, type: 3}
       propertyPath: Target.TrackingTarget
       value: 
@@ -69152,8 +69154,6 @@ MonoBehaviour:
   triggerBody: {fileID: 1511512468}
   autoCollectMode: 1
   autoCollectDelay: 0
-  autoCollectChildFires: 1
-  linkedFires: []
   fireSimulationManager: {fileID: 0}
   autoCollectChildVentPoints: 0
   linkedVentPoints:
@@ -87140,8 +87140,6 @@ MonoBehaviour:
   triggerBody: {fileID: 1892995070}
   autoCollectMode: 1
   autoCollectDelay: 0
-  autoCollectChildFires: 1
-  linkedFires: []
   fireSimulationManager: {fileID: 0}
   autoCollectChildVentPoints: 0
   linkedVentPoints:
@@ -94623,8 +94621,6 @@ MonoBehaviour:
   allowToggleAfterIsolation: 0
   hazardType: 1
   applyHazardTypeToLinkedFires: 1
-  autoCollectChildFires: 0
-  linkedFires: []
   fireSimulationManager: {fileID: 0}
   interactionDuration: 0.65
   lockPlayerWhileInteracting: 1

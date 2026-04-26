@@ -213,7 +213,7 @@ public static class DisplaySettingsService
 
     public static AntiAliasingMode GetCurrentAntiAliasingMode()
     {
-        Camera[] cameras = UnityEngine.Object.FindObjectsByType<Camera>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        Camera[] cameras = UnityEngine.Object.FindObjectsByType<Camera>(FindObjectsInactive.Exclude);
         for (int index = 0; index < cameras.Length; index++)
         {
             Camera camera = cameras[index];
@@ -255,7 +255,7 @@ public static class DisplaySettingsService
     public static void ApplyAntiAliasingMode(AntiAliasingMode mode)
     {
         AntialiasingMode urpMode = ToUrpAntiAliasing(mode);
-        Camera[] cameras = UnityEngine.Object.FindObjectsByType<Camera>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        Camera[] cameras = UnityEngine.Object.FindObjectsByType<Camera>(FindObjectsInactive.Exclude);
         bool applied = false;
 
         for (int index = 0; index < cameras.Length; index++)
@@ -552,7 +552,7 @@ public static class DisplaySettingsService
     private static bool ApplyDirectionalLightShadows(LightShadows shadows)
     {
         bool applied = false;
-        Light[] lights = UnityEngine.Object.FindObjectsByType<Light>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        Light[] lights = UnityEngine.Object.FindObjectsByType<Light>(FindObjectsInactive.Exclude);
         for (int index = 0; index < lights.Length; index++)
         {
             Light light = lights[index];
@@ -585,7 +585,7 @@ public static class DisplaySettingsService
             return RenderSettings.sun;
         }
 
-        Light[] lights = UnityEngine.Object.FindObjectsByType<Light>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        Light[] lights = UnityEngine.Object.FindObjectsByType<Light>(FindObjectsInactive.Exclude);
         for (int index = 0; index < lights.Length; index++)
         {
             Light light = lights[index];

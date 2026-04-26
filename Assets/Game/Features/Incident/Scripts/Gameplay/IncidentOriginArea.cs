@@ -6,6 +6,13 @@ using UnityEngine.Serialization;
 [DisallowMultipleComponent]
 public class IncidentOriginArea : MonoBehaviour
 {
+    public enum NormalRoomFirePrimarySurfaceMode
+    {
+        FloorOnly = 0,
+        WallOnly = 1,
+        FloorOrWall = 2
+    }
+
     [Header("Matching")]
     [SerializeField] private string areaKey = string.Empty;
     [SerializeField] private string[] fireOriginHintKeys = Array.Empty<string>();
@@ -20,6 +27,8 @@ public class IncidentOriginArea : MonoBehaviour
     [SerializeField] private IncidentPossibleFireCause[] explicitCauses = Array.Empty<IncidentPossibleFireCause>();
     [SerializeField] private bool collectCausesFromChildren = true;
     [SerializeField] [Min(0f)] private float normalRoomFireWeight = 1f;
+    [SerializeField] private NormalRoomFirePrimarySurfaceMode normalRoomFirePrimarySurfaceMode =
+        NormalRoomFirePrimarySurfaceMode.FloorOrWall;
 
     [Header("Compatibility")]
     [SerializeField] private IncidentPayloadAnchor legacyAnchor;
@@ -46,6 +55,7 @@ public class IncidentOriginArea : MonoBehaviour
     public bool IsDefaultArea => isDefaultArea;
     public IncidentPayloadAnchor LegacyAnchor => legacyAnchor;
     public float NormalRoomFireWeight => Mathf.Max(0f, normalRoomFireWeight);
+    public NormalRoomFirePrimarySurfaceMode PrimarySurfaceMode => normalRoomFirePrimarySurfaceMode;
     public LayerMask SurfacePlacementMask => legacyAnchor != null ? legacyAnchor.FirePlacementMask : ~0;
     public QueryTriggerInteraction SurfacePlacementTriggerInteraction =>
         legacyAnchor != null ? legacyAnchor.FirePlacementTriggerInteraction : QueryTriggerInteraction.Ignore;

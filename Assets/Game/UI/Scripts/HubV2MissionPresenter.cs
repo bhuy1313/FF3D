@@ -190,7 +190,14 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
             SetText(objectiveCounterText, BuildObjectiveCounterText());
         }
         SetText(progressText, BuildProgressText());
-        SetText(progressValueText, BuildProgressValueText());
+        if (progressValueText != null)
+        {
+            progressValueText.gameObject.SetActive(showObjectiveScores);
+            if (showObjectiveScores)
+            {
+                SetText(progressValueText, BuildProgressValueText());
+            }
+        }
 
         if (accentBarImage != null)
         {
@@ -657,8 +664,12 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
 
         if (view.ProgressValueText != null)
         {
-            string progressValue = MissionLocalization.Format("mission.hud.progress.percent", progressValueFormat, normalized * 100f);
-            changed |= SetText(view.ProgressValueText, progressValue);
+            view.ProgressValueText.gameObject.SetActive(showObjectiveScores);
+            if (showObjectiveScores)
+            {
+                string progressValue = MissionLocalization.Format("mission.hud.progress.percent", progressValueFormat, normalized * 100f);
+                changed |= SetText(view.ProgressValueText, progressValue);
+            }
         }
 
         if (view.IsRescueItem)

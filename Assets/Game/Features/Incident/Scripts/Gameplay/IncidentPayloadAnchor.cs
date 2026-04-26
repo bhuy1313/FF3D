@@ -6,6 +6,10 @@ using UnityEngine.Serialization;
 [DisallowMultipleComponent]
 public class IncidentPayloadAnchor : MonoBehaviour
 {
+    private const float DownFacingSurfaceDotThreshold = -0.35f;
+    private const float UpFacingSurfaceDotThreshold = 0.6f;
+    private const float TopSurfaceProbePadding = 0.08f;
+
     [Header("Matching")]
     [SerializeField] private string fireOriginKey = "Unknown";
     [SerializeField] private string logicalLocationKey = string.Empty;
@@ -288,6 +292,27 @@ public class IncidentPayloadAnchor : MonoBehaviour
         List<SpawnPlacement> existingPlacements,
         out SpawnPlacement placement)
     {
+        return TryFindPlacement(
+            random,
+            seedPosition,
+            seedSurfaceNormal,
+            placementRange,
+            minimumSpacing,
+            existingPlacements,
+            debugTraces: null,
+            out placement);
+    }
+
+    private bool TryFindPlacement(
+        System.Random random,
+        Vector3 seedPosition,
+        Vector3 seedSurfaceNormal,
+        float placementRange,
+        float minimumSpacing,
+        List<SpawnPlacement> existingPlacements,
+        List<DebugPlacementTrace> debugTraces,
+        out SpawnPlacement placement)
+    {
         placement = default;
         if (random == null || existingPlacements == null)
         {
@@ -319,6 +344,13 @@ public class IncidentPayloadAnchor : MonoBehaviour
                 Vector3.Lerp(launchPosition, landingPosition, 0.5f) +
                 (surfaceUp * apexHeight) +
                 (lateralDirection * lateralOffset);
+            List<Vector3> debugPath = debugTraces != null ? new List<Vector3>(segmentCount + 1) : null;
+            debugPath?.Add(launchPosition);
+            bool hadHit = false;
+            bool accepted = false;
+            bool promoted = false;
+            Vector3 hitPoint = Vector3.zero;
+            Vector3 resolvedPoint = Vector3.zero;
 
             Vector3 previousPoint = launchPosition;
             for (int segmentIndex = 1; segmentIndex <= segmentCount; segmentIndex++)
@@ -333,25 +365,49 @@ public class IncidentPayloadAnchor : MonoBehaviour
                     continue;
                 }
 
-                if (Physics.SphereCast(
-                        previousPoint,
-                        Mathf.Max(0.01f, runtimeSpawnProfile.ParabolaCastRadius),
-                        segment / segmentLength,
-                        out RaycastHit hit,
-                        segmentLength,
-                        firePlacementMask,
-                        firePlacementTriggerInteraction) &&
-                    IsValidPlacementHit(hit, existingPlacements, minimumSpacing))
+                debugPath?.Add(nextPoint);
+
+                bool didHit = Physics.SphereCast(
+                    previousPoint,
+                    Mathf.Max(0.01f, runtimeSpawnProfile.ParabolaCastRadius),
+                    segment / segmentLength,
+                    out RaycastHit hit,
+                    segmentLength,
+                    firePlacementMask,
+                    firePlacementTriggerInteraction);
+                if (didHit)
                 {
-                    Vector3 position = hit.point + hit.normal * Mathf.Max(0f, surfaceOffset);
-                    float weight = CalculatePlacementSurfaceWeight(hit.normal);
-                    candidates.Add(new PlacementCandidate(
-                        new SpawnPlacement(position, ResolveSurfaceRotation(hit.normal), hit.normal),
-                        weight));
+                    hadHit = true;
+                    hitPoint = hit.point;
+                    if (TryResolveDerivedPlacement(
+                            hit,
+                            existingPlacements,
+                            minimumSpacing,
+                            out SpawnPlacement resolvedPlacement,
+                            out float weight,
+                            out bool wasPromoted))
+                    {
+                        accepted = true;
+                        promoted = wasPromoted;
+                        resolvedPoint = resolvedPlacement.Position;
+                        candidates.Add(new PlacementCandidate(resolvedPlacement, weight));
+                    }
+
                     break;
                 }
 
                 previousPoint = nextPoint;
+            }
+
+            if (debugTraces != null)
+            {
+                debugTraces.Add(new DebugPlacementTrace(
+                    debugPath != null ? debugPath.ToArray() : Array.Empty<Vector3>(),
+                    hadHit,
+                    accepted,
+                    promoted,
+                    hitPoint,
+                    resolvedPoint));
             }
         }
 
@@ -362,6 +418,95 @@ public class IncidentPayloadAnchor : MonoBehaviour
 
         placement = ChoosePlacementCandidate(random, candidates);
         return true;
+    }
+
+    private bool TryResolveDerivedPlacement(
+        RaycastHit hit,
+        List<SpawnPlacement> existingPlacements,
+        float minimumSpacing,
+        out SpawnPlacement placement,
+        out float weight,
+        out bool wasPromoted)
+    {
+        placement = default;
+        weight = 0f;
+        wasPromoted = false;
+
+        RaycastHit resolvedHit = hit;
+        if (IsDownFacingSurface(hit.normal) &&
+            !TryPromoteUndersideHitToTopSurface(hit, out resolvedHit))
+        {
+            return false;
+        }
+
+        wasPromoted = resolvedHit.collider != null &&
+            resolvedHit.point != hit.point &&
+            IsDownFacingSurface(hit.normal);
+
+        if (!IsValidPlacementHit(resolvedHit, existingPlacements, minimumSpacing))
+        {
+            return false;
+        }
+
+        Vector3 position = resolvedHit.point + resolvedHit.normal * Mathf.Max(0f, surfaceOffset);
+        placement = new SpawnPlacement(position, ResolveSurfaceRotation(resolvedHit.normal), resolvedHit.normal);
+        weight = CalculatePlacementSurfaceWeight(resolvedHit.normal);
+        return true;
+    }
+
+    public bool TryCreateDebugPlacementSample(
+        IncidentFireSpawnProfile fireSpawnProfile,
+        Vector3 seedPosition,
+        Vector3 seedSurfaceNormal,
+        float placementRange,
+        float minimumSpacing,
+        IReadOnlyList<Vector3> existingPositions,
+        int randomSeed,
+        out DebugPlacementSample sample)
+    {
+        sample = default;
+        if (fireSpawnProfile == null)
+        {
+            return false;
+        }
+
+        IncidentFireSpawnProfile previousProfile = runtimeSpawnProfile;
+        runtimeSpawnProfile = fireSpawnProfile;
+        try
+        {
+            List<SpawnPlacement> existingPlacements = new List<SpawnPlacement>();
+            if (existingPositions != null)
+            {
+                for (int i = 0; i < existingPositions.Count; i++)
+                {
+                    existingPlacements.Add(new SpawnPlacement(existingPositions[i], Quaternion.identity, Vector3.up));
+                }
+            }
+
+            List<DebugPlacementTrace> debugTraces = new List<DebugPlacementTrace>();
+            System.Random random = new System.Random(randomSeed);
+            bool success = TryFindPlacement(
+                random,
+                seedPosition,
+                seedSurfaceNormal,
+                placementRange,
+                minimumSpacing,
+                existingPlacements,
+                debugTraces,
+                out SpawnPlacement placement);
+            sample = new DebugPlacementSample(
+                seedPosition,
+                seedSurfaceNormal,
+                success,
+                debugTraces.ToArray(),
+                success ? placement.Position : seedPosition,
+                success ? placement.SurfaceNormal : seedSurfaceNormal);
+            return success;
+        }
+        finally
+        {
+            runtimeSpawnProfile = previousProfile;
+        }
     }
 
     private int ResolveRequestedTotalFireCount(IncidentWorldSetupPayload payload)
@@ -460,6 +605,31 @@ public class IncidentPayloadAnchor : MonoBehaviour
         return true;
     }
 
+    private bool TryPromoteUndersideHitToTopSurface(RaycastHit undersideHit, out RaycastHit topSurfaceHit)
+    {
+        topSurfaceHit = default;
+        Collider targetCollider = undersideHit.collider;
+        if (targetCollider == null)
+        {
+            return false;
+        }
+
+        Bounds bounds = targetCollider.bounds;
+        float probePadding = Mathf.Max(TopSurfaceProbePadding, surfaceOffset + 0.02f);
+        Vector3 rayOrigin = new Vector3(
+            undersideHit.point.x,
+            bounds.max.y + probePadding,
+            undersideHit.point.z);
+        float rayDistance = Mathf.Max(0.1f, (bounds.size.y + (probePadding * 2f)));
+        Ray ray = new Ray(rayOrigin, Vector3.down);
+        if (!targetCollider.Raycast(ray, out topSurfaceHit, rayDistance))
+        {
+            return false;
+        }
+
+        return Vector3.Dot(topSurfaceHit.normal.normalized, Vector3.up) >= UpFacingSurfaceDotThreshold;
+    }
+
     private Quaternion ResolveFallbackRotation()
     {
         Vector3 forward = transform.forward.sqrMagnitude > 0f ? transform.forward : Vector3.forward;
@@ -524,17 +694,23 @@ public class IncidentPayloadAnchor : MonoBehaviour
     {
         Vector3 normalizedNormal = surfaceNormal.sqrMagnitude > 0.0001f ? surfaceNormal.normalized : Vector3.up;
         float upDot = Vector3.Dot(normalizedNormal, Vector3.up);
-        if (upDot >= 0.6f)
+        if (upDot >= UpFacingSurfaceDotThreshold)
         {
             return Mathf.Max(0.01f, runtimeSpawnProfile.FloorPlacementWeight);
         }
 
-        if (upDot <= -0.35f)
+        if (upDot <= DownFacingSurfaceDotThreshold)
         {
             return Mathf.Max(0.01f, runtimeSpawnProfile.CeilingPlacementWeight);
         }
 
         return Mathf.Max(0.01f, runtimeSpawnProfile.WallPlacementWeight);
+    }
+
+    private static bool IsDownFacingSurface(Vector3 surfaceNormal)
+    {
+        Vector3 normalizedNormal = surfaceNormal.sqrMagnitude > 0.0001f ? surfaceNormal.normalized : Vector3.up;
+        return Vector3.Dot(normalizedNormal, Vector3.up) <= DownFacingSurfaceDotThreshold;
     }
 
     private static SpawnPlacement ChoosePlacementCandidate(System.Random random, List<PlacementCandidate> candidates)
@@ -648,6 +824,58 @@ public class IncidentPayloadAnchor : MonoBehaviour
 
         public SpawnPlacement Placement { get; }
         public float Weight { get; }
+    }
+
+    public readonly struct DebugPlacementTrace
+    {
+        public DebugPlacementTrace(
+            Vector3[] pathPoints,
+            bool hadHit,
+            bool accepted,
+            bool promotedToTopSurface,
+            Vector3 hitPoint,
+            Vector3 resolvedPoint)
+        {
+            PathPoints = pathPoints ?? Array.Empty<Vector3>();
+            HadHit = hadHit;
+            Accepted = accepted;
+            PromotedToTopSurface = promotedToTopSurface;
+            HitPoint = hitPoint;
+            ResolvedPoint = resolvedPoint;
+        }
+
+        public Vector3[] PathPoints { get; }
+        public bool HadHit { get; }
+        public bool Accepted { get; }
+        public bool PromotedToTopSurface { get; }
+        public Vector3 HitPoint { get; }
+        public Vector3 ResolvedPoint { get; }
+    }
+
+    public readonly struct DebugPlacementSample
+    {
+        public DebugPlacementSample(
+            Vector3 seedPosition,
+            Vector3 seedSurfaceNormal,
+            bool success,
+            DebugPlacementTrace[] traces,
+            Vector3 placementPosition,
+            Vector3 placementSurfaceNormal)
+        {
+            SeedPosition = seedPosition;
+            SeedSurfaceNormal = seedSurfaceNormal.sqrMagnitude > 0.0001f ? seedSurfaceNormal.normalized : Vector3.up;
+            Success = success;
+            Traces = traces ?? Array.Empty<DebugPlacementTrace>();
+            PlacementPosition = placementPosition;
+            PlacementSurfaceNormal = placementSurfaceNormal.sqrMagnitude > 0.0001f ? placementSurfaceNormal.normalized : Vector3.up;
+        }
+
+        public Vector3 SeedPosition { get; }
+        public Vector3 SeedSurfaceNormal { get; }
+        public bool Success { get; }
+        public DebugPlacementTrace[] Traces { get; }
+        public Vector3 PlacementPosition { get; }
+        public Vector3 PlacementSurfaceNormal { get; }
     }
 
 }

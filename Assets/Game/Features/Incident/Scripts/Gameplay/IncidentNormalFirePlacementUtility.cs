@@ -4,6 +4,8 @@ public static class IncidentNormalFirePlacementUtility
 {
     private const int SampleCount = 24;
     private const float RaycastDistancePadding = 1f;
+    private const float UpFacingSurfaceDotThreshold = 0.6f;
+    private const float DownFacingSurfaceDotThreshold = -0.35f;
 
     public static bool TryResolvePlacement(IncidentOriginArea area, out Vector3 position, out Quaternion rotation)
     {
@@ -70,6 +72,11 @@ public static class IncidentNormalFirePlacementUtility
             return false;
         }
 
+        if (IsRejectedPrimarySurface(area, hit))
+        {
+            return false;
+        }
+
         position = hit.point + (hit.normal * area.SurfaceOffset);
         if (!bounds.Contains(position))
         {
@@ -78,6 +85,36 @@ public static class IncidentNormalFirePlacementUtility
 
         rotation = ResolveSurfaceRotation(area.transform, hit.normal);
         return true;
+    }
+
+    private static bool IsRejectedPrimarySurface(IncidentOriginArea area, RaycastHit hit)
+    {
+        if (area == null || hit.collider == null)
+        {
+            return true;
+        }
+
+        Vector3 normalizedNormal = hit.normal.sqrMagnitude > 0.0001f ? hit.normal.normalized : Vector3.up;
+        float upDot = Vector3.Dot(normalizedNormal, Vector3.up);
+        if (upDot <= DownFacingSurfaceDotThreshold)
+        {
+            return true;
+        }
+
+        bool isFloor = upDot >= UpFacingSurfaceDotThreshold;
+        bool isWall = !isFloor;
+        switch (area.PrimarySurfaceMode)
+        {
+            case IncidentOriginArea.NormalRoomFirePrimarySurfaceMode.FloorOnly:
+                return !isFloor;
+
+            case IncidentOriginArea.NormalRoomFirePrimarySurfaceMode.WallOnly:
+                return !isWall;
+
+            case IncidentOriginArea.NormalRoomFirePrimarySurfaceMode.FloorOrWall:
+            default:
+                return false;
+        }
     }
 
     private static Quaternion ResolveSurfaceRotation(Transform areaTransform, Vector3 surfaceNormal)

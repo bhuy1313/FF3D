@@ -30,6 +30,8 @@ public sealed class FireClusterView : MonoBehaviour
     private Material fallbackGlowMaterial;
     private bool fallbackVisualInitialized;
     private readonly List<RuntimeFlameEmitter> flameEmitters = new List<RuntimeFlameEmitter>();
+    private GameObject runtimeClusterLightProxyObject;
+    private Light runtimeClusterLightProxy;
 
     public int BoundClusterId => boundClusterId;
 
@@ -56,6 +58,11 @@ public sealed class FireClusterView : MonoBehaviour
         for (int i = 0; i < flameEmitters.Count; i++)
         {
             DestroyEmitterResources(flameEmitters[i]);
+        }
+
+        if (runtimeClusterLightProxyObject != null)
+        {
+            Destroy(runtimeClusterLightProxyObject);
         }
 
         if (fallbackCoreMaterial != null)
@@ -107,9 +114,12 @@ public sealed class FireClusterView : MonoBehaviour
 
         if (clusterLight != null)
         {
-            clusterLight.transform.localPosition = clusterLightLocalOffset;
-            clusterLight.enabled = snapshot.Intensity > 0.01f;
-            clusterLight.intensity = snapshot.Intensity * maxLightIntensity;
+            Light targetLight = ResolveClusterLightTarget();
+            if (targetLight != null)
+            {
+                targetLight.enabled = snapshot.Intensity > 0.01f;
+                targetLight.intensity = snapshot.Intensity * maxLightIntensity;
+            }
         }
 
         ApplyFallbackVisual(snapshot);
@@ -561,5 +571,85 @@ public sealed class FireClusterView : MonoBehaviour
         }
 
         return renderer;
+    }
+
+    private Light ResolveClusterLightTarget()
+    {
+        if (clusterLight == null)
+        {
+            return null;
+        }
+
+        bool lightOnRoot = clusterLight.transform == transform;
+        bool needsOffsetProxy = lightOnRoot && clusterLightLocalOffset.sqrMagnitude > 0.000001f;
+        if (!needsOffsetProxy)
+        {
+            clusterLight.transform.localPosition = clusterLightLocalOffset;
+            clusterLight.enabled = true;
+            DisableClusterLightProxy();
+            return clusterLight;
+        }
+
+        EnsureClusterLightProxy();
+        if (runtimeClusterLightProxy == null)
+        {
+            return clusterLight;
+        }
+
+        runtimeClusterLightProxy.transform.localPosition = clusterLightLocalOffset;
+        runtimeClusterLightProxy.transform.localRotation = Quaternion.identity;
+        runtimeClusterLightProxy.transform.localScale = Vector3.one;
+        clusterLight.enabled = false;
+        return runtimeClusterLightProxy;
+    }
+
+    private void EnsureClusterLightProxy()
+    {
+        if (runtimeClusterLightProxy != null || clusterLight == null)
+        {
+            return;
+        }
+
+        runtimeClusterLightProxyObject = new GameObject("ClusterLightProxy");
+        runtimeClusterLightProxyObject.transform.SetParent(transform, false);
+        runtimeClusterLightProxy = runtimeClusterLightProxyObject.AddComponent<Light>();
+        CopyLightSettings(clusterLight, runtimeClusterLightProxy);
+    }
+
+    private void DisableClusterLightProxy()
+    {
+        if (runtimeClusterLightProxy != null)
+        {
+            runtimeClusterLightProxy.enabled = false;
+        }
+    }
+
+    private static void CopyLightSettings(Light source, Light destination)
+    {
+        if (source == null || destination == null)
+        {
+            return;
+        }
+
+        destination.type = source.type;
+        destination.color = source.color;
+        destination.range = source.range;
+        destination.spotAngle = source.spotAngle;
+        destination.innerSpotAngle = source.innerSpotAngle;
+        destination.shadows = source.shadows;
+        destination.shadowStrength = source.shadowStrength;
+        destination.shadowBias = source.shadowBias;
+        destination.shadowNormalBias = source.shadowNormalBias;
+        destination.shadowNearPlane = source.shadowNearPlane;
+        destination.cookie = source.cookie;
+        destination.renderMode = source.renderMode;
+        destination.cullingMask = source.cullingMask;
+        destination.renderingLayerMask = source.renderingLayerMask;
+        destination.bounceIntensity = source.bounceIntensity;
+        destination.colorTemperature = source.colorTemperature;
+        destination.useColorTemperature = source.useColorTemperature;
+        destination.shapeRadius = source.shapeRadius;
+        destination.areaSize = source.areaSize;
+        destination.enabled = false;
     }
 }
