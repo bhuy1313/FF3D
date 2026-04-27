@@ -12,15 +12,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8c514f2794fd459ca795f89836f5d629, type: 3}
   m_Name: Map3_FireSimulationProfile
   m_EditorClassIdentifier: 
-  simulationTickInterval: 0.1
-  clusterRefreshInterval: 0.15
+  simulationTickInterval: 0.2
+  clusterRefreshInterval: 0.3
   ambientCoolingPerSecond: 0
   wetnessCoolingPerSecond: 0
   wetnessRecoveryPerSecond: 0.2
   passiveIgnitionThreshold: 1
   extinguishThreshold: 0.08
+  visualHeatThreshold: 0.01
   suppressionRecoveryDelaySeconds: 1.5
   suppressionRecoveryHeatMultiplier: 0.15
+  blockIncomingSpreadDuringSuppressionRecovery: 1
+  stopReceivingSpreadAfterSaturation: 1
+  spreadSaturationHeatMultiplier: 2
+  deleteNodeWhenHeatDropsToZero: 1
   fuelBurnPerSecond: 0.08
   burnedOutHeatRetention: 0.15
   neighborHeatTransferPerSecond: 0.55

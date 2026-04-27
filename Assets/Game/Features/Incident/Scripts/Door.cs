@@ -175,6 +175,13 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
         CloseDoor();
     }
 
+    public void SetLockState(DoorLockMode mode, bool locked)
+    {
+        lockMode = mode;
+        startsLocked = locked;
+        isLocked = locked;
+    }
+
     public Vector3 GetWorldPosition()
     {
         return transform.position;

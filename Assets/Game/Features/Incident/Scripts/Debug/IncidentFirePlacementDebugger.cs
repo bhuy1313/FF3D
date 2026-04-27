@@ -13,8 +13,7 @@ public sealed class IncidentFirePlacementDebugger : MonoBehaviour
     [Header("Playback")]
     [SerializeField] private bool autoStartOnPlay = true;
     [SerializeField] [Min(0.05f)] private float attemptIntervalSeconds = 1f;
-    [SerializeField] [Min(1)] private int maxSuccessfulPlacements = 10;
-    [SerializeField] private bool chainFromLastSuccessfulPlacement = true;
+    [SerializeField] [Min(1)] private int requestedActiveFireCount = 4;
 
     [Header("Fallback Seed")]
     [SerializeField] private Vector3 fallbackSeedSurfaceNormal = Vector3.up;
@@ -32,15 +31,14 @@ public sealed class IncidentFirePlacementDebugger : MonoBehaviour
     [SerializeField] private Color promotedTrajectoryColor = new Color(0.1f, 0.8f, 1f, 0.9f);
     [SerializeField] [Min(0.01f)] private float gizmoHitSphereRadius = 0.05f;
 
-    private readonly List<Vector3> existingPositions = new List<Vector3>();
     private readonly List<GameObject> spawnedMarkers = new List<GameObject>();
-    private readonly List<AttemptRecord> attempts = new List<AttemptRecord>();
+    private readonly List<AttemptRecord> revealedAttempts = new List<AttemptRecord>();
 
     private Coroutine playbackRoutine;
-    private Vector3 currentSeedPosition;
-    private Vector3 currentSeedSurfaceNormal = Vector3.up;
-    private int successfulPlacementCount;
-    private int attemptSequence;
+    private IncidentPayloadAnchor.DebugRuntimePlacementSession runtimeSession;
+    private Vector3 primarySeedPosition;
+    private Quaternion primarySeedRotation = Quaternion.identity;
+    private int nextAttemptIndexToReveal;
 
     private void Start()
     {
@@ -59,7 +57,7 @@ public sealed class IncidentFirePlacementDebugger : MonoBehaviour
         }
 
         ResetDebugVisualization();
-        if (!TryInitializeSeed())
+        if (!TryPrepareSession())
         {
             Debug.LogWarning($"{nameof(IncidentFirePlacementDebugger)} requires an anchor and fire spawn profile.", this);
             return;
@@ -82,13 +80,13 @@ public sealed class IncidentFirePlacementDebugger : MonoBehaviour
             playbackRoutine = null;
         }
 
-        if (!TryInitializeSeed())
+        if (!TryPrepareSession())
         {
             Debug.LogWarning($"{nameof(IncidentFirePlacementDebugger)} requires an anchor and fire spawn profile.", this);
             return;
         }
 
-        ExecuteAttempt();
+        RevealNextAttempt();
     }
 
     [ContextMenu("Reset Debug Visualization")]
@@ -100,10 +98,9 @@ public sealed class IncidentFirePlacementDebugger : MonoBehaviour
             playbackRoutine = null;
         }
 
-        successfulPlacementCount = 0;
-        attemptSequence = 0;
-        existingPositions.Clear();
-        attempts.Clear();
+        runtimeSession = default;
+        nextAttemptIndexToReveal = 0;
+        revealedAttempts.Clear();
 
         for (int i = 0; i < spawnedMarkers.Count; i++)
         {
@@ -119,55 +116,15 @@ public sealed class IncidentFirePlacementDebugger : MonoBehaviour
     private IEnumerator RunPlayback()
     {
         WaitForSeconds delay = new WaitForSeconds(attemptIntervalSeconds);
-        while (successfulPlacementCount < maxSuccessfulPlacements)
+        while (RevealNextAttempt())
         {
-            ExecuteAttempt();
             yield return delay;
         }
 
         playbackRoutine = null;
     }
 
-    private void ExecuteAttempt()
-    {
-        if (anchor == null || fireSpawnProfile == null)
-        {
-            return;
-        }
-
-        attemptSequence++;
-        int randomSeed = unchecked((System.Environment.TickCount * 397) ^ attemptSequence);
-        if (!anchor.TryCreateDebugPlacementSample(
-                fireSpawnProfile,
-                currentSeedPosition,
-                currentSeedSurfaceNormal,
-                fireSpawnProfile.SecondaryFireRange,
-                fireSpawnProfile.MinimumSecondaryFireSpacing,
-                existingPositions,
-                randomSeed,
-                out IncidentPayloadAnchor.DebugPlacementSample sample))
-        {
-            attempts.Add(new AttemptRecord(sample, wasPromoted: false));
-            return;
-        }
-
-        bool wasPromoted = WasPromoted(sample);
-        attempts.Add(new AttemptRecord(sample, wasPromoted));
-        existingPositions.Add(sample.PlacementPosition);
-        SpawnMarker(
-            sample.PlacementPosition,
-            wasPromoted ? promotedMarkerColor : successMarkerColor,
-            wasPromoted ? "PromotedPlacementMarker" : "PlacementMarker");
-        successfulPlacementCount++;
-
-        if (chainFromLastSuccessfulPlacement)
-        {
-            currentSeedPosition = sample.PlacementPosition;
-            currentSeedSurfaceNormal = sample.PlacementSurfaceNormal;
-        }
-    }
-
-    private bool TryInitializeSeed()
+    private bool TryPrepareSession()
     {
         ResolveReferences();
         if (anchor == null || fireSpawnProfile == null)
@@ -175,17 +132,74 @@ public sealed class IncidentFirePlacementDebugger : MonoBehaviour
             return false;
         }
 
-        if (existingPositions.Count > 0)
-        {
-            return true;
-        }
-
         Vector3 seedPosition = seedTransform != null ? seedTransform.position : transform.position;
         Vector3 seedNormal = seedTransform != null ? seedTransform.up : fallbackSeedSurfaceNormal;
-        currentSeedPosition = seedPosition;
-        currentSeedSurfaceNormal = seedNormal.sqrMagnitude > 0.0001f ? seedNormal.normalized : Vector3.up;
-        existingPositions.Add(currentSeedPosition);
-        SpawnMarker(currentSeedPosition, seedMarkerColor, "SeedMarker");
+        primarySeedPosition = seedPosition;
+        Vector3 resolvedSeedNormal = seedNormal.sqrMagnitude > 0.0001f ? seedNormal.normalized : Vector3.up;
+        primarySeedRotation = ResolveSeedRotation(resolvedSeedNormal);
+
+        SpawnMarker(primarySeedPosition, seedMarkerColor, "SeedMarker");
+
+        int activeSeed = unchecked(System.Environment.TickCount * 397);
+        int latentSeed = unchecked((System.Environment.TickCount * 733) ^ 0x5F3759DF);
+        if (!anchor.TryCreateDebugRuntimePlacementSession(
+                fireSpawnProfile,
+                primarySeedPosition,
+                primarySeedRotation,
+                requestedActiveFireCount,
+                activeSeed,
+                latentSeed,
+                out runtimeSession))
+        {
+            return false;
+        }
+
+        nextAttemptIndexToReveal = 0;
+        return true;
+    }
+
+    private Quaternion ResolveSeedRotation(Vector3 seedNormal)
+    {
+        Vector3 up = seedNormal.sqrMagnitude > 0.0001f ? seedNormal.normalized : Vector3.up;
+        Vector3 projectedForward = Vector3.ProjectOnPlane(
+            transform.forward.sqrMagnitude > 0.0001f ? transform.forward : Vector3.forward,
+            up);
+        if (projectedForward.sqrMagnitude < 0.0001f)
+        {
+            projectedForward = Vector3.ProjectOnPlane(Vector3.forward, up);
+        }
+
+        if (projectedForward.sqrMagnitude < 0.0001f)
+        {
+            projectedForward = Vector3.Cross(up, Vector3.right);
+        }
+
+        if (projectedForward.sqrMagnitude < 0.0001f)
+        {
+            projectedForward = Vector3.forward;
+        }
+
+        return Quaternion.LookRotation(projectedForward.normalized, up);
+    }
+
+    private bool RevealNextAttempt()
+    {
+        if (runtimeSession.Attempts == null || nextAttemptIndexToReveal >= runtimeSession.Attempts.Length)
+        {
+            return false;
+        }
+
+        IncidentPayloadAnchor.DebugRuntimePlacementAttempt attempt = runtimeSession.Attempts[nextAttemptIndexToReveal++];
+        bool wasPromoted = WasPromoted(attempt);
+        revealedAttempts.Add(new AttemptRecord(attempt));
+        if (attempt.Success)
+        {
+            SpawnMarker(
+                attempt.PlacementPosition,
+                wasPromoted ? promotedMarkerColor : successMarkerColor,
+                wasPromoted ? "PromotedPlacementMarker" : "PlacementMarker");
+        }
+
         return true;
     }
 
@@ -219,22 +233,23 @@ public sealed class IncidentFirePlacementDebugger : MonoBehaviour
         spawnedMarkers.Add(marker);
     }
 
-    private bool WasPromoted(IncidentPayloadAnchor.DebugPlacementSample sample)
+    private static bool WasPromoted(IncidentPayloadAnchor.DebugRuntimePlacementAttempt attempt)
     {
-        if (!sample.Success || sample.Traces == null)
+        IncidentPayloadAnchor.DebugPlacementTrace[] traces = attempt.Traces;
+        if (!attempt.Success || traces == null)
         {
             return false;
         }
 
-        for (int i = 0; i < sample.Traces.Length; i++)
+        for (int i = 0; i < traces.Length; i++)
         {
-            IncidentPayloadAnchor.DebugPlacementTrace trace = sample.Traces[i];
+            IncidentPayloadAnchor.DebugPlacementTrace trace = traces[i];
             if (!trace.Accepted)
             {
                 continue;
             }
 
-            if ((trace.ResolvedPoint - sample.PlacementPosition).sqrMagnitude <= 0.0001f)
+            if ((trace.ResolvedPoint - attempt.PlacementPosition).sqrMagnitude <= 0.0001f)
             {
                 return trace.PromotedToTopSurface;
             }
@@ -245,15 +260,14 @@ public sealed class IncidentFirePlacementDebugger : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        if (!drawTrajectories || attempts.Count == 0)
+        if (!drawTrajectories || revealedAttempts.Count == 0)
         {
             return;
         }
 
-        for (int attemptIndex = 0; attemptIndex < attempts.Count; attemptIndex++)
+        for (int attemptIndex = 0; attemptIndex < revealedAttempts.Count; attemptIndex++)
         {
-            AttemptRecord attempt = attempts[attemptIndex];
-            IncidentPayloadAnchor.DebugPlacementTrace[] traces = attempt.Sample.Traces;
+            IncidentPayloadAnchor.DebugPlacementTrace[] traces = revealedAttempts[attemptIndex].Attempt.Traces;
             if (traces == null)
             {
                 continue;
@@ -295,13 +309,11 @@ public sealed class IncidentFirePlacementDebugger : MonoBehaviour
 
     private readonly struct AttemptRecord
     {
-        public AttemptRecord(IncidentPayloadAnchor.DebugPlacementSample sample, bool wasPromoted)
+        public AttemptRecord(IncidentPayloadAnchor.DebugRuntimePlacementAttempt attempt)
         {
-            Sample = sample;
-            WasPromoted = wasPromoted;
+            Attempt = attempt;
         }
 
-        public IncidentPayloadAnchor.DebugPlacementSample Sample { get; }
-        public bool WasPromoted { get; }
+        public IncidentPayloadAnchor.DebugRuntimePlacementAttempt Attempt { get; }
     }
 }

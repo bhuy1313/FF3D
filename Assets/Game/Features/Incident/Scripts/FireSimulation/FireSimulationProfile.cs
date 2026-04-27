@@ -15,8 +15,13 @@ public sealed class FireSimulationProfile : ScriptableObject
     [SerializeField] [Min(0f)] private float wetnessRecoveryPerSecond = 0.2f;
     [SerializeField] [Min(0f)] private float passiveIgnitionThreshold = 1f;
     [SerializeField] [Min(0f)] private float extinguishThreshold = 0.08f;
+    [SerializeField] [Min(0f)] private float visualHeatThreshold = 0.01f;
     [SerializeField] [Min(0f)] private float suppressionRecoveryDelaySeconds = 1.5f;
     [SerializeField] [Range(0f, 1f)] private float suppressionRecoveryHeatMultiplier = 0.15f;
+    [SerializeField] private bool blockIncomingSpreadDuringSuppressionRecovery;
+    [SerializeField] private bool stopReceivingSpreadAfterSaturation;
+    [SerializeField] [Min(1f)] private float spreadSaturationHeatMultiplier = 2f;
+    [SerializeField] private bool deleteNodeWhenHeatDropsToZero;
 
     [Header("Fuel")]
     [SerializeField] [Min(0f)] private float fuelBurnPerSecond = 0.1f;
@@ -39,8 +44,13 @@ public sealed class FireSimulationProfile : ScriptableObject
     public float WetnessRecoveryPerSecond => wetnessRecoveryPerSecond;
     public float PassiveIgnitionThreshold => passiveIgnitionThreshold;
     public float ExtinguishThreshold => extinguishThreshold;
+    public float VisualHeatThreshold => visualHeatThreshold;
     public float SuppressionRecoveryDelaySeconds => suppressionRecoveryDelaySeconds;
     public float SuppressionRecoveryHeatMultiplier => suppressionRecoveryHeatMultiplier;
+    public bool BlockIncomingSpreadDuringSuppressionRecovery => blockIncomingSpreadDuringSuppressionRecovery;
+    public bool StopReceivingSpreadAfterSaturation => stopReceivingSpreadAfterSaturation;
+    public float SpreadSaturationHeatMultiplier => spreadSaturationHeatMultiplier;
+    public bool DeleteNodeWhenHeatDropsToZero => deleteNodeWhenHeatDropsToZero;
     public float FuelBurnPerSecond => fuelBurnPerSecond;
     public float BurnedOutHeatRetention => burnedOutHeatRetention;
     public float NeighborHeatTransferPerSecond => neighborHeatTransferPerSecond;
@@ -59,8 +69,10 @@ public sealed class FireSimulationProfile : ScriptableObject
         wetnessRecoveryPerSecond = Mathf.Max(0f, wetnessRecoveryPerSecond);
         passiveIgnitionThreshold = Mathf.Max(0f, passiveIgnitionThreshold);
         extinguishThreshold = Mathf.Max(0f, extinguishThreshold);
+        visualHeatThreshold = Mathf.Max(0f, visualHeatThreshold);
         suppressionRecoveryDelaySeconds = Mathf.Max(0f, suppressionRecoveryDelaySeconds);
         suppressionRecoveryHeatMultiplier = Mathf.Clamp01(suppressionRecoveryHeatMultiplier);
+        spreadSaturationHeatMultiplier = Mathf.Max(1f, spreadSaturationHeatMultiplier);
         fuelBurnPerSecond = Mathf.Max(0f, fuelBurnPerSecond);
         burnedOutHeatRetention = Mathf.Clamp01(burnedOutHeatRetention);
         neighborHeatTransferPerSecond = Mathf.Max(0f, neighborHeatTransferPerSecond);

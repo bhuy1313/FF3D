@@ -236,30 +236,20 @@ public class IncidentPayloadAnchor : MonoBehaviour
         }
 
         List<SpawnPlacement> allPlacements = new List<SpawnPlacement>(activePlacements);
-        List<SpawnPlacement> currentFrontier = new List<SpawnPlacement>();
-        int seedCount = Mathf.Min(activePlacements.Count, Mathf.Max(1, runtimeSpawnProfile.LatentSpreadSeedLimit));
-        for (int i = 0; i < seedCount; i++)
-        {
-            currentFrontier.Add(activePlacements[i]);
-        }
-
         System.Random random = new System.Random(Guid.NewGuid().GetHashCode());
-        int depthLimit = Mathf.Max(1, runtimeSpawnProfile.LatentSpreadBranchDepth);
-        for (int depth = 0; depth < depthLimit && latentPlacements.Count < runtimeSpawnProfile.LatentSpreadNodeCount; depth++)
+        Queue<SpawnPlacement> pendingSeeds = new Queue<SpawnPlacement>(activePlacements);
+        int placementsPerNode = Mathf.Max(1, runtimeSpawnProfile.LatentSpreadPlacementsPerNode);
+        int attemptsPerNode = Mathf.Max(1, runtimeSpawnProfile.PlacementAttemptsPerSecondaryFire);
+        while (pendingSeeds.Count > 0 && latentPlacements.Count < runtimeSpawnProfile.LatentSpreadNodeCount)
         {
-            if (currentFrontier.Count == 0)
+            SpawnPlacement seed = pendingSeeds.Dequeue();
+            int successfulPlacementsForSeed = 0;
+            int attemptsForSeed = 0;
+            while (successfulPlacementsForSeed < placementsPerNode &&
+                   attemptsForSeed < attemptsPerNode &&
+                   latentPlacements.Count < runtimeSpawnProfile.LatentSpreadNodeCount)
             {
-                break;
-            }
-
-            List<SpawnPlacement> nextFrontier = new List<SpawnPlacement>();
-            int attemptsPerDepth =
-                Mathf.Max(1, currentFrontier.Count) * Mathf.Max(1, runtimeSpawnProfile.PlacementAttemptsPerSecondaryFire);
-            int attempts = 0;
-            while (attempts < attemptsPerDepth && latentPlacements.Count < runtimeSpawnProfile.LatentSpreadNodeCount)
-            {
-                attempts++;
-                SpawnPlacement seed = currentFrontier[random.Next(currentFrontier.Count)];
+                attemptsForSeed++;
                 if (!TryFindPlacement(
                         random,
                         seed.Position,
@@ -274,10 +264,9 @@ public class IncidentPayloadAnchor : MonoBehaviour
 
                 latentPlacements.Add(placement);
                 allPlacements.Add(placement);
-                nextFrontier.Add(placement);
+                pendingSeeds.Enqueue(placement);
+                successfulPlacementsForSeed++;
             }
-
-            currentFrontier = nextFrontier;
         }
 
         return latentPlacements;
@@ -507,6 +496,238 @@ public class IncidentPayloadAnchor : MonoBehaviour
         {
             runtimeSpawnProfile = previousProfile;
         }
+    }
+
+    public bool TryCreateDebugActivePlacementSession(
+        IncidentFireSpawnProfile fireSpawnProfile,
+        Vector3 primaryPosition,
+        Quaternion primaryRotation,
+        int requestedSecondaryCount,
+        int randomSeed,
+        out DebugActivePlacementSession session)
+    {
+        session = default;
+        if (fireSpawnProfile == null)
+        {
+            return false;
+        }
+
+        IncidentFireSpawnProfile previousProfile = runtimeSpawnProfile;
+        runtimeSpawnProfile = fireSpawnProfile;
+        try
+        {
+            Vector3 primarySurfaceNormal = ResolvePlacementNormal(primaryRotation);
+            List<SpawnPlacement> placements = new List<SpawnPlacement>
+            {
+                new SpawnPlacement(primaryPosition, primaryRotation, primarySurfaceNormal)
+            };
+            List<DebugActivePlacementAttempt> attempts = new List<DebugActivePlacementAttempt>();
+            requestedSecondaryCount = Mathf.Max(0, requestedSecondaryCount);
+            if (requestedSecondaryCount <= 0)
+            {
+                session = new DebugActivePlacementSession(
+                    primaryPosition,
+                    primaryRotation,
+                    CreateDebugPlacementResults(placements),
+                    attempts.ToArray());
+                return true;
+            }
+
+            System.Random random = new System.Random(randomSeed);
+            int maxAttempts = Mathf.Max(
+                requestedSecondaryCount,
+                requestedSecondaryCount * Mathf.Max(1, runtimeSpawnProfile.PlacementAttemptsPerSecondaryFire));
+            int attemptIndex = 0;
+            while (placements.Count - 1 < requestedSecondaryCount && attemptIndex < maxAttempts)
+            {
+                attemptIndex++;
+                List<DebugPlacementTrace> traces = new List<DebugPlacementTrace>();
+                bool success = TryFindPlacement(
+                    random,
+                    primaryPosition,
+                    primarySurfaceNormal,
+                    runtimeSpawnProfile.SecondaryFireRange,
+                    Mathf.Max(0f, runtimeSpawnProfile.MinimumSecondaryFireSpacing),
+                    placements,
+                    traces,
+                    out SpawnPlacement placement);
+
+                Vector3 placementPosition = success ? placement.Position : primaryPosition;
+                Vector3 placementNormal = success ? placement.SurfaceNormal : primarySurfaceNormal;
+                attempts.Add(new DebugActivePlacementAttempt(
+                    attemptIndex,
+                    success,
+                    traces.ToArray(),
+                    placementPosition,
+                    placementNormal));
+                if (!success)
+                {
+                    continue;
+                }
+
+                placements.Add(placement);
+            }
+
+            session = new DebugActivePlacementSession(
+                primaryPosition,
+                primaryRotation,
+                CreateDebugPlacementResults(placements),
+                attempts.ToArray());
+            return true;
+        }
+        finally
+        {
+            runtimeSpawnProfile = previousProfile;
+        }
+    }
+
+    public bool TryCreateDebugRuntimePlacementSession(
+        IncidentFireSpawnProfile fireSpawnProfile,
+        Vector3 primaryPosition,
+        Quaternion primaryRotation,
+        int requestedActiveFireCount,
+        int activeRandomSeed,
+        int latentRandomSeed,
+        out DebugRuntimePlacementSession session)
+    {
+        session = default;
+        if (fireSpawnProfile == null)
+        {
+            return false;
+        }
+
+        IncidentFireSpawnProfile previousProfile = runtimeSpawnProfile;
+        runtimeSpawnProfile = fireSpawnProfile;
+        try
+        {
+            Vector3 primarySurfaceNormal = ResolvePlacementNormal(primaryRotation);
+            List<SpawnPlacement> activePlacements = new List<SpawnPlacement>
+            {
+                new SpawnPlacement(primaryPosition, primaryRotation, primarySurfaceNormal)
+            };
+            List<SpawnPlacement> latentPlacements = new List<SpawnPlacement>();
+            List<DebugRuntimePlacementAttempt> attempts = new List<DebugRuntimePlacementAttempt>();
+
+            int requestedSecondaryCount = Mathf.Max(0, requestedActiveFireCount - 1);
+            if (requestedSecondaryCount > 0)
+            {
+                System.Random activeRandom = new System.Random(activeRandomSeed);
+                int maxAttempts = Mathf.Max(
+                    requestedSecondaryCount,
+                    requestedSecondaryCount * Mathf.Max(1, runtimeSpawnProfile.PlacementAttemptsPerSecondaryFire));
+                int attemptIndex = 0;
+                while (activePlacements.Count - 1 < requestedSecondaryCount && attemptIndex < maxAttempts)
+                {
+                    attemptIndex++;
+                    List<DebugPlacementTrace> traces = new List<DebugPlacementTrace>();
+                    bool success = TryFindPlacement(
+                        activeRandom,
+                        primaryPosition,
+                        primarySurfaceNormal,
+                        runtimeSpawnProfile.SecondaryFireRange,
+                        Mathf.Max(0f, runtimeSpawnProfile.MinimumSecondaryFireSpacing),
+                        activePlacements,
+                        traces,
+                        out SpawnPlacement placement);
+
+                    attempts.Add(new DebugRuntimePlacementAttempt(
+                        attempts.Count + 1,
+                        DebugPlacementPhase.ActiveSecondary,
+                        primaryPosition,
+                        primarySurfaceNormal,
+                        success,
+                        traces.ToArray(),
+                        success ? placement.Position : primaryPosition,
+                        success ? placement.SurfaceNormal : primarySurfaceNormal));
+                    if (!success)
+                    {
+                        continue;
+                    }
+
+                    activePlacements.Add(placement);
+                }
+            }
+
+            if (runtimeSpawnProfile.SpawnLatentSpreadNodes &&
+                runtimeSpawnProfile.LatentSpreadNodeCount > 0 &&
+                activePlacements.Count > 0)
+            {
+                List<SpawnPlacement> allPlacements = new List<SpawnPlacement>(activePlacements);
+                System.Random latentRandom = new System.Random(latentRandomSeed);
+                Queue<SpawnPlacement> pendingSeeds = new Queue<SpawnPlacement>(activePlacements);
+                int placementsPerNode = Mathf.Max(1, runtimeSpawnProfile.LatentSpreadPlacementsPerNode);
+                int attemptsPerNode = Mathf.Max(1, runtimeSpawnProfile.PlacementAttemptsPerSecondaryFire);
+                while (pendingSeeds.Count > 0 && latentPlacements.Count < runtimeSpawnProfile.LatentSpreadNodeCount)
+                {
+                    SpawnPlacement seed = pendingSeeds.Dequeue();
+                    int successfulPlacementsForSeed = 0;
+                    int attemptsForSeed = 0;
+                    while (successfulPlacementsForSeed < placementsPerNode &&
+                           attemptsForSeed < attemptsPerNode &&
+                           latentPlacements.Count < runtimeSpawnProfile.LatentSpreadNodeCount)
+                    {
+                        attemptsForSeed++;
+                        List<DebugPlacementTrace> traces = new List<DebugPlacementTrace>();
+                        bool success = TryFindPlacement(
+                            latentRandom,
+                            seed.Position,
+                            seed.SurfaceNormal,
+                            runtimeSpawnProfile.LatentSpreadRange,
+                            Mathf.Max(0f, runtimeSpawnProfile.MinimumLatentNodeSpacing),
+                            allPlacements,
+                            traces,
+                            out SpawnPlacement placement);
+
+                        attempts.Add(new DebugRuntimePlacementAttempt(
+                            attempts.Count + 1,
+                            DebugPlacementPhase.LatentSpread,
+                            seed.Position,
+                            seed.SurfaceNormal,
+                            success,
+                            traces.ToArray(),
+                            success ? placement.Position : seed.Position,
+                            success ? placement.SurfaceNormal : seed.SurfaceNormal));
+                        if (!success)
+                        {
+                            continue;
+                        }
+
+                        latentPlacements.Add(placement);
+                        allPlacements.Add(placement);
+                        pendingSeeds.Enqueue(placement);
+                        successfulPlacementsForSeed++;
+                    }
+                }
+            }
+
+            session = new DebugRuntimePlacementSession(
+                primaryPosition,
+                primaryRotation,
+                CreateDebugPlacementResults(activePlacements),
+                CreateDebugPlacementResults(latentPlacements),
+                attempts.ToArray());
+            return true;
+        }
+        finally
+        {
+            runtimeSpawnProfile = previousProfile;
+        }
+    }
+
+    private static DebugPlacementResult[] CreateDebugPlacementResults(List<SpawnPlacement> placements)
+    {
+        if (placements == null || placements.Count == 0)
+        {
+            return Array.Empty<DebugPlacementResult>();
+        }
+
+        DebugPlacementResult[] results = new DebugPlacementResult[placements.Count];
+        for (int i = 0; i < placements.Count; i++)
+        {
+            results[i] = new DebugPlacementResult(placements[i].Position, placements[i].SurfaceNormal);
+        }
+
+        return results;
     }
 
     private int ResolveRequestedTotalFireCount(IncidentWorldSetupPayload payload)
@@ -876,6 +1097,122 @@ public class IncidentPayloadAnchor : MonoBehaviour
         public DebugPlacementTrace[] Traces { get; }
         public Vector3 PlacementPosition { get; }
         public Vector3 PlacementSurfaceNormal { get; }
+    }
+
+    public readonly struct DebugActivePlacementAttempt
+    {
+        public DebugActivePlacementAttempt(
+            int attemptIndex,
+            bool success,
+            DebugPlacementTrace[] traces,
+            Vector3 placementPosition,
+            Vector3 placementSurfaceNormal)
+        {
+            AttemptIndex = attemptIndex;
+            Success = success;
+            Traces = traces ?? Array.Empty<DebugPlacementTrace>();
+            PlacementPosition = placementPosition;
+            PlacementSurfaceNormal = placementSurfaceNormal.sqrMagnitude > 0.0001f ? placementSurfaceNormal.normalized : Vector3.up;
+        }
+
+        public int AttemptIndex { get; }
+        public bool Success { get; }
+        public DebugPlacementTrace[] Traces { get; }
+        public Vector3 PlacementPosition { get; }
+        public Vector3 PlacementSurfaceNormal { get; }
+    }
+
+    public readonly struct DebugActivePlacementSession
+    {
+        public DebugActivePlacementSession(
+            Vector3 primaryPosition,
+            Quaternion primaryRotation,
+            DebugPlacementResult[] placements,
+            DebugActivePlacementAttempt[] attempts)
+        {
+            PrimaryPosition = primaryPosition;
+            PrimaryRotation = primaryRotation;
+            Placements = placements ?? Array.Empty<DebugPlacementResult>();
+            Attempts = attempts ?? Array.Empty<DebugActivePlacementAttempt>();
+        }
+
+        public Vector3 PrimaryPosition { get; }
+        public Quaternion PrimaryRotation { get; }
+        public DebugPlacementResult[] Placements { get; }
+        public DebugActivePlacementAttempt[] Attempts { get; }
+    }
+
+    public readonly struct DebugPlacementResult
+    {
+        public DebugPlacementResult(Vector3 position, Vector3 surfaceNormal)
+        {
+            Position = position;
+            SurfaceNormal = surfaceNormal.sqrMagnitude > 0.0001f ? surfaceNormal.normalized : Vector3.up;
+        }
+
+        public Vector3 Position { get; }
+        public Vector3 SurfaceNormal { get; }
+    }
+
+    public enum DebugPlacementPhase
+    {
+        ActiveSecondary = 0,
+        LatentSpread = 1
+    }
+
+    public readonly struct DebugRuntimePlacementAttempt
+    {
+        public DebugRuntimePlacementAttempt(
+            int attemptIndex,
+            DebugPlacementPhase phase,
+            Vector3 seedPosition,
+            Vector3 seedSurfaceNormal,
+            bool success,
+            DebugPlacementTrace[] traces,
+            Vector3 placementPosition,
+            Vector3 placementSurfaceNormal)
+        {
+            AttemptIndex = attemptIndex;
+            Phase = phase;
+            SeedPosition = seedPosition;
+            SeedSurfaceNormal = seedSurfaceNormal.sqrMagnitude > 0.0001f ? seedSurfaceNormal.normalized : Vector3.up;
+            Success = success;
+            Traces = traces ?? Array.Empty<DebugPlacementTrace>();
+            PlacementPosition = placementPosition;
+            PlacementSurfaceNormal = placementSurfaceNormal.sqrMagnitude > 0.0001f ? placementSurfaceNormal.normalized : Vector3.up;
+        }
+
+        public int AttemptIndex { get; }
+        public DebugPlacementPhase Phase { get; }
+        public Vector3 SeedPosition { get; }
+        public Vector3 SeedSurfaceNormal { get; }
+        public bool Success { get; }
+        public DebugPlacementTrace[] Traces { get; }
+        public Vector3 PlacementPosition { get; }
+        public Vector3 PlacementSurfaceNormal { get; }
+    }
+
+    public readonly struct DebugRuntimePlacementSession
+    {
+        public DebugRuntimePlacementSession(
+            Vector3 primaryPosition,
+            Quaternion primaryRotation,
+            DebugPlacementResult[] activePlacements,
+            DebugPlacementResult[] latentPlacements,
+            DebugRuntimePlacementAttempt[] attempts)
+        {
+            PrimaryPosition = primaryPosition;
+            PrimaryRotation = primaryRotation;
+            ActivePlacements = activePlacements ?? Array.Empty<DebugPlacementResult>();
+            LatentPlacements = latentPlacements ?? Array.Empty<DebugPlacementResult>();
+            Attempts = attempts ?? Array.Empty<DebugRuntimePlacementAttempt>();
+        }
+
+        public Vector3 PrimaryPosition { get; }
+        public Quaternion PrimaryRotation { get; }
+        public DebugPlacementResult[] ActivePlacements { get; }
+        public DebugPlacementResult[] LatentPlacements { get; }
+        public DebugRuntimePlacementAttempt[] Attempts { get; }
     }
 
 }

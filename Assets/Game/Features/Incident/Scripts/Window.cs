@@ -1,5 +1,7 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using StarterAssets;
 
 [DisallowMultipleComponent]
 public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, IDamageable
@@ -30,6 +32,7 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
     [SerializeField] private bool startsBroken;
     [SerializeField] private bool allowToggle = true;
     [SerializeField] private bool breakOnInteract;
+    [SerializeField] private bool isLocked;
 
     [Header("Ventilation")]
     [SerializeField] private float smokeVentilationReliefWhenOpen = 0.28f;
@@ -40,11 +43,34 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
     [Header("Damage")]
     [SerializeField] private float breakDamageThreshold = 0.1f;
 
+    [Header("Climb Over")]
+    [SerializeField] private bool enableClimbOver = true;
+    [SerializeField] private Transform climbSideAAnchor;
+    [SerializeField] private Transform climbSideBAnchor;
+    [SerializeField] private float climbAnchorForwardOffset = 0.9f;
+    [SerializeField] private float climbProbeOriginHeight = 1.1f;
+    [SerializeField] private float climbProbeDownwardOffset = 1.8f;
+    [SerializeField] private float climbProbeMaxSlopeAngle = 45f;
+    [SerializeField] private LayerMask climbGroundMask = ~0;
+    [SerializeField] private float climbApproachDuration = 0.12f;
+    [SerializeField] private float climbApproachArcHeight = 0.04f;
+    [SerializeField] private float climbTraverseDuration = 0.55f;
+    [SerializeField] private float climbTraverseArcHeight = 0.35f;
+    [SerializeField] private bool drawClimbDebug;
+
+    [Header("Runtime")]
+    [SerializeField] private bool isOpen;
+    [SerializeField] private bool isBroken;
+    [SerializeField] private int openSashCount;
+    [SerializeField] private int brokenSashCount;
+
     private readonly List<SashRuntime> sashes = new List<SashRuntime>(2);
     private bool initialized;
+    private Coroutine activeClimbRoutine;
 
     public bool IsOpen => CountOpenSashes() > 0;
     public bool IsBroken => CountBrokenSashes() > 0;
+    public bool IsLocked => isLocked;
     public bool IsDoubleSash => sashes.Count > 1;
     public float SmokeVentilationRelief => GetVentilationContribution(smokeVentilationReliefWhenOpen, smokeVentilationReliefWhenBroken);
     public float FireDraftRisk => GetVentilationContribution(fireDraftRiskWhenOpen, fireDraftRiskWhenBroken);
@@ -62,6 +88,14 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
         fireDraftRiskWhenOpen = Mathf.Max(0f, fireDraftRiskWhenOpen);
         fireDraftRiskWhenBroken = Mathf.Max(fireDraftRiskWhenOpen, fireDraftRiskWhenBroken);
         breakDamageThreshold = Mathf.Max(0f, breakDamageThreshold);
+        climbAnchorForwardOffset = Mathf.Max(0.1f, climbAnchorForwardOffset);
+        climbProbeOriginHeight = Mathf.Max(0f, climbProbeOriginHeight);
+        climbProbeDownwardOffset = Mathf.Max(0.1f, climbProbeDownwardOffset);
+        climbProbeMaxSlopeAngle = Mathf.Clamp(climbProbeMaxSlopeAngle, 0f, 89f);
+        climbApproachDuration = Mathf.Max(0f, climbApproachDuration);
+        climbApproachArcHeight = Mathf.Max(0f, climbApproachArcHeight);
+        climbTraverseDuration = Mathf.Max(0.01f, climbTraverseDuration);
+        climbTraverseArcHeight = Mathf.Max(0f, climbTraverseArcHeight);
     }
 
     private void Update()
@@ -81,6 +115,8 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
                 sash.TargetLocalRotation,
                 t);
         }
+
+        SyncRuntimeState();
     }
 
     public void Interact(GameObject interactor)
@@ -89,6 +125,9 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
             InitializeState();
 
         if (sashes.Count == 0)
+            return;
+
+        if (isLocked)
             return;
 
         if (breakOnInteract)
@@ -126,7 +165,34 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
             return;
         }
 
+        if (isLocked)
+        {
+            return;
+        }
+
         SetAllUnbrokenSashesOpenState(isOpen);
+    }
+
+    public void SetLockedState(bool locked)
+    {
+        isLocked = locked;
+    }
+
+    public bool CanClimbOver(GameObject interactor)
+    {
+        return TryResolveClimbTraversal(interactor, out _, out _, out _, out _);
+    }
+
+    public bool TryStartClimbOver(GameObject interactor)
+    {
+        if (activeClimbRoutine != null)
+            return false;
+
+        if (!TryResolveClimbTraversal(interactor, out Vector3 startPosition, out Quaternion startRotation, out Vector3 endPosition, out Quaternion endRotation))
+            return false;
+
+        activeClimbRoutine = StartCoroutine(PerformClimbOverRoutine(interactor, startPosition, startRotation, endPosition, endRotation));
+        return true;
     }
 
     public void TakeDamage(float amount, GameObject source, Vector3 hitPoint, Vector3 hitNormal)
@@ -161,6 +227,7 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
         }
 
         initialized = sashes.Count > 0;
+        SyncRuntimeState();
     }
 
     private void TryAddSash(Transform sashTransform, Vector3 openEulerOffset)
@@ -225,6 +292,7 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
         sash.TargetLocalRotation = sash.OpenLocalRotation;
         sash.Transform.localRotation = sash.TargetLocalRotation;
         ShatterSashGlass(sash.Transform, impactPoint, impactDirection);
+        SyncRuntimeState();
     }
 
     private void ShatterSashGlass(Transform sashTransform, Vector3 impactPoint, Vector3 impactDirection)
@@ -276,6 +344,235 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
             sash.IsOpen = isOpen;
             sash.TargetLocalRotation = isOpen ? sash.OpenLocalRotation : sash.ClosedLocalRotation;
         }
+
+        SyncRuntimeState();
+    }
+
+    private void SyncRuntimeState()
+    {
+        openSashCount = CountOpenSashes();
+        brokenSashCount = CountBrokenSashes();
+        isOpen = openSashCount > 0;
+        isBroken = brokenSashCount > 0;
+    }
+
+    private bool TryResolveClimbTraversal(
+        GameObject interactor,
+        out Vector3 startPosition,
+        out Quaternion startRotation,
+        out Vector3 endPosition,
+        out Quaternion endRotation)
+    {
+        startPosition = transform.position;
+        endPosition = transform.position;
+        startRotation = transform.rotation;
+        endRotation = transform.rotation;
+
+        if (!enableClimbOver || interactor == null || (!IsOpen && !IsBroken))
+            return false;
+
+        if (!interactor.TryGetComponent(out FirstPersonController _))
+            return false;
+
+        if (interactor.TryGetComponent(out FPSInteractionSystem interactionSystem) && interactionSystem.AreHandsOccupied)
+            return false;
+
+        if (interactor.TryGetComponent(out PlayerActionLock actionLock) && actionLock.IsFullyLocked)
+            return false;
+
+        Vector3 sideAPosition = ResolveClimbAnchorPosition(true);
+        Vector3 sideBPosition = ResolveClimbAnchorPosition(false);
+        float distanceToA = (interactor.transform.position - sideAPosition).sqrMagnitude;
+        float distanceToB = (interactor.transform.position - sideBPosition).sqrMagnitude;
+
+        startPosition = distanceToA <= distanceToB ? sideAPosition : sideBPosition;
+        endPosition = distanceToA <= distanceToB ? sideBPosition : sideAPosition;
+
+        if (!HasTraversableFloorOnFarSide(interactor, endPosition))
+            return false;
+
+        Vector3 lookDirection = Vector3.ProjectOnPlane(endPosition - startPosition, Vector3.up);
+        if (lookDirection.sqrMagnitude <= 0.0001f)
+            lookDirection = Vector3.ProjectOnPlane(transform.forward, Vector3.up);
+        if (lookDirection.sqrMagnitude <= 0.0001f)
+            lookDirection = Vector3.forward;
+
+        startRotation = Quaternion.LookRotation(lookDirection.normalized, Vector3.up);
+        endRotation = startRotation;
+        return true;
+    }
+
+    private IEnumerator PerformClimbOverRoutine(
+        GameObject interactor,
+        Vector3 startPosition,
+        Quaternion startRotation,
+        Vector3 endPosition,
+        Quaternion endRotation)
+    {
+        PlayerActionLock actionLock = PlayerActionLock.GetOrCreate(interactor);
+        CharacterController controller = interactor.GetComponent<CharacterController>();
+        StarterAssetsInputs inputs = interactor.GetComponent<StarterAssetsInputs>();
+
+        bool restoreController = controller != null && controller.enabled;
+        actionLock?.AcquireFullLock();
+
+        try
+        {
+            if (inputs != null)
+                inputs.ClearGameplayActionInputs();
+
+            if (restoreController)
+                controller.enabled = false;
+
+            Transform interactorTransform = interactor.transform;
+
+            yield return MoveTransformRoutine(
+                interactorTransform,
+                startPosition,
+                startRotation,
+                Mathf.Max(0f, climbApproachDuration),
+                Mathf.Max(0f, climbApproachArcHeight));
+
+            yield return MoveTransformRoutine(
+                interactorTransform,
+                endPosition,
+                endRotation,
+                Mathf.Max(0.01f, climbTraverseDuration),
+                Mathf.Max(0f, climbTraverseArcHeight));
+        }
+        finally
+        {
+            if (restoreController && controller != null)
+                controller.enabled = true;
+
+            if (inputs != null)
+                inputs.ClearGameplayActionInputs();
+
+            actionLock?.ReleaseFullLock();
+            activeClimbRoutine = null;
+        }
+    }
+
+    private IEnumerator MoveTransformRoutine(
+        Transform target,
+        Vector3 destinationPosition,
+        Quaternion destinationRotation,
+        float duration,
+        float arcHeight)
+    {
+        if (target == null)
+            yield break;
+
+        if (duration <= 0.001f)
+        {
+            target.SetPositionAndRotation(destinationPosition, destinationRotation);
+            yield break;
+        }
+
+        Vector3 startPosition = target.position;
+        Quaternion startRotation = target.rotation;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float easedT = Mathf.SmoothStep(0f, 1f, t);
+            Vector3 position = Vector3.Lerp(startPosition, destinationPosition, easedT);
+
+            if (arcHeight > 0f)
+                position += Vector3.up * (Mathf.Sin(easedT * Mathf.PI) * arcHeight);
+
+            Quaternion rotation = Quaternion.Slerp(startRotation, destinationRotation, easedT);
+            target.SetPositionAndRotation(position, rotation);
+            yield return new WaitForEndOfFrame();
+        }
+
+        target.SetPositionAndRotation(destinationPosition, destinationRotation);
+    }
+
+    private Vector3 ResolveClimbAnchorPosition(bool sideA)
+    {
+        Transform anchor = sideA ? climbSideAAnchor : climbSideBAnchor;
+        if (anchor != null)
+            return anchor.position;
+
+        Vector3 direction = sideA ? -transform.forward : transform.forward;
+        Vector3 horizontalDirection = Vector3.ProjectOnPlane(direction, Vector3.up);
+        if (horizontalDirection.sqrMagnitude <= 0.0001f)
+            horizontalDirection = sideA ? Vector3.left : Vector3.right;
+
+        return transform.position + horizontalDirection.normalized * Mathf.Max(0.1f, climbAnchorForwardOffset);
+    }
+
+    private bool HasTraversableFloorOnFarSide(GameObject interactor, Vector3 farSidePosition)
+    {
+        Vector3 origin = GetWindowCenterWorld() + Vector3.up * Mathf.Max(0f, climbProbeOriginHeight);
+        Vector3 target = farSidePosition + Vector3.down * Mathf.Max(0.1f, climbProbeDownwardOffset);
+        Vector3 direction = target - origin;
+        float maxDistance = direction.magnitude;
+        if (maxDistance <= 0.001f)
+            return false;
+
+        RaycastHit[] hits = Physics.RaycastAll(
+            origin,
+            direction.normalized,
+            maxDistance,
+            climbGroundMask,
+            QueryTriggerInteraction.Ignore);
+
+        if (drawClimbDebug)
+            Debug.DrawRay(origin, direction, Color.cyan, 1.5f);
+
+        if (hits == null || hits.Length == 0)
+            return false;
+
+        System.Array.Sort(hits, (left, right) => left.distance.CompareTo(right.distance));
+        float minNormalY = Mathf.Cos(Mathf.Clamp(climbProbeMaxSlopeAngle, 0f, 89f) * Mathf.Deg2Rad);
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            RaycastHit hit = hits[i];
+            if (hit.collider == null)
+                continue;
+
+            Transform hitTransform = hit.collider.transform;
+            if (hitTransform == transform || hitTransform.IsChildOf(transform))
+                continue;
+
+            if (interactor != null && (hitTransform == interactor.transform || hitTransform.IsChildOf(interactor.transform)))
+                continue;
+
+            if (hit.normal.y < minNormalY)
+                continue;
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private Vector3 GetWindowCenterWorld()
+    {
+        if (sashes.Count > 0)
+        {
+            Vector3 accumulated = Vector3.zero;
+            int count = 0;
+            for (int i = 0; i < sashes.Count; i++)
+            {
+                SashRuntime sash = sashes[i];
+                if (sash?.Transform == null)
+                    continue;
+
+                accumulated += sash.Transform.position;
+                count++;
+            }
+
+            if (count > 0)
+                return accumulated / count;
+        }
+
+        return transform.position;
     }
 
     private float GetVentilationContribution(float openValue, float brokenValue)

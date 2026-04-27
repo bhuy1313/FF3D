@@ -17,12 +17,23 @@ public partial class BotCommandAgent
 
         public void OnStart(BotCommandAgent agent)
         {
-            agent.UpdatePathClearingDebugStage(PathClearingDebugStage.SearchingBlocker, $"Checking route to {destination} for blocking breakables.");
+            agent.UpdatePathClearingDebugStage(PathClearingDebugStage.SearchingBlocker, $"Checking route to {destination} for blocking obstacles.");
             agent.SetBreakSubtask(BotBreakSubtask.AcquireTarget, "Checking route for blocking obstacle.");
         }
 
         public BotPlanTaskStatus OnUpdate(BotCommandAgent agent)
         {
+            if (agent.currentBlockedPryTarget != null &&
+                !agent.currentBlockedPryTarget.IsBreached &&
+                (agent.currentBlockedPryTarget.CanBePriedOpen || agent.currentBlockedPryTarget.IsPryInProgress) &&
+                agent.IsPryTargetStillRelevant(agent.currentBlockedPryTarget))
+            {
+                agent.UpdatePathClearingDebugStage(
+                    PathClearingDebugStage.BlockedByBreakable,
+                    $"Continuing to pry blocking target '{BotCommandAgent.GetDebugTargetName(agent.currentBlockedPryTarget)}'.");
+                return BotPlanTaskStatus.Success;
+            }
+
             if (agent.currentBlockedBreakable != null &&
                 !agent.currentBlockedBreakable.IsBroken &&
                 agent.currentBlockedBreakable.CanBeClearedByBot &&
@@ -34,13 +45,26 @@ public partial class BotCommandAgent
                 return BotPlanTaskStatus.Success;
             }
 
+            if (agent.TryResolveBlockedPryTarget(destination, out IBotPryTarget pryTarget))
+            {
+                agent.SetCurrentBlockedPryTarget(pryTarget);
+                agent.SetCurrentBlockedBreakable(null);
+                agent.SetBreakSubtask(BotBreakSubtask.AcquireTool, $"Preparing crowbar for '{BotCommandAgent.GetDebugTargetName(pryTarget)}'.");
+                agent.UpdatePathClearingDebugStage(
+                    PathClearingDebugStage.BlockedByBreakable,
+                    $"Detected blocking pry target '{BotCommandAgent.GetDebugTargetName(pryTarget)}' at {pryTarget.GetWorldPosition()}.");
+                agent.RefreshPathClearingResumeGrace();
+                return BotPlanTaskStatus.Success;
+            }
+
             if (!agent.TryResolveBlockedBreakable(destination, out IBotBreakableTarget blockedTarget))
             {
-                agent.UpdatePathClearingDebugStage(PathClearingDebugStage.Cleared, $"No blocking breakable detected toward {destination}.");
+                agent.UpdatePathClearingDebugStage(PathClearingDebugStage.Cleared, $"No blocking obstacle detected toward {destination}.");
                 agent.ClearBlockedPathRuntime();
                 return BotPlanTaskStatus.Success;
             }
 
+            agent.SetCurrentBlockedPryTarget(null);
             agent.SetCurrentBlockedBreakable(blockedTarget);
             agent.SetBreakSubtask(BotBreakSubtask.AcquireTool, $"Preparing tool for '{BotCommandAgent.GetDebugTargetName(blockedTarget)}'.");
             agent.UpdatePathClearingDebugStage(
@@ -66,6 +90,35 @@ public partial class BotCommandAgent
 
         public BotPlanTaskStatus OnUpdate(BotCommandAgent agent)
         {
+            IBotPryTarget pryTarget = agent.currentBlockedPryTarget;
+            if (pryTarget != null && !pryTarget.IsBreached && (pryTarget.CanBePriedOpen || pryTarget.IsPryInProgress))
+            {
+                if (agent.activeBreakTool != null &&
+                    agent.activeBreakTool.ToolKind == BreakToolKind.Crowbar &&
+                    agent.activeBreakTool.IsAvailableTo(agent.gameObject))
+                {
+                    return BotPlanTaskStatus.Success;
+                }
+
+                IBotBreakTool pryTool = agent.ResolvePreferredPryTool();
+                if (pryTool == null)
+                {
+                    agent.StopBreakToolRoute();
+                    agent.UpdatePathClearingDebugStage(
+                        PathClearingDebugStage.NoBreakTool,
+                        $"No usable crowbar found for '{BotCommandAgent.GetDebugTargetName(pryTarget)}'.");
+                    agent.RefreshPathClearingResumeGrace();
+                    return BotPlanTaskStatus.Running;
+                }
+
+                if (!agent.TryEnsureBreakToolEquipped(pryTool))
+                {
+                    return BotPlanTaskStatus.Running;
+                }
+
+                return BotPlanTaskStatus.Success;
+            }
+
             IBotBreakableTarget blockedTarget = agent.currentBlockedBreakable;
             if (blockedTarget == null || blockedTarget.IsBroken || !blockedTarget.CanBeClearedByBot)
             {
@@ -118,6 +171,45 @@ public partial class BotCommandAgent
 
         public BotPlanTaskStatus OnUpdate(BotCommandAgent agent)
         {
+            IBotPryTarget pryTarget = agent.currentBlockedPryTarget;
+            if (pryTarget != null)
+            {
+                if (pryTarget.IsBreached)
+                {
+                    agent.ClearBlockedPathRuntime();
+                    return BotPlanTaskStatus.Success;
+                }
+
+                if (agent.activeBreakTool == null ||
+                    agent.activeBreakTool.ToolKind != BreakToolKind.Crowbar ||
+                    !agent.activeBreakTool.IsAvailableTo(agent.gameObject))
+                {
+                    agent.planProcessor.InjectFront(
+                        agent,
+                        new AcquireBlockedPathToolTask(),
+                        new ExecuteBlockedPathTask());
+                    return BotPlanTaskStatus.Success;
+                }
+
+                agent.UpdatePathClearingDebugStage(
+                    PathClearingDebugStage.BlockedByBreakable,
+                    $"Continuing to pry blocking target '{BotCommandAgent.GetDebugTargetName(pryTarget)}'.");
+                agent.RefreshPathClearingResumeGrace();
+                if (!agent.HandleEquippedPryToolAgainstTarget(agent.activeBreakTool, pryTarget))
+                {
+                    agent.ClearBlockedPathRuntime();
+                    return BotPlanTaskStatus.Success;
+                }
+
+                if (pryTarget.IsBreached)
+                {
+                    agent.ClearBlockedPathRuntime();
+                    return BotPlanTaskStatus.Success;
+                }
+
+                return BotPlanTaskStatus.Running;
+            }
+
             IBotBreakableTarget blockedTarget = agent.currentBlockedBreakable;
             if (blockedTarget == null)
             {
@@ -185,7 +277,17 @@ public partial class BotCommandAgent
             return true;
         }
 
-        if (!TryResolveBlockedBreakable(destination, out IBotBreakableTarget blockedTarget))
+        if (currentBlockedPryTarget != null && !currentBlockedPryTarget.IsBreached)
+        {
+            return true;
+        }
+
+        IBotPryTarget pryTarget = null;
+        IBotBreakableTarget blockedTarget = null;
+        bool hasPryTarget = TryResolveBlockedPryTarget(destination, out pryTarget);
+        bool hasBreakableTarget = !hasPryTarget && TryResolveBlockedBreakable(destination, out blockedTarget);
+
+        if (!hasPryTarget && !hasBreakableTarget)
         {
             ClearBlockedPathRuntime();
             return false;
@@ -197,7 +299,17 @@ public partial class BotCommandAgent
             return false;
         }
 
-        SetCurrentBlockedBreakable(blockedTarget);
+        if (hasPryTarget)
+        {
+            SetCurrentBlockedPryTarget(pryTarget);
+            SetCurrentBlockedBreakable(null);
+        }
+        else
+        {
+            SetCurrentBlockedPryTarget(null);
+            SetCurrentBlockedBreakable(blockedTarget);
+        }
+
         planProcessor.InterruptWith(
             this,
             new AcquireBlockedPathTargetTask(destination),
@@ -278,6 +390,58 @@ public partial class BotCommandAgent
         return true;
     }
 
+    private bool HandleEquippedPryToolAgainstTarget(IBotBreakTool equippedBreakTool, IBotPryTarget pryTarget)
+    {
+        if (equippedBreakTool == null || equippedBreakTool.ToolKind != BreakToolKind.Crowbar || pryTarget == null || pryTarget.IsBreached)
+        {
+            return false;
+        }
+
+        Vector3 targetPosition = pryTarget.GetWorldPosition();
+        float interactionDistance = Mathf.Max(0.5f, breachInteractionDistance);
+        float horizontalDistance = GetHorizontalDistance(transform.position, targetPosition);
+        if (horizontalDistance > interactionDistance)
+        {
+            SetBreakSubtask(BotBreakSubtask.MoveToObstacle, $"Moving into range of '{GetDebugTargetName(pryTarget)}'.");
+            UpdatePathClearingDebugStage(PathClearingDebugStage.MovingToBreakable, $"Moving into pry range of '{GetDebugTargetName(pryTarget)}'.");
+            navMeshAgent.isStopped = false;
+            navMeshAgent.SetDestination(targetPosition);
+            return true;
+        }
+
+        navMeshAgent.ResetPath();
+        navMeshAgent.isStopped = true;
+        AimTowards(targetPosition);
+
+        if (pryTarget.IsPryInProgress)
+        {
+            SetBreakSubtask(BotBreakSubtask.Pry, $"Prying '{GetDebugTargetName(pryTarget)}'.");
+            return true;
+        }
+
+        if (!pryTarget.CanBePriedOpen)
+        {
+            return false;
+        }
+
+        if (Time.time >= nextBreakUseTime)
+        {
+            bool startedPry = equippedBreakTool.UseOnTarget(gameObject, pryTarget);
+            if (startedPry)
+            {
+                SetBreakSubtask(BotBreakSubtask.Pry, $"Prying '{GetDebugTargetName(pryTarget)}'.");
+                UpdatePathClearingDebugStage(PathClearingDebugStage.Breaking, $"Prying '{GetDebugTargetName(pryTarget)}' with '{GetBreakToolName(equippedBreakTool)}'.");
+                LogPathClearingFlow(
+                    $"pry-target:{GetDebugTargetName(pryTarget)}",
+                    "Prying target.");
+            }
+
+            nextBreakUseTime = Time.time + equippedBreakTool.UseCooldown;
+        }
+
+        return true;
+    }
+
     private bool TryResolveBlockedBreakable(Vector3 destination, out IBotBreakableTarget blockedTarget)
     {
         blockedTarget = null;
@@ -321,6 +485,45 @@ public partial class BotCommandAgent
         return false;
     }
 
+    private bool TryResolveBlockedPryTarget(Vector3 destination, out IBotPryTarget pryTarget)
+    {
+        pryTarget = null;
+
+        if (currentBlockedPryTarget != null &&
+            !currentBlockedPryTarget.IsBreached &&
+            (currentBlockedPryTarget.CanBePriedOpen || currentBlockedPryTarget.IsPryInProgress) &&
+            IsPryTargetStillRelevant(currentBlockedPryTarget))
+        {
+            LogVerbosePathClearing(
+                VerbosePathClearingLogCategory.Detection,
+                $"reuseprytarget:{GetDebugTargetName(currentBlockedPryTarget)}",
+                $"Continuing with current pry target '{GetDebugTargetName(currentBlockedPryTarget)}'.");
+            pryTarget = currentBlockedPryTarget;
+            return true;
+        }
+
+        if (interactionSensor != null && interactionSensor.TryFindPryTargetAhead(out IBotPryTarget sensedPryTarget))
+        {
+            LogPathClearingFlow(
+                $"sensor-pry-ahead:{GetDebugTargetName(sensedPryTarget)}",
+                $"Pry target detected: '{GetDebugTargetName(sensedPryTarget)}'.");
+            pryTarget = sensedPryTarget;
+            return true;
+        }
+
+        if (TryFindPryTargetInFront(destination, out IBotPryTarget fallbackPryTarget))
+        {
+            LogVerbosePathClearing(
+                VerbosePathClearingLogCategory.Detection,
+                $"fallbackprytarget:{GetDebugTargetName(fallbackPryTarget)}",
+                $"Fallback probe detected pry target '{GetDebugTargetName(fallbackPryTarget)}' toward {destination}.");
+            pryTarget = fallbackPryTarget;
+            return true;
+        }
+
+        return false;
+    }
+
     private bool IsBreakableStillRelevant(IBotBreakableTarget candidate)
     {
         if (candidate == null || candidate.IsBroken || !candidate.CanBeClearedByBot)
@@ -336,6 +539,26 @@ public partial class BotCommandAgent
         if (TryFindBreakableInFront(lastIssuedDestination, out IBotBreakableTarget fallbackBreakable))
         {
             return ReferenceEquals(candidate, fallbackBreakable);
+        }
+
+        return false;
+    }
+
+    private bool IsPryTargetStillRelevant(IBotPryTarget candidate)
+    {
+        if (candidate == null || candidate.IsBreached || (!candidate.CanBePriedOpen && !candidate.IsPryInProgress))
+        {
+            return false;
+        }
+
+        if (interactionSensor != null && interactionSensor.TryFindPryTargetAhead(out IBotPryTarget sensedPryTarget))
+        {
+            return ReferenceEquals(candidate, sensedPryTarget);
+        }
+
+        if (TryFindPryTargetInFront(lastIssuedDestination, out IBotPryTarget fallbackPryTarget))
+        {
+            return ReferenceEquals(candidate, fallbackPryTarget);
         }
 
         return false;
@@ -405,6 +628,56 @@ public partial class BotCommandAgent
         return breakableTarget != null;
     }
 
+    private bool TryFindPryTargetInFront(Vector3 destination, out IBotPryTarget pryTarget)
+    {
+        pryTarget = null;
+        Vector3 forwardDirection = GetPathClearingProbeDirection(destination);
+        if (forwardDirection.sqrMagnitude <= 0.001f)
+        {
+            return false;
+        }
+
+        float bestDistance = float.PositiveInfinity;
+        Vector3 origin = transform.position;
+
+        foreach (IBotPryTarget candidate in BotRuntimeRegistry.ActivePryTargets)
+        {
+            if (candidate == null || candidate.IsBreached || (!candidate.CanBePriedOpen && !candidate.IsPryInProgress))
+            {
+                continue;
+            }
+
+            if (BotRuntimeRegistry.Reservations.IsReservedByOther(candidate, gameObject))
+            {
+                continue;
+            }
+
+            Vector3 candidatePosition = candidate.GetWorldPosition();
+            Vector3 toCandidate = candidatePosition - origin;
+            float forwardDistance = Vector3.Dot(forwardDirection, toCandidate);
+            if (forwardDistance < 0f || forwardDistance > breakableLookAheadDistance)
+            {
+                continue;
+            }
+
+            Vector3 projectedPoint = origin + forwardDirection * forwardDistance;
+            float lateralDistance = GetHorizontalDistance(projectedPoint, candidatePosition);
+            float maxLateralDistance = breakableCorridorWidth + GetPryTargetRouteRadius(candidate);
+            if (lateralDistance > maxLateralDistance)
+            {
+                continue;
+            }
+
+            if (forwardDistance < bestDistance)
+            {
+                bestDistance = forwardDistance;
+                pryTarget = candidate;
+            }
+        }
+
+        return pryTarget != null;
+    }
+
     private Vector3 GetPathClearingProbeDirection(Vector3 destination)
     {
         Vector3 direction = navMeshAgent != null ? navMeshAgent.velocity : Vector3.zero;
@@ -432,6 +705,16 @@ public partial class BotCommandAgent
     }
 
     private float GetBreakableRouteRadius(IBotBreakableTarget candidate)
+    {
+        if (candidate is Component component && TryGetWorldBounds(component, out Bounds bounds))
+        {
+            return Mathf.Max(bounds.extents.x, bounds.extents.z);
+        }
+
+        return 0.5f;
+    }
+
+    private float GetPryTargetRouteRadius(IBotPryTarget candidate)
     {
         if (candidate is Component component && TryGetWorldBounds(component, out Bounds bounds))
         {
@@ -809,6 +1092,7 @@ public partial class BotCommandAgent
         SetPickupWindow(false);
         activeBreakTool = null;
         SetCurrentBlockedBreakable(null);
+        SetCurrentBlockedPryTarget(null);
         temporarilyRejectedBreakTool = null;
         temporarilyRejectedBreakable = null;
         nextBreakUseTime = 0f;

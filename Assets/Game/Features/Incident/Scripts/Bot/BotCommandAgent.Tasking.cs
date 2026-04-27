@@ -76,6 +76,19 @@ public partial class BotCommandAgent
             return;
         }
 
+        if (currentBlockedPryTarget != null &&
+            !currentBlockedPryTarget.IsBreached &&
+            (currentBlockedPryTarget.CanBePriedOpen || currentBlockedPryTarget.IsPryInProgress))
+        {
+            RefreshReservation(currentBlockedPryTarget);
+            BeginOrRefreshTask(
+                BotTaskType.PathClear,
+                GetActiveBreakTaskDetail(),
+                currentBlockedPryTarget as Component,
+                currentBlockedPryTarget.GetWorldPosition());
+            return;
+        }
+
         if (behaviorContext.HasExtinguishOrder)
         {
             RefreshReservation(currentFireTarget);
@@ -271,6 +284,19 @@ public partial class BotCommandAgent
         ReleaseReservation(currentBlockedBreakable);
         currentBlockedBreakable = target;
         ReserveTarget(target, IsBreachCommandActive() ? BotTaskType.Breach : BotTaskType.PathClear);
+    }
+
+    private void SetCurrentBlockedPryTarget(IBotPryTarget target)
+    {
+        if (ReferenceEquals(currentBlockedPryTarget, target))
+        {
+            RefreshReservation(target);
+            return;
+        }
+
+        ReleaseReservation(currentBlockedPryTarget);
+        currentBlockedPryTarget = target;
+        ReserveTarget(target, BotTaskType.PathClear);
     }
 
     private void ReserveTarget(object target, BotTaskType taskType)

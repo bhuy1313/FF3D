@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 5842722545830707931}
   - component: {fileID: 1090410461770226201}
-  - component: {fileID: 6083850805279481694}
   m_Layer: 0
   m_Name: Crowbar
   m_TagString: Untagged
@@ -61,29 +60,6 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!114 &6083850805279481694
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7227241211258806717}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 203fa74b97c24501b70333539b3be982, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Crowbar
-  toolKind: 4
-  movementWeightKg: 5
-  useRange: 2
-  hitMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  damagePerUse: 1
-  botUseRange: 1.75
-  botUseCooldown: 0.6
-  currentHolder: {fileID: 0}
-  claimOwner: {fileID: 0}
 --- !u!1001 &2650719014425034076
 PrefabInstance:
   m_ObjectHideFlags: 0

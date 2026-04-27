@@ -117,6 +117,7 @@ MonoBehaviour:
   fogVfxSpreadMultiplier: 1.45
   waterParticles: {fileID: 0}
   sprayAudio: {fileID: 0}
+  fireSimulationManager: {fileID: 0}
   enableParticle: 1
   particleGravityModifier: 0.25
   waterTag: Water
@@ -277,7 +278,7 @@ MonoBehaviour:
       useLeftHandIkHint: 0
       leftHandIkHintLocalPosition: {x: 0, y: 0, z: 0}
       overrideSpineAimMaxWeight: 1
-      spineAimMaxWeight: 0.4
+      spineAimMaxWeight: 0.15
 --- !u!114 &6610283024095116843
 MonoBehaviour:
   m_ObjectHideFlags: 0

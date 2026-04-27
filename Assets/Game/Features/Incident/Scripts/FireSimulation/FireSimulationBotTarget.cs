@@ -76,7 +76,7 @@ public sealed class FireSimulationBotTarget : MonoBehaviour, IFireTarget, ITherm
         }
 
         sphereCollider.radius = radius;
-        sphereCollider.enabled = node.IsTrackedByIncident || node.IsBurning;
+        sphereCollider.enabled = manager != null && manager.IsNodeVisualActive(nodeIndex);
     }
 
     public void ApplyWater(float amount)

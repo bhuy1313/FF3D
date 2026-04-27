@@ -195,6 +195,35 @@ namespace TrueJourney.BotBehavior
             return true;
         }
 
+        public bool TryFindPryTargetAhead(out IBotPryTarget pryTarget)
+        {
+            pryTarget = null;
+            if (agent == null || !agent.enabled || !agent.isOnNavMesh)
+            {
+                return false;
+            }
+
+            Vector3 origin = transform.position + Vector3.up * sensorYOffset;
+            if (!TryGetProbeDirection(false, out Vector3 direction))
+            {
+                return false;
+            }
+
+            if (!Physics.SphereCast(origin, sensorRadius, direction, out RaycastHit hit, sensorRange, interactMask, QueryTriggerInteraction.Ignore))
+            {
+                return false;
+            }
+
+            IBotPryTarget target = FindPryTarget(hit.collider);
+            if (target == null || target.IsBreached || (!target.CanBePriedOpen && !target.IsPryInProgress))
+            {
+                return false;
+            }
+
+            pryTarget = target;
+            return true;
+        }
+
         public bool TryFindBreakableTowards(Vector3 worldPosition, out IBotBreakableTarget breakableTarget)
         {
             breakableTarget = null;
@@ -243,6 +272,39 @@ namespace TrueJourney.BotBehavior
                 $"Towards {worldPosition}: detected blocker '{GetBreakableDebugName(breakable)}'.");
             RememberBreakable(breakable);
             breakableTarget = breakable;
+            return true;
+        }
+
+        public bool TryFindPryTargetTowards(Vector3 worldPosition, out IBotPryTarget pryTarget)
+        {
+            pryTarget = null;
+            if (agent == null || !agent.enabled || !agent.isOnNavMesh)
+            {
+                return false;
+            }
+
+            Vector3 origin = transform.position + Vector3.up * sensorYOffset;
+            Vector3 direction = worldPosition - origin;
+            direction.y = 0f;
+            float distance = direction.magnitude;
+            if (distance <= 0.05f)
+            {
+                return false;
+            }
+
+            direction /= distance;
+            if (!Physics.SphereCast(origin, sensorRadius, direction, out RaycastHit hit, distance, interactMask, QueryTriggerInteraction.Ignore))
+            {
+                return false;
+            }
+
+            IBotPryTarget target = FindPryTarget(hit.collider);
+            if (target == null || target.IsBreached || (!target.CanBePriedOpen && !target.IsPryInProgress))
+            {
+                return false;
+            }
+
+            pryTarget = target;
             return true;
         }
 
@@ -297,6 +359,40 @@ namespace TrueJourney.BotBehavior
                 $"Between {worldStart} -> {worldEnd}: detected blocker '{GetBreakableDebugName(breakable)}'.");
             RememberBreakable(breakable);
             breakableTarget = breakable;
+            return true;
+        }
+
+        public bool TryFindPryTargetBetween(Vector3 worldStart, Vector3 worldEnd, out IBotPryTarget pryTarget)
+        {
+            pryTarget = null;
+            if (agent == null || !agent.enabled || !agent.isOnNavMesh)
+            {
+                return false;
+            }
+
+            Vector3 origin = worldStart + Vector3.up * sensorYOffset;
+            Vector3 targetPoint = worldEnd + Vector3.up * sensorYOffset;
+            Vector3 direction = targetPoint - origin;
+            direction.y = 0f;
+            float distance = direction.magnitude;
+            if (distance <= 0.05f)
+            {
+                return false;
+            }
+
+            direction /= distance;
+            if (!Physics.SphereCast(origin, sensorRadius, direction, out RaycastHit hit, distance, interactMask, QueryTriggerInteraction.Ignore))
+            {
+                return false;
+            }
+
+            IBotPryTarget target = FindPryTarget(hit.collider);
+            if (target == null || target.IsBreached || (!target.CanBePriedOpen && !target.IsPryInProgress))
+            {
+                return false;
+            }
+
+            pryTarget = target;
             return true;
         }
 
@@ -572,6 +668,38 @@ namespace TrueJourney.BotBehavior
                 if (parent.TryGetComponent(out IFireTarget parentFire))
                 {
                     return parentFire;
+                }
+
+                parent = parent.parent;
+            }
+
+            return null;
+        }
+
+        private static IBotPryTarget FindPryTarget(Collider collider)
+        {
+            if (collider == null)
+            {
+                return null;
+            }
+
+            if (collider.TryGetComponent(out IBotPryTarget direct))
+            {
+                return direct;
+            }
+
+            if (collider.attachedRigidbody != null &&
+                collider.attachedRigidbody.TryGetComponent(out IBotPryTarget rigidbodyOwner))
+            {
+                return rigidbodyOwner;
+            }
+
+            Transform parent = collider.transform.parent;
+            while (parent != null)
+            {
+                if (parent.TryGetComponent(out IBotPryTarget parentPryTarget))
+                {
+                    return parentPryTarget;
                 }
 
                 parent = parent.parent;

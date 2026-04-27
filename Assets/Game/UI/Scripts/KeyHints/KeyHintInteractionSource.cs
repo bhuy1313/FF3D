@@ -21,7 +21,7 @@ public sealed class KeyHintInteractionSource : KeyHintSourceBase
 
         GameObject currentTarget = context.CurrentTarget;
         GameObject heldObject = context.HeldObject;
-        GameObject owner = context.InventorySystem != null ? context.InventorySystem.gameObject : null;
+        GameObject owner = context.InteractionSystem != null ? context.InteractionSystem.gameObject : null;
         GameObject occupyingObject = context.InteractionSystem != null
             ? context.InteractionSystem.CurrentHandOccupyingObject
             : heldObject;
@@ -36,6 +36,7 @@ public sealed class KeyHintInteractionSource : KeyHintSourceBase
         FireHoseConnectionPoint targetHoseConnection = KeyHintGameplayUtility.FindComponentInTargetHierarchy<FireHoseConnectionPoint>(currentTarget);
         Breakable targetBreakable = KeyHintGameplayUtility.FindComponentInTargetHierarchy<Breakable>(currentTarget);
         Explosive targetExplosive = KeyHintGameplayUtility.FindComponentInTargetHierarchy<Explosive>(currentTarget);
+        Window targetWindow = KeyHintGameplayUtility.FindComponentInTargetHierarchy<Window>(currentTarget);
         IInteractable targetInteractable = KeyHintGameplayUtility.FindComponentInTargetHierarchy<IInteractable>(currentTarget);
         ICommandable targetCommandable = KeyHintGameplayUtility.FindComponentInTargetHierarchy<ICommandable>(currentTarget);
         FireHose heldFireHose = KeyHintGameplayUtility.FindComponentInTargetHierarchy<FireHose>(heldObject);
@@ -105,7 +106,6 @@ public sealed class KeyHintInteractionSource : KeyHintSourceBase
             string label = KeyHintGameplayUtility.ResolvePickupLabelFallback(currentTarget);
             results.Add(CreateHint("Pickup", KeyHintGameplayUtility.GetContextLabelLocalizationKey(label), label, priorityOffset: 50, sortOrder: 40, groupId: "interaction"));
         }
-
         if (targetIsGrabbable && occupyingObject == null && !context.IsCarryingRescuable)
         {
             results.Add(CreateHint("Grab", KeyHintGameplayUtility.GetContextLabelLocalizationKey("Grab Object"), "Grab Object", priorityOffset: 45, sortOrder: 50, groupId: "interaction"));

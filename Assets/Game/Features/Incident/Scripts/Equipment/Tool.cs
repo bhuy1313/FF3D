@@ -126,6 +126,14 @@ public class Tool : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotBrea
             return;
         }
 
+        if (toolKind == BreakToolKind.Crowbar &&
+            TryGetUseHit(user, out UseHit pryHit) &&
+            TryFindPryOpenable(pryHit.Collider, out IPryOpenable pryOpenable) &&
+            pryOpenable.TryPryOpen(user != null ? user : gameObject))
+        {
+            return;
+        }
+
         Breakable breakable = FindBreakableInView(user);
         if (breakable == null)
         {
@@ -146,6 +154,17 @@ public class Tool : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotBrea
 
         GameObject source = user != null ? user : gameObject;
         return target.TryStartBreak(source, toolKind);
+    }
+
+    public bool UseOnTarget(GameObject user, IBotPryTarget target)
+    {
+        if (toolKind != BreakToolKind.Crowbar || target == null || target.IsBreached)
+        {
+            return false;
+        }
+
+        GameObject source = user != null ? user : gameObject;
+        return target.TryPryOpen(source);
     }
 
     private void ApplyDefaultToolKind()
@@ -362,6 +381,39 @@ public class Tool : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotBrea
         }
 
         return null;
+    }
+
+    private static bool TryFindPryOpenable(Collider collider, out IPryOpenable pryOpenable)
+    {
+        pryOpenable = null;
+        if (collider == null)
+        {
+            return false;
+        }
+
+        if (collider.TryGetComponent(out pryOpenable))
+        {
+            return true;
+        }
+
+        if (collider.attachedRigidbody != null &&
+            collider.attachedRigidbody.TryGetComponent(out pryOpenable))
+        {
+            return true;
+        }
+
+        Transform parent = collider.transform.parent;
+        while (parent != null)
+        {
+            if (parent.TryGetComponent(out pryOpenable))
+            {
+                return true;
+            }
+
+            parent = parent.parent;
+        }
+
+        return false;
     }
 
     private static IDamageable FindDamageable(Collider collider)

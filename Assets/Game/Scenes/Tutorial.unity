@@ -26,7 +26,7 @@ RenderSettings:
   m_AmbientIntensity: 1
   m_AmbientMode: 1
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 2100000, guid: c56e28e54cac24b04ae3dd957d214534, type: 2}
+  m_SkyboxMaterial: {fileID: 0}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -2599,10 +2599,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1700398994}
     m_Modifications:
-    - target: {fileID: 488739571219905206, guid: b776637ebbae7ec4eb8e05eb727ecd87, type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 553468921299418875, guid: b776637ebbae7ec4eb8e05eb727ecd87, type: 3}
       propertyPath: m_LocalPosition.x
       value: 60
@@ -2647,17 +2643,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: FireAxe
       objectReference: {fileID: 0}
-    - target: {fileID: 4990459243102346162, guid: b776637ebbae7ec4eb8e05eb727ecd87, type: 3}
-      propertyPath: m_IsActive
-      value: 0
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 979707955808453874, guid: b776637ebbae7ec4eb8e05eb727ecd87, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1740364075}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: b776637ebbae7ec4eb8e05eb727ecd87, type: 3}
 --- !u!1 &70612487
 GameObject:
@@ -2941,11 +2930,31 @@ MonoBehaviour:
   startsBroken: 0
   allowToggle: 1
   breakOnInteract: 0
+  isLocked: 0
   smokeVentilationReliefWhenOpen: 0.28
   smokeVentilationReliefWhenBroken: 0.48
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  enableClimbOver: 1
+  climbSideAAnchor: {fileID: 0}
+  climbSideBAnchor: {fileID: 0}
+  climbAnchorForwardOffset: 0.9
+  climbProbeOriginHeight: 1.1
+  climbProbeDownwardOffset: 1.8
+  climbProbeMaxSlopeAngle: 45
+  climbGroundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  climbApproachDuration: 0.12
+  climbApproachArcHeight: 0.04
+  climbTraverseDuration: 0.55
+  climbTraverseArcHeight: 0.35
+  drawClimbDebug: 0
+  isOpen: 0
+  isBroken: 0
+  openSashCount: 0
+  brokenSashCount: 0
 --- !u!64 &85227254
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -5628,11 +5637,31 @@ MonoBehaviour:
   startsBroken: 0
   allowToggle: 1
   breakOnInteract: 0
+  isLocked: 0
   smokeVentilationReliefWhenOpen: 0.28
   smokeVentilationReliefWhenBroken: 0.48
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  enableClimbOver: 1
+  climbSideAAnchor: {fileID: 0}
+  climbSideBAnchor: {fileID: 0}
+  climbAnchorForwardOffset: 0.9
+  climbProbeOriginHeight: 1.1
+  climbProbeDownwardOffset: 1.8
+  climbProbeMaxSlopeAngle: 45
+  climbGroundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  climbApproachDuration: 0.12
+  climbApproachArcHeight: 0.04
+  climbTraverseDuration: 0.55
+  climbTraverseArcHeight: 0.35
+  drawClimbDebug: 0
+  isOpen: 0
+  isBroken: 0
+  openSashCount: 0
+  brokenSashCount: 0
 --- !u!64 &161020057
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -6756,11 +6785,31 @@ MonoBehaviour:
   startsBroken: 0
   allowToggle: 1
   breakOnInteract: 0
+  isLocked: 0
   smokeVentilationReliefWhenOpen: 0.28
   smokeVentilationReliefWhenBroken: 0.48
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  enableClimbOver: 1
+  climbSideAAnchor: {fileID: 0}
+  climbSideBAnchor: {fileID: 0}
+  climbAnchorForwardOffset: 0.9
+  climbProbeOriginHeight: 1.1
+  climbProbeDownwardOffset: 1.8
+  climbProbeMaxSlopeAngle: 45
+  climbGroundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  climbApproachDuration: 0.12
+  climbApproachArcHeight: 0.04
+  climbTraverseDuration: 0.55
+  climbTraverseArcHeight: 0.35
+  drawClimbDebug: 0
+  isOpen: 0
+  isBroken: 0
+  openSashCount: 0
+  brokenSashCount: 0
 --- !u!64 &178418507
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -7255,11 +7304,31 @@ MonoBehaviour:
   startsBroken: 0
   allowToggle: 1
   breakOnInteract: 0
+  isLocked: 0
   smokeVentilationReliefWhenOpen: 0.28
   smokeVentilationReliefWhenBroken: 0.48
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  enableClimbOver: 1
+  climbSideAAnchor: {fileID: 0}
+  climbSideBAnchor: {fileID: 0}
+  climbAnchorForwardOffset: 0.9
+  climbProbeOriginHeight: 1.1
+  climbProbeDownwardOffset: 1.8
+  climbProbeMaxSlopeAngle: 45
+  climbGroundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  climbApproachDuration: 0.12
+  climbApproachArcHeight: 0.04
+  climbTraverseDuration: 0.55
+  climbTraverseArcHeight: 0.35
+  drawClimbDebug: 0
+  isOpen: 0
+  isBroken: 0
+  openSashCount: 0
+  brokenSashCount: 0
 --- !u!64 &182290011
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -8169,11 +8238,31 @@ MonoBehaviour:
   startsBroken: 0
   allowToggle: 1
   breakOnInteract: 0
+  isLocked: 0
   smokeVentilationReliefWhenOpen: 0.28
   smokeVentilationReliefWhenBroken: 0.48
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  enableClimbOver: 1
+  climbSideAAnchor: {fileID: 0}
+  climbSideBAnchor: {fileID: 0}
+  climbAnchorForwardOffset: 0.9
+  climbProbeOriginHeight: 1.1
+  climbProbeDownwardOffset: 1.8
+  climbProbeMaxSlopeAngle: 45
+  climbGroundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  climbApproachDuration: 0.12
+  climbApproachArcHeight: 0.04
+  climbTraverseDuration: 0.55
+  climbTraverseArcHeight: 0.35
+  drawClimbDebug: 0
+  isOpen: 0
+  isBroken: 0
+  openSashCount: 0
+  brokenSashCount: 0
 --- !u!64 &208763552
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -10700,11 +10789,31 @@ MonoBehaviour:
   startsBroken: 0
   allowToggle: 1
   breakOnInteract: 0
+  isLocked: 0
   smokeVentilationReliefWhenOpen: 0.28
   smokeVentilationReliefWhenBroken: 0.48
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  enableClimbOver: 1
+  climbSideAAnchor: {fileID: 0}
+  climbSideBAnchor: {fileID: 0}
+  climbAnchorForwardOffset: 0.9
+  climbProbeOriginHeight: 1.1
+  climbProbeDownwardOffset: 1.8
+  climbProbeMaxSlopeAngle: 45
+  climbGroundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  climbApproachDuration: 0.12
+  climbApproachArcHeight: 0.04
+  climbTraverseDuration: 0.55
+  climbTraverseArcHeight: 0.35
+  drawClimbDebug: 0
+  isOpen: 0
+  isBroken: 0
+  openSashCount: 0
+  brokenSashCount: 0
 --- !u!64 &303807882
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -17083,11 +17192,31 @@ MonoBehaviour:
   startsBroken: 0
   allowToggle: 1
   breakOnInteract: 0
+  isLocked: 0
   smokeVentilationReliefWhenOpen: 0.28
   smokeVentilationReliefWhenBroken: 0.48
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  enableClimbOver: 1
+  climbSideAAnchor: {fileID: 0}
+  climbSideBAnchor: {fileID: 0}
+  climbAnchorForwardOffset: 0.9
+  climbProbeOriginHeight: 1.1
+  climbProbeDownwardOffset: 1.8
+  climbProbeMaxSlopeAngle: 45
+  climbGroundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  climbApproachDuration: 0.12
+  climbApproachArcHeight: 0.04
+  climbTraverseDuration: 0.55
+  climbTraverseArcHeight: 0.35
+  drawClimbDebug: 0
+  isOpen: 0
+  isBroken: 0
+  openSashCount: 0
+  brokenSashCount: 0
 --- !u!64 &463553664
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -19998,11 +20127,31 @@ MonoBehaviour:
   startsBroken: 0
   allowToggle: 1
   breakOnInteract: 0
+  isLocked: 0
   smokeVentilationReliefWhenOpen: 0.28
   smokeVentilationReliefWhenBroken: 0.48
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  enableClimbOver: 1
+  climbSideAAnchor: {fileID: 0}
+  climbSideBAnchor: {fileID: 0}
+  climbAnchorForwardOffset: 0.9
+  climbProbeOriginHeight: 1.1
+  climbProbeDownwardOffset: 1.8
+  climbProbeMaxSlopeAngle: 45
+  climbGroundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  climbApproachDuration: 0.12
+  climbApproachArcHeight: 0.04
+  climbTraverseDuration: 0.55
+  climbTraverseArcHeight: 0.35
+  drawClimbDebug: 0
+  isOpen: 0
+  isBroken: 0
+  openSashCount: 0
+  brokenSashCount: 0
 --- !u!64 &575246602
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -23024,11 +23173,31 @@ MonoBehaviour:
   startsBroken: 0
   allowToggle: 1
   breakOnInteract: 0
+  isLocked: 0
   smokeVentilationReliefWhenOpen: 0.28
   smokeVentilationReliefWhenBroken: 0.48
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  enableClimbOver: 1
+  climbSideAAnchor: {fileID: 0}
+  climbSideBAnchor: {fileID: 0}
+  climbAnchorForwardOffset: 0.9
+  climbProbeOriginHeight: 1.1
+  climbProbeDownwardOffset: 1.8
+  climbProbeMaxSlopeAngle: 45
+  climbGroundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  climbApproachDuration: 0.12
+  climbApproachArcHeight: 0.04
+  climbTraverseDuration: 0.55
+  climbTraverseArcHeight: 0.35
+  drawClimbDebug: 0
+  isOpen: 0
+  isBroken: 0
+  openSashCount: 0
+  brokenSashCount: 0
 --- !u!64 &617556795
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -28960,11 +29129,31 @@ MonoBehaviour:
   startsBroken: 0
   allowToggle: 1
   breakOnInteract: 0
+  isLocked: 0
   smokeVentilationReliefWhenOpen: 0.28
   smokeVentilationReliefWhenBroken: 0.48
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  enableClimbOver: 1
+  climbSideAAnchor: {fileID: 0}
+  climbSideBAnchor: {fileID: 0}
+  climbAnchorForwardOffset: 0.9
+  climbProbeOriginHeight: 1.1
+  climbProbeDownwardOffset: 1.8
+  climbProbeMaxSlopeAngle: 45
+  climbGroundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  climbApproachDuration: 0.12
+  climbApproachArcHeight: 0.04
+  climbTraverseDuration: 0.55
+  climbTraverseArcHeight: 0.35
+  drawClimbDebug: 0
+  isOpen: 0
+  isBroken: 0
+  openSashCount: 0
+  brokenSashCount: 0
 --- !u!64 &748169537
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -36131,11 +36320,31 @@ MonoBehaviour:
   startsBroken: 0
   allowToggle: 1
   breakOnInteract: 0
+  isLocked: 0
   smokeVentilationReliefWhenOpen: 0.28
   smokeVentilationReliefWhenBroken: 0.48
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  enableClimbOver: 1
+  climbSideAAnchor: {fileID: 0}
+  climbSideBAnchor: {fileID: 0}
+  climbAnchorForwardOffset: 0.9
+  climbProbeOriginHeight: 1.1
+  climbProbeDownwardOffset: 1.8
+  climbProbeMaxSlopeAngle: 45
+  climbGroundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  climbApproachDuration: 0.12
+  climbApproachArcHeight: 0.04
+  climbTraverseDuration: 0.55
+  climbTraverseArcHeight: 0.35
+  drawClimbDebug: 0
+  isOpen: 0
+  isBroken: 0
+  openSashCount: 0
+  brokenSashCount: 0
 --- !u!64 &894388818
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -37462,6 +37671,17 @@ MonoBehaviour:
   m_SelectedFaces: 
   m_SelectedEdges: []
   m_SelectedVertices: 
+--- !u!114 &928633438 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 9103052700435118138, guid: e3bf8c7099d32bf40a2b5184c8c127a1, type: 3}
+  m_PrefabInstance: {fileID: 1812301089}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 922a8e5c3652427ab5fa82f89d6fe28d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FireSimulationManager
 --- !u!1001 &933206361
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -38844,11 +39064,31 @@ MonoBehaviour:
   startsBroken: 0
   allowToggle: 1
   breakOnInteract: 0
+  isLocked: 0
   smokeVentilationReliefWhenOpen: 0.28
   smokeVentilationReliefWhenBroken: 0.48
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  enableClimbOver: 1
+  climbSideAAnchor: {fileID: 0}
+  climbSideBAnchor: {fileID: 0}
+  climbAnchorForwardOffset: 0.9
+  climbProbeOriginHeight: 1.1
+  climbProbeDownwardOffset: 1.8
+  climbProbeMaxSlopeAngle: 45
+  climbGroundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  climbApproachDuration: 0.12
+  climbApproachArcHeight: 0.04
+  climbTraverseDuration: 0.55
+  climbTraverseArcHeight: 0.35
+  drawClimbDebug: 0
+  isOpen: 0
+  isBroken: 0
+  openSashCount: 0
+  brokenSashCount: 0
 --- !u!64 &993129633
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -43377,11 +43617,31 @@ MonoBehaviour:
   startsBroken: 0
   allowToggle: 1
   breakOnInteract: 0
+  isLocked: 0
   smokeVentilationReliefWhenOpen: 0.28
   smokeVentilationReliefWhenBroken: 0.48
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  enableClimbOver: 1
+  climbSideAAnchor: {fileID: 0}
+  climbSideBAnchor: {fileID: 0}
+  climbAnchorForwardOffset: 0.9
+  climbProbeOriginHeight: 1.1
+  climbProbeDownwardOffset: 1.8
+  climbProbeMaxSlopeAngle: 45
+  climbGroundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  climbApproachDuration: 0.12
+  climbApproachArcHeight: 0.04
+  climbTraverseDuration: 0.55
+  climbTraverseArcHeight: 0.35
+  drawClimbDebug: 0
+  isOpen: 0
+  isBroken: 0
+  openSashCount: 0
+  brokenSashCount: 0
 --- !u!64 &1041203946
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -43698,11 +43958,31 @@ MonoBehaviour:
   startsBroken: 0
   allowToggle: 1
   breakOnInteract: 0
+  isLocked: 0
   smokeVentilationReliefWhenOpen: 0.28
   smokeVentilationReliefWhenBroken: 0.48
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  enableClimbOver: 1
+  climbSideAAnchor: {fileID: 0}
+  climbSideBAnchor: {fileID: 0}
+  climbAnchorForwardOffset: 0.9
+  climbProbeOriginHeight: 1.1
+  climbProbeDownwardOffset: 1.8
+  climbProbeMaxSlopeAngle: 45
+  climbGroundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  climbApproachDuration: 0.12
+  climbApproachArcHeight: 0.04
+  climbTraverseDuration: 0.55
+  climbTraverseArcHeight: 0.35
+  drawClimbDebug: 0
+  isOpen: 0
+  isBroken: 0
+  openSashCount: 0
+  brokenSashCount: 0
 --- !u!64 &1061981943
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -46234,11 +46514,31 @@ MonoBehaviour:
   startsBroken: 0
   allowToggle: 1
   breakOnInteract: 0
+  isLocked: 0
   smokeVentilationReliefWhenOpen: 0.28
   smokeVentilationReliefWhenBroken: 0.48
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  enableClimbOver: 1
+  climbSideAAnchor: {fileID: 0}
+  climbSideBAnchor: {fileID: 0}
+  climbAnchorForwardOffset: 0.9
+  climbProbeOriginHeight: 1.1
+  climbProbeDownwardOffset: 1.8
+  climbProbeMaxSlopeAngle: 45
+  climbGroundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  climbApproachDuration: 0.12
+  climbApproachArcHeight: 0.04
+  climbTraverseDuration: 0.55
+  climbTraverseArcHeight: 0.35
+  drawClimbDebug: 0
+  isOpen: 0
+  isBroken: 0
+  openSashCount: 0
+  brokenSashCount: 0
 --- !u!64 &1105532943
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -48749,6 +49049,9 @@ MonoBehaviour:
   noonSkybox: {fileID: 2100000, guid: c56e28e54cac24b04ae3dd957d214534, type: 2}
   eveningSkybox: {fileID: 2100000, guid: 7416536dbe0334cfd888dd1beb75a9fb, type: 2}
   nightSkybox: {fileID: 2100000, guid: c494c335823f54b52b2e87e1b7a63a23, type: 2}
+  rotateSkybox: 0
+  initialSkyboxRotation: 0
+  skyboxRotationSpeed: 0.25
 --- !u!43 &1139256176
 Mesh:
   m_ObjectHideFlags: 0
@@ -61278,11 +61581,31 @@ MonoBehaviour:
   startsBroken: 0
   allowToggle: 1
   breakOnInteract: 0
+  isLocked: 0
   smokeVentilationReliefWhenOpen: 0.28
   smokeVentilationReliefWhenBroken: 0.48
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  enableClimbOver: 1
+  climbSideAAnchor: {fileID: 0}
+  climbSideBAnchor: {fileID: 0}
+  climbAnchorForwardOffset: 0.9
+  climbProbeOriginHeight: 1.1
+  climbProbeDownwardOffset: 1.8
+  climbProbeMaxSlopeAngle: 45
+  climbGroundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  climbApproachDuration: 0.12
+  climbApproachArcHeight: 0.04
+  climbTraverseDuration: 0.55
+  climbTraverseArcHeight: 0.35
+  drawClimbDebug: 0
+  isOpen: 0
+  isBroken: 0
+  openSashCount: 0
+  brokenSashCount: 0
 --- !u!64 &1362734215
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -66773,11 +67096,31 @@ MonoBehaviour:
   startsBroken: 0
   allowToggle: 1
   breakOnInteract: 0
+  isLocked: 0
   smokeVentilationReliefWhenOpen: 0.28
   smokeVentilationReliefWhenBroken: 0.48
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  enableClimbOver: 1
+  climbSideAAnchor: {fileID: 0}
+  climbSideBAnchor: {fileID: 0}
+  climbAnchorForwardOffset: 0.9
+  climbProbeOriginHeight: 1.1
+  climbProbeDownwardOffset: 1.8
+  climbProbeMaxSlopeAngle: 45
+  climbGroundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  climbApproachDuration: 0.12
+  climbApproachArcHeight: 0.04
+  climbTraverseDuration: 0.55
+  climbTraverseArcHeight: 0.35
+  drawClimbDebug: 0
+  isOpen: 0
+  isBroken: 0
+  openSashCount: 0
+  brokenSashCount: 0
 --- !u!64 &1460253592
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -69311,11 +69654,31 @@ MonoBehaviour:
   startsBroken: 0
   allowToggle: 1
   breakOnInteract: 0
+  isLocked: 0
   smokeVentilationReliefWhenOpen: 0.28
   smokeVentilationReliefWhenBroken: 0.48
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  enableClimbOver: 1
+  climbSideAAnchor: {fileID: 0}
+  climbSideBAnchor: {fileID: 0}
+  climbAnchorForwardOffset: 0.9
+  climbProbeOriginHeight: 1.1
+  climbProbeDownwardOffset: 1.8
+  climbProbeMaxSlopeAngle: 45
+  climbGroundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  climbApproachDuration: 0.12
+  climbApproachArcHeight: 0.04
+  climbTraverseDuration: 0.55
+  climbTraverseArcHeight: 0.35
+  drawClimbDebug: 0
+  isOpen: 0
+  isBroken: 0
+  openSashCount: 0
+  brokenSashCount: 0
 --- !u!64 &1514738479
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -76217,11 +76580,31 @@ MonoBehaviour:
   startsBroken: 0
   allowToggle: 1
   breakOnInteract: 0
+  isLocked: 0
   smokeVentilationReliefWhenOpen: 0.28
   smokeVentilationReliefWhenBroken: 0.48
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  enableClimbOver: 1
+  climbSideAAnchor: {fileID: 0}
+  climbSideBAnchor: {fileID: 0}
+  climbAnchorForwardOffset: 0.9
+  climbProbeOriginHeight: 1.1
+  climbProbeDownwardOffset: 1.8
+  climbProbeMaxSlopeAngle: 45
+  climbGroundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  climbApproachDuration: 0.12
+  climbApproachArcHeight: 0.04
+  climbTraverseDuration: 0.55
+  climbTraverseArcHeight: 0.35
+  drawClimbDebug: 0
+  isOpen: 0
+  isBroken: 0
+  openSashCount: 0
+  brokenSashCount: 0
 --- !u!64 &1675877296
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -76721,11 +77104,31 @@ MonoBehaviour:
   startsBroken: 0
   allowToggle: 1
   breakOnInteract: 0
+  isLocked: 0
   smokeVentilationReliefWhenOpen: 0.28
   smokeVentilationReliefWhenBroken: 0.48
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  enableClimbOver: 1
+  climbSideAAnchor: {fileID: 0}
+  climbSideBAnchor: {fileID: 0}
+  climbAnchorForwardOffset: 0.9
+  climbProbeOriginHeight: 1.1
+  climbProbeDownwardOffset: 1.8
+  climbProbeMaxSlopeAngle: 45
+  climbGroundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  climbApproachDuration: 0.12
+  climbApproachArcHeight: 0.04
+  climbTraverseDuration: 0.55
+  climbTraverseArcHeight: 0.35
+  drawClimbDebug: 0
+  isOpen: 0
+  isBroken: 0
+  openSashCount: 0
+  brokenSashCount: 0
 --- !u!64 &1693417893
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -80316,26 +80719,6 @@ MonoBehaviour:
   m_SelectedFaces: 
   m_SelectedEdges: []
   m_SelectedVertices: 
---- !u!1 &1740364069 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 979707955808453874, guid: b776637ebbae7ec4eb8e05eb727ecd87, type: 3}
-  m_PrefabInstance: {fileID: 67534282}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &1740364075
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1740364069}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c85dffbce88f476e865da8f7d718f5c0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerEquippedItemPoseProfile
-  overridePlayerEquippedPose: 1
-  equippedLocalPosition: {x: -0.015, y: 0.118, z: 0.034}
-  equippedLocalEulerAngles: {x: 277.51697, y: 347.93582, z: 89.12851}
 --- !u!1 &1745218289
 GameObject:
   m_ObjectHideFlags: 0
@@ -80462,11 +80845,31 @@ MonoBehaviour:
   startsBroken: 0
   allowToggle: 1
   breakOnInteract: 0
+  isLocked: 0
   smokeVentilationReliefWhenOpen: 0.28
   smokeVentilationReliefWhenBroken: 0.48
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  enableClimbOver: 1
+  climbSideAAnchor: {fileID: 0}
+  climbSideBAnchor: {fileID: 0}
+  climbAnchorForwardOffset: 0.9
+  climbProbeOriginHeight: 1.1
+  climbProbeDownwardOffset: 1.8
+  climbProbeMaxSlopeAngle: 45
+  climbGroundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  climbApproachDuration: 0.12
+  climbApproachArcHeight: 0.04
+  climbTraverseDuration: 0.55
+  climbTraverseArcHeight: 0.35
+  drawClimbDebug: 0
+  isOpen: 0
+  isBroken: 0
+  openSashCount: 0
+  brokenSashCount: 0
 --- !u!64 &1759052637
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -86871,11 +87274,31 @@ MonoBehaviour:
   startsBroken: 0
   allowToggle: 1
   breakOnInteract: 0
+  isLocked: 0
   smokeVentilationReliefWhenOpen: 0.28
   smokeVentilationReliefWhenBroken: 0.48
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  enableClimbOver: 1
+  climbSideAAnchor: {fileID: 0}
+  climbSideBAnchor: {fileID: 0}
+  climbAnchorForwardOffset: 0.9
+  climbProbeOriginHeight: 1.1
+  climbProbeDownwardOffset: 1.8
+  climbProbeMaxSlopeAngle: 45
+  climbGroundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  climbApproachDuration: 0.12
+  climbApproachArcHeight: 0.04
+  climbTraverseDuration: 0.55
+  climbTraverseArcHeight: 0.35
+  drawClimbDebug: 0
+  isOpen: 0
+  isBroken: 0
+  openSashCount: 0
+  brokenSashCount: 0
 --- !u!64 &1888445182
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -94621,7 +95044,7 @@ MonoBehaviour:
   allowToggleAfterIsolation: 0
   hazardType: 1
   applyHazardTypeToLinkedFires: 1
-  fireSimulationManager: {fileID: 0}
+  fireSimulationManager: {fileID: 928633438}
   interactionDuration: 0.65
   lockPlayerWhileInteracting: 1
   hazardDisplayName: 
@@ -103344,14 +103767,6 @@ PrefabInstance:
     - target: {fileID: 1816086955231797324, guid: a3bca02bbbca3d146b0ff0248da05478, type: 3}
       propertyPath: m_Name
       value: FireHose
-      objectReference: {fileID: 0}
-    - target: {fileID: 7404256443553440381, guid: a3bca02bbbca3d146b0ff0248da05478, type: 3}
-      propertyPath: poseEntries.Array.data[3].pose.spineAimMaxWeight
-      value: 0.15
-      objectReference: {fileID: 0}
-    - target: {fileID: 7404256443553440381, guid: a3bca02bbbca3d146b0ff0248da05478, type: 3}
-      propertyPath: poseEntries.Array.data[3].pose.overrideSpineAimMaxWeight
-      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

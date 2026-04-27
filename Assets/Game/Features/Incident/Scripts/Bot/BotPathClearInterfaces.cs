@@ -24,6 +24,7 @@ namespace TrueJourney.BotBehavior
         bool TryClaim(GameObject requester);
         void ReleaseClaim(GameObject requester);
         bool UseOnTarget(GameObject user, IBotBreakableTarget target);
+        bool UseOnTarget(GameObject user, IBotPryTarget target);
     }
 
     public interface IBotBreakableTarget

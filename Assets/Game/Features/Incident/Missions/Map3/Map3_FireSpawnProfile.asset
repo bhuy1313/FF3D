@@ -15,12 +15,11 @@ MonoBehaviour:
   secondaryFirePointCount: 1
   secondaryFireRange: 1.5
   minimumSecondaryFireSpacing: 0.85
-  placementAttemptsPerSecondaryFire: 960
+  placementAttemptsPerSecondaryFire: 50
   activeSecondaryIntensityScale: 0.65
   spawnLatentSpreadNodes: 1
-  latentSpreadNodeCount: 100
-  latentSpreadSeedLimit: 3
-  latentSpreadBranchDepth: 2
+  latentSpreadNodeCount: 10
+  latentSpreadPlacementsPerNode: 2
   latentSpreadRange: 2
   minimumLatentNodeSpacing: 1.5
   parabolaLaunchHeight: 0.35

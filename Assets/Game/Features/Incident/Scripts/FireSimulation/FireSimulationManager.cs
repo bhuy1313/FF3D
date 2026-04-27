@@ -17,6 +17,7 @@ public sealed class FireSimulationManager : MonoBehaviour
     [SerializeField] [Min(0.1f)] private float runtimeNodeAutoConnectRadius = 2.6f;
     [SerializeField] private bool runtimeNodeDrawGizmos = true;
     [SerializeField] private Color runtimeNodeGizmoColor = new Color(1f, 0.45f, 0.1f, 0.8f);
+    [SerializeField] private bool removeRuntimeNodeWhenHeatReachesZero;
 
     [Header("Boot")]
     [SerializeField] private bool initializeOnEnable = true;
@@ -144,7 +145,7 @@ public sealed class FireSimulationManager : MonoBehaviour
         for (int i = 0; i < runtimeGraph.Count; i++)
         {
             FireRuntimeNode node = runtimeGraph.GetNode(i);
-            if (node == null)
+            if (node == null || node.IsRemoved)
             {
                 continue;
             }
@@ -263,7 +264,7 @@ public sealed class FireSimulationManager : MonoBehaviour
 
     public int GetTrackedNodeCount()
     {
-        return CountNodes(node => node != null && node.IsTrackedByIncident);
+        return CountNodes(node => node != null && node.IsTrackedByIncident && !node.IsRemoved);
     }
 
     public int GetExtinguishedTrackedNodeCount()
@@ -480,7 +481,7 @@ public sealed class FireSimulationManager : MonoBehaviour
         for (int i = 0; i < runtimeGraph.Count; i++)
         {
             FireRuntimeNode node = runtimeGraph.GetNode(i);
-            if (node == null)
+            if (node == null || node.IsRemoved)
             {
                 continue;
             }
@@ -491,7 +492,7 @@ public sealed class FireSimulationManager : MonoBehaviour
         for (int i = 0; i < runtimeGraph.Count; i++)
         {
             FireRuntimeNode node = runtimeGraph.GetNode(i);
-            if (node == null)
+            if (node == null || node.IsRemoved)
             {
                 continue;
             }
@@ -518,6 +519,17 @@ public sealed class FireSimulationManager : MonoBehaviour
             {
                 node.Heat = 0f;
             }
+
+            if (simulationProfile != null && node.Heat >= GetSpreadSaturationHeat(node))
+            {
+                node.HasReachedSpreadSaturation = true;
+            }
+
+            if (ShouldRemoveNodeAtZeroHeat(node))
+            {
+                RemoveRuntimeNode(node);
+                changed = true;
+            }
         }
 
         return changed;
@@ -525,6 +537,11 @@ public sealed class FireSimulationManager : MonoBehaviour
 
     private bool TickNode(FireRuntimeNode node, float deltaTime)
     {
+        if (node == null || node.IsRemoved)
+        {
+            return false;
+        }
+
         float previousHeat = node.Heat;
         float previousWetness = node.Wetness;
         float previousFuel = node.RemainingFuel;
@@ -549,12 +566,30 @@ public sealed class FireSimulationManager : MonoBehaviour
 
     private void SpreadHeatToNeighbors(FireRuntimeNode source, float deltaTime)
     {
+        if (source == null || source.IsRemoved)
+        {
+            return;
+        }
+
         for (int i = 0; i < source.NeighborIndices.Count; i++)
         {
             FireRuntimeNode target = runtimeGraph.GetNode(source.NeighborIndices[i]);
-            if (target == null || target.RemainingFuel <= 0f)
+            if (target == null || target.IsRemoved || target.RemainingFuel <= 0f)
             {
                 continue;
+            }
+
+            if (simulationProfile != null)
+            {
+                if (simulationProfile.StopReceivingSpreadAfterSaturation && target.HasReachedSpreadSaturation)
+                {
+                    continue;
+                }
+
+                if (simulationProfile.BlockIncomingSpreadDuringSuppressionRecovery && target.SuppressionRecoveryTimer > 0f)
+                {
+                    continue;
+                }
             }
 
             if (source.IsTrackedByIncident)
@@ -594,7 +629,7 @@ public sealed class FireSimulationManager : MonoBehaviour
         for (int i = 0; i < runtimeGraph.Count; i++)
         {
             FireRuntimeNode seed = runtimeGraph.GetNode(i);
-            if (seed == null || visited[i] || !seed.IsBurning)
+            if (seed == null || seed.IsRemoved || visited[i] || !ShouldRenderNodeInCluster(seed))
             {
                 continue;
             }
@@ -616,7 +651,7 @@ public sealed class FireSimulationManager : MonoBehaviour
             {
                 int nodeIndex = queue.Dequeue();
                 FireRuntimeNode node = runtimeGraph.GetNode(nodeIndex);
-                if (node == null || !node.IsBurning)
+                if (node == null || node.IsRemoved || !ShouldRenderNodeInCluster(node))
                 {
                     continue;
                 }
@@ -625,7 +660,7 @@ public sealed class FireSimulationManager : MonoBehaviour
                 burningNodeCount++;
                 center += node.Position;
                 normal += node.SurfaceNormal;
-                float nodeIntensity = Mathf.Clamp01(node.Heat / Mathf.Max(0.01f, node.IgnitionThreshold));
+                float nodeIntensity = GetNodeVisualIntensity01(node);
                 intensitySum += nodeIntensity;
                 memberSnapshots.Add(new FireClusterMemberSnapshot(
                     node.Index,
@@ -650,7 +685,7 @@ public sealed class FireSimulationManager : MonoBehaviour
                     }
 
                     FireRuntimeNode neighbor = runtimeGraph.GetNode(neighborIndex);
-                    if (neighbor == null || !neighbor.IsBurning)
+                    if (neighbor == null || neighbor.IsRemoved || !ShouldRenderNodeInCluster(neighbor))
                     {
                         continue;
                     }
@@ -676,7 +711,7 @@ public sealed class FireSimulationManager : MonoBehaviour
             for (int nodeListIndex = 0; nodeListIndex < clusterNodeIndices.Count; nodeListIndex++)
             {
                 FireRuntimeNode node = runtimeGraph.GetNode(clusterNodeIndices[nodeListIndex]);
-                if (node == null || !node.IsBurning)
+                if (node == null || node.IsRemoved || !ShouldRenderNodeInCluster(node))
                 {
                     continue;
                 }
@@ -933,10 +968,92 @@ public sealed class FireSimulationManager : MonoBehaviour
             node.PendingWetnessDelta = 0f;
             node.IsTrackedByIncident = false;
             node.SuppressionRecoveryTimer = 0f;
+            node.HasReachedSpreadSaturation = false;
+            node.IsRemoved = false;
             node.Heat = useAuthoringIgnition && node.AuthoringStartIgnited
                 ? Mathf.Max(0.01f, node.IgnitionThreshold)
                 : 0f;
         }
+    }
+
+    public float GetNodeVisualIntensity01(int nodeIndex)
+    {
+        if (!initialized || runtimeGraph == null)
+        {
+            return 0f;
+        }
+
+        return GetNodeVisualIntensity01(runtimeGraph.GetNode(nodeIndex));
+    }
+
+    public bool IsNodeVisualActive(int nodeIndex)
+    {
+        if (!initialized || runtimeGraph == null)
+        {
+            return false;
+        }
+
+        return ShouldRenderNodeInCluster(runtimeGraph.GetNode(nodeIndex));
+    }
+
+    private float GetNodeVisualIntensity01(FireRuntimeNode node)
+    {
+        if (node == null || node.IsRemoved || node.RemainingFuel <= 0f)
+        {
+            return 0f;
+        }
+
+        return Mathf.InverseLerp(0f, Mathf.Max(0.01f, GetSpreadSaturationHeat(node)), node.Heat);
+    }
+
+    private bool ShouldRenderNodeInCluster(FireRuntimeNode node)
+    {
+        if (node == null || node.IsRemoved || !node.IsTrackedByIncident || node.RemainingFuel <= 0f)
+        {
+            return false;
+        }
+
+        float threshold = simulationProfile != null ? simulationProfile.VisualHeatThreshold : 0.01f;
+        return node.Heat > threshold;
+    }
+
+    private float GetSpreadSaturationHeat(FireRuntimeNode node)
+    {
+        if (node == null)
+        {
+            return float.PositiveInfinity;
+        }
+
+        float multiplier = simulationProfile != null ? simulationProfile.SpreadSaturationHeatMultiplier : 2f;
+        return Mathf.Max(node.IgnitionThreshold, node.IgnitionThreshold * multiplier);
+    }
+
+    private bool ShouldRemoveNodeAtZeroHeat(FireRuntimeNode node)
+    {
+        if (node == null || node.IsRemoved || !node.IsTrackedByIncident)
+        {
+            return false;
+        }
+
+        bool deleteAtZero = removeRuntimeNodeWhenHeatReachesZero || (simulationProfile != null && simulationProfile.DeleteNodeWhenHeatDropsToZero);
+        return deleteAtZero && node.Heat <= 0.0001f;
+    }
+
+    private void RemoveRuntimeNode(FireRuntimeNode node)
+    {
+        if (node == null)
+        {
+            return;
+        }
+
+        node.IsRemoved = true;
+        node.IsTrackedByIncident = false;
+        node.Heat = 0f;
+        node.PendingHeatDelta = 0f;
+        node.PendingWetnessDelta = 0f;
+        node.RemainingFuel = 0f;
+        node.Wetness = 0f;
+        node.SuppressionRecoveryTimer = 0f;
     }
 
     private void MarkNodeRecentlySuppressed(FireRuntimeNode node)
@@ -987,7 +1104,7 @@ public sealed class FireSimulationManager : MonoBehaviour
         for (int i = 0; i < runtimeGraph.Count; i++)
         {
             FireRuntimeNode node = runtimeGraph.GetNode(i);
-            if (predicate(node))
+            if (node != null && !node.IsRemoved && predicate(node))
             {
                 count++;
             }

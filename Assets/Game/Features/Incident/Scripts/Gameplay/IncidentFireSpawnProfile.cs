@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [CreateAssetMenu(
     fileName = "IncidentFireSpawnProfile",
@@ -16,8 +17,8 @@ public sealed class IncidentFireSpawnProfile : ScriptableObject
     [Header("Latent Spread Nodes")]
     [SerializeField] private bool spawnLatentSpreadNodes = true;
     [SerializeField] [Min(0)] private int latentSpreadNodeCount = 4;
-    [SerializeField] [Min(1)] private int latentSpreadSeedLimit = 3;
-    [SerializeField] [Min(1)] private int latentSpreadBranchDepth = 2;
+    [FormerlySerializedAs("latentSpreadSeedLimit")]
+    [SerializeField] [Min(1)] private int latentSpreadPlacementsPerNode = 2;
     [SerializeField] [Min(0.1f)] private float latentSpreadRange = 4.2f;
     [SerializeField] [Min(0f)] private float minimumLatentNodeSpacing = 2.2f;
 
@@ -40,8 +41,7 @@ public sealed class IncidentFireSpawnProfile : ScriptableObject
     public float ActiveSecondaryIntensityScale => activeSecondaryIntensityScale;
     public bool SpawnLatentSpreadNodes => spawnLatentSpreadNodes;
     public int LatentSpreadNodeCount => latentSpreadNodeCount;
-    public int LatentSpreadSeedLimit => latentSpreadSeedLimit;
-    public int LatentSpreadBranchDepth => latentSpreadBranchDepth;
+    public int LatentSpreadPlacementsPerNode => latentSpreadPlacementsPerNode;
     public float LatentSpreadRange => latentSpreadRange;
     public float MinimumLatentNodeSpacing => minimumLatentNodeSpacing;
     public float ParabolaLaunchHeight => parabolaLaunchHeight;

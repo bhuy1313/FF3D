@@ -46,7 +46,16 @@ public class TimeOfDayPresetController : MonoBehaviour
     [SerializeField] private Material eveningSkybox;
     [SerializeField] private Material nightSkybox;
 
+    [Header("Skybox Rotation")]
+    [SerializeField] private bool rotateSkybox;
+    [SerializeField] private float initialSkyboxRotation;
+    [SerializeField] private float skyboxRotationSpeed = 0.25f;
+
     public TimeOfDayPreset SelectedPreset => selectedPreset;
+
+    private Material runtimeSkyboxInstance;
+    private Material activeSkyboxSource;
+    private float currentSkyboxRotation;
 
     private void Reset()
     {
@@ -73,6 +82,22 @@ public class TimeOfDayPresetController : MonoBehaviour
         }
 
         ApplySelectedPreset();
+    }
+
+    private void Update()
+    {
+        if (!Application.isPlaying || !rotateSkybox || runtimeSkyboxInstance == null)
+        {
+            return;
+        }
+
+        currentSkyboxRotation = RepeatRotation(currentSkyboxRotation + (skyboxRotationSpeed * Time.deltaTime));
+        ApplySkyboxRotation();
+    }
+
+    private void OnDisable()
+    {
+        ReleaseRuntimeSkybox();
     }
 
     public void SetPreset(TimeOfDayPreset preset)
@@ -111,7 +136,11 @@ public class TimeOfDayPresetController : MonoBehaviour
     {
         if (preset.skybox != null)
         {
-            RenderSettings.skybox = preset.skybox;
+            AssignSkyboxInstance(preset.skybox);
+        }
+        else
+        {
+            ReleaseRuntimeSkybox();
         }
 
         RenderSettings.fog = enableFog;
@@ -132,7 +161,79 @@ public class TimeOfDayPresetController : MonoBehaviour
         sunLight.intensity = preset.sunIntensity;
         transform.rotation = Quaternion.Euler(preset.sunEulerAngles);
 
+        currentSkyboxRotation = RepeatRotation(initialSkyboxRotation);
+        ApplySkyboxRotation();
+
         DynamicGI.UpdateEnvironment();
+    }
+
+    private void AssignSkyboxInstance(Material sourceSkybox)
+    {
+        if (sourceSkybox == null)
+        {
+            ReleaseRuntimeSkybox();
+            return;
+        }
+
+        if (runtimeSkyboxInstance != null && activeSkyboxSource == sourceSkybox)
+        {
+            RenderSettings.skybox = runtimeSkyboxInstance;
+            return;
+        }
+
+        ReleaseRuntimeSkybox();
+
+        runtimeSkyboxInstance = new Material(sourceSkybox)
+        {
+            name = sourceSkybox.name + " (Runtime)"
+        };
+
+        if (!Application.isPlaying)
+        {
+            runtimeSkyboxInstance.hideFlags = HideFlags.DontSave;
+        }
+
+        activeSkyboxSource = sourceSkybox;
+        RenderSettings.skybox = runtimeSkyboxInstance;
+    }
+
+    private void ApplySkyboxRotation()
+    {
+        if (runtimeSkyboxInstance == null || !runtimeSkyboxInstance.HasProperty("_Rotation"))
+        {
+            return;
+        }
+
+        float appliedRotation = rotateSkybox ? currentSkyboxRotation : initialSkyboxRotation;
+        runtimeSkyboxInstance.SetFloat("_Rotation", appliedRotation);
+    }
+
+    private void ReleaseRuntimeSkybox()
+    {
+        if (RenderSettings.skybox == runtimeSkyboxInstance)
+        {
+            RenderSettings.skybox = activeSkyboxSource;
+        }
+
+        if (runtimeSkyboxInstance != null)
+        {
+            if (Application.isPlaying)
+            {
+                Destroy(runtimeSkyboxInstance);
+            }
+            else
+            {
+                DestroyImmediate(runtimeSkyboxInstance);
+            }
+        }
+
+        runtimeSkyboxInstance = null;
+        activeSkyboxSource = null;
+    }
+
+    private static float RepeatRotation(float value)
+    {
+        return Mathf.Repeat(value, 360f);
     }
 
     private PresetValues GetPresetValues(TimeOfDayPreset preset)

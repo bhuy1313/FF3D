@@ -150,7 +150,16 @@ namespace StarterAssets
                 return;
             }
 
-            if (WasPressed(input != null && input.pickup, ref previousPickup) && inventory != null)
+            if (Input.GetKeyDown(KeyCode.V))
+            {
+                if (TryStartWindowClimbAtCurrentTarget())
+                {
+                    return;
+                }
+            }
+
+            bool pickupPressed = WasPressed(input != null && input.pickup, ref previousPickup);
+            if (pickupPressed && inventory != null)
             {
                 if (IsInventoryActionBlockedByCarry())
                 {
@@ -902,6 +911,43 @@ namespace StarterAssets
         private static bool CanInteractWhileHandsOccupied(IInteractable interactable)
         {
             return interactable is Door;
+        }
+
+        private bool TryStartWindowClimbAtCurrentTarget()
+        {
+            if (currentTarget == null)
+            {
+                return false;
+            }
+
+            Window targetWindow = FindWindow(currentTarget.transform);
+            if (targetWindow == null)
+            {
+                return false;
+            }
+
+            if (AreHandsOccupied)
+            {
+                return false;
+            }
+
+            return targetWindow.TryStartClimbOver(gameObject);
+        }
+
+        private static Window FindWindow(Transform origin)
+        {
+            Transform current = origin;
+            while (current != null)
+            {
+                if (current.TryGetComponent(out Window window))
+                {
+                    return window;
+                }
+
+                current = current.parent;
+            }
+
+            return null;
         }
 
         private static bool WasPressed(bool current, ref bool previous)

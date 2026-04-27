@@ -197,6 +197,7 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     private IRescuableTarget currentRescueTarget;
     private ISafeZoneTarget currentSafeZoneTarget;
     private IBotPryTarget currentBreachPryTarget;
+    private IBotPryTarget currentBlockedPryTarget;
     private IBotHazardIsolationTarget currentHazardIsolationTarget;
     private float cachedHazardIsolationStoppingDistance = -1f;
     private float hazardIsolationUnavailableSinceTime = -1f;
@@ -254,6 +255,7 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
         (
             Time.time < pathClearingResumeGraceUntilTime ||
             HasPendingCommittedBreakTool() ||
+            (currentBlockedPryTarget != null && !currentBlockedPryTarget.IsBreached) ||
             (currentBlockedBreakable != null && !currentBlockedBreakable.IsBroken && currentBlockedBreakable.CanBeClearedByBot)
         )) ||
         IsRouteFireClearingActive();

@@ -11,6 +11,7 @@ namespace FF3D.Editor
     {
         private const string DefaultRootName = "IncidentSetup";
         private const string SimulationRootPrefix = "FireSimulation_";
+        private const string DefaultWindowLockTaskName = "WindowLockRandomizerStartupTask";
         private const string DefaultPayloadTaskName = "IncidentPayloadStartupTask";
         private const string DefaultStepsRootName = "SetupSteps";
         private const string DefaultDebugSpawnerName = "DebugIncidentSpawner";
@@ -21,6 +22,7 @@ namespace FF3D.Editor
         private const string VentilationStepName = "IncidentVentilationPresetSetupStep";
 
         [SerializeField] private bool ensureSceneStartupFlow = true;
+        [SerializeField] private bool ensureWindowLockStartupTask = true;
         [SerializeField] private bool ensurePayloadStartupTask = true;
         [SerializeField] private bool ensureMapSetupRoot = true;
         [SerializeField] private bool ensureSimulationManager = true;
@@ -80,6 +82,7 @@ namespace FF3D.Editor
         {
             EditorGUILayout.LabelField("Scene Setup", EditorStyles.boldLabel);
             ensureSceneStartupFlow = EditorGUILayout.ToggleLeft("Ensure SceneStartupFlow", ensureSceneStartupFlow);
+            ensureWindowLockStartupTask = EditorGUILayout.ToggleLeft("Ensure WindowLockRandomizerStartupTask", ensureWindowLockStartupTask);
             ensurePayloadStartupTask = EditorGUILayout.ToggleLeft("Ensure IncidentPayloadStartupTask", ensurePayloadStartupTask);
             ensureMapSetupRoot = EditorGUILayout.ToggleLeft("Ensure IncidentMapSetupRoot", ensureMapSetupRoot);
             ensureSimulationManager = EditorGUILayout.ToggleLeft("Ensure FireSimulationManager + FireSurfaceGraph", ensureSimulationManager);
@@ -169,6 +172,17 @@ namespace FF3D.Editor
                         result);
                     ConfigureStartupTask(payloadTask, result);
                     AssignPayloadTaskBindings(payloadTask, mapSetupRoot, result);
+                }
+
+                if (ensureWindowLockStartupTask)
+                {
+                    GameObject windowLockTaskRoot = EnsureChildObject(incidentRoot, DefaultWindowLockTaskName, result);
+                    WindowLockRandomizerStartupTask windowLockTask = EnsureComponent<WindowLockRandomizerStartupTask>(
+                        windowLockTaskRoot,
+                        "WindowLockRandomizerStartupTask",
+                        result);
+                    ConfigureStartupTask(windowLockTask, result);
+                    ConfigureWindowLockStartupTask(windowLockTask, result);
                 }
 
                 if (ensureDebugPayloadSpawner)
@@ -290,6 +304,7 @@ namespace FF3D.Editor
             SceneStartupFlow startupFlow = FindFirstInScene<SceneStartupFlow>(scene);
             IncidentMapSetupRoot mapSetupRoot = FindFirstInScene<IncidentMapSetupRoot>(scene);
             IncidentPayloadStartupTask payloadTask = FindFirstInScene<IncidentPayloadStartupTask>(scene);
+            WindowLockRandomizerStartupTask windowLockTask = FindFirstInScene<WindowLockRandomizerStartupTask>(scene);
             FireSimulationManager simulationManager = FindFirstInScene<FireSimulationManager>(scene);
             FireSurfaceGraph surfaceGraph = FindFirstInScene<FireSurfaceGraph>(scene);
             DebugIncidentPayloadSpawner debugSpawner = FindFirstInScene<DebugIncidentPayloadSpawner>(scene);
@@ -305,6 +320,11 @@ namespace FF3D.Editor
             if (payloadTask == null)
             {
                 warnings.Add("Missing IncidentPayloadStartupTask.");
+            }
+
+            if (windowLockTask == null)
+            {
+                warnings.Add("Missing WindowLockRandomizerStartupTask.");
             }
 
             if (mapSetupRoot == null)
@@ -640,6 +660,26 @@ namespace FF3D.Editor
             bool changed = false;
 
             changed |= SetBoolProperty(serializedObject, startupTask, "runTask", true, $"{startupTask.GetType().Name}.runTask", result);
+
+            if (changed)
+            {
+                serializedObject.ApplyModifiedProperties();
+            }
+        }
+
+        private static void ConfigureWindowLockStartupTask(WindowLockRandomizerStartupTask startupTask, SetupResult result)
+        {
+            if (startupTask == null)
+            {
+                return;
+            }
+
+            SerializedObject serializedObject = new SerializedObject(startupTask);
+            serializedObject.Update();
+            bool changed = false;
+
+            changed |= SetIntProperty(serializedObject, startupTask, "order", -10, "WindowLockRandomizerStartupTask.order", result);
+            changed |= SetBoolProperty(serializedObject, startupTask, "useDeterministicSeed", false, "WindowLockRandomizerStartupTask.useDeterministicSeed", result);
 
             if (changed)
             {
@@ -1131,6 +1171,26 @@ namespace FF3D.Editor
 
             Undo.RecordObject(targetObject, $"Set {resultLabel}");
             property.boolValue = value;
+            result.RepairedObjects.Add(resultLabel);
+            return true;
+        }
+
+        private static bool SetIntProperty(
+            SerializedObject serializedObject,
+            UnityEngine.Object targetObject,
+            string propertyName,
+            int value,
+            string resultLabel,
+            SetupResult result)
+        {
+            SerializedProperty property = serializedObject.FindProperty(propertyName);
+            if (property == null || property.intValue == value)
+            {
+                return false;
+            }
+
+            Undo.RecordObject(targetObject, $"Set {resultLabel}");
+            property.intValue = value;
             result.RepairedObjects.Add(resultLabel);
             return true;
         }
