@@ -465,7 +465,8 @@ MonoBehaviour:
   duration: 0.5
   moveEase: 15
   fadeEase: 4
-  topLeftPosition: {x: -960, y: 539.84}
+  ignoreTimeScale: 1
+  topLeftOffset: {x: 0, y: 0}
 --- !u!1 &47340601
 GameObject:
   m_ObjectHideFlags: 0
@@ -1158,8 +1159,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1400645571}
   m_HandleRect: {fileID: 1400645570}
   m_Direction: 2
-  m_Value: 1
-  m_Size: 0.62429535
+  m_Value: 1.0000002
+  m_Size: 0.6242954
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -1231,7 +1232,7 @@ RectTransform:
   m_GameObject: {fileID: 126010335}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.7, y: 0.7, z: 0.7}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 1770715266}
@@ -2408,7 +2409,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &229873616
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2418,7 +2419,7 @@ RectTransform:
   m_GameObject: {fileID: 229873615}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.7, y: 0.7, z: 0.7}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 813381480}
@@ -2577,14 +2578,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RawImage
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 0, b: 0, a: 1}
+  m_Color: {r: 0.9607844, g: 0.9607844, b: 0.8627452, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Texture: {fileID: 2800000, guid: dca9c7459db9a154ca69af184322f33f, type: 3}
+  m_Texture: {fileID: 2800000, guid: 8811e890a05dc724ea6baca61d6f2d35, type: 3}
   m_UVRect:
     serializedVersion: 2
     x: 0
@@ -3321,7 +3322,7 @@ RectTransform:
   m_GameObject: {fileID: 311261085}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.7, y: 0.7, z: 0.7}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 59872720}
@@ -3329,7 +3330,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -357.5, y: 47.8}
+  m_AnchoredPosition: {x: 423.09668, y: -147.88675}
   m_SizeDelta: {x: 80, y: 80}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &311261087
@@ -4386,14 +4387,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RawImage
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 0, b: 0, a: 1}
+  m_Color: {r: 0.9607844, g: 0.9607844, b: 0.8627452, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Texture: {fileID: 2800000, guid: dca9c7459db9a154ca69af184322f33f, type: 3}
+  m_Texture: {fileID: 2800000, guid: 8811e890a05dc724ea6baca61d6f2d35, type: 3}
   m_UVRect:
     serializedVersion: 2
     x: 0
@@ -4769,8 +4770,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 257516651}
   m_HandleRect: {fileID: 257516650}
   m_Direction: 0
-  m_Value: 1
-  m_Size: 0.9999999
+  m_Value: 0
+  m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -5420,7 +5421,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &521055397
 RectTransform:
   m_ObjectHideFlags: 0
@@ -5589,14 +5590,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RawImage
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 0, b: 0, a: 1}
+  m_Color: {r: 0.9607844, g: 0.9607844, b: 0.8627452, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Texture: {fileID: 2800000, guid: dca9c7459db9a154ca69af184322f33f, type: 3}
+  m_Texture: {fileID: 2800000, guid: 8811e890a05dc724ea6baca61d6f2d35, type: 3}
   m_UVRect:
     serializedVersion: 2
     x: 0
@@ -5810,14 +5811,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RawImage
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 0, b: 0, a: 1}
+  m_Color: {r: 0.9607844, g: 0.9607844, b: 0.8627452, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Texture: {fileID: 2800000, guid: dca9c7459db9a154ca69af184322f33f, type: 3}
+  m_Texture: {fileID: 2800000, guid: 8811e890a05dc724ea6baca61d6f2d35, type: 3}
   m_UVRect:
     serializedVersion: 2
     x: 0
@@ -8873,8 +8874,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1613337126}
   m_HandleRect: {fileID: 1613337125}
   m_Direction: 0
-  m_Value: 1
-  m_Size: 0.9999999
+  m_Value: 0
+  m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -10453,14 +10454,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RawImage
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 0, b: 0, a: 1}
+  m_Color: {r: 0.9607844, g: 0.9607844, b: 0.8627452, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Texture: {fileID: 2800000, guid: dca9c7459db9a154ca69af184322f33f, type: 3}
+  m_Texture: {fileID: 2800000, guid: 8811e890a05dc724ea6baca61d6f2d35, type: 3}
   m_UVRect:
     serializedVersion: 2
     x: 0
@@ -10560,7 +10561,7 @@ CanvasGroup:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1190020789}
   m_Enabled: 1
-  m_Alpha: 1
+  m_Alpha: 0
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
@@ -11527,7 +11528,7 @@ RectTransform:
   m_GameObject: {fileID: 1367334196}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.7, y: 0.7, z: 0.7}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 674719281}
@@ -13495,7 +13496,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1758142996
 RectTransform:
   m_ObjectHideFlags: 0
@@ -14356,14 +14357,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RawImage
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 0, b: 0, a: 1}
+  m_Color: {r: 0.9607844, g: 0.9607844, b: 0.8627452, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Texture: {fileID: 2800000, guid: dca9c7459db9a154ca69af184322f33f, type: 3}
+  m_Texture: {fileID: 2800000, guid: 8811e890a05dc724ea6baca61d6f2d35, type: 3}
   m_UVRect:
     serializedVersion: 2
     x: 0
@@ -15799,7 +15800,7 @@ CanvasGroup:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2014745274}
   m_Enabled: 1
-  m_Alpha: 1
+  m_Alpha: 0
   m_Interactable: 0
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
@@ -16154,7 +16155,6 @@ MonoBehaviour:
     levels:
     - Training Map
     - Map 1
-    - Map 2
     levelDefinitions:
     - buttonName: LevelButton_01
       levelId: training_map
@@ -16205,27 +16205,6 @@ MonoBehaviour:
         targetSceneName: CallPhaseScene
         onsiteSceneName: 
         scenarioResourcePath: CallPhaseLaundryFireScenario
-    - buttonName: LevelButton_03
-      levelId: suburban_map_02
-      levelName: Map 2
-      levelNameLocalizationKey: 
-      description: A residential map that currently deploys a garage fire scenario.
-      descriptionLocalizationKey: 
-      objective: Deploy to the map and respond to the randomly assigned scenario.
-      objectiveLocalizationKey: 
-      difficulty: Normal
-      difficultyLocalizationKey: 
-      caseId: 
-      targetSceneName: 
-      onsiteSceneName: 
-      scenarioResourcePath: 
-      scenarioDefinitions:
-      - scenarioId: suburban_map_02_garage_fire
-        displayName: Garage Fire
-        caseId: SH-GR-01
-        targetSceneName: CallPhaseScene
-        onsiteSceneName: 
-        scenarioResourcePath: CallPhaseGarageFireScenario
   cityCard:
     name: City
     titleLocalizationKey: 
@@ -16235,42 +16214,10 @@ MonoBehaviour:
     placeholderColor: {r: 0.3529412, g: 0.23529412, b: 0.21960784, a: 1}
     levels:
     - Map 3
-    - Map 4
-    - Map 5
     levelDefinitions:
     - buttonName: LevelButton_01
       levelId: city_map_01
       levelName: Map 3
-      levelNameLocalizationKey: 
-      description: This city map is reserved for future scenario setup.
-      descriptionLocalizationKey: 
-      objective: Assign scenarios to enable this map.
-      objectiveLocalizationKey: 
-      difficulty: Normal
-      difficultyLocalizationKey: 
-      caseId: 
-      targetSceneName: 
-      onsiteSceneName: 
-      scenarioResourcePath: 
-      scenarioDefinitions: []
-    - buttonName: LevelButton_02
-      levelId: city_map_02
-      levelName: Map 4
-      levelNameLocalizationKey: 
-      description: This city map is reserved for future scenario setup.
-      descriptionLocalizationKey: 
-      objective: Assign scenarios to enable this map.
-      objectiveLocalizationKey: 
-      difficulty: Normal
-      difficultyLocalizationKey: 
-      caseId: 
-      targetSceneName: 
-      onsiteSceneName: 
-      scenarioResourcePath: 
-      scenarioDefinitions: []
-    - buttonName: LevelButton_03
-      levelId: city_map_03
-      levelName: Map 5
       levelNameLocalizationKey: 
       description: This city map is reserved for future scenario setup.
       descriptionLocalizationKey: 
