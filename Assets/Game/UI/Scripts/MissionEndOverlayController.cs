@@ -1,8 +1,10 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using StarterAssets;
 using TMPro;
 using UnityEngine;
+using Unity.Cinemachine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -40,6 +42,40 @@ public class MissionEndOverlayController : MonoBehaviour
     [SerializeField]
     private Canvas targetCanvas;
 
+    [SerializeField]
+    private PlayerVitals playerVitals;
+
+    [SerializeField]
+    private FirstPersonController firstPersonController;
+
+    [SerializeField]
+    private Transform playerCameraRoot;
+
+    [SerializeField]
+    private StarterAssetsInputs starterAssetsInputs;
+
+    [SerializeField]
+    private SubMenuPanelController subMenuPanelController;
+
+    [SerializeField]
+    private SubMenuEscapeHost subMenuEscapeHost;
+
+    [SerializeField]
+    private EndMissionCinematicController completionCinematic;
+
+    [Header("Completion Cinematic")]
+    [SerializeField]
+    private bool playCompletionCinematicAfterResultPopup = true;
+
+    [SerializeField]
+    private float completionCinematicDelayAfterResultPopup = 2f;
+
+    [SerializeField]
+    private bool waitForCompletionIntroBeforeCinematic = true;
+
+    [SerializeField]
+    private bool fadeBackgroundOnCinematic = true;
+
     [Header("Behavior")]
     [SerializeField]
     private bool pauseGameplayOnMissionEnd = true;
@@ -54,7 +90,63 @@ public class MissionEndOverlayController : MonoBehaviour
     private bool showMainMenuButton = true;
 
     [SerializeField]
+    private bool hideOtherUIOnMissionEnd = true;
+
+    [SerializeField]
+    private GameObject[] uiObjectsToHideOnMissionEnd = Array.Empty<GameObject>();
+
+    [SerializeField]
     private string mainMenuSceneName = "MainMenu";
+
+    [Header("Player Death Camera Fall")]
+    [SerializeField]
+    private bool playDeathCameraFallBeforeResultPopup = true;
+
+    [SerializeField]
+    private float deathCameraFallDuration = 0.9f;
+
+    [SerializeField]
+    private float deathCameraFallDropDistance = 0.6f;
+
+    [SerializeField]
+    private float deathCameraFallForwardDistance = 0.3f;
+
+    [SerializeField]
+    private float deathCameraFallPitch = 75f;
+
+    [SerializeField]
+    private float deathCameraFallRoll = 12f;
+
+    [SerializeField]
+    private float deathCameraFallYawJitter = 4f;
+
+    [SerializeField]
+    private float deathCameraGroundClearance = 0.1f;
+
+    [SerializeField]
+    private float deathCameraGroundProbeHeight = 0.8f;
+
+    [SerializeField]
+    private float deathCameraGroundProbeDistance = 3f;
+
+    [SerializeField]
+    private LayerMask deathCameraGroundMask = ~0;
+
+    [SerializeField]
+    private AnimationCurve deathCameraFallCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+
+    [Header("Player Death Camera Shake")]
+    [SerializeField]
+    private float deathCameraShakePositionAmplitude = 0.045f;
+
+    [SerializeField]
+    private float deathCameraShakeRotationAmplitude = 2.8f;
+
+    [SerializeField]
+    private float deathCameraShakeFrequency = 13f;
+
+    [SerializeField]
+    private float deathCameraShakeDamping = 1.7f;
 
     [Header("Labels")]
     [SerializeField]
@@ -106,6 +198,13 @@ public class MissionEndOverlayController : MonoBehaviour
     [SerializeField]
     private string resultPopupObjectName = "ResultPopup";
 
+    [Header("Rank Stamp Animation")]
+    [SerializeField]
+    private float rankStampFinalTiltMin = -6f;
+
+    [SerializeField]
+    private float rankStampFinalTiltMax = 6f;
+
     private GameObject overlayRoot;
     private CanvasGroup overlayCanvasGroup;
     private MissionResultPopupSequence overlaySequence;
@@ -139,14 +238,31 @@ public class MissionEndOverlayController : MonoBehaviour
     private GameObject mainMenuButtonRoot;
     private Button mainMenuButton;
     private TMP_Text mainMenuButtonText;
+    private GameObject saveRecordButtonRoot;
+    private Button saveRecordButton;
+    private TMP_Text saveRecordButtonText;
+    private PlayerCompletionRecord pendingCompletionRecord;
+    private bool completionRecordSaved;
     private bool hasOpenedResult;
     private float previousTimeScale = 1f;
     private bool timeScaleOverridden;
     private bool missingOverlayWarningLogged;
     private bool callbacksBound;
     private bool usingCompletionIntroSequence;
+    private bool deathEventSubscribed;
+    private bool isPlayingDeathCameraSequence;
+    private bool isPlayingCompletionCinematic;
+    private bool hasStartedCompletionCinematic;
+    private bool isSceneTransitionInProgress;
+    private bool disabledFirstPersonControllerForDeathSequence;
+    private bool disabledCinemachineBrainForDeathSequence;
     private Coroutine rankStampCoroutine;
     private Coroutine rankStampDelayCoroutine;
+    private Coroutine deathCameraSequenceCoroutine;
+    private Coroutine completionCinematicDelayCoroutine;
+    private CinemachineBrain deathSequenceCinemachineBrain;
+
+    public bool IsResultOverlayOpen => hasOpenedResult;
 
     private sealed class ObjectiveRowView
     {
@@ -159,6 +275,7 @@ public class MissionEndOverlayController : MonoBehaviour
     private void Awake()
     {
         ResolveReferences();
+        SubscribePlayerDeathEvent();
         ResolveSceneOverlay();
         BindButtonCallbacks();
         HideOverlayImmediate();
@@ -167,6 +284,7 @@ public class MissionEndOverlayController : MonoBehaviour
     private void OnEnable()
     {
         ResolveReferences();
+        SubscribePlayerDeathEvent();
         ResolveSceneOverlay();
         BindButtonCallbacks();
         LanguageManager.LanguageChanged -= HandleLanguageChanged;
@@ -175,23 +293,39 @@ public class MissionEndOverlayController : MonoBehaviour
 
     private void OnDisable()
     {
+        AbortDeathCameraSequence(restoreFirstPersonController: !hasOpenedResult);
+        UnsubscribePlayerDeathEvent();
         LanguageManager.LanguageChanged -= HandleLanguageChanged;
         RestoreTimeScale();
     }
 
     private void OnDestroy()
     {
+        AbortDeathCameraSequence(restoreFirstPersonController: !hasOpenedResult);
+        UnsubscribePlayerDeathEvent();
         LanguageManager.LanguageChanged -= HandleLanguageChanged;
         RestoreTimeScale();
     }
 
     private void Update()
     {
+        if (isSceneTransitionInProgress)
+        {
+            return;
+        }
+
         ResolveReferences();
+        SubscribePlayerDeathEvent();
         ResolveSceneOverlay();
         BindButtonCallbacks();
 
-        if (missionSystem == null || hasOpenedResult)
+        if (hasOpenedResult)
+        {
+            EnforceResultInteractionState();
+            return;
+        }
+
+        if (missionSystem == null || isPlayingDeathCameraSequence)
         {
             return;
         }
@@ -215,6 +349,459 @@ public class MissionEndOverlayController : MonoBehaviour
                 missionSystem = FindAnyObjectByType<IncidentMissionSystem>();
             }
         }
+
+        if (playerVitals == null)
+        {
+            playerVitals = FindAnyObjectByType<PlayerVitals>(FindObjectsInactive.Exclude);
+        }
+
+        if (firstPersonController == null)
+        {
+            if (playerVitals != null)
+            {
+                firstPersonController = playerVitals.GetComponent<FirstPersonController>();
+            }
+
+            if (firstPersonController == null)
+            {
+                firstPersonController = FindAnyObjectByType<FirstPersonController>(
+                    FindObjectsInactive.Exclude
+                );
+            }
+        }
+
+        if (playerCameraRoot == null)
+        {
+            if (firstPersonController != null)
+            {
+                if (firstPersonController.CinemachineCameraTarget != null)
+                {
+                    playerCameraRoot = firstPersonController.CinemachineCameraTarget.transform;
+                }
+
+                if (playerCameraRoot == null)
+                {
+                    Transform namedCameraRoot = firstPersonController.transform.Find("PlayerCameraRoot");
+                    if (namedCameraRoot != null)
+                    {
+                        playerCameraRoot = namedCameraRoot;
+                    }
+                }
+            }
+        }
+
+        if (starterAssetsInputs == null)
+        {
+            if (firstPersonController != null)
+            {
+                starterAssetsInputs = firstPersonController.GetComponent<StarterAssetsInputs>();
+            }
+
+            if (starterAssetsInputs == null)
+            {
+                starterAssetsInputs = FindAnyObjectByType<StarterAssetsInputs>(
+                    FindObjectsInactive.Exclude
+                );
+            }
+        }
+
+        if (subMenuPanelController == null)
+        {
+            subMenuPanelController = FindAnyObjectByType<SubMenuPanelController>(
+                FindObjectsInactive.Include
+            );
+        }
+
+        if (subMenuEscapeHost == null)
+        {
+            subMenuEscapeHost = FindAnyObjectByType<SubMenuEscapeHost>(FindObjectsInactive.Include);
+        }
+
+        if (completionCinematic == null)
+        {
+            completionCinematic = FindAnyObjectByType<EndMissionCinematicController>(
+                FindObjectsInactive.Include
+            );
+        }
+    }
+
+    private void SubscribePlayerDeathEvent()
+    {
+        if (deathEventSubscribed && playerVitals != null)
+        {
+            return;
+        }
+
+        if (playerVitals == null)
+        {
+            playerVitals = FindAnyObjectByType<PlayerVitals>(FindObjectsInactive.Exclude);
+        }
+
+        if (playerVitals == null)
+        {
+            return;
+        }
+
+        playerVitals.OnDeath -= HandlePlayerDeath;
+        playerVitals.OnDeath += HandlePlayerDeath;
+        deathEventSubscribed = true;
+    }
+
+    private void UnsubscribePlayerDeathEvent()
+    {
+        if (!deathEventSubscribed || playerVitals == null)
+        {
+            deathEventSubscribed = false;
+            return;
+        }
+
+        playerVitals.OnDeath -= HandlePlayerDeath;
+        deathEventSubscribed = false;
+    }
+
+    private void HandlePlayerDeath()
+    {
+        ResolveReferences();
+        if (missionSystem != null && missionSystem.State == IncidentMissionSystem.MissionState.Running)
+        {
+            missionSystem.FailMission();
+        }
+
+        if (hasOpenedResult || isPlayingDeathCameraSequence)
+        {
+            return;
+        }
+
+        if (
+            !playDeathCameraFallBeforeResultPopup
+            || !TryResolveDeathCameraPivot(out Transform deathCameraPivot, out bool isTrackingTargetPivot)
+        )
+        {
+            OpenResultOverlay();
+            return;
+        }
+
+        deathCameraSequenceCoroutine = StartCoroutine(
+            PlayDeathCameraSequenceAndOpenOverlayRoutine(deathCameraPivot, isTrackingTargetPivot)
+        );
+    }
+
+    private bool TryResolveDeathCameraPivot(
+        out Transform deathCameraPivot,
+        out bool isTrackingTargetPivot
+    )
+    {
+        deathCameraPivot = null;
+        isTrackingTargetPivot = false;
+
+        if (playerCameraRoot == null)
+        {
+            ResolveReferences();
+        }
+
+        if (playerCameraRoot != null)
+        {
+            deathCameraPivot = playerCameraRoot;
+            isTrackingTargetPivot = true;
+            return true;
+        }
+
+        if (firstPersonController == null)
+        {
+            ResolveReferences();
+        }
+
+        if (firstPersonController != null && firstPersonController.CinemachineCameraTarget != null)
+        {
+            deathCameraPivot = firstPersonController.CinemachineCameraTarget.transform;
+            isTrackingTargetPivot = true;
+            return deathCameraPivot != null;
+        }
+
+        CinemachineCamera[] cinemachineCameras = FindObjectsByType<CinemachineCamera>(
+            FindObjectsInactive.Exclude,
+            FindObjectsSortMode.None
+        );
+        for (int i = 0; i < cinemachineCameras.Length; i++)
+        {
+            CinemachineCamera cinemachineCamera = cinemachineCameras[i];
+            if (
+                cinemachineCamera == null
+                || !string.Equals(cinemachineCamera.name, "PlayerFollowCamera", StringComparison.OrdinalIgnoreCase)
+            )
+            {
+                continue;
+            }
+
+            if (cinemachineCamera.Target.TrackingTarget != null)
+            {
+                deathCameraPivot = cinemachineCamera.Target.TrackingTarget;
+                isTrackingTargetPivot = true;
+                return true;
+            }
+        }
+
+        Camera mainCamera = Camera.main;
+        if (mainCamera != null)
+        {
+            deathCameraPivot = mainCamera.transform;
+            return true;
+        }
+
+        return deathCameraPivot != null;
+    }
+
+    private IEnumerator PlayDeathCameraSequenceAndOpenOverlayRoutine(
+        Transform deathCameraPivot,
+        bool isTrackingTargetPivot
+    )
+    {
+        isPlayingDeathCameraSequence = true;
+        SetFirstPersonControllerEnabledForDeathSequence(isEnabled: false);
+        AcquireDeathSequenceCameraControl(!isTrackingTargetPivot, deathCameraPivot);
+
+        float rollSign = UnityEngine.Random.value < 0.5f ? -1f : 1f;
+        float yawOffset = UnityEngine.Random.Range(-deathCameraFallYawJitter, deathCameraFallYawJitter);
+        
+        // Define phases for a more realistic collapse
+        float fallDuration = Mathf.Max(0.01f, deathCameraFallDuration * 0.45f);
+        float settleDuration = Mathf.Max(0.01f, deathCameraFallDuration * 0.55f);
+        
+        bool animateLocal = deathCameraPivot.parent != null;
+
+        Vector3 startPosition = animateLocal ? deathCameraPivot.localPosition : deathCameraPivot.position;
+        Quaternion startRotation = animateLocal ? deathCameraPivot.localRotation : deathCameraPivot.rotation;
+        
+        Vector3 impactPosition;
+        Quaternion impactRotation;
+        Vector3 finalPosition;
+        Quaternion finalRotation;
+
+        // Adjust values for a realistic sideways landing on the cheek
+        float targetCheekHeight = 0.26f;
+        float finalPitch = 15f; // Look slightly down, but still able to see objects
+        float finalRoll = 80f;  // Head turned sideways on the ground
+
+        if (animateLocal)
+        {
+            // Fall forward and down
+            impactPosition = startPosition + Vector3.forward * Mathf.Max(0f, deathCameraFallForwardDistance);
+            impactPosition.y = targetCheekHeight;
+            
+            // Start pitching and slightly rolling during the fall
+            impactRotation = startRotation * Quaternion.Euler(finalPitch * 0.5f, yawOffset * 0.3f, rollSign * finalRoll * 0.3f);
+            
+            // Final position is the same, but rotation is fully on the cheek
+            finalPosition = impactPosition;
+            finalRotation = startRotation * Quaternion.Euler(finalPitch, yawOffset, rollSign * finalRoll);
+        }
+        else
+        {
+            Vector3 flattenedForward = Vector3.ProjectOnPlane(startRotation * Vector3.forward, Vector3.up);
+            if (flattenedForward.sqrMagnitude < 0.0001f)
+            {
+                flattenedForward = Vector3.forward;
+            }
+
+            impactPosition = startPosition + flattenedForward.normalized * Mathf.Max(0f, deathCameraFallForwardDistance);
+
+            float probeDistance = Mathf.Max(0.2f, Mathf.Max(0f, deathCameraGroundProbeDistance) + Mathf.Max(0f, deathCameraGroundProbeHeight));
+            Vector3 probeOrigin = startPosition + Vector3.up * Mathf.Max(0.05f, deathCameraGroundProbeHeight);
+            
+            float groundY = startPosition.y - deathCameraFallDropDistance; // Fallback
+            if (Physics.Raycast(probeOrigin, Vector3.down, out RaycastHit groundHit, probeDistance, deathCameraGroundMask, QueryTriggerInteraction.Ignore))
+            {
+                groundY = groundHit.point.y;
+            }
+            impactPosition.y = groundY + targetCheekHeight;
+
+            impactRotation = startRotation * Quaternion.Euler(finalPitch * 0.5f, yawOffset * 0.3f, rollSign * finalRoll * 0.3f);
+            
+            finalPosition = impactPosition;
+            finalRotation = startRotation * Quaternion.Euler(finalPitch, yawOffset, rollSign * finalRoll);
+        }
+
+        // Phase 1: Free Fall (Accelerating due to gravity)
+        float elapsed = 0f;
+        while (elapsed < fallDuration)
+        {
+            float t = elapsed / fallDuration;
+            float easedT = t * t; // Quadratic ease-in (acceleration)
+            
+            if (animateLocal)
+            {
+                deathCameraPivot.localPosition = Vector3.LerpUnclamped(startPosition, impactPosition, easedT);
+                deathCameraPivot.localRotation = Quaternion.SlerpUnclamped(startRotation, impactRotation, easedT);
+            }
+            else
+            {
+                deathCameraPivot.position = Vector3.LerpUnclamped(startPosition, impactPosition, easedT);
+                deathCameraPivot.rotation = Quaternion.SlerpUnclamped(startRotation, impactRotation, easedT);
+            }
+
+            elapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
+        
+        // Phase 2: Ground Impact Jolt & Head Roll (Settle)
+        elapsed = 0f;
+        
+        // Generate a sharp jolt offset using the shake amplitude
+        Vector3 impactJoltOffset = new Vector3(
+            UnityEngine.Random.Range(-1f, 1f),
+            -1.5f, // strong downward push
+            UnityEngine.Random.Range(-1f, 1f)
+        ) * Mathf.Max(0f, deathCameraShakePositionAmplitude);
+        
+        while (elapsed < settleDuration)
+        {
+            float t = elapsed / settleDuration;
+            // Cubic ease-out (deceleration as head rolls)
+            float easedT = 1f - Mathf.Pow(1f - t, 3f);
+            
+            // Impact jolt decays very quickly in the first 30% of settle
+            float joltFade = Mathf.Max(0f, 1f - (elapsed / (settleDuration * 0.3f)));
+            Vector3 currentJolt = impactJoltOffset * (joltFade * joltFade);
+            
+            if (animateLocal)
+            {
+                deathCameraPivot.localPosition = Vector3.LerpUnclamped(impactPosition, finalPosition, easedT) + currentJolt;
+                deathCameraPivot.localRotation = Quaternion.SlerpUnclamped(impactRotation, finalRotation, easedT);
+            }
+            else
+            {
+                deathCameraPivot.position = Vector3.LerpUnclamped(impactPosition, finalPosition, easedT) + currentJolt;
+                deathCameraPivot.rotation = Quaternion.SlerpUnclamped(impactRotation, finalRotation, easedT);
+            }
+
+            elapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        // Phase 3: Final Breaths / Twitching (Subtle fading motion)
+        float breathDuration = 1.2f;
+        elapsed = 0f;
+        while (elapsed < breathDuration)
+        {
+            float t = elapsed / breathDuration;
+            float fade = 1f - t;
+            // Subtle up/down breathing motion
+            float breathOffset = Mathf.Sin(elapsed * 4f) * 0.015f * fade; 
+            
+            if (animateLocal)
+            {
+                deathCameraPivot.localPosition = finalPosition + new Vector3(0f, breathOffset, 0f);
+            }
+            else
+            {
+                deathCameraPivot.position = finalPosition + new Vector3(0f, breathOffset, 0f);
+            }
+            
+            elapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        if (animateLocal)
+        {
+            deathCameraPivot.localPosition = finalPosition;
+            deathCameraPivot.localRotation = finalRotation;
+        }
+        else
+        {
+            deathCameraPivot.position = finalPosition;
+            deathCameraPivot.rotation = finalRotation;
+        }
+
+        isPlayingDeathCameraSequence = false;
+        deathCameraSequenceCoroutine = null;
+        OpenResultOverlay();
+    }
+
+    private void AbortDeathCameraSequence(bool restoreFirstPersonController)
+    {
+        if (deathCameraSequenceCoroutine != null)
+        {
+            StopCoroutine(deathCameraSequenceCoroutine);
+            deathCameraSequenceCoroutine = null;
+        }
+
+        isPlayingDeathCameraSequence = false;
+        if (restoreFirstPersonController)
+        {
+            SetFirstPersonControllerEnabledForDeathSequence(isEnabled: true);
+        }
+
+        ReleaseDeathSequenceCameraControl();
+    }
+
+    private void SetFirstPersonControllerEnabledForDeathSequence(bool isEnabled)
+    {
+        if (!isEnabled)
+        {
+            if (
+                !disabledFirstPersonControllerForDeathSequence
+                && firstPersonController != null
+                && firstPersonController.enabled
+            )
+            {
+                firstPersonController.enabled = false;
+                disabledFirstPersonControllerForDeathSequence = true;
+            }
+
+            return;
+        }
+
+        if (
+            disabledFirstPersonControllerForDeathSequence
+            && firstPersonController != null
+            && !firstPersonController.enabled
+        )
+        {
+            firstPersonController.enabled = true;
+        }
+
+        disabledFirstPersonControllerForDeathSequence = false;
+    }
+
+    private void AcquireDeathSequenceCameraControl(bool disableBrain, Transform deathCameraPivot)
+    {
+        if (!disableBrain || deathCameraPivot == null || Camera.main == null)
+        {
+            return;
+        }
+
+        if (deathCameraPivot != Camera.main.transform)
+        {
+            return;
+        }
+
+        CinemachineBrain brain = deathCameraPivot.GetComponent<CinemachineBrain>();
+        if (brain == null)
+        {
+            return;
+        }
+
+        deathSequenceCinemachineBrain = brain;
+        if (deathSequenceCinemachineBrain.enabled)
+        {
+            deathSequenceCinemachineBrain.enabled = false;
+            disabledCinemachineBrainForDeathSequence = true;
+        }
+    }
+
+    private void ReleaseDeathSequenceCameraControl()
+    {
+        if (
+            disabledCinemachineBrainForDeathSequence
+            && deathSequenceCinemachineBrain != null
+            && !deathSequenceCinemachineBrain.enabled
+        )
+        {
+            deathSequenceCinemachineBrain.enabled = true;
+        }
+
+        deathSequenceCinemachineBrain = null;
+        disabledCinemachineBrainForDeathSequence = false;
     }
 
     private void ResolveSceneOverlay()
@@ -345,15 +932,12 @@ public class MissionEndOverlayController : MonoBehaviour
             FindFirstTextInTransform(
                 mainMenuButton != null ? mainMenuButton.transform : mainMenuButtonRoot?.transform
             ) ?? FindText(overlayContentRoot, "MainMenuButtonText");
+
+        EnsureSaveRecordButton();
     }
 
     private void BindButtonCallbacks()
     {
-        if (callbacksBound)
-        {
-            return;
-        }
-
         if (retryButton != null)
         {
             retryButton.onClick.RemoveListener(HandleRetryPressed);
@@ -366,7 +950,13 @@ public class MissionEndOverlayController : MonoBehaviour
             mainMenuButton.onClick.AddListener(HandleMainMenuPressed);
         }
 
-        callbacksBound = retryButton != null || mainMenuButton != null;
+        if (saveRecordButton != null)
+        {
+            saveRecordButton.onClick.RemoveListener(HandleSaveRecordPressed);
+            saveRecordButton.onClick.AddListener(HandleSaveRecordPressed);
+        }
+
+        callbacksBound = retryButton != null || mainMenuButton != null || saveRecordButton != null;
     }
 
     private void OpenResultOverlay()
@@ -379,6 +969,25 @@ public class MissionEndOverlayController : MonoBehaviour
 
         hasOpenedResult = true;
         usingCompletionIntroSequence = false;
+
+        if (hideOtherUIOnMissionEnd && uiObjectsToHideOnMissionEnd != null)
+        {
+            for (int i = 0; i < uiObjectsToHideOnMissionEnd.Length; i++)
+            {
+                GameObject uiObj = uiObjectsToHideOnMissionEnd[i];
+                if (uiObj != null)
+                {
+                    CanvasGroup cg = uiObj.GetComponent<CanvasGroup>();
+                    if (cg == null)
+                    {
+                        cg = uiObj.AddComponent<CanvasGroup>();
+                    }
+                    cg.alpha = 0f;
+                    cg.interactable = false;
+                    cg.blocksRaycasts = false;
+                }
+            }
+        }
 
         overlayRoot.SetActive(true);
         EnsurePreferredSummaryPanelActive();
@@ -395,6 +1004,8 @@ public class MissionEndOverlayController : MonoBehaviour
             Cursor.visible = true;
             Cursor.lockState = CursorLockMode.None;
         }
+
+        EnforceResultInteractionState();
 
         if (
             missionSystem.State == IncidentMissionSystem.MissionState.Completed
@@ -416,7 +1027,14 @@ public class MissionEndOverlayController : MonoBehaviour
                 mainMenuButtonRoot.SetActive(showMainMenuButton);
             }
 
+            RefreshSaveRecordButtonState();
+
             overlaySequence.PlayCompletionIntro(HandleCompletionIntroFinished);
+            if (!waitForCompletionIntroBeforeCinematic)
+            {
+                ScheduleCompletionCinematicAfterResultPopup();
+            }
+
             return;
         }
 
@@ -438,12 +1056,16 @@ public class MissionEndOverlayController : MonoBehaviour
             mainMenuButtonRoot.SetActive(showMainMenuButton);
         }
 
+        RefreshSaveRecordButtonState();
+
         if (overlayCanvasGroup != null)
         {
             overlayCanvasGroup.alpha = 1f;
             overlayCanvasGroup.interactable = true;
             overlayCanvasGroup.blocksRaycasts = true;
         }
+
+        ScheduleCompletionCinematicAfterResultPopup();
     }
 
     private void HideOverlayImmediate()
@@ -479,6 +1101,8 @@ public class MissionEndOverlayController : MonoBehaviour
             StopCoroutine(rankStampCoroutine);
             rankStampCoroutine = null;
         }
+
+        StopCompletionCinematicDelay();
     }
 
     private void PopulateOverlay()
@@ -655,12 +1279,120 @@ public class MissionEndOverlayController : MonoBehaviour
             mainMenuButtonRoot.SetActive(showMainMenuButton);
         }
 
+        RefreshSaveRecordButtonState();
+
         if (overlayCanvasGroup != null)
         {
             overlayCanvasGroup.alpha = 1f;
             overlayCanvasGroup.interactable = true;
             overlayCanvasGroup.blocksRaycasts = true;
         }
+
+        ScheduleCompletionCinematicAfterResultPopup();
+    }
+
+    private void HandleCompletionCinematicFinished()
+    {
+        isPlayingCompletionCinematic = false;
+        completionCinematicDelayCoroutine = null;
+        
+        if (pauseGameplayOnMissionEnd && timeScaleOverridden)
+        {
+            Time.timeScale = 0f;
+        }
+    }
+
+    private void ScheduleCompletionCinematicAfterResultPopup()
+    {
+        if (
+            !playCompletionCinematicAfterResultPopup
+            || hasStartedCompletionCinematic
+            || isPlayingCompletionCinematic
+            || isSceneTransitionInProgress
+            || missionSystem == null
+            || missionSystem.State != IncidentMissionSystem.MissionState.Completed
+        )
+        {
+            return;
+        }
+
+        ResolveReferences();
+        if (completionCinematic == null || !completionCinematic.CanPlayBeforeResultOverlay)
+        {
+            return;
+        }
+
+        StopCompletionCinematicDelay();
+        completionCinematicDelayCoroutine = StartCoroutine(
+            PlayCompletionCinematicAfterResultDelayRoutine()
+        );
+    }
+
+    private IEnumerator PlayCompletionCinematicAfterResultDelayRoutine()
+    {
+        isPlayingCompletionCinematic = true;
+        float delay = Mathf.Max(0f, completionCinematicDelayAfterResultPopup);
+        if (delay > 0f)
+        {
+            yield return new WaitForSecondsRealtime(delay);
+        }
+
+        completionCinematicDelayCoroutine = null;
+
+        if (
+            isSceneTransitionInProgress
+            || !hasOpenedResult
+            || missionSystem == null
+            || missionSystem.State != IncidentMissionSystem.MissionState.Completed
+        )
+        {
+            isPlayingCompletionCinematic = false;
+            yield break;
+        }
+
+        ResolveReferences();
+        if (
+            completionCinematic != null
+            && completionCinematic.CanPlayBeforeResultOverlay
+        )
+        {
+            // Fade out gradient background if enabled
+            if (fadeBackgroundOnCinematic && overlaySequence != null)
+            {
+                overlaySequence.FadeOutBackground(1f);
+            }
+
+            // Unpause game so Cinemachine Brain can process camera switch and blend
+            if (pauseGameplayOnMissionEnd)
+            {
+                Time.timeScale = 1f;
+            }
+
+            if (completionCinematic.TryPlayBeforeResult(HandleCompletionCinematicFinished))
+            {
+                hasStartedCompletionCinematic = true;
+                yield break;
+            }
+            
+            // If failed to play, restore time scale
+            if (pauseGameplayOnMissionEnd && timeScaleOverridden)
+            {
+                Time.timeScale = 0f;
+            }
+        }
+
+        isPlayingCompletionCinematic = false;
+    }
+
+    private void StopCompletionCinematicDelay()
+    {
+        if (completionCinematicDelayCoroutine == null)
+        {
+            return;
+        }
+
+        StopCoroutine(completionCinematicDelayCoroutine);
+        completionCinematicDelayCoroutine = null;
     }
 
     private void RefreshObjectiveRows()
@@ -860,17 +1592,190 @@ public class MissionEndOverlayController : MonoBehaviour
                 mainMenuButtonLabel
             );
         }
+
+        RefreshSaveRecordButtonState();
+    }
+
+    private void EnsureSaveRecordButton()
+    {
+        if (overlayContentRoot == null || saveRecordButton != null)
+        {
+            return;
+        }
+
+        Transform buttonTransform =
+            FindDescendantByName(overlayContentRoot, "btnSaveRecord")
+            ?? FindDescendantByName(overlayContentRoot, "SaveRecordButton")
+            ?? FindDescendantByName(overlayContentRoot, "ButtonSaveRecord")
+            ?? FindDescendantByName(overlayContentRoot, "SaveRecord");
+        if (buttonTransform == null)
+        {
+            return;
+        }
+
+        Button directButton = buttonTransform.GetComponent<Button>();
+        Button childButton = directButton == null ? buttonTransform.GetComponentInChildren<Button>(true) : null;
+        saveRecordButton = directButton ?? childButton ?? buttonTransform.GetComponentInParent<Button>(true);
+        if (saveRecordButton == null)
+        {
+            return;
+        }
+
+        saveRecordButtonRoot = directButton != null || childButton != null
+            ? buttonTransform.gameObject
+            : saveRecordButton.gameObject;
+        saveRecordButtonText = FindFirstTextInTransform(saveRecordButton.transform);
+
+        if (saveRecordButton != null)
+        {
+            saveRecordButton.onClick.RemoveListener(HandleSaveRecordPressed);
+            saveRecordButton.onClick.AddListener(HandleSaveRecordPressed);
+        }
+    }
+
+    private void RefreshSaveRecordButtonState()
+    {
+        EnsureSaveRecordButton();
+
+        if (saveRecordButtonRoot == null)
+        {
+            return;
+        }
+
+        bool canSave = missionSystem != null && missionSystem.State == IncidentMissionSystem.MissionState.Completed;
+        saveRecordButtonRoot.SetActive(canSave);
+
+        if (saveRecordButton != null)
+        {
+            saveRecordButton.interactable = canSave && !completionRecordSaved;
+        }
+
+        if (saveRecordButtonText != null)
+        {
+            saveRecordButtonText.text = completionRecordSaved
+                ? MissionLocalization.Get("mission.end.record_saved_button", "Record Saved")
+                : MissionLocalization.Get("mission.end.save_record_button", "Save Record");
+        }
+    }
+
+    private void HandleSaveRecordPressed()
+    {
+        if (completionRecordSaved || missionSystem == null || missionSystem.State != IncidentMissionSystem.MissionState.Completed)
+        {
+            RefreshSaveRecordButtonState();
+            return;
+        }
+
+        pendingCompletionRecord ??= BuildCompletionRecord();
+        if (pendingCompletionRecord == null)
+        {
+            RefreshSaveRecordButtonState();
+            return;
+        }
+
+        PlayerCompletionRecordStore.SaveRecord(pendingCompletionRecord);
+        if (!string.IsNullOrWhiteSpace(pendingCompletionRecord.levelId))
+        {
+            PlayerProgressProfileStore.MarkLevelCompleted(pendingCompletionRecord.playerName, pendingCompletionRecord.levelId);
+        }
+
+        completionRecordSaved = true;
+        RefreshSaveRecordButtonState();
+    }
+
+    private PlayerCompletionRecord BuildCompletionRecord()
+    {
+        if (missionSystem == null || missionSystem.State != IncidentMissionSystem.MissionState.Completed)
+        {
+            return null;
+        }
+
+        LoadingFlowState.TryGetPendingCallPhaseResult(out CallPhaseResultSnapshot callPhaseSnapshot);
+        LoadingFlowState.TryGetPendingIncidentPayload(out IncidentWorldSetupPayload payload);
+
+        string playerName = LoadingFlowState.GetPlayerName();
+        if (string.IsNullOrWhiteSpace(playerName))
+        {
+            playerName = "Player";
+        }
+
+        string levelId = LoadingFlowState.GetCurrentLevelId();
+        if (string.IsNullOrWhiteSpace(levelId))
+        {
+            levelId = SceneManager.GetActiveScene().name;
+        }
+
+        PlayerCompletionRecord record = new PlayerCompletionRecord
+        {
+            playerName = playerName.Trim(),
+            levelId = levelId.Trim(),
+            missionId = missionSystem.MissionId,
+            missionTitle = missionSystem.MissionTitle,
+            caseId = payload != null && !string.IsNullOrWhiteSpace(payload.caseId)
+                ? payload.caseId
+                : callPhaseSnapshot?.caseId ?? string.Empty,
+            scenarioId = payload != null && !string.IsNullOrWhiteSpace(payload.scenarioId)
+                ? payload.scenarioId
+                : callPhaseSnapshot?.scenarioId ?? string.Empty,
+            logicalFireLocation = payload != null ? payload.logicalFireLocation : string.Empty,
+            savedUtcTicks = DateTime.UtcNow.Ticks,
+            callPhase = callPhaseSnapshot ?? new CallPhaseResultSnapshot(),
+            onsiteScore = missionSystem.DisplayedScore,
+            onsiteMaximumScore = missionSystem.DisplayedMaximumScore,
+            onsiteRank = missionSystem.DisplayedScoreRank,
+            onsiteElapsedSeconds = missionSystem.ElapsedTime,
+            totalTrackedFires = missionSystem.DisplayedTotalTrackedFires,
+            extinguishedFireCount = missionSystem.DisplayedExtinguishedFireCount,
+            totalTrackedRescuables = missionSystem.DisplayedTotalTrackedRescuables,
+            rescuedCount = missionSystem.DisplayedRescuedCount,
+            totalTrackedVictims = missionSystem.DisplayedTotalTrackedVictims,
+            urgentVictimCount = missionSystem.DisplayedUrgentVictimCount,
+            criticalVictimCount = missionSystem.DisplayedCriticalVictimCount,
+            stabilizedVictimCount = missionSystem.DisplayedStabilizedVictimCount,
+            extractedVictimCount = missionSystem.DisplayedExtractedVictimCount,
+            deceasedVictimCount = missionSystem.DisplayedDeceasedVictimCount
+        };
+
+        record.totalScore = Mathf.Max(0, record.callPhase.finalScore) + Mathf.Max(0, record.onsiteScore);
+        record.totalMaximumScore = Mathf.Max(0, record.callPhase.maximumScore) + Mathf.Max(0, record.onsiteMaximumScore);
+
+        for (int i = 0; i < missionSystem.ResultObjectiveStatusCount; i++)
+        {
+            if (!missionSystem.TryGetResultObjectiveStatus(i, out MissionObjectiveStatusSnapshot status))
+            {
+                continue;
+            }
+
+            record.objectives.Add(new PlayerCompletionObjectiveRecord
+            {
+                title = status.Title,
+                summary = status.Summary,
+                isComplete = status.IsComplete,
+                hasFailed = status.HasFailed,
+                score = status.Score,
+                maximumScore = status.MaxScore
+            });
+        }
+
+        record.recordId = PlayerCompletionRecordStore.BuildRecordId(record);
+        return record;
     }
 
     private void HandleRetryPressed()
     {
+        isSceneTransitionInProgress = true;
+        PrepareForGameplaySceneReload();
         RestoreTimeScale();
+        Time.timeScale = 1f;
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
     private void HandleMainMenuPressed()
     {
+        isSceneTransitionInProgress = true;
+        PrepareForNonGameplaySceneTransition();
         RestoreTimeScale();
+        Time.timeScale = 1f;
         if (!string.IsNullOrWhiteSpace(mainMenuSceneName))
         {
             SceneManager.LoadScene(mainMenuSceneName.Trim());
@@ -886,6 +1791,71 @@ public class MissionEndOverlayController : MonoBehaviour
 
         Time.timeScale = previousTimeScale;
         timeScaleOverridden = false;
+    }
+
+    private void EnforceResultInteractionState()
+    {
+        ResolveReferences();
+
+        if (subMenuEscapeHost != null)
+        {
+            subMenuEscapeHost.ForceCloseAll();
+        }
+        else if (subMenuPanelController != null && subMenuPanelController.IsOpen)
+        {
+            subMenuPanelController.Close();
+        }
+
+        if (starterAssetsInputs != null)
+        {
+            starterAssetsInputs.move = Vector2.zero;
+            starterAssetsInputs.look = Vector2.zero;
+            starterAssetsInputs.ClearGameplayActionInputs();
+            starterAssetsInputs.cursorLocked = false;
+            starterAssetsInputs.cursorInputForLook = false;
+        }
+
+        Cursor.visible = true;
+        Cursor.lockState = CursorLockMode.None;
+    }
+
+    private void PrepareForGameplaySceneReload()
+    {
+        ResolveReferences();
+        hasOpenedResult = false;
+        usingCompletionIntroSequence = false;
+        isPlayingCompletionCinematic = false;
+        hasStartedCompletionCinematic = false;
+        StopCompletionCinematicDelay();
+
+        AbortDeathCameraSequence(restoreFirstPersonController: true);
+        SetFirstPersonControllerEnabledForDeathSequence(isEnabled: true);
+        ReleaseDeathSequenceCameraControl();
+
+        if (starterAssetsInputs != null)
+        {
+            starterAssetsInputs.move = Vector2.zero;
+            starterAssetsInputs.look = Vector2.zero;
+            starterAssetsInputs.ClearGameplayActionInputs();
+            starterAssetsInputs.cursorLocked = true;
+            starterAssetsInputs.cursorInputForLook = true;
+            starterAssetsInputs.LookInput(Vector2.zero);
+        }
+
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+    }
+
+    private void PrepareForNonGameplaySceneTransition()
+    {
+        hasOpenedResult = false;
+        usingCompletionIntroSequence = false;
+        isPlayingCompletionCinematic = false;
+        hasStartedCompletionCinematic = false;
+        StopCompletionCinematicDelay();
+        AbortDeathCameraSequence(restoreFirstPersonController: true);
+        SetFirstPersonControllerEnabledForDeathSequence(isEnabled: true);
+        ReleaseDeathSequenceCameraControl();
     }
 
     private string BuildTimeValue()
@@ -1277,6 +2247,12 @@ public class MissionEndOverlayController : MonoBehaviour
         Transform t = rankStampRoot.transform;
         Vector3 originalScale = t.localScale;
         Quaternion originalRot = t.localRotation;
+        float originalZ = originalRot.eulerAngles.z;
+        if (originalZ > 180f)
+        {
+            originalZ -= 360f;
+        }
+        float finalTiltZ = originalZ + UnityEngine.Random.Range(rankStampFinalTiltMin, rankStampFinalTiltMax);
 
         t.localScale = Vector3.zero;
         t.localRotation = Quaternion.Euler(0f, 0f, -30f);
@@ -1304,13 +2280,13 @@ public class MissionEndOverlayController : MonoBehaviour
             float p = elapsed / phase2;
             float s = Mathf.SmoothStep(1.25f, 1f, p);
             t.localScale = originalScale * s;
-            t.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(10f, 0f, p));
+            t.localRotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(10f, finalTiltZ, p));
             elapsed += Time.unscaledDeltaTime;
             yield return null;
         }
 
         t.localScale = originalScale;
-        t.localRotation = originalRot;
+        t.localRotation = Quaternion.Euler(0f, 0f, finalTiltZ);
         rankStampCoroutine = null;
     }
 

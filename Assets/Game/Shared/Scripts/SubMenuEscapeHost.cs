@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 [DisallowMultipleComponent]
 public class SubMenuEscapeHost : MonoBehaviour
@@ -8,6 +9,7 @@ public class SubMenuEscapeHost : MonoBehaviour
 
     [SerializeField] private SubMenuPanelController subMenuPanelController;
     [SerializeField] private WheelSelector wheelSelector;
+    [SerializeField] private MissionEndOverlayController missionEndOverlayController;
     [SerializeField] private bool closePanelOnStart = true;
     [SerializeField] private GameObject settingPanelPrefab;
     [SerializeField] private GameObject toastPrefab;
@@ -35,6 +37,12 @@ public class SubMenuEscapeHost : MonoBehaviour
 
     private void Update()
     {
+        if (IsMissionResultOpen())
+        {
+            ForceCloseAll();
+            return;
+        }
+
         if (!Input.GetKeyDown(KeyCode.Escape))
         {
             return;
@@ -77,6 +85,7 @@ public class SubMenuEscapeHost : MonoBehaviour
     {
         if (subMenuPanelController != null)
         {
+            ResolveMissionEndOverlayController();
             return;
         }
 
@@ -91,6 +100,8 @@ public class SubMenuEscapeHost : MonoBehaviour
         {
             subMenuPanelController = panel.GetComponent<SubMenuPanelController>();
         }
+
+        ResolveMissionEndOverlayController();
     }
 
     private void ResolveWheelSelector()
@@ -272,6 +283,19 @@ public class SubMenuEscapeHost : MonoBehaviour
         }
     }
 
+    public void ForceCloseAll()
+    {
+        if (IsSettingsOpen())
+        {
+            SetSettingsVisible(false);
+        }
+
+        if (subMenuPanelController != null && subMenuPanelController.IsOpen)
+        {
+            subMenuPanelController.Close();
+        }
+    }
+
     private RectTransform GetCanvasRect()
     {
         Canvas canvas = GetComponentInParent<Canvas>(true);
@@ -322,5 +346,43 @@ public class SubMenuEscapeHost : MonoBehaviour
     private static bool IsEscapeSuppressedForCurrentFrame()
     {
         return suppressEscapeFrame == Time.frameCount;
+    }
+
+    private void ResolveMissionEndOverlayController()
+    {
+        if (
+            missionEndOverlayController != null
+            && missionEndOverlayController.gameObject.scene == gameObject.scene
+        )
+        {
+            return;
+        }
+
+        missionEndOverlayController = null;
+        MissionEndOverlayController[] controllers = FindObjectsByType<MissionEndOverlayController>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None
+        );
+        Scene currentScene = gameObject.scene;
+        for (int i = 0; i < controllers.Length; i++)
+        {
+            MissionEndOverlayController candidate = controllers[i];
+            if (candidate == null || candidate.gameObject.scene != currentScene)
+            {
+                continue;
+            }
+
+            missionEndOverlayController = candidate;
+            break;
+        }
+    }
+
+    private bool IsMissionResultOpen()
+    {
+        ResolveMissionEndOverlayController();
+        return missionEndOverlayController != null
+            && missionEndOverlayController.isActiveAndEnabled
+            && missionEndOverlayController.gameObject.activeInHierarchy
+            && missionEndOverlayController.IsResultOverlayOpen;
     }
 }

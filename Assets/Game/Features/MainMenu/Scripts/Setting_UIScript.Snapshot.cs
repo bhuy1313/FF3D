@@ -115,9 +115,9 @@ public partial class Setting_UIScript
 
         if (vsyncToggle != null && toggleSnapshot.TryGetValue(vsyncToggle, out bool vsyncSnapshotValue))
         {
-            Debug.Log(
-                $"Setting_UIScript[{GetInstanceLabel()}]: CaptureSnapshot reason='{reason ?? "<none>"}' VSync current={vsyncToggle.isOn} snapshot={vsyncSnapshotValue}",
-                this);
+            // Debug.Log(
+            //     $"Setting_UIScript[{GetInstanceLabel()}]: CaptureSnapshot reason='{reason ?? "<none>"}' VSync current={vsyncToggle.isOn} snapshot={vsyncSnapshotValue}",
+            //     this);
         }
     }
 
@@ -520,16 +520,16 @@ public partial class Setting_UIScript
     {
         if (vsyncToggle != null && toggleSnapshot.TryGetValue(vsyncToggle, out bool vsyncSnapshotValue))
         {
-            Debug.Log(
-                $"Setting_UIScript[{GetInstanceLabel()}]: Save baseline ({stage}) VSync current={vsyncToggle.isOn} snapshot={vsyncSnapshotValue} savedPref={ReadBoolPref(DisplaySettingsService.VSyncEnabledKey)} currentRuntimeVSync={DisplaySettingsService.GetCurrentVSyncEnabled()}",
-                this);
+            // Debug.Log(
+            //     $"Setting_UIScript[{GetInstanceLabel()}]: Save baseline ({stage}) VSync current={vsyncToggle.isOn} snapshot={vsyncSnapshotValue} savedPref={ReadBoolPref(DisplaySettingsService.VSyncEnabledKey)} currentRuntimeVSync={DisplaySettingsService.GetCurrentVSyncEnabled()}",
+            //     this);
         }
 
         if (resolutionDropdown != null && tmpDropdownSnapshot.TryGetValue(resolutionDropdown, out int resolutionSnapshotValue))
         {
-            Debug.Log(
-                $"Setting_UIScript[{GetInstanceLabel()}]: Save baseline ({stage}) Resolution current={resolutionDropdown.value} snapshot={resolutionSnapshotValue}",
-                this);
+            // Debug.Log(
+            //     $"Setting_UIScript[{GetInstanceLabel()}]: Save baseline ({stage}) Resolution current={resolutionDropdown.value} snapshot={resolutionSnapshotValue}",
+            //     this);
         }
     }
 

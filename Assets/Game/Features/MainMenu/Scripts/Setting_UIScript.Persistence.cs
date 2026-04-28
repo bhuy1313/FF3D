@@ -12,12 +12,13 @@ public partial class Setting_UIScript
     private void SaveChanges()
     {
         isFinalizingSave = true;
-        Debug.Log($"Setting_UIScript[{GetInstanceLabel()}]: SaveChanges start.", this);
+        // Debug.Log($"Setting_UIScript[{GetInstanceLabel()}]: SaveChanges start.", this);
 
         SaveResolutionSelection();
         SaveAntiAliasingSelection();
         SaveVSyncSelection();
         SaveShadowQualitySelection();
+        SaveRenderDistanceSelection();
         SaveFpsSelection();
         SaveFovSelection();
         SaveMouseSensitivitySelection();
@@ -248,6 +249,28 @@ public partial class Setting_UIScript
         {
             DisplaySettingsService.ApplyShadowQuality(selectedLevel);
         }
+    }
+
+    private void LoadSavedRenderDistanceSelection()
+    {
+        if (renderDistanceSlider == null)
+        {
+            return;
+        }
+
+        renderDistanceSlider.SetStep((int)GameplayRenderDistanceSettings.GetSavedOrDefaultLevel(), false);
+        ApplyRenderDistancePreview();
+    }
+
+    private void InitializeRenderDistanceDefaultSelection()
+    {
+        if (renderDistanceSlider == null)
+        {
+            return;
+        }
+
+        renderDistanceSlider.SetStep((int)GameplayRenderDistanceSettings.DefaultLevel, false);
+        ApplyRenderDistancePreview();
     }
 
     private void LoadSavedFpsSelection()
@@ -590,6 +613,25 @@ public partial class Setting_UIScript
         FPSOverlayRuntimeController.SetOverlayVisible(fpsToggle.isOn);
     }
 
+    private void SaveRenderDistanceSelection()
+    {
+        if (renderDistanceSlider == null)
+        {
+            return;
+        }
+
+        int selectedStep = renderDistanceSlider.GetCurrentStep();
+        GameplayRenderDistanceSettings.RenderDistanceLevel selectedLevel =
+            (GameplayRenderDistanceSettings.RenderDistanceLevel)GameplayRenderDistanceSettings.GetClampedStep(selectedStep);
+        bool hasSavedValue = GameplayRenderDistanceSettings.TryGetSavedLevel(out GameplayRenderDistanceSettings.RenderDistanceLevel savedLevel);
+        if (!hasSavedValue || savedLevel != selectedLevel)
+        {
+            GameplayRenderDistanceSettings.SaveLevel(selectedLevel);
+        }
+
+        GameplayRenderDistanceRuntimeApplier.ApplyLevel(selectedLevel);
+    }
+
     private void SaveFovSelection()
     {
         if (fovSlider == null)
@@ -780,6 +822,12 @@ public partial class Setting_UIScript
         MarkDirty();
     }
 
+    private void OnRenderDistanceStepChanged(int _)
+    {
+        ApplyRenderDistancePreview();
+        MarkDirty();
+    }
+
     private void OnFovSliderValueChanged(float _)
     {
         ApplyFovSliderPreview();
@@ -829,6 +877,16 @@ public partial class Setting_UIScript
 
         DisplaySettingsService.ShadowQualityLevel selectedLevel = StepToShadowQuality(shadowQualitySlider.GetCurrentStep());
         DisplaySettingsService.ApplyShadowQuality(selectedLevel);
+    }
+
+    private void ApplyRenderDistancePreview()
+    {
+        if (renderDistanceSlider == null)
+        {
+            return;
+        }
+
+        GameplayRenderDistanceRuntimeApplier.ApplyStep(renderDistanceSlider.GetCurrentStep());
     }
 
     private void ApplyFovSliderPreview()

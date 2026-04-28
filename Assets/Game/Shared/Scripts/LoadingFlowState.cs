@@ -6,6 +6,7 @@ public static class LoadingFlowState
     private const string PendingScenarioResourcePathKey = "flow.pending_scenario_resource_path";
     private const string PendingCaseIdKey = "flow.pending_case_id";
     private const string PendingIncidentPayloadKey = "flow.pending_incident_payload";
+    private const string PendingCallPhaseResultKey = "flow.pending_call_phase_result";
     private const string PendingOnsiteSceneKey = "flow.pending_onsite_scene";
     private const string CurrentLevelIdKey = "flow.current_level_id";
     private const string PlayerNameKey = "profile.player_name";
@@ -133,6 +134,48 @@ public static class LoadingFlowState
         }
 
         PlayerPrefs.DeleteKey(PendingIncidentPayloadKey);
+        PlayerPrefs.Save();
+    }
+
+    public static void SetPendingCallPhaseResult(CallPhaseResultSnapshot snapshot)
+    {
+        if (snapshot == null)
+        {
+            return;
+        }
+
+        string json = JsonUtility.ToJson(snapshot);
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return;
+        }
+
+        PlayerPrefs.SetString(PendingCallPhaseResultKey, json);
+        PlayerPrefs.Save();
+    }
+
+    public static bool TryGetPendingCallPhaseResult(out CallPhaseResultSnapshot snapshot)
+    {
+        snapshot = null;
+
+        string json = PlayerPrefs.GetString(PendingCallPhaseResultKey, string.Empty);
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return false;
+        }
+
+        snapshot = JsonUtility.FromJson<CallPhaseResultSnapshot>(json);
+        return snapshot != null;
+    }
+
+    public static void ClearPendingCallPhaseResult()
+    {
+        if (!PlayerPrefs.HasKey(PendingCallPhaseResultKey))
+        {
+            return;
+        }
+
+        PlayerPrefs.DeleteKey(PendingCallPhaseResultKey);
         PlayerPrefs.Save();
     }
 

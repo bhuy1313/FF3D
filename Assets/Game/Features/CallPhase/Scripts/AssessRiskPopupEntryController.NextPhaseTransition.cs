@@ -16,6 +16,16 @@ public partial class AssessRiskPopupEntryController
         LoadingFlowState.SetPendingIncidentPayload(payload);
     }
 
+    private void PersistCallPhaseResultSnapshot()
+    {
+        CallPhaseResultSnapshot snapshot = BuildCallPhaseResultSnapshot();
+        if (snapshot == null)
+        {
+            return;
+        }
+
+        LoadingFlowState.SetPendingCallPhaseResult(snapshot);
+    }
 
     private void ProceedToNextPhase()
     {

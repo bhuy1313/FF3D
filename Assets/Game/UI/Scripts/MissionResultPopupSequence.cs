@@ -92,6 +92,18 @@ public class MissionResultPopupSequence : MonoBehaviour
         }
     }
 
+    public void FadeOutBackground(float duration)
+    {
+        if (gradientBackground != null)
+        {
+            CanvasGroup bgCanvasGroup = gradientBackground.GetComponent<CanvasGroup>();
+            if (bgCanvasGroup != null)
+            {
+                bgCanvasGroup.DOFade(0f, duration).SetUpdate(true);
+            }
+        }
+    }
+
     public void PrepareSummaryLayout()
     {
         ResolveReferences();

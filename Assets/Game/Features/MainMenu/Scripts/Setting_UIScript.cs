@@ -48,6 +48,7 @@ public partial class Setting_UIScript : MonoBehaviour
     [SerializeField] private TMP_Dropdown antiAliasingDropdown;
     [SerializeField] private Toggle vsyncToggle;
     [SerializeField] private ThreeStepSlider shadowQualitySlider;
+    [SerializeField] private ThreeStepSlider renderDistanceSlider;
     [SerializeField] private Toggle fpsToggle;
     [SerializeField] private Slider fovSlider;
     [SerializeField] private SliderPercentText fovSliderValueText;
@@ -145,9 +146,10 @@ public partial class Setting_UIScript : MonoBehaviour
         InitializeAutoValidateDefaultSelection();
         InitializeMinimapToggleDefaultSelection();
         InitializeMinimapTypeDefaultSelection();
+        InitializeRenderDistanceDefaultSelection();
         ValidateResolvedReferences();
         CaptureDefaultState();
-        Debug.Log($"Setting_UIScript[{GetInstanceLabel()}]: Awake", this);
+        // Debug.Log($"Setting_UIScript[{GetInstanceLabel()}]: Awake", this);
 
         cgGen = GetOrAddCanvasGroup(panelGen);
         cgGrap = GetOrAddCanvasGroup(panelGrap);
@@ -171,6 +173,7 @@ public partial class Setting_UIScript : MonoBehaviour
         if (antiAliasingDropdown != null) antiAliasingDropdown.onValueChanged.AddListener(OnAntiAliasingDropdownValueChanged);
         if (fpsToggle != null) fpsToggle.onValueChanged.AddListener(OnFpsToggleValueChanged);
         if (shadowQualitySlider != null) shadowQualitySlider.AddStepChangedListener(OnShadowQualityStepChanged);
+        if (renderDistanceSlider != null) renderDistanceSlider.AddStepChangedListener(OnRenderDistanceStepChanged);
         if (fovSlider != null) fovSlider.onValueChanged.AddListener(OnFovSliderValueChanged);
         if (mouseSensitivitySlider != null) mouseSensitivitySlider.onValueChanged.AddListener(OnMouseSensitivitySliderValueChanged);
         RegisterAudioSliderListener(masterVolumeSlider, AudioBus.Master);
@@ -215,6 +218,7 @@ public partial class Setting_UIScript : MonoBehaviour
         LoadSavedAntiAliasingSelection();
         LoadSavedVSyncSelection();
         LoadSavedShadowQualitySelection();
+        LoadSavedRenderDistanceSelection();
         LoadSavedFpsSelection();
         LoadSavedFovSelection();
         LoadSavedMouseSensitivitySelection();
@@ -315,7 +319,7 @@ public partial class Setting_UIScript : MonoBehaviour
 
     public bool HandleBackRequest(Action continueBackAction)
     {
-        Debug.Log($"Setting_UIScript[{GetInstanceLabel()}]: HandleBackRequest start. isFinalizingSave={isFinalizingSave} hasSnapshot={hasSnapshot} hasUnsavedChanges={hasUnsavedChanges}", this);
+        // Debug.Log($"Setting_UIScript[{GetInstanceLabel()}]: HandleBackRequest start. isFinalizingSave={isFinalizingSave} hasSnapshot={hasSnapshot} hasUnsavedChanges={hasUnsavedChanges}", this);
 
         if (isFinalizingSave)
         {
@@ -332,7 +336,7 @@ public partial class Setting_UIScript : MonoBehaviour
 
         if (TryGetDifferenceDescription(out string unsavedDifference))
         {
-            Debug.Log($"Setting_UIScript: Unsaved change detected before back. {unsavedDifference}", this);
+            // Debug.Log($"Setting_UIScript: Unsaved change detected before back. {unsavedDifference}", this);
         }
 
         ShowConfirmation(
@@ -360,7 +364,7 @@ public partial class Setting_UIScript : MonoBehaviour
 
         CaptureSnapshot("BeginEditSession");
         hasUnsavedChanges = false;
-        Debug.Log($"Setting_UIScript[{GetInstanceLabel()}]: BeginEditSession complete.", this);
+        // Debug.Log($"Setting_UIScript[{GetInstanceLabel()}]: BeginEditSession complete.", this);
     }
 
     public void ShowConfirmation(
@@ -499,6 +503,8 @@ public partial class Setting_UIScript : MonoBehaviour
 
         shadowQualitySlider ??= FindThreeStepSliderInNamedPanelChild(panelGrap, "ShadowSlider");
         shadowQualitySlider ??= FindThreeStepSliderByObjectName("ShadowSlider");
+        renderDistanceSlider ??= FindThreeStepSliderInNamedPanelChild(panelGrap, "RenderDistance");
+        renderDistanceSlider ??= FindThreeStepSliderByObjectName("RenderDistanceSlider");
 
         fovSlider = FindSliderInNamedPanelChild(panelGrap, "FOV");
         fovSliderValueText = FindSliderPercentTextInNamedPanelChild(panelGrap, "FOV");
@@ -572,6 +578,11 @@ public partial class Setting_UIScript : MonoBehaviour
         if (panelGrap != null && shadowQualitySlider == null)
         {
             Debug.LogWarning("Setting_UIScript: Shadow quality slider could not be resolved from the graphics panel.", this);
+        }
+
+        if (panelGrap != null && renderDistanceSlider == null)
+        {
+            Debug.LogWarning("Setting_UIScript: Render distance slider could not be resolved from the graphics panel.", this);
         }
 
         if (panelGrap != null && fovSlider == null)
