@@ -6,6 +6,12 @@ using UnityEngine.Serialization;
 [DisallowMultipleComponent]
 public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmokeVentPoint, IBotPryTarget
 {
+    public enum DoorOpenMode
+    {
+        Hinged = 0,
+        DoubleSliding = 1
+    }
+
     public enum DoorLockMode
     {
         None = 0,
@@ -13,8 +19,17 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
         Blocked = 2
     }
 
-    [SerializeField] private string doorChildName = "Door";
+    [Header("Motion")]
+    [SerializeField] private DoorOpenMode openMode = DoorOpenMode.Hinged;
+    [Header("Hinged Door")]
+    [SerializeField] private Transform hingedDoorTransform;
     [SerializeField] private float openAngle = -90f;
+    [Header("Double Sliding Door")]
+    [SerializeField] private Transform leftSlidingDoorTransform;
+    [SerializeField] private Transform rightSlidingDoorTransform;
+    [SerializeField] private Vector3 slidingLocalAxis = Vector3.right;
+    [SerializeField] private float slidingOpenDistance = 1f;
+    [Header("Motion Shared")]
     [SerializeField] private float animationSpeed = 6f;
     [SerializeField] private bool startsOpen;
     [Header("Forced Entry")]
@@ -29,6 +44,10 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
     [Header("Smoke")]
     [SerializeField] private float smokeVentilationReliefWhenOpen = 0.2f;
     [SerializeField] private float fireDraftRiskWhenOpen;
+    [Header("Audio")]
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioClip openSound;
+    [SerializeField] private AudioClip closeSound;
     [Header("Runtime")]
     [SerializeField] private bool isLocked;
     [SerializeField] private bool isPryInProgress;
@@ -38,6 +57,10 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
     private Quaternion closedLocalRotation;
     private Vector3 closedLocalEulerAngles;
     private Quaternion targetLocalRotation;
+    private Vector3 leftClosedLocalPosition;
+    private Vector3 rightClosedLocalPosition;
+    private Vector3 leftTargetLocalPosition;
+    private Vector3 rightTargetLocalPosition;
     private bool isOpen;
     private bool initialized;
     private int currentOpenDirection = -1;
@@ -66,6 +89,12 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
     private void OnValidate()
     {
         ApplyLegacyLockMigration();
+        slidingOpenDistance = Mathf.Max(0f, slidingOpenDistance);
+        if (slidingLocalAxis.sqrMagnitude <= 0.0001f)
+        {
+            slidingLocalAxis = Vector3.right;
+        }
+
         pryOpenDuration = Mathf.Max(0.01f, pryOpenDuration);
         smokeVentilationReliefWhenOpen = Mathf.Max(0f, smokeVentilationReliefWhenOpen);
         fireDraftRiskWhenOpen = Mathf.Max(0f, fireDraftRiskWhenOpen);
@@ -83,12 +112,19 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
 
     private void Update()
     {
-        if (!initialized || doorTransform == null)
+        if (!initialized)
         {
             return;
         }
 
         float t = 1f - Mathf.Exp(-animationSpeed * Time.deltaTime);
+        if (openMode == DoorOpenMode.DoubleSliding)
+        {
+            leftSlidingDoorTransform.localPosition = Vector3.Lerp(leftSlidingDoorTransform.localPosition, leftTargetLocalPosition, t);
+            rightSlidingDoorTransform.localPosition = Vector3.Lerp(rightSlidingDoorTransform.localPosition, rightTargetLocalPosition, t);
+            return;
+        }
+
         doorTransform.localRotation = Quaternion.Slerp(doorTransform.localRotation, targetLocalRotation, t);
     }
 
@@ -99,7 +135,7 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
             InitializeDoorState();
         }
 
-        if (doorTransform == null)
+        if (!HasRequiredDoorGeometry())
         {
             return;
         }
@@ -130,7 +166,7 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
             InitializeDoorState();
         }
 
-        if (doorTransform == null || isOpen || !isLocked || lockMode != DoorLockMode.SoftLockedCrowbar)
+        if (!HasRequiredDoorGeometry() || isOpen || !isLocked || lockMode != DoorLockMode.SoftLockedCrowbar)
         {
             return false;
         }
@@ -154,7 +190,7 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
             InitializeDoorState();
         }
 
-        if (doorTransform == null)
+        if (!HasRequiredDoorGeometry())
         {
             return;
         }
@@ -190,35 +226,55 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
     private void InitializeDoorState()
     {
         ApplyLegacyLockMigration();
-        doorTransform = FindDoorTransform();
-        if (doorTransform == null)
+        ResolveDoorGeometry();
+        if (!HasRequiredDoorGeometry())
         {
             initialized = false;
             return;
         }
 
-        closedLocalRotation = doorTransform.localRotation;
-        closedLocalEulerAngles = doorTransform.localEulerAngles;
         currentOpenDirection = GetDefaultOpenDirection();
+        if (openMode == DoorOpenMode.DoubleSliding)
+        {
+            leftClosedLocalPosition = leftSlidingDoorTransform.localPosition;
+            rightClosedLocalPosition = rightSlidingDoorTransform.localPosition;
+            leftTargetLocalPosition = startsOpen ? GetSlidingOpenLocalPosition(leftClosedLocalPosition, -1) : leftClosedLocalPosition;
+            rightTargetLocalPosition = startsOpen ? GetSlidingOpenLocalPosition(rightClosedLocalPosition, 1) : rightClosedLocalPosition;
+            leftSlidingDoorTransform.localPosition = leftTargetLocalPosition;
+            rightSlidingDoorTransform.localPosition = rightTargetLocalPosition;
+        }
+        else
+        {
+            closedLocalRotation = doorTransform.localRotation;
+            closedLocalEulerAngles = doorTransform.localEulerAngles;
+            targetLocalRotation = startsOpen ? GetOpenLocalRotation(currentOpenDirection) : closedLocalRotation;
+            doorTransform.localRotation = targetLocalRotation;
+        }
+
         isOpen = startsOpen;
         isLocked = lockMode != DoorLockMode.None && startsLocked;
-        targetLocalRotation = isOpen ? GetOpenLocalRotation(currentOpenDirection) : closedLocalRotation;
-        doorTransform.localRotation = targetLocalRotation;
         initialized = true;
     }
 
-    private Transform FindDoorTransform()
+    private void ResolveDoorGeometry()
     {
-        if (!string.IsNullOrWhiteSpace(doorChildName))
+        if (openMode == DoorOpenMode.DoubleSliding)
         {
-            Transform namedChild = transform.Find(doorChildName);
-            if (namedChild != null)
-            {
-                return namedChild;
-            }
+            doorTransform = null;
+            return;
         }
 
-        return transform;
+        doorTransform = hingedDoorTransform != null ? hingedDoorTransform : transform;
+    }
+
+    private bool HasRequiredDoorGeometry()
+    {
+        if (openMode == DoorOpenMode.DoubleSliding)
+        {
+            return leftSlidingDoorTransform != null && rightSlidingDoorTransform != null;
+        }
+
+        return doorTransform != null;
     }
 
     private Quaternion GetOpenLocalRotation(int direction)
@@ -227,16 +283,45 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
         return Quaternion.Euler(closedLocalEulerAngles.x, targetY, closedLocalEulerAngles.z);
     }
 
+    private Vector3 GetSlidingOpenLocalPosition(Vector3 closedLocalPosition, int direction)
+    {
+        return closedLocalPosition + slidingLocalAxis.normalized * slidingOpenDistance * direction;
+    }
+
     private void OpenDoor(GameObject interactor)
     {
+        if (audioSource != null && openSound != null)
+        {
+            audioSource.PlayOneShot(openSound);
+        }
+
         currentOpenDirection = DetermineOpenDirection(interactor);
         isOpen = true;
+        if (openMode == DoorOpenMode.DoubleSliding)
+        {
+            leftTargetLocalPosition = GetSlidingOpenLocalPosition(leftClosedLocalPosition, -1);
+            rightTargetLocalPosition = GetSlidingOpenLocalPosition(rightClosedLocalPosition, 1);
+            return;
+        }
+
         targetLocalRotation = GetOpenLocalRotation(currentOpenDirection);
     }
 
     private void CloseDoor()
     {
+        if (audioSource != null && closeSound != null)
+        {
+            audioSource.PlayOneShot(closeSound);
+        }
+
         isOpen = false;
+        if (openMode == DoorOpenMode.DoubleSliding)
+        {
+            leftTargetLocalPosition = leftClosedLocalPosition;
+            rightTargetLocalPosition = rightClosedLocalPosition;
+            return;
+        }
+
         targetLocalRotation = closedLocalRotation;
     }
 
@@ -291,7 +376,7 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
         yield return new WaitForSeconds(duration);
 
         pryRoutine = null;
-        if (!isActiveAndEnabled || doorTransform == null)
+        if (!isActiveAndEnabled || !HasRequiredDoorGeometry())
         {
             isPryInProgress = false;
             activePryer = null;

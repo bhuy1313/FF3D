@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 4526234694069746674}
   - component: {fileID: 9104680913224289246}
   - component: {fileID: 8592132813343185595}
+  - component: {fileID: 2839516263083362028}
   m_Layer: 0
   m_Name: fire_truck
   m_TagString: Untagged
@@ -26,13 +27,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3854445215284361970}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.6743797, y: 0.21263114, z: 0.21263114, w: 0.6743797}
+  m_LocalRotation: {x: -0.67437977, y: 0.21263108, z: 0.21263108, w: 0.67437977}
   m_LocalPosition: {x: 6.281167, y: 1.7095275e-33, z: 8.095973}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: -90, y: 0, z: 35}
 --- !u!33 &9104680913224289246
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -94,3 +95,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!208 &2839516263083362028
+NavMeshObstacle:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3854445215284361970}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Shape: 1
+  m_Extents: {x: 1.3540001, y: 4.366, z: 1.5330001}
+  m_MoveThreshold: 0.1
+  m_Carve: 0
+  m_CarveOnlyStationary: 1
+  m_Center: {x: 0, y: -0.017, z: 1.5230001}
+  m_TimeToStationary: 0.5

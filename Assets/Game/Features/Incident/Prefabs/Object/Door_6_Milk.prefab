@@ -366,18 +366,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a91d7b7ea4de4d84aa464e2db481e6fd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Door
-  doorChildName: Door
+  openMode: 0
+  hingedDoorTransform: {fileID: 1107688653939403532}
   openAngle: -90
+  leftSlidingDoorTransform: {fileID: 0}
+  rightSlidingDoorTransform: {fileID: 0}
+  slidingLocalAxis: {x: 1, y: 0, z: 0}
+  slidingOpenDistance: 1
   animationSpeed: 6
   startsOpen: 0
   legacyRequiresCrowbarToOpenWhenClosed: 0
   lockMode: 0
   startsLocked: 0
-  pryOpenDuration: 0.75
+  pryOpenDuration: 5
   unlockOnSuccessfulPry: 1
   lockPlayerWhilePrying: 1
   smokeVentilationReliefWhenOpen: 0.2
   fireDraftRiskWhenOpen: 0
+  audioSource: {fileID: 2335594383182363747}
+  openSound: {fileID: 8300000, guid: 44b63b0db16ce624b97e45ebde0a0971, type: 3}
+  closeSound: {fileID: 8300000, guid: bc37ad25465405a428a26ff0facd9a7b, type: 3}
   isLocked: 0
   isPryInProgress: 0
   activePryer: {fileID: 0}

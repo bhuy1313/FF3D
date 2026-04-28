@@ -963,6 +963,7 @@ GameObject:
   - component: {fileID: 7286251771642285745}
   - component: {fileID: 9103052700435118138}
   - component: {fileID: 9202031649153982278}
+  - component: {fileID: 5801840532896120417}
   m_Layer: 0
   m_Name: FireSimulation
   m_TagString: Untagged
@@ -1044,6 +1045,34 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FireEffectManager
   clusterViewPrefab: {fileID: 6598967934756895505}
   clusterViewRoot: {fileID: 0}
+--- !u!114 &5801840532896120417
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7540332092357022194}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1129e4af4044ee2b3f7f8d5ff9a4cb3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FireSimulationScorchDecalBinder
+  simulationManager: {fileID: 9103052700435118138}
+  scorchMaterial: {fileID: 2100000, guid: 9d96e21a785e4c3cb030694a46cf9d2e, type: 2}
+  scorchMaskTexture: {fileID: 2800000, guid: 3b2f0ad7fbcb4fc5809f3ff2fd85de2b, type: 3}
+  scorchTint: {r: 0.11, g: 0.085, b: 0.065, a: 0.85}
+  surfaceMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  triggerInteraction: 1
+  maxDecals: 96
+  minSize: 0.5
+  maxSize: 2.6
+  maxOpacity: 0.72
+  surfaceOffset: 0.015
+  raycastBackoff: 0.65
+  raycastDistance: 1.8
+  growthPerSecond: 0.35
 --- !u!1 &7676517865980041575
 GameObject:
   m_ObjectHideFlags: 0
