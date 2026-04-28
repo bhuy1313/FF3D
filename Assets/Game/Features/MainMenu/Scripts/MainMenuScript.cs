@@ -10,7 +10,6 @@ using System.Text;
 public class MainMenuScript : MonoBehaviour
 {
     private const int DefaultPlayerNameCharacterLimit = 24;
-    private const string ContinueLocalizationKey = "mainmenu.btn.continue";
     private const string CommonToastConfirmTitleLocalizationKey = "common.toast.confirm.title";
     private const string CommonYesLocalizationKey = "common.btn.yes";
     private const string CommonNoLocalizationKey = "common.btn.no";
@@ -72,12 +71,33 @@ public class MainMenuScript : MonoBehaviour
 
     private bool IsPrimaryController => mainMenuPanel != null;
 
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        ValidateCriticalSerializedReferences(logAsError: false);
+    }
+#endif
+
     private void Awake()
     {
+        if (Time.timeScale <= 0f)
+        {
+            Time.timeScale = 1f;
+        }
+
         settingUI = ResolveSettingUI();
 
         if (!IsPrimaryController)
         {
+            Debug.LogWarning("MainMenuScript: mainMenuPanel is not assigned. Component is inactive.", this);
+            enabled = false;
+            return;
+        }
+
+        if (!ValidateCriticalSerializedReferences(logAsError: true))
+        {
+            Debug.LogError("MainMenuScript: Missing critical serialized references. Component has been disabled.", this);
+            enabled = false;
             return;
         }
 
@@ -384,41 +404,6 @@ public class MainMenuScript : MonoBehaviour
 
     private void ResolveNewGamePopupControls()
     {
-        if (newGamePopupPanel == null)
-        {
-            return;
-        }
-
-        Transform popupRoot = newGamePopupPanel.transform;
-
-        if (playerNameInput == null)
-        {
-            playerNameInput = FindComponentByName<TMP_InputField>(popupRoot, "InputField (TMP)");
-
-            if (playerNameInput == null)
-            {
-                playerNameInput = popupRoot.GetComponentInChildren<TMP_InputField>(true);
-            }
-        }
-
-        if (confirmNewGameButton == null)
-        {
-            confirmNewGameButton = FindComponentByName<Button>(popupRoot, "btnConfirm");
-
-            if (confirmNewGameButton == null)
-            {
-                Button[] buttons = popupRoot.GetComponentsInChildren<Button>(true);
-                foreach (Button button in buttons)
-                {
-                    if (button != null && button.name != "btnBack")
-                    {
-                        confirmNewGameButton = button;
-                        break;
-                    }
-                }
-            }
-        }
-
         if (playerNameInput != null)
         {
             playerNameInput.characterLimit = Mathf.Max(1, playerNameCharacterLimit);
@@ -431,26 +416,6 @@ public class MainMenuScript : MonoBehaviour
                     inputTextLocalizer.enabled = false;
                 }
             }
-        }
-
-        if (newGameNameLabelText == null)
-        {
-            newGameNameLabelText = FindComponentByName<TMP_Text>(popupRoot, "NameLabelText");
-        }
-
-        if (newGameHintText == null)
-        {
-            newGameHintText = FindComponentByName<TMP_Text>(popupRoot, "HintText");
-        }
-
-        if (newGameCounterText == null)
-        {
-            newGameCounterText = FindComponentByName<TMP_Text>(popupRoot, "CounterText");
-        }
-
-        if (newGameErrorText == null)
-        {
-            newGameErrorText = FindComponentByName<TMP_Text>(popupRoot, "ErrorText");
         }
 
         if (newGameErrorText != null && newGameErrorRoot == null && newGameErrorText.transform.parent != null)
@@ -466,73 +431,9 @@ public class MainMenuScript : MonoBehaviour
 
     private void ResolveContinueControls()
     {
-        Transform searchRoot = mainMenuPanel != null ? mainMenuPanel.transform : transform;
-        if (continueButton == null)
-        {
-            continueButton = FindButtonByLocalizationKey(searchRoot, ContinueLocalizationKey);
-            if (continueButton == null)
-            {
-                continueButton = FindComponentByName<Button>(searchRoot, "btnContinue");
-            }
-        }
-
-        RectTransform canvasRoot = GetCanvasRoot();
-        if (canvasRoot == null)
-        {
-            return;
-        }
-
-        if (continuePopupPanel == null)
-        {
-            continuePopupPanel = FindComponentByName<CanvasGroup>(canvasRoot, "ContinuePopup");
-        }
-
-        if (continuePopupPanel == null)
-        {
-            return;
-        }
-
-        Transform popupRoot = continuePopupPanel.transform;
-
-        if (continuePopupTitleText == null)
-        {
-            continuePopupTitleText = FindComponentByName<TMP_Text>(popupRoot, "TittleText");
-        }
-
-        if (continuePopupSubtitleText == null)
-        {
-            continuePopupSubtitleText = FindComponentByName<TMP_Text>(popupRoot, "SubTittleText");
-        }
-
-        if (continuePopupListRoot == null)
-        {
-            continuePopupListRoot = FindComponentByName<RectTransform>(popupRoot, "Container");
-        }
-
-        if (continuePopupTemplateButton == null)
-        {
-            continuePopupTemplateButton = FindComponentByName<Button>(popupRoot, "ProfileItem1");
-        }
-
-        if (continuePopupEmptyRoot == null)
-        {
-            RectTransform emptyRect = FindComponentByName<RectTransform>(popupRoot, "Empty");
-            continuePopupEmptyRoot = emptyRect != null ? emptyRect.gameObject : null;
-        }
-
         if (continuePopupEmptyText == null && continuePopupEmptyRoot != null)
         {
             continuePopupEmptyText = continuePopupEmptyRoot.GetComponentInChildren<TMP_Text>(true);
-        }
-
-        if (continuePopupCloseButton == null)
-        {
-            continuePopupCloseButton = FindComponentByName<Button>(popupRoot, "btnBack");
-        }
-
-        if (continuePopupConfirmButton == null)
-        {
-            continuePopupConfirmButton = FindComponentByName<Button>(popupRoot, "btnContinue");
         }
 
         Button templateForStyling = continuePopupTemplateButton != null ? continuePopupTemplateButton : continueProfileItemPrefab;
@@ -944,41 +845,6 @@ public class MainMenuScript : MonoBehaviour
             newGameErrorRoot.SetActive(shouldShowError);
         }
     }
-
-    private void RefreshNewGameLocalizedTextsLegacy()
-    {
-        ResolveNewGamePopupControls();
-        SetLocalizedPopupText(newGameNameLabelText, NewGameNameLabelLocalizationKey, "Tên nhân vật");
-        SetLocalizedPopupText(newGameHintText, NewGameHintLocalizationKey, "Tên sẽ dùng cho tiến trình chơi.");
-    }
-
-    private void UpdateNewGameStatusTextsLegacy(bool hasValidPlayerName)
-    {
-        ResolveNewGamePopupControls();
-
-        int characterLimit = Mathf.Max(1, playerNameCharacterLimit);
-        int currentLength = SanitizePlayerName(playerNameInput != null ? playerNameInput.text : string.Empty).Length;
-
-        if (newGameCounterText != null)
-        {
-            ApplyPopupFont(newGameCounterText);
-            string counterTemplate = LanguageManager.Tr(NewGameCounterLocalizationKey, "{0}/{1} ký tự");
-            newGameCounterText.text = string.Format(counterTemplate, currentLength, characterLimit);
-        }
-
-        if (newGameErrorText != null)
-        {
-            ApplyPopupFont(newGameErrorText);
-            newGameErrorText.text = LanguageManager.Tr(NewGameErrorEmptyLocalizationKey, "Vui lòng nhập tên nhân vật");
-        }
-
-        if (newGameErrorRoot != null)
-        {
-            bool shouldShowError = IsNewGamePopupOpen && !isStartingNewGame && !hasValidPlayerName && showNewGameNameError;
-            newGameErrorRoot.SetActive(shouldShowError);
-        }
-    }
-
     private void SetLocalizedPopupText(TMP_Text target, string key, string fallback)
     {
         if (target == null)
@@ -1028,68 +894,6 @@ public class MainMenuScript : MonoBehaviour
 
         return null;
     }
-
-    private TMP_Text CreatePopupText(
-        string objectName,
-        RectTransform parent,
-        string text,
-        TMP_FontAsset font,
-        float fontSize,
-        FontStyles fontStyle,
-        TextAlignmentOptions alignment)
-    {
-        GameObject go = new GameObject(objectName, typeof(RectTransform), typeof(TextMeshProUGUI));
-        RectTransform rect = go.GetComponent<RectTransform>();
-        rect.SetParent(parent, false);
-
-        TMP_Text label = go.GetComponent<TMP_Text>();
-        label.text = text;
-        label.font = font != null ? font : label.font;
-        label.fontSize = fontSize;
-        label.fontStyle = fontStyle;
-        label.alignment = alignment;
-        label.textWrappingMode = TextWrappingModes.Normal;
-        label.color = Color.white;
-        return label;
-    }
-
-    private Button CreatePopupButton(RectTransform parent, string labelText, TMP_FontAsset font, UnityEngine.Events.UnityAction clickAction)
-    {
-        GameObject buttonObject = new GameObject("Button", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
-        RectTransform buttonRect = buttonObject.GetComponent<RectTransform>();
-        buttonRect.SetParent(parent, false);
-
-        Image background = buttonObject.GetComponent<Image>();
-        background.color = new Color(0.93f, 0.72f, 0.38f, 1f);
-
-        Button button = buttonObject.GetComponent<Button>();
-        button.transition = Selectable.Transition.ColorTint;
-        ColorBlock colors = button.colors;
-        colors.normalColor = background.color;
-        colors.highlightedColor = new Color(1f, 0.82f, 0.50f, 1f);
-        colors.pressedColor = new Color(0.84f, 0.60f, 0.22f, 1f);
-        colors.selectedColor = colors.highlightedColor;
-        button.colors = colors;
-        button.onClick.AddListener(clickAction);
-
-        LayoutElement layoutElement = buttonObject.GetComponent<LayoutElement>();
-        layoutElement.preferredHeight = 54f;
-
-        TMP_Text label = CreatePopupText("Label", buttonRect, labelText, font, 20f, FontStyles.Normal, TextAlignmentOptions.Center);
-        label.color = new Color(0.17f, 0.17f, 0.17f, 1f);
-        label.rectTransform.anchorMin = Vector2.zero;
-        label.rectTransform.anchorMax = Vector2.one;
-        label.rectTransform.offsetMin = new Vector2(14f, 8f);
-        label.rectTransform.offsetMax = new Vector2(-14f, -8f);
-        return button;
-    }
-
-    private RectTransform GetCanvasRoot()
-    {
-        Canvas canvas = GetComponentInParent<Canvas>(true);
-        return canvas != null ? canvas.transform as RectTransform : null;
-    }
-
     private void RefreshContinuePopupLocalizedTexts()
     {
         ResolveContinueControls();
@@ -1279,54 +1083,62 @@ public class MainMenuScript : MonoBehaviour
         return GetComponentInChildren<Setting_UIScript>(true);
     }
 
-    private Button FindButtonByLocalizationKey(Transform root, string localizationKey)
+    private bool ValidateCriticalSerializedReferences(bool logAsError)
     {
-        if (root == null || string.IsNullOrWhiteSpace(localizationKey))
-        {
-            return null;
-        }
+        bool hasMissingReference = false;
 
-        LocalizedText[] localizedTexts = root.GetComponentsInChildren<LocalizedText>(true);
-        foreach (LocalizedText localizedText in localizedTexts)
-        {
-            if (localizedText == null || !string.Equals(localizedText.LocalizationKey, localizationKey, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
+        hasMissingReference |= ReportMissingReference(mainMenuPanel, nameof(mainMenuPanel), logAsError);
+        hasMissingReference |= ReportMissingReference(settingPanel, nameof(settingPanel), logAsError);
+        hasMissingReference |= ReportMissingReference(newGamePopupPanel, nameof(newGamePopupPanel), logAsError);
+        hasMissingReference |= ReportMissingReference(playerNameInput, nameof(playerNameInput), logAsError);
+        hasMissingReference |= ReportMissingReference(confirmNewGameButton, nameof(confirmNewGameButton), logAsError);
+        hasMissingReference |= ReportMissingReference(continueButton, nameof(continueButton), logAsError);
+        hasMissingReference |= ReportMissingReference(continueProfileItemPrefab, nameof(continueProfileItemPrefab), logAsError);
+        hasMissingReference |= ReportMissingReference(continuePopupPanel, nameof(continuePopupPanel), logAsError);
+        hasMissingReference |= ReportMissingReference(continuePopupListRoot, nameof(continuePopupListRoot), logAsError);
+        hasMissingReference |= ReportMissingReference(continuePopupCloseButton, nameof(continuePopupCloseButton), logAsError);
+        hasMissingReference |= ReportMissingReference(continuePopupConfirmButton, nameof(continuePopupConfirmButton), logAsError);
+        hasMissingReference |= ReportMissingReference(continuePopupEmptyRoot, nameof(continuePopupEmptyRoot), logAsError);
+        hasMissingReference |= ReportMissingString(loadingSceneName, nameof(loadingSceneName), logAsError);
+        hasMissingReference |= ReportMissingString(nextSceneAfterNewGameName, nameof(nextSceneAfterNewGameName), logAsError);
 
-            Button button = localizedText.GetComponentInParent<Button>(true);
-            if (button != null)
-            {
-                return button;
-            }
-        }
-
-        return null;
+        return !hasMissingReference;
     }
 
-    private T FindComponentByName<T>(Transform root, string objectName) where T : Component
+    private bool ReportMissingReference(UnityEngine.Object reference, string fieldName, bool logAsError)
     {
-        if (root == null || string.IsNullOrWhiteSpace(objectName))
+        if (reference != null)
         {
-            return null;
+            return false;
         }
 
-        Transform[] transforms = root.GetComponentsInChildren<Transform>(true);
-        foreach (Transform child in transforms)
+        LogMissingSerializedField($"Critical reference '{fieldName}' is not assigned.", logAsError);
+        return true;
+    }
+
+    private bool ReportMissingString(string value, string fieldName, bool logAsError)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
         {
-            if (child != null && child.name == objectName)
-            {
-                T component = child.GetComponent<T>();
-                if (component != null)
-                {
-                    return component;
-                }
-            }
+            return false;
         }
 
-        return null;
+        LogMissingSerializedField($"Critical string '{fieldName}' is empty.", logAsError);
+        return true;
+    }
+
+    private void LogMissingSerializedField(string message, bool logAsError)
+    {
+        if (logAsError)
+        {
+            Debug.LogError($"MainMenuScript: {message}", this);
+            return;
+        }
+
+        Debug.LogWarning($"MainMenuScript: {message}", this);
     }
 
     private bool IsNewGamePopupOpen => newGamePopupPanel != null && newGamePopupPanel.alpha > 0.99f;
     private bool IsContinuePopupOpen => continuePopupPanel != null && continuePopupPanel.alpha > 0.99f;
 }
+

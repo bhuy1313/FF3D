@@ -28,6 +28,12 @@ public partial class AssessRiskPopupEntryController
 
     private string BuildResultPopupReviewText()
     {
+        CallPhaseResultSnapshot snapshot = BuildCallPhaseResultSnapshot();
+        return snapshot != null ? snapshot.resultReviewText : string.Empty;
+    }
+
+    private CallPhaseResultSnapshot BuildCallPhaseResultSnapshot()
+    {
         int keyValuesScore = CalculateKeyValuesScore(out List<string> keyValueIssues);
         int confirmedFactsCount = CountConfirmedFacts();
         int confirmedFactsScore = CalculateConfirmedFactsScore();
@@ -60,63 +66,95 @@ public partial class AssessRiskPopupEntryController
             callTimeQualified,
             callTimeScore);
 
+        CallPhaseResultSnapshot snapshot = new CallPhaseResultSnapshot
+        {
+            caseId = scenarioContext != null ? scenarioContext.CurrentCaseId : string.Empty,
+            scenarioId = scenarioData != null ? scenarioData.scenarioId : string.Empty,
+            finalScore = finalScore,
+            maximumScore = maximumScore,
+            keyValuesScore = keyValuesScore,
+            confirmedFactsCount = confirmedFactsCount,
+            confirmedFactsScore = confirmedFactsScore,
+            severityChosen = IsMissingValue(severityChosen) ? string.Empty : severityChosen,
+            severityChosenDisplay = severityChosenDisplay,
+            expectedSeverity = GetExpectedSeverityValue(),
+            expectedSeverityDisplay = expectedSeverityDisplay,
+            severityScore = severityScore,
+            readinessScore = readinessScore,
+            followUpTotalCount = followUpTotalCount,
+            followUpOptimalCount = GetOptimalFollowUpCount(),
+            followUpAcceptableCount = GetAcceptableFollowUpCount(),
+            followUpPoorCount = GetPoorFollowUpCount(),
+            followUpScore = followUpScore,
+            followUpQualityLabel = followUpQualityLabel,
+            callDurationSeconds = callTimeSeconds,
+            targetCallTimeSeconds = GetTargetCallTimeSeconds(),
+            acceptableCallTimeSeconds = GetAcceptableCallTimeSeconds(),
+            callTimeScore = callTimeScore,
+            callTimeQualified = callTimeQualified,
+            callTimeEfficiencyLabel = callTimeEfficiencyLabel,
+            feedbackLines = feedbackLines,
+            keyValueIssues = keyValueIssues
+        };
+
         StringBuilder builder = new StringBuilder();
         builder.Append(CallPhaseUiChromeText.Tr("callphase.result.final_score", "Final Score"));
         builder.Append(": ");
-        builder.Append(finalScore);
+        builder.Append(snapshot.finalScore);
         builder.Append(" / ");
-        builder.Append(maximumScore);
+        builder.Append(snapshot.maximumScore);
         builder.Append("\n\n");
         builder.Append(CallPhaseUiChromeText.Tr("callphase.result.severity_chosen", "Severity Chosen"));
         builder.Append(": ");
-        builder.Append(severityChosenDisplay);
+        builder.Append(snapshot.severityChosenDisplay);
         builder.Append("\n");
         builder.Append(CallPhaseUiChromeText.Tr("callphase.result.expected_severity", "Expected Severity"));
         builder.Append(": ");
-        builder.Append(expectedSeverityDisplay);
+        builder.Append(snapshot.expectedSeverityDisplay);
         builder.Append("\n\n");
         builder.Append(CallPhaseUiChromeText.Tr("callphase.result.confirmed_facts", "Confirmed Facts"));
         builder.Append(": ");
-        builder.Append(confirmedFactsCount);
+        builder.Append(snapshot.confirmedFactsCount);
         builder.Append("\n\n");
         builder.Append(CallPhaseUiChromeText.Tr("callphase.result.followup_quality", "Follow-up Quality"));
         builder.Append(": ");
-        builder.Append(followUpQualityLabel);
+        builder.Append(snapshot.followUpQualityLabel);
         builder.Append("\n");
         builder.Append(CallPhaseUiChromeText.Tr("callphase.result.optimal_questions", "Optimal Questions Chosen"));
         builder.Append(": ");
-        builder.Append(GetOptimalFollowUpCount());
+        builder.Append(snapshot.followUpOptimalCount);
         builder.Append("\n");
         builder.Append(CallPhaseUiChromeText.Tr("callphase.result.acceptable_questions", "Acceptable Questions Chosen"));
         builder.Append(": ");
-        builder.Append(GetAcceptableFollowUpCount());
+        builder.Append(snapshot.followUpAcceptableCount);
         builder.Append("\n");
         builder.Append(CallPhaseUiChromeText.Tr("callphase.result.poor_questions", "Poor Questions Chosen"));
         builder.Append(": ");
-        builder.Append(GetPoorFollowUpCount());
+        builder.Append(snapshot.followUpPoorCount);
         builder.Append("\n\n");
         builder.Append(CallPhaseUiChromeText.Tr("callphase.result.call_time", "Call Time"));
         builder.Append(": ");
-        builder.Append(FormatDuration(callTimeSeconds));
+        builder.Append(FormatDuration(snapshot.callDurationSeconds));
         builder.Append("\n");
         builder.Append(CallPhaseUiChromeText.Tr("callphase.result.target_time", "Target Time"));
         builder.Append(": ");
-        builder.Append(FormatDuration(GetTargetCallTimeSeconds()));
+        builder.Append(FormatDuration(snapshot.targetCallTimeSeconds));
         builder.Append("\n");
         builder.Append(CallPhaseUiChromeText.Tr("callphase.result.efficiency", "Efficiency"));
         builder.Append(": ");
-        builder.Append(callTimeEfficiencyLabel);
+        builder.Append(snapshot.callTimeEfficiencyLabel);
         builder.Append("\n\n");
         builder.Append(CallPhaseUiChromeText.Tr("callphase.result.feedback", "Feedback"));
         builder.Append(":");
 
-        for (int i = 0; i < feedbackLines.Count; i++)
+        for (int i = 0; i < snapshot.feedbackLines.Count; i++)
         {
             builder.Append("\n- ");
-            builder.Append(feedbackLines[i]);
+            builder.Append(snapshot.feedbackLines[i]);
         }
 
-        return builder.ToString();
+        snapshot.resultReviewText = builder.ToString();
+        return snapshot;
     }
 
     private int CalculateKeyValuesScore(out List<string> issues)

@@ -10,8 +10,16 @@ public class OxygenMask : WornGearItem, IPlayerExternalOxygenSource
     [SerializeField] private bool rechargeWhileStowed;
     [SerializeField, Range(0f, 1f)] private float lowOxygenThreshold01 = 0.15f;
 
+    [Header("Overlay Mask")]
+    [SerializeField] private bool driveOverlayMask = true;
+    [SerializeField] private bool showHelmetOverlayWhenEnabled = true;
+    [SerializeField] private bool showVisorOverlayWhenEnabled;
+    [SerializeField, Range(0f, 1f)] private float visorOverlayOpacity = 0.85f;
+    [SerializeField, Range(0f, 1f)] private float lowOxygenVignetteMax = 0.45f;
+
     [Header("Runtime")]
     [SerializeField] private float currentMaskOxygen;
+    [SerializeField] private PlayerHazardOverlayUI overlayUi;
     public bool IsSupplyingOxygen => IsGearEnabled && HasOxygenSupply;
     public bool HasOxygenSupply => currentMaskOxygen > 0.01f;
     public bool IsOxygenSupplyLow => OxygenSupplyPercent01 <= Mathf.Clamp01(lowOxygenThreshold01);
@@ -33,6 +41,8 @@ public class OxygenMask : WornGearItem, IPlayerExternalOxygenSource
         maxMaskOxygen = Mathf.Max(1f, maxMaskOxygen);
         oxygenRechargePerSecond = Mathf.Max(0f, oxygenRechargePerSecond);
         lowOxygenThreshold01 = Mathf.Clamp01(lowOxygenThreshold01);
+        visorOverlayOpacity = Mathf.Clamp01(visorOverlayOpacity);
+        lowOxygenVignetteMax = Mathf.Clamp01(lowOxygenVignetteMax);
         currentMaskOxygen = Mathf.Clamp(currentMaskOxygen, 0f, maxMaskOxygen);
     }
 
@@ -44,11 +54,13 @@ public class OxygenMask : WornGearItem, IPlayerExternalOxygenSource
     protected override void OnGearEnabled(GameObject owner)
     {
         BindToHolderVitals(owner);
+        UpdateOverlayMaskPresentation(owner, IsGearEquipped);
     }
 
     protected override void OnGearDisabled(GameObject owner)
     {
         UnbindFromHolderVitals(owner != null ? owner : CurrentHolder);
+        UpdateOverlayMaskPresentation(owner != null ? owner : CurrentHolder, false);
     }
 
     protected override void OnWearHolderChanged(GameObject previousHolder, GameObject newHolder, bool gearWasEnabled)
@@ -67,6 +79,8 @@ public class OxygenMask : WornGearItem, IPlayerExternalOxygenSource
         {
             BindToHolderVitals(newHolder);
         }
+
+        UpdateOverlayMaskPresentation(newHolder, IsGearEquipped && gearWasEnabled);
     }
 
     protected override void OnWearTick(GameObject owner, bool equipped, float deltaTime)
@@ -76,15 +90,12 @@ public class OxygenMask : WornGearItem, IPlayerExternalOxygenSource
             SetGearEnabled(false, owner);
         }
 
-        if (oxygenRechargePerSecond <= 0f || deltaTime <= 0f)
-        {
-            return;
-        }
-
-        if (equipped || rechargeWhileStowed)
+        if (oxygenRechargePerSecond > 0f && deltaTime > 0f && (equipped || rechargeWhileStowed))
         {
             currentMaskOxygen = Mathf.Min(maxMaskOxygen, currentMaskOxygen + oxygenRechargePerSecond * deltaTime);
         }
+
+        UpdateOverlayMaskPresentation(owner, equipped);
     }
 
     public float ConsumeSuppliedOxygen(float amount)
@@ -122,5 +133,68 @@ public class OxygenMask : WornGearItem, IPlayerExternalOxygenSource
         }
 
         vitals.UnbindExternalOxygenSource(this);
+    }
+
+    private void UpdateOverlayMaskPresentation(GameObject owner, bool equipped)
+    {
+        if (!driveOverlayMask)
+        {
+            return;
+        }
+
+        PlayerHazardOverlayUI resolvedOverlayUi = ResolveOverlayUi(owner);
+        if (resolvedOverlayUi == null)
+        {
+            return;
+        }
+
+        bool showHelmetOverlay = showHelmetOverlayWhenEnabled && equipped && IsGearEnabled;
+        bool showVisorOverlay = showHelmetOverlay && showVisorOverlayWhenEnabled;
+
+        resolvedOverlayUi.SetHelmetOverlayVisible(showHelmetOverlay);
+        resolvedOverlayUi.SetVisorOverlayVisible(showVisorOverlay, visorOverlayOpacity);
+        resolvedOverlayUi.SetVignetteMaskIntensity(ResolveLowOxygenVignetteIntensity(showHelmetOverlay));
+    }
+
+    private float ResolveLowOxygenVignetteIntensity(bool overlayIsVisible)
+    {
+        if (!overlayIsVisible)
+        {
+            return 0f;
+        }
+
+        if (!HasOxygenSupply)
+        {
+            return lowOxygenVignetteMax;
+        }
+
+        float threshold = Mathf.Clamp01(lowOxygenThreshold01);
+        if (threshold <= 0f || OxygenSupplyPercent01 > threshold)
+        {
+            return 0f;
+        }
+
+        float lowOxygen01 = Mathf.InverseLerp(threshold, 0f, OxygenSupplyPercent01);
+        return Mathf.Clamp01(lowOxygen01) * lowOxygenVignetteMax;
+    }
+
+    private PlayerHazardOverlayUI ResolveOverlayUi(GameObject owner)
+    {
+        if (overlayUi != null)
+        {
+            return overlayUi;
+        }
+
+        if (owner != null)
+        {
+            overlayUi = owner.GetComponentInChildren<PlayerHazardOverlayUI>(true);
+        }
+
+        if (overlayUi == null)
+        {
+            overlayUi = FindAnyObjectByType<PlayerHazardOverlayUI>();
+        }
+
+        return overlayUi;
     }
 }

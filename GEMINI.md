@@ -1,7 +1,7 @@
 # FF3D (Fightfigter 3D Simulator) - AI Agent Guidelines
 
 ## Project Overview
-**FF3D** is a first-person firefighter simulation game built with Unity (`m_EditorVersion: 6000.3.3f1`). The game focuses on simulating realistic firefighting scenarios where the player must assess the situation, select the right tools, control fire spread, and rescue victims under time pressure. 
+**FF3D** is a first-person firefighter simulation game built with Unity (`m_EditorVersion: 6000.4.4f1`). The game focuses on simulating realistic firefighting scenarios where the player must assess the situation, select the right tools, control fire spread, and rescue victims under time pressure. 
 
 Key gameplay systems include an FPS controller, interaction system, inventory, vitals management, and a comprehensive fire system covering intensity, spread, extinguishing mechanics, and damage.
 
@@ -18,7 +18,7 @@ Key gameplay systems include an FPS controller, interaction system, inventory, v
 Currently, the game is built manually through the Unity UI (`File > Build Settings`). However, headless operations can be run via the command line.
 
 ### Commands
-Ensure you use the correct Unity Editor path for version `6000.3.3f1`.
+Ensure you use the correct Unity Editor path for version `6000.4.4f1`.
 
 *   **Compile Check (headless):**
     ```powershell

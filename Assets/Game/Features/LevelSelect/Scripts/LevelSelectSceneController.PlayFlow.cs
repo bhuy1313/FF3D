@@ -60,6 +60,7 @@ public partial class LevelSelectSceneController
         }
 
         LoadingFlowState.ClearPendingIncidentPayload();
+        LoadingFlowState.ClearPendingCallPhaseResult();
 
         CloseLevelInfo();
         SceneManager.LoadScene(LoadingSceneName);

@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c514f2794fd459ca795f89836f5d629, type: 3}
+  m_Name: Tutorial_FireSimulationProfile
+  m_EditorClassIdentifier: Assembly-CSharp::FireSimulationProfile
+  simulationTickInterval: 0.1
+  clusterRefreshInterval: 0.2
+  ambientCoolingPerSecond: 0
+  wetnessCoolingPerSecond: 0
+  wetnessRecoveryPerSecond: 0.2
+  passiveIgnitionThreshold: 1
+  extinguishThreshold: 0.08
+  suppressionRecoveryDelaySeconds: 1.5
+  suppressionRecoveryHeatMultiplier: 0.15
+  fuelBurnPerSecond: 0
+  burnedOutHeatRetention: 0.15
+  neighborHeatTransferPerSecond: 0.5
+  sameSurfaceTransferMultiplier: 1.2
+  crossSurfaceTransferMultiplier: 0.65
+  verticalSpreadBias: 0.85
+  clusterMergeDistance: 2.5
+  maxClusterViews: 24

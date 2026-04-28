@@ -268,6 +268,7 @@ public partial class LevelSelectSceneController : MonoBehaviour
         EnsureDivider();
         EnsureLevelInfoPopup();
         EnsureSubMenuPopup();
+        EnsureRecordsRuntimeUi();
         SetupCard(suburbanCard, RegionSelection.Suburban);
         SetupCard(cityCard, RegionSelection.City);
         CloseLevelInfo(instant: true);
@@ -1184,6 +1185,12 @@ public partial class LevelSelectSceneController : MonoBehaviour
 
     private void HandleEscapePressed()
     {
+        if (IsRecordsPanelOpen())
+        {
+            CloseRecordsPanel();
+            return;
+        }
+
         if (IsSettingsOpen())
         {
             RequestCloseSettings();
@@ -1402,6 +1409,7 @@ public partial class LevelSelectSceneController : MonoBehaviour
 
         BuildScenarioDropdown(definition);
         ApplyLevelInfoTexts(card, definition, sourceButton);
+        RefreshLevelSuperDetail();
         RefreshLevelInfoLayout();
         RefreshPlayButtonState(definition);
         RefreshScenarioDropdownToggleVisualState();
@@ -1446,6 +1454,7 @@ public partial class LevelSelectSceneController : MonoBehaviour
         selectedScenarioOverride = null;
         ResetScenarioDropdownClickState();
         SetScenarioDropdownVisible(false);
+        HideLevelSuperDetailImmediate();
         selectedLevelSourceButton = null;
         RefreshScenarioDropdownToggleVisualState();
 
@@ -2171,6 +2180,7 @@ public partial class LevelSelectSceneController : MonoBehaviour
         ResetScenarioDropdownClickState();
         SetScenarioDropdownVisible(false);
         ApplyLevelInfoTexts(selectedLevelCard, selectedLevelDefinition, selectedLevelSourceButton);
+        RefreshLevelSuperDetail();
         RefreshLevelInfoLayout();
         RefreshPlayButtonState(selectedLevelDefinition);
         RefreshScenarioDropdownToggleVisualState();
@@ -2388,10 +2398,12 @@ public partial class LevelSelectSceneController : MonoBehaviour
         RefreshRegionCardLayout(suburbanCard);
         RefreshRegionCardLayout(cityCard);
         RefreshPlayButtonText();
+        RefreshRecordsRuntimeUi();
 
         if (selectedLevelDefinition != null)
         {
             ApplyLevelInfoTexts(selectedLevelCard, selectedLevelDefinition, selectedLevelSourceButton);
+            RefreshLevelSuperDetail();
             RefreshLevelInfoLayout();
         }
     }
