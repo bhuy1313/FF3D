@@ -18,8 +18,13 @@ public class ExtinguishFiresObjectiveDefinition : MissionObjectiveDefinition
     public override MissionObjectiveEvaluation Evaluate(MissionProgressSnapshot snapshot)
     {
         string title = ResolveTitle("Extinguish Fires");
-        bool isRelevant = snapshot.TotalTrackedFires > 0;
-        bool isComplete = isRelevant && snapshot.ExtinguishedFireCount >= snapshot.TotalTrackedFires;
+        // Objective is relevant whenever the scene has fire simulation managers,
+        // even before incident placements are applied (TotalTrackedFires becomes >0
+        // only after IncidentPayloadAnchor.SetupIncident runs and tracks nodes).
+        bool isRelevant = snapshot.HasFireSimulationManagers || snapshot.TotalTrackedFires > 0;
+        bool isComplete = isRelevant
+            && snapshot.TotalTrackedFires > 0
+            && snapshot.ExtinguishedFireCount >= snapshot.TotalTrackedFires;
         string summary = MissionLocalization.Format(
             "mission.objective.extinguish_fires.summary",
             "{0}: {1}/{2} extinguished",

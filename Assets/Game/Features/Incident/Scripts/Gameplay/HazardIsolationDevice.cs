@@ -1,5 +1,7 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Text;
 using TrueJourney.BotBehavior;
 using UnityEngine;
 using UnityEngine.Events;
@@ -18,7 +20,6 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
     [SerializeField] private bool startsIsolated;
     [SerializeField] private bool allowToggleAfterIsolation;
     [SerializeField] private IsolationHazardType hazardType = IsolationHazardType.None;
-    [SerializeField] private bool applyHazardTypeToLinkedFires = true;
     [SerializeField] private FireSimulationManager fireSimulationManager;
 
     [Header("Interaction")]
@@ -54,6 +55,11 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
     [SerializeField] private bool isTransitionInProgress;
     [SerializeField] private string currentStateSummary;
 
+    [Header("Linked Fires (Runtime, Read-Only)")]
+    [SerializeField] private int linkedFireNodeCount;
+    [SerializeField] private int linkedBurningFireNodeCount;
+    [SerializeField] [TextArea(1, 6)] private string linkedFireSummary;
+
     public bool IsIsolated => isIsolated;
     public bool IsTransitionInProgress => isTransitionInProgress;
     public bool IsHazardActive => !isIsolated;
@@ -61,9 +67,13 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
     public string CurrentStateSummary => currentStateSummary;
     public string HazardDisplayName => ResolveHazardDisplayName();
     public FireHazardType HazardType => ResolveFireHazardType();
+    public int LinkedFireNodeCount => linkedFireNodeCount;
+    public int LinkedBurningFireNodeCount => linkedBurningFireNodeCount;
 
     private Coroutine transitionRoutine;
     private PlayerActionLock activePlayerLock;
+    private FireSimulationManager subscribedManager;
+    private readonly List<FireRuntimeNode> linkedFireNodeBuffer = new List<FireRuntimeNode>();
 
     private void Awake()
     {
@@ -75,7 +85,9 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
     {
         BotRuntimeRegistry.RegisterHazardIsolationTarget(this);
         ResolveFireSimulationManager();
+        SubscribeToManager();
         ApplyIsolationState(startsIsolated, invokeEvents: false);
+        RefreshLinkedFireSummary();
     }
 
     private void OnDisable()
@@ -88,13 +100,13 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
 
         isTransitionInProgress = false;
         ReleasePlayerLock();
+        UnsubscribeFromManager();
         BotRuntimeRegistry.UnregisterHazardIsolationTarget(this);
     }
 
     private void OnValidate()
     {
         ResolveFireSimulationManager();
-        ApplyLinkedFireConfiguration();
         interactionDuration = Mathf.Max(0f, interactionDuration);
         activeLightIntensity = Mathf.Max(0f, activeLightIntensity);
         isolatedLightIntensity = Mathf.Max(0f, isolatedLightIntensity);
@@ -147,7 +159,44 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
 
     public void SetFireSimulationManager(FireSimulationManager manager)
     {
+        if (fireSimulationManager == manager)
+        {
+            return;
+        }
+
+        UnsubscribeFromManager();
         fireSimulationManager = manager;
+        if (isActiveAndEnabled)
+        {
+            SubscribeToManager();
+            RefreshLinkedFireSummary();
+        }
+    }
+
+    public void GetLinkedFireNodes(List<FireRuntimeNode> buffer)
+    {
+        if (buffer == null)
+        {
+            return;
+        }
+
+        buffer.Clear();
+        if (fireSimulationManager == null)
+        {
+            return;
+        }
+
+        fireSimulationManager.GetHazardLinkedNodes(buffer);
+    }
+
+    [ContextMenu("Log Linked Fires")]
+    private void LogLinkedFires()
+    {
+        RefreshLinkedFireSummary();
+        Debug.Log(
+            $"[{nameof(HazardIsolationDevice)}] '{name}' linked fires: {linkedFireNodeCount} " +
+            $"({linkedBurningFireNodeCount} burning)\n{linkedFireSummary}",
+            this);
     }
 
     public void SetRuntimeHazardType(FireHazardType fireHazardType)
@@ -165,7 +214,6 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
                 break;
         }
 
-        ApplyLinkedFireConfiguration();
         fireSimulationManager?.SetActiveIncidentHazardType(fireHazardType);
         RefreshPresentation();
     }
@@ -182,7 +230,6 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
         bool changed = isIsolated != isolated;
         isIsolated = isolated;
         isTransitionInProgress = false;
-        ApplyLinkedFireConfiguration();
 
         fireSimulationManager?.SetRuntimeHazardIsolation(isolated);
 
@@ -230,12 +277,75 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
         }
     }
 
-    private void ApplyLinkedFireConfiguration()
+    private void SubscribeToManager()
     {
-        if (fireSimulationManager != null || !applyHazardTypeToLinkedFires || hazardType == IsolationHazardType.None)
+        if (fireSimulationManager == null || subscribedManager == fireSimulationManager)
         {
             return;
         }
+
+        UnsubscribeFromManager();
+        fireSimulationManager.StateChanged += HandleManagerStateChanged;
+        subscribedManager = fireSimulationManager;
+    }
+
+    private void UnsubscribeFromManager()
+    {
+        if (subscribedManager == null)
+        {
+            return;
+        }
+
+        subscribedManager.StateChanged -= HandleManagerStateChanged;
+        subscribedManager = null;
+    }
+
+    private void HandleManagerStateChanged()
+    {
+        RefreshLinkedFireSummary();
+    }
+
+    private void RefreshLinkedFireSummary()
+    {
+        if (fireSimulationManager == null)
+        {
+            linkedFireNodeCount = 0;
+            linkedBurningFireNodeCount = 0;
+            linkedFireSummary = "<no FireSimulationManager>";
+            return;
+        }
+
+        fireSimulationManager.GetHazardLinkedNodes(linkedFireNodeBuffer);
+        linkedFireNodeCount = linkedFireNodeBuffer.Count;
+
+        int burning = 0;
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < linkedFireNodeBuffer.Count; i++)
+        {
+            FireRuntimeNode node = linkedFireNodeBuffer[i];
+            if (node == null)
+            {
+                continue;
+            }
+
+            if (node.IsBurning)
+            {
+                burning++;
+            }
+
+            if (sb.Length > 0)
+            {
+                sb.Append('\n');
+            }
+
+            sb.Append('[').Append(node.IncidentNodeKind).Append("] idx=").Append(node.Index)
+                .Append(" heat=").Append(node.Heat.ToString("0.00"))
+                .Append(" fuel=").Append(node.RemainingFuel.ToString("0.00"))
+                .Append(node.IsBurning ? " (burning)" : " (idle)");
+        }
+
+        linkedBurningFireNodeCount = burning;
+        linkedFireSummary = sb.Length > 0 ? sb.ToString() : "<no linked fires>";
     }
 
     private FireHazardType ResolveFireHazardType()

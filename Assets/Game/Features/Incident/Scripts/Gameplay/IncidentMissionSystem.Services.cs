@@ -235,11 +235,18 @@ public partial class IncidentMissionSystem
 
         public void BuildLegacyObjectiveStatuses(MissionProgressSnapshot snapshot)
         {
-            if (owner.requireAllFiresExtinguished && snapshot.TotalTrackedFires > 0)
+            // Show fire objective whenever managers exist in scene, mirroring the
+            // definition-based ExtinguishFiresObjectiveDefinition behaviour so the
+            // HUD slot remains visible even before incident placements run.
+            bool fireObjectiveRelevant = owner.requireAllFiresExtinguished
+                && (snapshot.HasFireSimulationManagers || snapshot.TotalTrackedFires > 0);
+            if (fireObjectiveRelevant)
             {
                 float fireProgress = snapshot.TotalTrackedFires > 0
                     ? (float)snapshot.ExtinguishedFireCount / snapshot.TotalTrackedFires
                     : 0f;
+                bool fireObjectiveComplete = snapshot.TotalTrackedFires > 0
+                    && snapshot.ExtinguishedFireCount >= snapshot.TotalTrackedFires;
                 AddObjectiveStatus(new MissionObjectiveEvaluation(
                     MissionLocalization.Get("mission.objective.extinguish_fires.title", "Extinguish Fires"),
                     MissionLocalization.Format(
@@ -248,7 +255,7 @@ public partial class IncidentMissionSystem
                         MissionLocalization.Get("mission.objective.extinguish_fires.title", "Extinguish Fires"),
                         snapshot.ExtinguishedFireCount,
                         snapshot.TotalTrackedFires),
-                    snapshot.ExtinguishedFireCount >= snapshot.TotalTrackedFires,
+                    fireObjectiveComplete,
                     false,
                     true),
                     CreateLegacyProgressiveScore(fireProgress));

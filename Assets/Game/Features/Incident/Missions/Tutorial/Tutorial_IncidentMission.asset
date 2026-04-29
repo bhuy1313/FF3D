@@ -66,7 +66,6 @@ MonoBehaviour:
   - {fileID: -6214757763015457601}
   failConditions:
   - {fileID: 8481906818168850071}
-  - {fileID: 8481906818168850072}
 --- !u!114 &1803299867243040891
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -105,20 +104,3 @@ MonoBehaviour:
   timeLimitSeconds: 240
   remainingSummaryLocalizationKey: 
   disabledSummaryLocalizationKey: 
---- !u!114 &8481906818168850072
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 521dc86dc5a04d3599ad626fa5556b89, type: 3}
-  m_Name: Tutorial_AnyVictimDeathFailCondition_AnyVictimDeathFailConditionDefinition
-  m_EditorClassIdentifier: Assembly-CSharp::AnyVictimDeathFailConditionDefinition
-  failConditionTitleLocalizationKey: 
-  failConditionTitle: Victim Fatality
-  failConditionDescriptionLocalizationKey: 
-  failConditionDescription: Do not allow any victim to die during the tutorial.
-  autoDiscoverVictimConditions: 1

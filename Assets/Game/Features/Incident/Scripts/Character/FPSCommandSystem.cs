@@ -502,9 +502,16 @@ namespace StarterAssets
                 {
                     if (logCommandSelection)
                     {
-                        Debug.LogWarning($"[FPSCommandSystem] Extinguish found no burning fire or active fire group near {primaryHit.point}.", this);
+                        Debug.LogWarning($"[FPSCommandSystem] Extinguish found no burning fire or active fire group near {primaryHit.point}. Cancelling command.", this);
                     }
 
+                    // Invalid deployment point: abort the command instead of forcing the
+                    // player to keep clicking until a valid fire is hit.
+                    commandState.Cancel();
+                    destinationConfirmClickGate.Reset();
+                    selectedCommandTarget = null;
+                    UpdateTargetOutline(null);
+                    hasPreviewPoint = false;
                     return;
                 }
 

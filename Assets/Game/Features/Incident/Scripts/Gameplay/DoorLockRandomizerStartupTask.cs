@@ -59,7 +59,7 @@ public class DoorLockRandomizerStartupTask : SceneStartupTask
     private bool ResolveLockedState(Door door, int baseSeed)
     {
         string key = GetHierarchyPath(door.transform);
-        int doorSeed = CombineHash(baseSeed, StableHash(key));
+        int doorSeed = IncidentSeedUtility.CombineHash(baseSeed, IncidentSeedUtility.StableHash(key));
         System.Random random = new System.Random(doorSeed);
         double normalizedPercentage = Mathf.Clamp(lockedPercentage, 0f, 100f) / 100f;
         return random.NextDouble() < normalizedPercentage;
@@ -72,51 +72,24 @@ public class DoorLockRandomizerStartupTask : SceneStartupTask
             return Environment.TickCount ^ seedOffset;
         }
 
-        int seed = StableHash(SceneManager.GetActiveScene().path);
-        seed = CombineHash(seed, seedOffset);
+        int seed = IncidentSeedUtility.StableHash(SceneManager.GetActiveScene().path);
+        seed = IncidentSeedUtility.CombineHash(seed, seedOffset);
 
         if (LoadingFlowState.TryGetPendingIncidentPayload(out IncidentWorldSetupPayload payload) && payload != null)
         {
-            seed = CombineHash(seed, StableHash(payload.caseId));
-            seed = CombineHash(seed, StableHash(payload.scenarioId));
-            seed = CombineHash(seed, StableHash(payload.fireOrigin));
-            seed = CombineHash(seed, StableHash(payload.logicalFireLocation));
+            seed = IncidentSeedUtility.CombineHash(seed, IncidentSeedUtility.StableHash(payload.caseId));
+            seed = IncidentSeedUtility.CombineHash(seed, IncidentSeedUtility.StableHash(payload.scenarioId));
+            seed = IncidentSeedUtility.CombineHash(seed, IncidentSeedUtility.StableHash(payload.fireOrigin));
+            seed = IncidentSeedUtility.CombineHash(seed, IncidentSeedUtility.StableHash(payload.logicalFireLocation));
             return seed;
         }
 
         if (LoadingFlowState.TryGetPendingCaseId(out string caseId))
         {
-            seed = CombineHash(seed, StableHash(caseId));
+            seed = IncidentSeedUtility.CombineHash(seed, IncidentSeedUtility.StableHash(caseId));
         }
 
         return seed;
-    }
-
-    private static int StableHash(string value)
-    {
-        unchecked
-        {
-            if (string.IsNullOrEmpty(value))
-            {
-                return 0;
-            }
-
-            int hash = 23;
-            for (int i = 0; i < value.Length; i++)
-            {
-                hash = (hash * 31) + value[i];
-            }
-
-            return hash;
-        }
-    }
-
-    private static int CombineHash(int left, int right)
-    {
-        unchecked
-        {
-            return (left * 397) ^ right;
-        }
     }
 
     private static string GetHierarchyPath(Transform target)

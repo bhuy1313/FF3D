@@ -60,6 +60,7 @@ public sealed class FireRuntimeNode
     public float IgnitionThreshold { get; }
     public float SpreadResistance { get; }
     public bool IsTrackedByIncident { get; set; }
+    public FireIncidentNodeKind IncidentNodeKind { get; set; } = FireIncidentNodeKind.Late;
     public bool HasReachedSpreadSaturation { get; set; }
     public bool IsRemoved { get; set; }
     public bool IsBurning => !IsRemoved && Heat >= IgnitionThreshold && RemainingFuel > 0f;

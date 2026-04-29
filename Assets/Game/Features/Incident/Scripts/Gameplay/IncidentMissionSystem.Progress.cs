@@ -74,6 +74,8 @@ public partial class IncidentMissionSystem
         return results;
     }
 
+    // Counts hazard-linked nodes (Primary + Secondary, excluding Late spread nodes)
+    // so the objective metric reflects "fires the player must actively suppress".
     private static int CountTrackedSimulationNodes(List<FireSimulationManager> managers)
     {
         int count = 0;
@@ -87,7 +89,7 @@ public partial class IncidentMissionSystem
             FireSimulationManager manager = managers[i];
             if (manager != null && manager.IsInitialized)
             {
-                count += manager.GetTrackedNodeCount();
+                count += manager.GetHazardLinkedNodeCount();
             }
         }
 
@@ -107,11 +109,31 @@ public partial class IncidentMissionSystem
             FireSimulationManager manager = managers[i];
             if (manager != null && manager.IsInitialized)
             {
-                count += manager.GetExtinguishedTrackedNodeCount();
+                int hazardLinked = manager.GetHazardLinkedNodeCount();
+                int hazardLinkedBurning = manager.GetHazardLinkedBurningNodeCount();
+                count += Mathf.Max(0, hazardLinked - hazardLinkedBurning);
             }
         }
 
         return count;
+    }
+
+    private static bool HasAnyFireSimulationManager(List<FireSimulationManager> managers)
+    {
+        if (managers == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < managers.Count; i++)
+        {
+            if (managers[i] != null)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static int CountRescuedTargets(List<Rescuable> rescuables)

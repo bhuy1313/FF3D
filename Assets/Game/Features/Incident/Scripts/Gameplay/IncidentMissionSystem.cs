@@ -765,7 +765,8 @@ public partial class IncidentMissionSystem : MonoBehaviour
             criticalVictimCount,
             stabilizedVictimCount,
             extractedVictimCount,
-            deceasedVictimCount);
+            deceasedVictimCount,
+            HasAnyFireSimulationManager(trackedFireSimulationManagers));
     }
 
     private MissionProgressSnapshot BuildResultPerformanceSnapshot()
@@ -814,7 +815,8 @@ public partial class IncidentMissionSystem : MonoBehaviour
             CountVictimsInState(resultVictimConditions, VictimCondition.TriageState.Critical),
             CountStabilizedVictims(resultVictimConditions),
             CountExtractedVictims(resultVictimConditions),
-            CountVictimsInState(resultVictimConditions, VictimCondition.TriageState.Deceased));
+            CountVictimsInState(resultVictimConditions, VictimCondition.TriageState.Deceased),
+            HasAnyFireSimulationManager(resultSimulationManagers));
     }
 
     private void CollectResultSceneTargets(MissionRuntimeSceneData sceneData)

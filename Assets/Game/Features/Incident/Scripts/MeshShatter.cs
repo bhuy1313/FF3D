@@ -1,9 +1,15 @@
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 [DisallowMultipleComponent]
 public class MeshShatter : MonoBehaviour
 {
+    [Serializable] public class ShatterUnityEvent : UnityEvent<Vector3, Vector3, float> { }
+    [Serializable] public class ShardUnityEvent : UnityEvent<Rigidbody> { }
+
     public enum ShatterMode
     {
         SurfaceShards,
@@ -56,12 +62,58 @@ public class MeshShatter : MonoBehaviour
     [Tooltip("Optional override when no IMovementWeightSource is available. Set to 0 to resolve mass from the hierarchy.")]
     [SerializeField] private float sourceMassOverrideKg = 0f;
 
+    [Header("Impact Force")]
+    [Tooltip("Base impulse magnitude (kg*m/s) applied to each shard along the resolved impact direction.")]
+    [SerializeField] private float impulseStrength = 2.5f;
+    [Tooltip("How strongly the incoming impact direction biases the shard impulse direction.")]
+    [SerializeField] private float impactDirectionWeight = 1f;
+    [Tooltip("How strongly each shard's outward surface normal biases the shard impulse direction.")]
+    [SerializeField] private float surfaceNormalWeight = 0.5f;
+    [Tooltip("Random spread (0..1) added to the resolved impulse direction per shard.")]
+    [SerializeField, Range(0f, 1f)] private float impactSpread = 0.2f;
+    [Tooltip("Random impulse magnitude (0..1) blended on top of the base impulse per shard.")]
+    [SerializeField, Range(0f, 1f)] private float randomImpulse = 0.35f;
+    [Tooltip("Random angular velocity magnitude (rad/s) applied to each shard.")]
+    [SerializeField] private float randomTorque = 1.5f;
+
+    [Header("Spawn Pacing")]
+    [Tooltip("Spawn at most this many shards per frame to avoid CPU spikes. Set to 0 to spawn all in one frame (sync).")]
+    [SerializeField] private int shardsPerFrame = 0;
+
+    [Header("Force Scaling")]
+    [Tooltip("How much the incoming forceMultiplier scales shard count. 0 = no influence, 1 = full proportional scaling.")]
+    [SerializeField, Range(0f, 1f)] private float forceCountInfluence = 0.4f;
+    [Tooltip("Radius (mesh-local units) within which surface shards get an extra subdivision level. 0 = uniform subdivision.")]
+    [SerializeField] private float impactInfluenceRadius = 0f;
+
+    [Header("Source Inheritance")]
+    [Tooltip("Copy PhysicMaterial / layer / tag from the source collider onto each shard for consistent physics & gameplay tagging.")]
+    [SerializeField] private bool inheritSourceColliderProperties = true;
+
     [Header("Cleanup")]
     [SerializeField] private float destroyAfterSeconds = 8f;
     [SerializeField] private bool disableOriginalRenderer = true;
     [SerializeField] private bool disableConfiguredColliders = true;
 
+    [Header("Events")]
+    [SerializeField] private ShatterUnityEvent onShatter = new ShatterUnityEvent();
+    [SerializeField] private ShardUnityEvent onShardSpawned = new ShardUnityEvent();
+
+    public ShatterUnityEvent OnShatter => onShatter;
+    public ShardUnityEvent OnShardSpawned => onShardSpawned;
+
     [SerializeField] private bool isShattered;
+
+    private const int MaxPreLimitShardCount = 4096;
+
+    private Vector3 currentImpactPoint;
+    private Vector3 currentImpactDirection;
+    private float currentForceMultiplier;
+
+    private readonly List<Mesh> generatedMeshes = new List<Mesh>();
+    private Vector3 lastShatterPoint;
+    private Vector3 lastShatterDirection;
+    private bool hasRecordedShatter;
 
     public bool IsShattered => isShattered;
 
@@ -85,6 +137,15 @@ public class MeshShatter : MonoBehaviour
         maxSpawnedShards = Mathf.Max(0, maxSpawnedShards);
         sourceMassOverrideKg = Mathf.Max(0f, sourceMassOverrideKg);
         destroyAfterSeconds = Mathf.Max(0f, destroyAfterSeconds);
+        impulseStrength = Mathf.Max(0f, impulseStrength);
+        impactDirectionWeight = Mathf.Max(0f, impactDirectionWeight);
+        surfaceNormalWeight = Mathf.Max(0f, surfaceNormalWeight);
+        impactSpread = Mathf.Clamp01(impactSpread);
+        randomImpulse = Mathf.Clamp01(randomImpulse);
+        randomTorque = Mathf.Max(0f, randomTorque);
+        shardsPerFrame = Mathf.Max(0, shardsPerFrame);
+        forceCountInfluence = Mathf.Clamp01(forceCountInfluence);
+        impactInfluenceRadius = Mathf.Max(0f, impactInfluenceRadius);
 
         if (!Application.isPlaying)
         {
@@ -112,8 +173,15 @@ public class MeshShatter : MonoBehaviour
             return;
         }
 
+        currentImpactPoint = impactPoint;
+        currentImpactDirection = impactDirection;
+        currentForceMultiplier = Mathf.Max(0f, forceMultiplier);
+        lastShatterPoint = impactPoint;
+        lastShatterDirection = impactDirection;
+        hasRecordedShatter = true;
+
         int patternSeed = randomizeShardPattern
-            ? UnityEngine.Random.Range(int.MinValue, int.MaxValue)
+            ? UnityEngine.Random.Range(int.MinValue, int.MaxValue - 1)
             : shardPatternSeed;
         Material[] shardMaterials = ResolveShardMaterials();
         Transform shardRoot = CreateShardRoot();
@@ -134,16 +202,16 @@ public class MeshShatter : MonoBehaviour
             }
 
             float resolvedShardMass = ResolveRuntimeShardMass(chunks.Count);
-            for (int i = 0; i < chunks.Count; i++)
+            if (ShouldUseCoroutineSpawn())
             {
-                SpawnDebrisChunk(
-                    chunks[i],
-                    i,
-                    shardRoot,
-                    shardMaterials,
-                    meshTransform,
-                    resolvedShardMass,
-                    shardRandom);
+                StartCoroutine(SpawnDebrisChunksRoutine(chunks, shardRoot, shardMaterials, meshTransform, resolvedShardMass, shardRandom));
+            }
+            else
+            {
+                for (int i = 0; i < chunks.Count; i++)
+                {
+                    SpawnDebrisChunk(chunks[i], i, shardRoot, shardMaterials, meshTransform, resolvedShardMass, shardRandom);
+                }
             }
         }
         else
@@ -156,15 +224,35 @@ public class MeshShatter : MonoBehaviour
                 return;
             }
 
+            int safeDepth = MeshShatterUtility.ResolveSafeSubdivisionDepth(
+                sourceMesh,
+                subdivisionDepth,
+                targetSubmesh,
+                MaxPreLimitShardCount);
             List<MeshShatterUtility.TriangleShard> shards;
             try
             {
-                shards = MeshShatterUtility.CreateTriangleShards(
-                    sourceMesh,
-                    subdivisionDepth,
-                    splitJitter,
-                    patternSeed,
-                    targetSubmesh);
+                if (impactInfluenceRadius > 0f)
+                {
+                    Vector3 impactLocal = meshTransform.InverseTransformPoint(impactPoint);
+                    shards = MeshShatterUtility.CreateTriangleShardsImpactWeighted(
+                        sourceMesh,
+                        safeDepth,
+                        splitJitter,
+                        patternSeed,
+                        targetSubmesh,
+                        impactLocal,
+                        impactInfluenceRadius);
+                }
+                else
+                {
+                    shards = MeshShatterUtility.CreateTriangleShards(
+                        sourceMesh,
+                        safeDepth,
+                        splitJitter,
+                        patternSeed,
+                        targetSubmesh);
+                }
             }
             catch (UnityException exception)
             {
@@ -181,28 +269,112 @@ public class MeshShatter : MonoBehaviour
             }
 
             float resolvedShardMass = ResolveRuntimeShardMass(shards.Count);
-            for (int i = 0; i < shards.Count; i++)
+            if (ShouldUseCoroutineSpawn())
             {
-                SpawnShard(
-                    shards[i],
-                    i,
-                    shardRoot,
-                    shardMaterials,
-                    meshTransform,
-                    resolvedShardMass,
-                    shardRandom);
+                StartCoroutine(SpawnSurfaceShardsRoutine(shards, shardRoot, shardMaterials, meshTransform, resolvedShardMass, shardRandom));
+            }
+            else
+            {
+                for (int i = 0; i < shards.Count; i++)
+                {
+                    SpawnShard(shards[i], i, shardRoot, shardMaterials, meshTransform, resolvedShardMass, shardRandom);
+                }
             }
         }
 
         bool preservedRemainingMesh = TryPreserveRemainingMesh(sourceMesh);
         DisableOriginalState(preservedRemainingMesh);
+        ScheduleShardRootDestroy(shardRoot);
         isShattered = true;
+        onShatter?.Invoke(impactPoint, impactDirection, currentForceMultiplier);
+    }
+
+    private bool ShouldUseCoroutineSpawn()
+    {
+        return shardsPerFrame > 0 && Application.isPlaying && isActiveAndEnabled;
+    }
+
+    private IEnumerator SpawnSurfaceShardsRoutine(
+        List<MeshShatterUtility.TriangleShard> shards,
+        Transform shardRoot,
+        Material[] shardMaterials,
+        Transform meshTransform,
+        float resolvedShardMass,
+        System.Random shardRandom)
+    {
+        int perFrame = Mathf.Max(1, shardsPerFrame);
+        for (int i = 0; i < shards.Count; i++)
+        {
+            if (shardRoot == null)
+            {
+                yield break;
+            }
+
+            SpawnShard(shards[i], i, shardRoot, shardMaterials, meshTransform, resolvedShardMass, shardRandom);
+            if ((i + 1) % perFrame == 0 && i < shards.Count - 1)
+            {
+                yield return null;
+            }
+        }
+    }
+
+    private IEnumerator SpawnDebrisChunksRoutine(
+        List<MeshShatterUtility.BoundsChunk> chunks,
+        Transform shardRoot,
+        Material[] shardMaterials,
+        Transform meshTransform,
+        float resolvedShardMass,
+        System.Random shardRandom)
+    {
+        int perFrame = Mathf.Max(1, shardsPerFrame);
+        for (int i = 0; i < chunks.Count; i++)
+        {
+            if (shardRoot == null)
+            {
+                yield break;
+            }
+
+            SpawnDebrisChunk(chunks[i], i, shardRoot, shardMaterials, meshTransform, resolvedShardMass, shardRandom);
+            if ((i + 1) % perFrame == 0 && i < chunks.Count - 1)
+            {
+                yield return null;
+            }
+        }
+    }
+
+    private void ScheduleShardRootDestroy(Transform shardRoot)
+    {
+        if (shardRoot == null || destroyAfterSeconds <= 0f)
+        {
+            return;
+        }
+
+        Destroy(shardRoot.gameObject, destroyAfterSeconds + 0.5f);
     }
 
     [ContextMenu("Apply Preset Values")]
     private void ApplyPresetValuesContextMenu()
     {
         ApplyPresetValues();
+    }
+
+    [ContextMenu("Shatter Now (Play Mode)")]
+    private void ShatterNowContextMenu()
+    {
+        if (!Application.isPlaying)
+        {
+            Debug.LogWarning("MeshShatter: 'Shatter Now' only works in Play Mode.", this);
+            return;
+        }
+
+        Shatter();
+    }
+
+    [ContextMenu("Reset Shatter State")]
+    private void ResetShatterStateContextMenu()
+    {
+        isShattered = false;
+        hasRecordedShatter = false;
     }
 
     private void ResolveReferences()
@@ -395,22 +567,36 @@ public class MeshShatter : MonoBehaviour
         float sourceMassKg = autoTuneFromSourceMass
             ? ResolveSourceMassKg()
             : 0f;
+        int baseCount;
         if (sourceMassKg > 0f)
         {
-            return ApplySizeMultiplierToPreferredCount(ResolveAutoShardTargetCount(sourceMassKg));
+            baseCount = ApplySizeMultiplierToPreferredCount(ResolveAutoShardTargetCount(sourceMassKg));
         }
-
-        if (maxSpawnedShards > 0)
+        else if (maxSpawnedShards > 0)
         {
-            return ApplySizeMultiplierToPreferredCount(maxSpawnedShards);
+            baseCount = ApplySizeMultiplierToPreferredCount(maxSpawnedShards);
         }
-
-        if (shatterMode != ShatterMode.DebrisChunks)
+        else if (shatterMode != ShatterMode.DebrisChunks)
         {
-            return 0;
+            baseCount = 0;
+        }
+        else
+        {
+            baseCount = ApplySizeMultiplierToPreferredCount(ResolveDefaultDebrisChunkCount());
         }
 
-        return ApplySizeMultiplierToPreferredCount(ResolveDefaultDebrisChunkCount());
+        return ApplyForceScalingToShardCount(baseCount);
+    }
+
+    private int ApplyForceScalingToShardCount(int baseCount)
+    {
+        if (baseCount <= 0 || forceCountInfluence <= 0f)
+        {
+            return baseCount;
+        }
+
+        float forceFactor = Mathf.Lerp(1f, Mathf.Max(0.1f, currentForceMultiplier), forceCountInfluence);
+        return Mathf.Max(1, Mathf.RoundToInt(baseCount * forceFactor));
     }
 
     private int ApplySizeMultiplierToPreferredCount(int preferredCount)
@@ -588,6 +774,10 @@ public class MeshShatter : MonoBehaviour
 
         Rigidbody rigidbody = shardObject.AddComponent<Rigidbody>();
         rigidbody.mass = resolvedShardMass;
+        InheritSourceProperties(shardObject, shardCollider);
+        ApplyShardImpulse(rigidbody, worldCenter, (worldCenter - currentImpactPoint).normalized, shardRandom);
+        TrackGeneratedMesh(chunkMesh);
+        onShardSpawned?.Invoke(rigidbody);
 
         if (destroyAfterSeconds > 0f)
         {
@@ -646,6 +836,15 @@ public class MeshShatter : MonoBehaviour
 
         Rigidbody rigidbody = shardObject.AddComponent<Rigidbody>();
         rigidbody.mass = resolvedShardMass;
+        Vector3 shardNormal = Vector3.Cross(worldB - worldA, worldC - worldA).normalized;
+        if (shardNormal.sqrMagnitude < 0.0001f)
+        {
+            shardNormal = (center - currentImpactPoint).normalized;
+        }
+        InheritSourceProperties(shardObject, shardCollider);
+        ApplyShardImpulse(rigidbody, center, shardNormal, shardRandom);
+        TrackGeneratedMesh(shardMesh);
+        onShardSpawned?.Invoke(rigidbody);
 
         if (destroyAfterSeconds > 0f)
         {
@@ -680,6 +879,186 @@ public class MeshShatter : MonoBehaviour
         return new Vector3(uniformScale, uniformScale, uniformScale);
     }
 
+    private void ApplyShardImpulse(Rigidbody body, Vector3 shardCenter, Vector3 surfaceNormal, System.Random shardRandom)
+    {
+        if (body == null)
+        {
+            return;
+        }
+
+        Vector3 direction = ResolveImpulseDirection(
+            currentImpactDirection,
+            currentImpactPoint,
+            shardCenter,
+            surfaceNormal);
+
+        if (impactSpread > 0f && shardRandom != null)
+        {
+            Vector3 spread = new Vector3(
+                (float)shardRandom.NextDouble() * 2f - 1f,
+                (float)shardRandom.NextDouble() * 2f - 1f,
+                (float)shardRandom.NextDouble() * 2f - 1f) * impactSpread;
+            direction = (direction + spread).normalized;
+        }
+
+        if (direction.sqrMagnitude < 0.0001f)
+        {
+            direction = Vector3.up;
+        }
+
+        float impulseMagnitude = impulseStrength * Mathf.Max(0f, currentForceMultiplier);
+        if (randomImpulse > 0f && shardRandom != null)
+        {
+            float randomFactor = 1f + ((float)shardRandom.NextDouble() * 2f - 1f) * randomImpulse;
+            impulseMagnitude *= Mathf.Max(0f, randomFactor);
+        }
+
+        if (impulseMagnitude > 0f)
+        {
+            body.AddForce(direction * impulseMagnitude, ForceMode.Impulse);
+        }
+
+        if (randomTorque > 0f && shardRandom != null)
+        {
+            Vector3 torque = new Vector3(
+                (float)shardRandom.NextDouble() * 2f - 1f,
+                (float)shardRandom.NextDouble() * 2f - 1f,
+                (float)shardRandom.NextDouble() * 2f - 1f) * randomTorque;
+            body.AddTorque(torque, ForceMode.VelocityChange);
+        }
+    }
+
+    private Vector3 ResolveImpulseDirection(
+        Vector3 impactDirection,
+        Vector3 impactPoint,
+        Vector3 shardCenter,
+        Vector3 surfaceNormal)
+    {
+        Vector3 baseDirection = impactDirection;
+        if (baseDirection.sqrMagnitude < 0.0001f)
+        {
+            baseDirection = shardCenter - impactPoint;
+        }
+
+        if (baseDirection.sqrMagnitude < 0.0001f)
+        {
+            baseDirection = surfaceNormal.sqrMagnitude > 0.0001f ? surfaceNormal : Vector3.up;
+        }
+
+        Vector3 normalized = baseDirection.normalized;
+        Vector3 normalContribution = surfaceNormal.sqrMagnitude > 0.0001f
+            ? surfaceNormal.normalized * surfaceNormalWeight
+            : Vector3.zero;
+        Vector3 result = normalized * impactDirectionWeight + normalContribution;
+        if (result.sqrMagnitude < 0.0001f)
+        {
+            return normalized;
+        }
+
+        return result.normalized;
+    }
+
+    private void InheritSourceProperties(GameObject shardObject, Collider shardCollider)
+    {
+        if (!inheritSourceColliderProperties || shardObject == null)
+        {
+            return;
+        }
+
+        Collider source = ResolveSourceColliderForInheritance();
+        if (source == null)
+        {
+            return;
+        }
+
+        shardObject.layer = source.gameObject.layer;
+        if (!string.IsNullOrEmpty(source.tag) && source.tag != "Untagged")
+        {
+            try { shardObject.tag = source.tag; }
+            catch (UnityException) { /* tag may be invalid in some test contexts */ }
+        }
+
+        if (shardCollider != null && source.sharedMaterial != null)
+        {
+            shardCollider.sharedMaterial = source.sharedMaterial;
+        }
+    }
+
+    private Collider ResolveSourceColliderForInheritance()
+    {
+        if (collidersToDisable != null)
+        {
+            for (int i = 0; i < collidersToDisable.Length; i++)
+            {
+                if (collidersToDisable[i] != null)
+                {
+                    return collidersToDisable[i];
+                }
+            }
+        }
+
+        return GetComponent<Collider>();
+    }
+
+    private void TrackGeneratedMesh(Mesh mesh)
+    {
+        if (mesh == null)
+        {
+            return;
+        }
+
+        generatedMeshes.Add(mesh);
+        if (destroyAfterSeconds > 0f)
+        {
+            Destroy(mesh, destroyAfterSeconds + 0.5f);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        for (int i = 0; i < generatedMeshes.Count; i++)
+        {
+            Mesh mesh = generatedMeshes[i];
+            if (mesh != null)
+            {
+                Destroy(mesh);
+            }
+        }
+
+        generatedMeshes.Clear();
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        Mesh sourceMesh = targetMeshFilter != null ? targetMeshFilter.sharedMesh : null;
+        if (sourceMesh != null)
+        {
+            Transform meshTransform = targetMeshFilter.transform;
+            Gizmos.color = new Color(1f, 0.85f, 0.2f, 0.85f);
+            Matrix4x4 previous = Gizmos.matrix;
+            Gizmos.matrix = meshTransform.localToWorldMatrix;
+            Gizmos.DrawWireCube(sourceMesh.bounds.center, sourceMesh.bounds.size);
+            Gizmos.matrix = previous;
+        }
+
+        if (hasRecordedShatter)
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawSphere(lastShatterPoint, 0.05f);
+            if (lastShatterDirection.sqrMagnitude > 0.0001f)
+            {
+                Gizmos.DrawLine(lastShatterPoint, lastShatterPoint + lastShatterDirection.normalized * 0.5f);
+            }
+        }
+
+        if (impactInfluenceRadius > 0f && targetMeshFilter != null)
+        {
+            Vector3 origin = hasRecordedShatter ? lastShatterPoint : targetMeshFilter.transform.position;
+            Gizmos.color = new Color(1f, 0.4f, 0.2f, 0.35f);
+            Gizmos.DrawWireSphere(origin, impactInfluenceRadius * targetMeshFilter.transform.lossyScale.x);
+        }
+    }
+
     private bool TryPreserveRemainingMesh(Mesh sourceMesh)
     {
         if (!keepNonShatteredSubmeshes || sourceMesh == null || targetMeshFilter == null)
@@ -699,6 +1078,7 @@ public class MeshShatter : MonoBehaviour
         }
 
         targetMeshFilter.mesh = preservedMesh;
+        generatedMeshes.Add(preservedMesh);
 
         if (targetRenderer != null && targetRenderer.sharedMaterials != null && targetRenderer.sharedMaterials.Length > 0)
         {
@@ -739,475 +1119,4 @@ public class MeshShatter : MonoBehaviour
         }
     }
 
-}
-
-public static class MeshShatterUtility
-{
-    public readonly struct BoundsChunk
-    {
-        public BoundsChunk(Vector3 center, Vector3 size)
-        {
-            Center = center;
-            Size = size;
-        }
-
-        public Vector3 Center { get; }
-        public Vector3 Size { get; }
-    }
-
-    public readonly struct TriangleShard
-    {
-        public TriangleShard(Vector3 a, Vector3 b, Vector3 c)
-        {
-            A = a;
-            B = b;
-            C = c;
-        }
-
-        public Vector3 A { get; }
-        public Vector3 B { get; }
-        public Vector3 C { get; }
-    }
-
-    public static List<TriangleShard> CreateTriangleShards(Mesh mesh, int subdivisionDepth)
-    {
-        return CreateTriangleShards(mesh, subdivisionDepth, 0f, 0, -1);
-    }
-
-    public static List<TriangleShard> CreateTriangleShards(Mesh mesh, int subdivisionDepth, float splitJitter, int seed)
-    {
-        return CreateTriangleShards(mesh, subdivisionDepth, splitJitter, seed, -1);
-    }
-
-    public static List<TriangleShard> CreateTriangleShards(Mesh mesh, int subdivisionDepth, float splitJitter, int seed, int targetSubmesh)
-    {
-        List<TriangleShard> shards = new List<TriangleShard>();
-        if (mesh == null)
-        {
-            return shards;
-        }
-
-        Vector3[] vertices = mesh.vertices;
-        int[] triangles = ResolveTriangles(mesh, targetSubmesh);
-        if (vertices == null || triangles == null || triangles.Length < 3)
-        {
-            return shards;
-        }
-
-        subdivisionDepth = Mathf.Clamp(subdivisionDepth, 0, 3);
-        splitJitter = Mathf.Clamp(splitJitter, 0f, 0.35f);
-        System.Random random = splitJitter > 0f ? new System.Random(seed) : null;
-        for (int i = 0; i <= triangles.Length - 3; i += 3)
-        {
-            TriangleShard triangle = new TriangleShard(
-                vertices[triangles[i]],
-                vertices[triangles[i + 1]],
-                vertices[triangles[i + 2]]);
-            SubdivideTriangle(triangle, subdivisionDepth, splitJitter, random, shards);
-        }
-
-        return shards;
-    }
-
-    public static Mesh CreateMeshWithoutSubmesh(Mesh sourceMesh, int removedSubmesh)
-    {
-        if (sourceMesh == null || removedSubmesh < 0 || removedSubmesh >= sourceMesh.subMeshCount || sourceMesh.subMeshCount <= 1)
-        {
-            return null;
-        }
-
-        Mesh mesh = new Mesh
-        {
-            name = sourceMesh.name + "_WithoutSubmesh_" + removedSubmesh
-        };
-        mesh.vertices = sourceMesh.vertices;
-        mesh.normals = sourceMesh.normals;
-        mesh.tangents = sourceMesh.tangents;
-        mesh.colors = sourceMesh.colors;
-        mesh.uv = sourceMesh.uv;
-        mesh.uv2 = sourceMesh.uv2;
-        mesh.uv3 = sourceMesh.uv3;
-        mesh.uv4 = sourceMesh.uv4;
-        mesh.subMeshCount = sourceMesh.subMeshCount - 1;
-
-        int writeIndex = 0;
-        for (int i = 0; i < sourceMesh.subMeshCount; i++)
-        {
-            if (i == removedSubmesh)
-            {
-                continue;
-            }
-
-            mesh.SetTriangles(sourceMesh.GetTriangles(i), writeIndex++);
-        }
-
-        mesh.RecalculateBounds();
-        if (mesh.normals == null || mesh.normals.Length == 0)
-        {
-            mesh.RecalculateNormals();
-        }
-
-        return mesh;
-    }
-
-    public static Mesh CreateShardMesh(Vector3 worldA, Vector3 worldB, Vector3 worldC, float thickness)
-    {
-        Vector3 center = (worldA + worldB + worldC) / 3f;
-        Vector3 normal = Vector3.Cross(worldB - worldA, worldC - worldA).normalized;
-        if (normal.sqrMagnitude <= 0.0001f)
-        {
-            normal = Vector3.forward;
-        }
-
-        float halfThickness = Mathf.Max(0.001f, thickness) * 0.5f;
-        Vector3[] vertices =
-        {
-            worldA - center + normal * halfThickness,
-            worldB - center + normal * halfThickness,
-            worldC - center + normal * halfThickness,
-            worldA - center - normal * halfThickness,
-            worldB - center - normal * halfThickness,
-            worldC - center - normal * halfThickness
-        };
-
-        int[] triangles =
-        {
-            0, 1, 2,
-            5, 4, 3,
-            0, 3, 4,
-            0, 4, 1,
-            1, 4, 5,
-            1, 5, 2,
-            2, 5, 3,
-            2, 3, 0
-        };
-
-        Vector2[] uv =
-        {
-            new Vector2(0f, 0f),
-            new Vector2(1f, 0f),
-            new Vector2(0.5f, 1f),
-            new Vector2(0f, 0f),
-            new Vector2(1f, 0f),
-            new Vector2(0.5f, 1f)
-        };
-
-        Mesh mesh = new Mesh
-        {
-            name = "ShatterShard"
-        };
-        mesh.vertices = vertices;
-        mesh.triangles = triangles;
-        mesh.uv = uv;
-        mesh.RecalculateNormals();
-        mesh.RecalculateBounds();
-        return mesh;
-    }
-
-    public static List<BoundsChunk> CreateBoundsChunks(Bounds bounds, int preferredChunkCount, float splitJitter, int seed)
-    {
-        List<BoundsChunk> chunks = new List<BoundsChunk>();
-        Vector3 size = bounds.size;
-        if (size.x <= 0f || size.y <= 0f || size.z <= 0f)
-        {
-            return chunks;
-        }
-
-        int targetChunkCount = Mathf.Max(1, preferredChunkCount);
-        Vector3Int grid = ResolveChunkGrid(size, targetChunkCount);
-        System.Random random = splitJitter > 0f ? new System.Random(seed) : null;
-        List<AxisSegment> xSegments = BuildAxisSegments(bounds.min.x, bounds.max.x, grid.x, splitJitter, random);
-        List<AxisSegment> ySegments = BuildAxisSegments(bounds.min.y, bounds.max.y, grid.y, splitJitter, random);
-        List<AxisSegment> zSegments = BuildAxisSegments(bounds.min.z, bounds.max.z, grid.z, splitJitter, random);
-
-        for (int x = 0; x < xSegments.Count; x++)
-        {
-            for (int y = 0; y < ySegments.Count; y++)
-            {
-                for (int z = 0; z < zSegments.Count; z++)
-                {
-                    Vector3 chunkSize = new Vector3(xSegments[x].Length, ySegments[y].Length, zSegments[z].Length);
-                    if (chunkSize.x <= 0.0001f || chunkSize.y <= 0.0001f || chunkSize.z <= 0.0001f)
-                    {
-                        continue;
-                    }
-
-                    Vector3 center = new Vector3(
-                        (xSegments[x].Min + xSegments[x].Max) * 0.5f,
-                        (ySegments[y].Min + ySegments[y].Max) * 0.5f,
-                        (zSegments[z].Min + zSegments[z].Max) * 0.5f);
-                    chunks.Add(new BoundsChunk(center, chunkSize));
-                }
-            }
-        }
-
-        return LimitBoundsChunkCount(chunks, targetChunkCount, seed ^ 165041);
-    }
-
-    public static Mesh CreateBoxChunkMesh(
-        Vector3 worldCenter,
-        Vector3 axisX,
-        Vector3 axisY,
-        Vector3 axisZ,
-        float cornerJitter,
-        System.Random random)
-    {
-        Vector3[] corners =
-        {
-            worldCenter + ResolveCornerOffset(-axisX, -axisY, -axisZ, cornerJitter, random),
-            worldCenter + ResolveCornerOffset(axisX, -axisY, -axisZ, cornerJitter, random),
-            worldCenter + ResolveCornerOffset(axisX, axisY, -axisZ, cornerJitter, random),
-            worldCenter + ResolveCornerOffset(-axisX, axisY, -axisZ, cornerJitter, random),
-            worldCenter + ResolveCornerOffset(-axisX, -axisY, axisZ, cornerJitter, random),
-            worldCenter + ResolveCornerOffset(axisX, -axisY, axisZ, cornerJitter, random),
-            worldCenter + ResolveCornerOffset(axisX, axisY, axisZ, cornerJitter, random),
-            worldCenter + ResolveCornerOffset(-axisX, axisY, axisZ, cornerJitter, random)
-        };
-
-        Vector3[] vertices =
-        {
-            corners[4] - worldCenter, corners[5] - worldCenter, corners[6] - worldCenter, corners[7] - worldCenter,
-            corners[1] - worldCenter, corners[0] - worldCenter, corners[3] - worldCenter, corners[2] - worldCenter,
-            corners[0] - worldCenter, corners[4] - worldCenter, corners[7] - worldCenter, corners[3] - worldCenter,
-            corners[5] - worldCenter, corners[1] - worldCenter, corners[2] - worldCenter, corners[6] - worldCenter,
-            corners[7] - worldCenter, corners[6] - worldCenter, corners[2] - worldCenter, corners[3] - worldCenter,
-            corners[0] - worldCenter, corners[1] - worldCenter, corners[5] - worldCenter, corners[4] - worldCenter
-        };
-
-        int[] triangles =
-        {
-            0, 1, 2, 0, 2, 3,
-            4, 5, 6, 4, 6, 7,
-            8, 9, 10, 8, 10, 11,
-            12, 13, 14, 12, 14, 15,
-            16, 17, 18, 16, 18, 19,
-            20, 21, 22, 20, 22, 23
-        };
-
-        Vector2[] uv =
-        {
-            new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(0f, 1f),
-            new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(0f, 1f),
-            new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(0f, 1f),
-            new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(0f, 1f),
-            new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(0f, 1f),
-            new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(0f, 1f)
-        };
-
-        Mesh mesh = new Mesh
-        {
-            name = "ShatterChunk"
-        };
-        mesh.vertices = vertices;
-        mesh.triangles = triangles;
-        mesh.uv = uv;
-        mesh.RecalculateNormals();
-        mesh.RecalculateBounds();
-        return mesh;
-    }
-
-    private static Vector3 ResolveCornerOffset(
-        Vector3 axisX,
-        Vector3 axisY,
-        Vector3 axisZ,
-        float cornerJitter,
-        System.Random random)
-    {
-        if (random == null || cornerJitter <= 0f)
-        {
-            return axisX + axisY + axisZ;
-        }
-
-        float minScale = Mathf.Max(0.55f, 1f - cornerJitter);
-        float maxScale = 1f + cornerJitter;
-        float scaleX = Mathf.Lerp(minScale, maxScale, (float)random.NextDouble());
-        float scaleY = Mathf.Lerp(minScale, maxScale, (float)random.NextDouble());
-        float scaleZ = Mathf.Lerp(minScale, maxScale, (float)random.NextDouble());
-        return axisX * scaleX + axisY * scaleY + axisZ * scaleZ;
-    }
-
-    public static List<TriangleShard> LimitShardCount(List<TriangleShard> shards, int maxShardCount, int seed)
-    {
-        if (shards == null || shards.Count == 0 || maxShardCount <= 0 || shards.Count <= maxShardCount)
-        {
-            return shards;
-        }
-
-        List<TriangleShard> reducedShards = new List<TriangleShard>(maxShardCount);
-        System.Random random = new System.Random(seed);
-        float step = (float)shards.Count / maxShardCount;
-        float cursor = (float)random.NextDouble() * Mathf.Max(1f, step);
-
-        for (int i = 0; i < maxShardCount; i++)
-        {
-            int sourceIndex = Mathf.Clamp(Mathf.FloorToInt(cursor), 0, shards.Count - 1);
-            reducedShards.Add(shards[sourceIndex]);
-            cursor += step;
-        }
-
-        return reducedShards;
-    }
-
-    public static List<BoundsChunk> LimitBoundsChunkCount(List<BoundsChunk> chunks, int maxChunkCount, int seed)
-    {
-        if (chunks == null || chunks.Count == 0 || maxChunkCount <= 0 || chunks.Count <= maxChunkCount)
-        {
-            return chunks;
-        }
-
-        List<BoundsChunk> reducedChunks = new List<BoundsChunk>(maxChunkCount);
-        System.Random random = new System.Random(seed);
-        float step = (float)chunks.Count / maxChunkCount;
-        float cursor = (float)random.NextDouble() * Mathf.Max(1f, step);
-
-        for (int i = 0; i < maxChunkCount; i++)
-        {
-            int sourceIndex = Mathf.Clamp(Mathf.FloorToInt(cursor), 0, chunks.Count - 1);
-            reducedChunks.Add(chunks[sourceIndex]);
-            cursor += step;
-        }
-
-        return reducedChunks;
-    }
-
-    private static void SubdivideTriangle(
-        TriangleShard triangle,
-        int remainingDepth,
-        float splitJitter,
-        System.Random random,
-        List<TriangleShard> shards)
-    {
-        if (remainingDepth <= 0)
-        {
-            shards.Add(triangle);
-            return;
-        }
-
-        Vector3 midAB = Vector3.Lerp(triangle.A, triangle.B, GetSplitRatio(random, splitJitter));
-        Vector3 midBC = Vector3.Lerp(triangle.B, triangle.C, GetSplitRatio(random, splitJitter));
-        Vector3 midCA = Vector3.Lerp(triangle.C, triangle.A, GetSplitRatio(random, splitJitter));
-
-        int nextDepth = remainingDepth - 1;
-        SubdivideTriangle(new TriangleShard(triangle.A, midAB, midCA), nextDepth, splitJitter, random, shards);
-        SubdivideTriangle(new TriangleShard(midAB, triangle.B, midBC), nextDepth, splitJitter, random, shards);
-        SubdivideTriangle(new TriangleShard(midCA, midBC, triangle.C), nextDepth, splitJitter, random, shards);
-        SubdivideTriangle(new TriangleShard(midAB, midBC, midCA), nextDepth, splitJitter, random, shards);
-    }
-
-    private static float GetSplitRatio(System.Random random, float splitJitter)
-    {
-        if (random == null || splitJitter <= 0f)
-        {
-            return 0.5f;
-        }
-
-        float min = 0.5f - splitJitter;
-        float max = 0.5f + splitJitter;
-        return Mathf.Lerp(min, max, (float)random.NextDouble());
-    }
-
-    private readonly struct AxisSegment
-    {
-        public AxisSegment(float min, float max)
-        {
-            Min = min;
-            Max = max;
-        }
-
-        public float Min { get; }
-        public float Max { get; }
-        public float Length => Mathf.Max(0f, Max - Min);
-    }
-
-    private static Vector3Int ResolveChunkGrid(Vector3 size, int targetChunkCount)
-    {
-        Vector3 safeSize = new Vector3(
-            Mathf.Max(0.001f, size.x),
-            Mathf.Max(0.001f, size.y),
-            Mathf.Max(0.001f, size.z));
-        float volume = safeSize.x * safeSize.y * safeSize.z;
-        float density = Mathf.Pow(targetChunkCount / volume, 1f / 3f);
-        Vector3 scaledCounts = safeSize * density;
-
-        Vector3Int grid = new Vector3Int(
-            Mathf.Max(1, Mathf.RoundToInt(scaledCounts.x)),
-            Mathf.Max(1, Mathf.RoundToInt(scaledCounts.y)),
-            Mathf.Max(1, Mathf.RoundToInt(scaledCounts.z)));
-
-        while (grid.x * grid.y * grid.z < targetChunkCount)
-        {
-            float cellX = safeSize.x / grid.x;
-            float cellY = safeSize.y / grid.y;
-            float cellZ = safeSize.z / grid.z;
-
-            if (cellX >= cellY && cellX >= cellZ)
-            {
-                grid.x++;
-            }
-            else if (cellY >= cellZ)
-            {
-                grid.y++;
-            }
-            else
-            {
-                grid.z++;
-            }
-        }
-
-        return grid;
-    }
-
-    private static List<AxisSegment> BuildAxisSegments(float min, float max, int segmentCount, float splitJitter, System.Random random)
-    {
-        List<AxisSegment> segments = new List<AxisSegment>(Mathf.Max(1, segmentCount));
-        float length = max - min;
-        if (segmentCount <= 1 || length <= 0f)
-        {
-            segments.Add(new AxisSegment(min, max));
-            return segments;
-        }
-
-        float[] weights = new float[segmentCount];
-        float weightSum = 0f;
-        for (int i = 0; i < segmentCount; i++)
-        {
-            float weight = 1f;
-            if (random != null && splitJitter > 0f)
-            {
-                float jitter = Mathf.Lerp(-splitJitter, splitJitter, (float)random.NextDouble());
-                weight = Mathf.Max(0.15f, 1f + jitter);
-            }
-
-            weights[i] = weight;
-            weightSum += weight;
-        }
-
-        float cursor = min;
-        for (int i = 0; i < segmentCount; i++)
-        {
-            float segmentLength = i == segmentCount - 1
-                ? max - cursor
-                : length * (weights[i] / weightSum);
-            float next = cursor + segmentLength;
-            segments.Add(new AxisSegment(cursor, next));
-            cursor = next;
-        }
-
-        return segments;
-    }
-
-    private static int[] ResolveTriangles(Mesh mesh, int targetSubmesh)
-    {
-        if (mesh == null)
-        {
-            return null;
-        }
-
-        if (targetSubmesh >= 0 && targetSubmesh < mesh.subMeshCount)
-        {
-            return mesh.GetTriangles(targetSubmesh);
-        }
-
-        return mesh.triangles;
-    }
 }

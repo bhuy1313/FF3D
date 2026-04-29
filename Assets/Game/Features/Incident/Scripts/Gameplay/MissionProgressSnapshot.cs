@@ -11,7 +11,8 @@ public readonly struct MissionProgressSnapshot
         int criticalVictimCount,
         int stabilizedVictimCount,
         int extractedVictimCount,
-        int deceasedVictimCount)
+        int deceasedVictimCount,
+        bool hasFireSimulationManagers = false)
     {
         TotalTrackedFires = totalTrackedFires;
         ExtinguishedFireCount = extinguishedFireCount;
@@ -24,6 +25,7 @@ public readonly struct MissionProgressSnapshot
         StabilizedVictimCount = stabilizedVictimCount;
         ExtractedVictimCount = extractedVictimCount;
         DeceasedVictimCount = deceasedVictimCount;
+        HasFireSimulationManagers = hasFireSimulationManagers;
     }
 
     public int TotalTrackedFires { get; }
@@ -37,6 +39,7 @@ public readonly struct MissionProgressSnapshot
     public int StabilizedVictimCount { get; }
     public int ExtractedVictimCount { get; }
     public int DeceasedVictimCount { get; }
+    public bool HasFireSimulationManagers { get; }
 
     public int ActiveFireCount => UnityEngine.Mathf.Max(0, TotalTrackedFires - ExtinguishedFireCount);
     public int RemainingRescuableCount => UnityEngine.Mathf.Max(0, TotalTrackedRescuables - RescuedCount);

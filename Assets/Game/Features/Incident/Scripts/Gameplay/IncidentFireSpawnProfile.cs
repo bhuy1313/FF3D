@@ -6,12 +6,22 @@ using UnityEngine.Serialization;
     menuName = "FF3D/Incident/Fire Spawn Profile")]
 public sealed class IncidentFireSpawnProfile : ScriptableObject
 {
+    [Header("Shared Placement")]
+    [Tooltip("Maximum search radius from a seed placement to a child placement (used for both secondary and latent nodes).")]
+    [FormerlySerializedAs("secondaryFireRange")]
+    [FormerlySerializedAs("latentSpreadRange")]
+    [SerializeField] [Min(0.1f)] private float placementRange = 4.2f;
+    [Tooltip("Minimum spacing between any two placements (secondary or latent).")]
+    [FormerlySerializedAs("minimumSecondaryFireSpacing")]
+    [FormerlySerializedAs("minimumLatentNodeSpacing")]
+    [SerializeField] [Min(0f)] private float minimumNodeSpacing = 2.2f;
+    [Tooltip("Maximum placement attempts per node (shared by secondary and latent passes).")]
+    [FormerlySerializedAs("placementAttemptsPerSecondaryFire")]
+    [SerializeField] [Min(1)] private int placementAttemptsPerNode = 24;
+
     [Header("Secondary Fire Placement")]
     [Tooltip("Fallback active secondary fire count when payload does not specify a valid total fire count.")]
     [SerializeField] [Min(0)] private int secondaryFirePointCount = 3;
-    [SerializeField] [Min(0.1f)] private float secondaryFireRange = 4.2f;
-    [SerializeField] [Min(0f)] private float minimumSecondaryFireSpacing = 2.2f;
-    [SerializeField] [Min(1)] private int placementAttemptsPerSecondaryFire = 24;
     [SerializeField] [Range(0f, 1f)] private float activeSecondaryIntensityScale = 0.65f;
 
     [Header("Latent Spread Nodes")]
@@ -19,8 +29,6 @@ public sealed class IncidentFireSpawnProfile : ScriptableObject
     [SerializeField] [Min(0)] private int latentSpreadNodeCount = 4;
     [FormerlySerializedAs("latentSpreadSeedLimit")]
     [SerializeField] [Min(1)] private int latentSpreadPlacementsPerNode = 2;
-    [SerializeField] [Min(0.1f)] private float latentSpreadRange = 4.2f;
-    [SerializeField] [Min(0f)] private float minimumLatentNodeSpacing = 2.2f;
 
     [Header("Surface Sampling")]
     [SerializeField] [Min(0.05f)] private float parabolaLaunchHeight = 0.35f;
@@ -34,16 +42,14 @@ public sealed class IncidentFireSpawnProfile : ScriptableObject
     [SerializeField] [Min(0.01f)] private float wallPlacementWeight = 1.35f;
     [SerializeField] [Min(0.01f)] private float ceilingPlacementWeight = 0.2f;
 
+    public float PlacementRange => placementRange;
+    public float MinimumNodeSpacing => minimumNodeSpacing;
+    public int PlacementAttemptsPerNode => placementAttemptsPerNode;
     public int SecondaryFirePointCount => secondaryFirePointCount;
-    public float SecondaryFireRange => secondaryFireRange;
-    public float MinimumSecondaryFireSpacing => minimumSecondaryFireSpacing;
-    public int PlacementAttemptsPerSecondaryFire => placementAttemptsPerSecondaryFire;
     public float ActiveSecondaryIntensityScale => activeSecondaryIntensityScale;
     public bool SpawnLatentSpreadNodes => spawnLatentSpreadNodes;
     public int LatentSpreadNodeCount => latentSpreadNodeCount;
     public int LatentSpreadPlacementsPerNode => latentSpreadPlacementsPerNode;
-    public float LatentSpreadRange => latentSpreadRange;
-    public float MinimumLatentNodeSpacing => minimumLatentNodeSpacing;
     public float ParabolaLaunchHeight => parabolaLaunchHeight;
     public float ParabolaApexHeight => parabolaApexHeight;
     public float ParabolaApexHeightJitter => parabolaApexHeightJitter;

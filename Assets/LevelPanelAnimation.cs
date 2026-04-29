@@ -108,9 +108,18 @@ public class LevelPanelAnimation : MonoBehaviour
     // =========================
     private void SetTopLeft(RectTransform rt)
     {
+        // Cần lưu lại vị trí không gian (world position) và kích thước
+        // để khi đổi anchor/pivot, UI không bị giật (jump) đi chỗ khác.
+        Vector3 cachedPosition = rt.position;
+        Vector2 cachedSize = rt.rect.size;
+
         rt.anchorMin = new Vector2(0, 1);
         rt.anchorMax = new Vector2(0, 1);
         rt.pivot = new Vector2(0, 1);
+
+        // Khôi phục lại kích thước và vị trí hiện tại dựa trên anchor mới
+        rt.sizeDelta = cachedSize;
+        rt.position = cachedPosition;
     }
 
     private void OnDestroy()

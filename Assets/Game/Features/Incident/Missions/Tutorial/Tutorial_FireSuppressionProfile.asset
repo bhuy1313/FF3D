@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 019117aee9478ac40a3eba94a2d68a71, type: 3}
+  m_Name: Tutorial_FireSuppressionProfile
+  m_EditorClassIdentifier: 
+  entries:
+  - hazardType: 0
+    notIsolated:
+      water: 1
+      dryChemical: 0.8
+      co2: 0.55
+      waterWorsens: 0
+    isolated:
+      water: 1
+      dryChemical: 0.8
+      co2: 0.55
+      waterWorsens: 0
+  - hazardType: 1
+    notIsolated:
+      water: 0
+      dryChemical: 1.25
+      co2: 1.35
+      waterWorsens: 0
+    isolated:
+      water: 0.8
+      dryChemical: 1.05
+      co2: 1
+      waterWorsens: 0
+  - hazardType: 2
+    notIsolated:
+      water: 0
+      dryChemical: 1.2
+      co2: 1
+      waterWorsens: 1
+    isolated:
+      water: 0
+      dryChemical: 1.2
+      co2: 1
+      waterWorsens: 1
+  - hazardType: 3
+    notIsolated:
+      water: 0.3
+      dryChemical: 0.45
+      co2: 0.4
+      waterWorsens: 0
+    isolated:
+      water: 0.85
+      dryChemical: 1.1
+      co2: 1
+      waterWorsens: 0

@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 642135791357913580}
   - component: {fileID: 642135791357913581}
-  - component: {fileID: 642135791357913590}
   - component: {fileID: 642135791357913582}
   m_Layer: 0
   m_Name: IncidentPayloadStartup
@@ -55,22 +54,6 @@ MonoBehaviour:
   logResolvedPayload: 1
   explicitMapSetupRoot: {fileID: 642135791357913582}
   explicitAnchors: []
---- !u!114 &642135791357913590
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 642135791357913579}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8d6f9a6b8d4a4d2d9c0e5f2a7b0c4d12, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IncidentFirePrefabLibrary
-  ordinaryFirePrefab: {fileID: 5130709412628550656, guid: 51d84099765e7ec499301cc4183a5b7a, type: 3}
-  electricalFirePrefab: {fileID: 7698629607497175451, guid: 1e69d87df12eef04689ac0fe6bc45bff, type: 3}
-  gasFirePrefab: {fileID: 3295295309587666049, guid: d0de36439a32b2e4389b1d4d33b704ac, type: 3}
-  flammableLiquidFirePrefab: {fileID: 5925063092961701543, guid: 5b6b56a00dc60f64e880d84b4122e789, type: 3}
 --- !u!114 &642135791357913582
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -391,11 +374,65 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MissionEndOverlayController
   missionSystem: {fileID: 6783775267924060584}
   targetCanvas: {fileID: 0}
+  playerVitals: {fileID: 0}
+  firstPersonController: {fileID: 0}
+  playerCameraRoot: {fileID: 0}
+  starterAssetsInputs: {fileID: 0}
+  subMenuPanelController: {fileID: 0}
+  subMenuEscapeHost: {fileID: 0}
+  completionCinematic: {fileID: 0}
+  playCompletionCinematicAfterResultPopup: 1
+  completionCinematicDelayAfterResultPopup: 2
+  waitForCompletionIntroBeforeCinematic: 1
+  fadeBackgroundOnCinematic: 1
   pauseGameplayOnMissionEnd: 1
   unlockCursorOnMissionEnd: 1
   showRetryButton: 1
   showMainMenuButton: 1
+  hideOtherUIOnMissionEnd: 1
+  uiObjectsToHideOnMissionEnd: []
   mainMenuSceneName: MainMenu
+  playDeathCameraFallBeforeResultPopup: 1
+  deathCameraFallDuration: 0.9
+  deathCameraFallDropDistance: 0.6
+  deathCameraFallForwardDistance: 0.3
+  deathCameraFallPitch: 75
+  deathCameraFallRoll: 12
+  deathCameraFallYawJitter: 4
+  deathCameraGroundClearance: 0.1
+  deathCameraGroundProbeHeight: 0.8
+  deathCameraGroundProbeDistance: 3
+  deathCameraGroundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  deathCameraFallCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  deathCameraShakePositionAmplitude: 0.045
+  deathCameraShakeRotationAmplitude: 2.8
+  deathCameraShakeFrequency: 13
+  deathCameraShakeDamping: 1.7
   resultLabel: RESULT
   completedTitle: Mission Complete
   failedTitle: Mission Failed
@@ -412,6 +449,8 @@ MonoBehaviour:
   scoreLabel: Score
   victimsValueFormat: U:{0} C:{1} S:{2} X:{3} D:{4}
   resultPopupObjectName: ResultPopup
+  rankStampFinalTiltMin: -6
+  rankStampFinalTiltMax: 6
 --- !u!114 &5546122349495465332
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -794,7 +833,7 @@ MonoBehaviour:
   taskNameOverride: 
   lockedPercentage: 20
   includeInactiveWindows: 1
-  useDeterministicSeed: 1
+  useDeterministicSeed: 0
   seedOffset: 0
   logSummary: 0
 --- !u!1 &5942125578591603775
@@ -1016,6 +1055,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FireSimulationManager
   surfaceGraph: {fileID: 7286251771642285745}
   simulationProfile: {fileID: 11400000, guid: b4ab4f88c49d4bf2a92ee58b4d54bff2, type: 2}
+  suppressionProfile: {fileID: 11400000, guid: b8e3f5a91d4c2e8074a6f9c3b21d5e80, type: 2}
   effectManager: {fileID: 9202031649153982278}
   clusterViewPrefab: {fileID: 6598967934756895505}
   clusterViewRoot: {fileID: 0}
@@ -1025,6 +1065,7 @@ MonoBehaviour:
   runtimeNodeAutoConnectRadius: 2.6
   runtimeNodeDrawGizmos: 1
   runtimeNodeGizmoColor: {r: 1, g: 0.45, b: 0.1, a: 0.8}
+  removeRuntimeNodeWhenHeatReachesZero: 0
   initializeOnEnable: 1
   logInitializationWarnings: 1
   logNodeHeatProgress: 0
@@ -1068,10 +1109,15 @@ MonoBehaviour:
   maxDecals: 96
   minSize: 0.5
   maxSize: 2.6
-  maxOpacity: 0.72
+  maxOpacity: 1
   surfaceOffset: 0.015
   raycastBackoff: 0.65
   raycastDistance: 1.8
+  projectorDepth: 0.18
+  requireSurfaceHit: 1
+  maxSurfaceNormalAngle: 35
+  startAngleFade: 40
+  endAngleFade: 65
   growthPerSecond: 0.35
 --- !u!1 &7676517865980041575
 GameObject:
@@ -1109,8 +1155,61 @@ Transform:
   - {fileID: 5603700801687358895}
   - {fileID: 8650706310272585343}
   - {fileID: 1977364216806456673}
+  - {fileID: 5307433241529742939}
   m_Father: {fileID: 8916907086897807096}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &7695642254483989376
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5307433241529742939}
+  - component: {fileID: 5724600685280160435}
+  m_Layer: 0
+  m_Name: DoorLockRandomizerStartupTask
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5307433241529742939
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7695642254483989376}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5835050266681781383}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5724600685280160435
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7695642254483989376}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4a1ad724917f0c647a1e0a38ce952484, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoorLockRandomizerStartupTask
+  runTask: 1
+  order: -10
+  taskNameOverride: 
+  lockedPercentage: 20
+  includeInactiveDoors: 1
+  useDeterministicSeed: 0
+  seedOffset: 0
+  logSummary: 0
 --- !u!1 &8214017301321242446
 GameObject:
   m_ObjectHideFlags: 0

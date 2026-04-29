@@ -224,7 +224,6 @@ GameObject:
   - component: {fileID: 1527422086245369808}
   - component: {fileID: 1153314612747198194}
   - component: {fileID: 1861864049588010192}
-  - component: {fileID: 111538465771111678}
   - component: {fileID: 4118338593966918488}
   m_Layer: 8
   m_Name: WoodenBlank_Breakable
@@ -320,23 +319,6 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!114 &111538465771111678
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 386660003779459026}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 85d8e00b4ded4ac3a19f5e8c7fc8ec98, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MissionBreakableSignalRelay
-  breakable: {fileID: 1153314612747198194}
-  missionSystem: {fileID: 0}
-  signalKey: tutorial-break-barricade
-  triggerOnce: 1
-  hasRaised: 0
 --- !u!114 &4118338593966918488
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -369,7 +351,7 @@ GameObject:
   - component: {fileID: 988880464266969035}
   - component: {fileID: 3405519200401456401}
   - component: {fileID: 2585630272010643544}
-  - component: {fileID: 7421312902546343418}
+  - component: {fileID: 5490338982315277650}
   m_Layer: 8
   m_Name: model
   m_TagString: Untagged
@@ -471,7 +453,7 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -5495902117074765545, guid: 83d5b098874646341b095432582f0f69, type: 3}
---- !u!114 &7421312902546343418
+--- !u!114 &5490338982315277650
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -489,11 +471,11 @@ MonoBehaviour:
   targetMeshFilter: {fileID: 988880464266969035}
   targetRenderer: {fileID: 3405519200401456401}
   collidersToDisable:
-  - {fileID: 0}
+  - {fileID: 2585630272010643544}
   shardContainer: {fileID: 0}
   overrideMaterial: {fileID: 0}
   targetSubmesh: -1
-  keepNonShatteredSubmeshes: 0
+  keepNonShatteredSubmeshes: 1
   subdivisionDepth: 1
   splitJitter: 0.26
   randomizeShardPattern: 1
@@ -501,12 +483,18 @@ MonoBehaviour:
   shardThickness: 0.14
   shardMass: 0.28
   shardThicknessVariation: 0.5
-  shardScaleVariation: 0.25
-  shardSizeMultiplier: 1
+  shardScaleVariation: 0.45
+  shardSizeMultiplier: 0.8
   maxSpawnedShards: 14
-  autoTuneFromSourceMass: 1
-  sourceMassOverrideKg: 15
-  destroyAfterSeconds: 3
+  autoTuneFromSourceMass: 0
+  sourceMassOverrideKg: 0
+  impulseStrength: 2.5
+  impactDirectionWeight: 1
+  surfaceNormalWeight: 0.5
+  impactSpread: 0.2
+  randomImpulse: 0.35
+  randomTorque: 1.5
+  destroyAfterSeconds: 8
   disableOriginalRenderer: 1
   disableConfiguredColliders: 1
   isShattered: 0

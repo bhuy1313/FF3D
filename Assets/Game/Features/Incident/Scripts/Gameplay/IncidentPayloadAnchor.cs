@@ -140,26 +140,27 @@ public class IncidentPayloadAnchor : MonoBehaviour
         float secondaryIntensity = Mathf.Clamp01(primaryIntensity * Mathf.Clamp01(runtimeSpawnProfile.ActiveSecondaryIntensityScale));
 
         List<SpawnPlacement> activePlacements = BuildInitialSecondaryPlacements(
+            payload,
             primaryPosition,
             primaryRotation,
             requestedSecondaryCount);
         List<FireIncidentPlacement> simulationPlacements = new List<FireIncidentPlacement>(activePlacements.Count);
         if (activePlacements.Count > 0)
         {
-            simulationPlacements.Add(CreateIncidentPlacement(activePlacements[0], primaryIntensity));
+            simulationPlacements.Add(CreateIncidentPlacement(activePlacements[0], primaryIntensity, FireIncidentNodeKind.Primary));
         }
 
         for (int i = 1; i < activePlacements.Count; i++)
         {
-            simulationPlacements.Add(CreateIncidentPlacement(activePlacements[i], secondaryIntensity));
+            simulationPlacements.Add(CreateIncidentPlacement(activePlacements[i], secondaryIntensity, FireIncidentNodeKind.Secondary));
         }
 
         if (runtimeSpawnProfile.SpawnLatentSpreadNodes && runtimeSpawnProfile.LatentSpreadNodeCount > 0)
         {
-            List<SpawnPlacement> latentPlacements = BuildLatentSpreadPlacements(activePlacements);
+            List<SpawnPlacement> latentPlacements = BuildLatentSpreadPlacements(payload, activePlacements);
             for (int i = 0; i < latentPlacements.Count; i++)
             {
-                simulationPlacements.Add(CreateIncidentPlacement(latentPlacements[i], 0f));
+                simulationPlacements.Add(CreateIncidentPlacement(latentPlacements[i], 0f, FireIncidentNodeKind.Late));
             }
         }
 
@@ -169,12 +170,13 @@ public class IncidentPayloadAnchor : MonoBehaviour
             for (int i = 0; i < simulationPlacements.Count; i++)
             {
                 FireIncidentPlacement placement = simulationPlacements[i];
-                fireSimulationManager.TrackClosestNode(placement.Position, placement.InitialIntensity01);
+                fireSimulationManager.TrackClosestNode(placement.Position, placement.InitialIntensity01, placement.Kind);
             }
         }
     }
 
     private List<SpawnPlacement> BuildInitialSecondaryPlacements(
+        IncidentWorldSetupPayload payload,
         Vector3 primaryPosition,
         Quaternion primaryRotation,
         int requestedSecondaryCount)
@@ -190,10 +192,10 @@ public class IncidentPayloadAnchor : MonoBehaviour
             return placements;
         }
 
-        System.Random random = new System.Random(Guid.NewGuid().GetHashCode());
+        System.Random random = new System.Random(IncidentSeedUtility.ResolvePlacementSeed(payload, "secondary"));
         int maxAttempts = Mathf.Max(
             requestedSecondaryCount,
-            requestedSecondaryCount * Mathf.Max(1, runtimeSpawnProfile.PlacementAttemptsPerSecondaryFire));
+            requestedSecondaryCount * Mathf.Max(1, runtimeSpawnProfile.PlacementAttemptsPerNode));
         int attempts = 0;
         while (placements.Count - 1 < requestedSecondaryCount && attempts < maxAttempts)
         {
@@ -202,8 +204,8 @@ public class IncidentPayloadAnchor : MonoBehaviour
                     random,
                     primaryPosition,
                     primarySurfaceNormal,
-                    runtimeSpawnProfile.SecondaryFireRange,
-                    Mathf.Max(0f, runtimeSpawnProfile.MinimumSecondaryFireSpacing),
+                    runtimeSpawnProfile.PlacementRange,
+                    Mathf.Max(0f, runtimeSpawnProfile.MinimumNodeSpacing),
                     placements,
                     out SpawnPlacement placement))
             {
@@ -217,14 +219,16 @@ public class IncidentPayloadAnchor : MonoBehaviour
         {
             Debug.LogWarning(
                 $"{nameof(IncidentPayloadAnchor)} on '{name}' only found {placements.Count - 1}/{requestedSecondaryCount} active secondary placements " +
-                $"within range {runtimeSpawnProfile.SecondaryFireRange:0.##}.",
+                $"within range {runtimeSpawnProfile.PlacementRange:0.##}.",
                 this);
         }
 
         return placements;
     }
 
-    private List<SpawnPlacement> BuildLatentSpreadPlacements(List<SpawnPlacement> activePlacements)
+    private List<SpawnPlacement> BuildLatentSpreadPlacements(
+        IncidentWorldSetupPayload payload,
+        List<SpawnPlacement> activePlacements)
     {
         List<SpawnPlacement> latentPlacements = new List<SpawnPlacement>();
         if (!runtimeSpawnProfile.SpawnLatentSpreadNodes ||
@@ -236,10 +240,10 @@ public class IncidentPayloadAnchor : MonoBehaviour
         }
 
         List<SpawnPlacement> allPlacements = new List<SpawnPlacement>(activePlacements);
-        System.Random random = new System.Random(Guid.NewGuid().GetHashCode());
+        System.Random random = new System.Random(IncidentSeedUtility.ResolvePlacementSeed(payload, "latent"));
         Queue<SpawnPlacement> pendingSeeds = new Queue<SpawnPlacement>(activePlacements);
         int placementsPerNode = Mathf.Max(1, runtimeSpawnProfile.LatentSpreadPlacementsPerNode);
-        int attemptsPerNode = Mathf.Max(1, runtimeSpawnProfile.PlacementAttemptsPerSecondaryFire);
+        int attemptsPerNode = Mathf.Max(1, runtimeSpawnProfile.PlacementAttemptsPerNode);
         while (pendingSeeds.Count > 0 && latentPlacements.Count < runtimeSpawnProfile.LatentSpreadNodeCount)
         {
             SpawnPlacement seed = pendingSeeds.Dequeue();
@@ -254,8 +258,8 @@ public class IncidentPayloadAnchor : MonoBehaviour
                         random,
                         seed.Position,
                         seed.SurfaceNormal,
-                        runtimeSpawnProfile.LatentSpreadRange,
-                        Mathf.Max(0f, runtimeSpawnProfile.MinimumLatentNodeSpacing),
+                        runtimeSpawnProfile.PlacementRange,
+                        Mathf.Max(0f, runtimeSpawnProfile.MinimumNodeSpacing),
                         allPlacements,
                         out SpawnPlacement placement))
                 {
@@ -536,7 +540,7 @@ public class IncidentPayloadAnchor : MonoBehaviour
             System.Random random = new System.Random(randomSeed);
             int maxAttempts = Mathf.Max(
                 requestedSecondaryCount,
-                requestedSecondaryCount * Mathf.Max(1, runtimeSpawnProfile.PlacementAttemptsPerSecondaryFire));
+                requestedSecondaryCount * Mathf.Max(1, runtimeSpawnProfile.PlacementAttemptsPerNode));
             int attemptIndex = 0;
             while (placements.Count - 1 < requestedSecondaryCount && attemptIndex < maxAttempts)
             {
@@ -546,8 +550,8 @@ public class IncidentPayloadAnchor : MonoBehaviour
                     random,
                     primaryPosition,
                     primarySurfaceNormal,
-                    runtimeSpawnProfile.SecondaryFireRange,
-                    Mathf.Max(0f, runtimeSpawnProfile.MinimumSecondaryFireSpacing),
+                    runtimeSpawnProfile.PlacementRange,
+                    Mathf.Max(0f, runtimeSpawnProfile.MinimumNodeSpacing),
                     placements,
                     traces,
                     out SpawnPlacement placement);
@@ -614,7 +618,7 @@ public class IncidentPayloadAnchor : MonoBehaviour
                 System.Random activeRandom = new System.Random(activeRandomSeed);
                 int maxAttempts = Mathf.Max(
                     requestedSecondaryCount,
-                    requestedSecondaryCount * Mathf.Max(1, runtimeSpawnProfile.PlacementAttemptsPerSecondaryFire));
+                    requestedSecondaryCount * Mathf.Max(1, runtimeSpawnProfile.PlacementAttemptsPerNode));
                 int attemptIndex = 0;
                 while (activePlacements.Count - 1 < requestedSecondaryCount && attemptIndex < maxAttempts)
                 {
@@ -624,8 +628,8 @@ public class IncidentPayloadAnchor : MonoBehaviour
                         activeRandom,
                         primaryPosition,
                         primarySurfaceNormal,
-                        runtimeSpawnProfile.SecondaryFireRange,
-                        Mathf.Max(0f, runtimeSpawnProfile.MinimumSecondaryFireSpacing),
+                        runtimeSpawnProfile.PlacementRange,
+                        Mathf.Max(0f, runtimeSpawnProfile.MinimumNodeSpacing),
                         activePlacements,
                         traces,
                         out SpawnPlacement placement);
@@ -656,7 +660,7 @@ public class IncidentPayloadAnchor : MonoBehaviour
                 System.Random latentRandom = new System.Random(latentRandomSeed);
                 Queue<SpawnPlacement> pendingSeeds = new Queue<SpawnPlacement>(activePlacements);
                 int placementsPerNode = Mathf.Max(1, runtimeSpawnProfile.LatentSpreadPlacementsPerNode);
-                int attemptsPerNode = Mathf.Max(1, runtimeSpawnProfile.PlacementAttemptsPerSecondaryFire);
+                int attemptsPerNode = Mathf.Max(1, runtimeSpawnProfile.PlacementAttemptsPerNode);
                 while (pendingSeeds.Count > 0 && latentPlacements.Count < runtimeSpawnProfile.LatentSpreadNodeCount)
                 {
                     SpawnPlacement seed = pendingSeeds.Dequeue();
@@ -672,8 +676,8 @@ public class IncidentPayloadAnchor : MonoBehaviour
                             latentRandom,
                             seed.Position,
                             seed.SurfaceNormal,
-                            runtimeSpawnProfile.LatentSpreadRange,
-                            Mathf.Max(0f, runtimeSpawnProfile.MinimumLatentNodeSpacing),
+                            runtimeSpawnProfile.PlacementRange,
+                            Mathf.Max(0f, runtimeSpawnProfile.MinimumNodeSpacing),
                             allPlacements,
                             traces,
                             out SpawnPlacement placement);
@@ -977,12 +981,16 @@ public class IncidentPayloadAnchor : MonoBehaviour
         return (((float)random.NextDouble() * 2f) - 1f) * magnitude;
     }
 
-    private static FireIncidentPlacement CreateIncidentPlacement(SpawnPlacement placement, float initialIntensity01)
+    private static FireIncidentPlacement CreateIncidentPlacement(
+        SpawnPlacement placement,
+        float initialIntensity01,
+        FireIncidentNodeKind kind)
     {
         return new FireIncidentPlacement(
             placement.Position,
             placement.SurfaceNormal,
-            initialIntensity01);
+            initialIntensity01,
+            kind);
     }
 
     private void ClearRuntimeObjects()
