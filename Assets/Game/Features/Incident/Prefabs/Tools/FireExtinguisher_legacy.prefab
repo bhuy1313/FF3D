@@ -1853,9 +1853,12 @@ MonoBehaviour:
   sprayMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  sprayOrigin: {fileID: 624486182625446283}
+  lineOfSightMask:
+    serializedVersion: 2
+    m_Bits: 1
   sprayParticles: {fileID: 7869541486188356678}
-  sprayAudio: {fileID: 0}
+  audioController: {fileID: 0}
+  fireSimulationManager: {fileID: 0}
   currentCharge: 0
   isSpraying: 0
   currentHolder: {fileID: 0}
@@ -1941,7 +1944,7 @@ MonoBehaviour:
   poseEntries:
   - key: 0
     pose:
-      equippedLocalPosition: {x: 0.1418, y: 0.05, z: 0.0242}
+      equippedLocalPosition: {x: 0.6, y: 0.15, z: 0.05}
       equippedLocalEulerAngles: {x: 270, y: 90, z: 0}
       useRightHandIkTarget: 1
       rightHandIkWeight: 1

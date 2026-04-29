@@ -90,6 +90,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
     [SerializeField] private float currentStartDelay;
     [SerializeField] private int totalTrackedFires;
     [SerializeField] private int extinguishedFireCount;
+    [SerializeField] private int peakHazardLinkedFireCount;
     [SerializeField] private int totalTrackedRescuables;
     [SerializeField] private int rescuedCount;
     [SerializeField] private int totalTrackedVictims;
@@ -246,6 +247,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
         ResetScoreRuntime();
         ResetFinalPerformanceSnapshot();
         ResetSignalEmitters();
+        peakHazardLinkedFireCount = 0;
         RefreshObjectives();
         elapsedTime = 0f;
         currentStartDelay = startDelay;
@@ -801,8 +803,11 @@ public partial class IncidentMissionSystem : MonoBehaviour
         RemoveNullEntries(resultRescuables);
         RemoveNullEntries(resultVictimConditions);
 
-        int resultTrackedFireCount = CountTrackedSimulationNodes(resultSimulationManagers);
-        int resultExtinguishedFireCount = CountExtinguishedSimulationNodes(resultSimulationManagers);
+        // The peak/extinguished metrics already account for nodes that were fully
+        // removed during the run, so reuse the cached values instead of recounting
+        // (the live scene only reports survivors and would report 0/0 at success).
+        int resultTrackedFireCount = totalTrackedFires;
+        int resultExtinguishedFireCount = extinguishedFireCount;
 
         return new MissionProgressSnapshot(
             resultTrackedFireCount,

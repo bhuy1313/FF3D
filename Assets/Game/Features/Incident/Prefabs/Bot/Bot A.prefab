@@ -671,7 +671,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1069035845898369546}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: CarryLeftHandIK_target
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1591,7 +1591,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5624859767966819374}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: CarryRightHandIK_target
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2259,7 +2259,7 @@ Transform:
   m_GameObject: {fileID: 3499819477736356723}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: -1.1, z: 0}
+  m_LocalPosition: {x: 0, y: -1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -3891,6 +3891,7 @@ GameObject:
   - component: {fileID: 6169907213170882658}
   - component: {fileID: 5816684741572102670}
   - component: {fileID: 5580254689201413862}
+  - component: {fileID: 3314307627503674168}
   m_Layer: 3
   m_Name: Bot A
   m_TagString: Bot
@@ -4024,6 +4025,8 @@ MonoBehaviour:
   toolSearchRadius: 30
   fireSearchRadius: 6
   pickupDistance: 1.5
+  bulkyToolDropOffset: {x: 0.65, y: 0, z: 0.75}
+  bulkyToolDropGroundProbeDistance: 2
   sprayFacingThreshold: 0.9
   sprayStartDelay: 0.75
   crouchBeforeFireHoseSpray: 1
@@ -4071,6 +4074,10 @@ MonoBehaviour:
   drawAimGizmo: 0
   aimGizmoLength: 2.5
   enableActivityDebug: 0
+  showCommandPlanOverlay: 0
+  commandPlanOverlayScreenOffset: {x: 24, y: -24}
+  commandPlanOverlayWidth: 300
+  commandPlanOverlayMaxQueuedTasks: 6
 --- !u!114 &6447384362930444411
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4261,6 +4268,93 @@ MonoBehaviour:
   breakToolMemorySeconds: 12
   hazardIsolationMemorySeconds: 15
   followTargetMemorySeconds: 15
+--- !u!114 &3314307627503674168
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7933330459082302272}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b00f09957e7c0947a9376e24dbdd1a0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TrueJourney.BotCommands::TrueJourney.BotBehavior.BotAnimatorParameterDriver
+  animator: {fileID: 6377011507141568050}
+  navMeshAgent: {fileID: 7122702489324680403}
+  commandAgent: {fileID: 5442345780187076574}
+  behaviorContext: {fileID: 6447384362930444411}
+  inventorySystem: {fileID: 6169907213170882658}
+  velocityReference: {fileID: 5844291567037251139}
+  movingThreshold: 0.1
+  directionalMoveThreshold: 0.05
+  parameterDampTime: 0.1
+  speedParameter: Speed
+  horizontalSpeedParameter: HorizontalSpeed
+  desiredSpeedParameter: DesiredSpeed
+  velocityXParameter: VelocityX
+  velocityYParameter: VelocityY
+  velocityZParameter: VelocityZ
+  moveXParameter: MoveX
+  moveYParameter: MoveY
+  moveForwardParameter: MoveForward
+  moveRightParameter: MoveRight
+  turnParameter: Turn
+  movementBurdenParameter: MovementBurden
+  extinguishStanceParameter: ExtinguishStance
+  isGroundedParameter: IsGrounded
+  isMovingParameter: IsMoving
+  isIdleParameter: IsIdle
+  isStrafingParameter: IsStrafing
+  isMovingForwardParameter: IsMovingForward
+  isMovingBackwardParameter: IsMovingBackward
+  isMovingRightParameter: IsMovingRight
+  isMovingLeftParameter: IsMovingLeft
+  isCrouchingParameter: IsCrouching
+  isHoldingParameter: IsHolding
+  hasItemParameter: HasItem
+  isAimingToolParameter: IsAimingTool
+  isUsingToolParameter: IsUsingTool
+  isCarryingVictimParameter: IsCarryingVictim
+  hasCommandParameter: HasCommand
+  isFollowingParameter: IsFollowing
+  isExtinguishingParameter: IsExtinguishing
+  isRescuingParameter: IsRescuing
+  itemCountParameter: ItemCount
+  heldItemNameHashParameter: HeldItemNameHash
+  heldItemTypeHashParameter: HeldItemTypeHash
+  activeCommandTypeParameter: ActiveCommandType
+  holdingNamePrefix: IsHolding_
+  holdingTypePrefix: IsHoldingType_
+  commandTypePrefix: IsCommand_
+  worldVelocity: {x: 0, y: 0, z: 0}
+  localVelocity: {x: 0, y: 0, z: 0}
+  desiredWorldVelocity: {x: 0, y: 0, z: 0}
+  desiredLocalVelocity: {x: 0, y: 0, z: 0}
+  speed: 0
+  horizontalSpeed: 0
+  desiredSpeed: 0
+  turnAmount: 0
+  movementBurden: 0
+  extinguishStance: 0
+  isGrounded: 0
+  isMoving: 0
+  isIdle: 0
+  isStrafing: 0
+  isMovingForward: 0
+  isMovingBackward: 0
+  isMovingRight: 0
+  isMovingLeft: 0
+  isCrouching: 0
+  isHolding: 0
+  isAimingTool: 0
+  isUsingTool: 0
+  isCarryingVictim: 0
+  hasCommand: 0
+  activeCommandType: 0
+  itemCount: 0
+  heldItemName: 
+  heldItemTypeName: 
 --- !u!1 &8080815507665081034
 GameObject:
   m_ObjectHideFlags: 0
@@ -4270,7 +4364,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4971748020214578884}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: CarryLeftHandIK_hint
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4459,7 +4553,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8828344073987793475}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: CarryRightHandIK_hint
   m_TagString: Untagged
   m_Icon: {fileID: 0}

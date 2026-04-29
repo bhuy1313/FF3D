@@ -39,6 +39,11 @@ public sealed partial class FireSimulationManager
             return false;
         }
 
+        if (IsHazardSuppressionGated(node))
+        {
+            return false;
+        }
+
         float effectiveness = ResolveSuppressionEffectiveness(node, agent);
         bool worsens = ResolveSuppressionWorsens(node, agent);
         if (Mathf.Approximately(effectiveness, 0f) && !worsens)
@@ -88,6 +93,11 @@ public sealed partial class FireSimulationManager
 
             float distanceSqr = (node.Position - worldCenter).sqrMagnitude;
             if (distanceSqr > radiusSqr)
+            {
+                continue;
+            }
+
+            if (IsHazardSuppressionGated(node))
             {
                 continue;
             }
@@ -157,6 +167,11 @@ public sealed partial class FireSimulationManager
                 continue;
             }
 
+            if (IsHazardSuppressionGated(node))
+            {
+                continue;
+            }
+
             float normalizedFalloff = 1f - Mathf.Clamp01(Mathf.Sqrt(distanceSqr) / radius);
             node.Wetness += wetnessAmount * normalizedFalloff;
             node.Heat = Mathf.Max(0f, node.Heat - heatRemovalAmount * normalizedFalloff);
@@ -189,6 +204,43 @@ public sealed partial class FireSimulationManager
         }
 
         return fallbackSuppressionProfile;
+    }
+
+    // Returns true when the node belongs to an active hazard incident (Primary/Secondary)
+    // whose source has not yet been isolated. While gated, all suppression is rejected so
+    // the player must interact with the linked HazardIsolationDevice first.
+    // Late spread nodes are never gated — they behave like ordinary combustibles.
+    private bool IsHazardSuppressionGated(FireRuntimeNode node)
+    {
+        if (node == null)
+        {
+            return false;
+        }
+
+        if (node.IncidentNodeKind == FireIncidentNodeKind.Late)
+        {
+            return false;
+        }
+
+        if (activeHazardSourceIsolated)
+        {
+            return false;
+        }
+
+        return HazardTypeRequiresIsolation(activeIncidentHazardType);
+    }
+
+    private static bool HazardTypeRequiresIsolation(FireHazardType hazardType)
+    {
+        switch (hazardType)
+        {
+            case FireHazardType.Electrical:
+            case FireHazardType.GasFed:
+            case FireHazardType.FlammableLiquid:
+                return true;
+            default:
+                return false;
+        }
     }
 
     private bool ResolveSuppressionWorsens(FireRuntimeNode node, FireSuppressionAgent agent)

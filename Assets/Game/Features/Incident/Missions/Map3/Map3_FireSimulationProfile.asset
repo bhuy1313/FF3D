@@ -23,12 +23,12 @@ MonoBehaviour:
   suppressionRecoveryDelaySeconds: 1.5
   suppressionRecoveryHeatMultiplier: 0.15
   blockIncomingSpreadDuringSuppressionRecovery: 1
-  stopReceivingSpreadAfterSaturation: 0
+  stopReceivingSpreadAfterSaturation: 1
   spreadSaturationHeatMultiplier: 2
-  deleteNodeWhenHeatDropsToZero: 0
+  deleteNodeWhenHeatDropsToZero: 1
   fuelBurnPerSecond: 0.08
   burnedOutHeatRetention: 0.15
-  neighborHeatTransferPerSecond: 0.55
+  neighborHeatTransferPerSecond: 0.05
   sameSurfaceTransferMultiplier: 1.2
   crossSurfaceTransferMultiplier: 0.7
   verticalSpreadBias: 0.9

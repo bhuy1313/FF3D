@@ -9,10 +9,19 @@ public partial class IncidentMissionSystem
         RemoveNullEntries(trackedRescuables);
         RemoveNullEntries(trackedVictimConditions);
 
-        int simulationTrackedFireCount = CountTrackedSimulationNodes(trackedFireSimulationManagers);
-        int simulationExtinguishedFireCount = CountExtinguishedSimulationNodes(trackedFireSimulationManagers);
-        totalTrackedFires = simulationTrackedFireCount;
-        extinguishedFireCount = simulationExtinguishedFireCount;
+        // Hazard-linked nodes get cleaned up (IsTrackedByIncident=false, IsRemoved=true)
+        // once fully extinguished. Counting "currently tracked" would shrink the
+        // denominator as the player puts out fires. We instead keep a sticky peak so
+        // the objective shows 1/3 -> 2/3 -> 3/3 instead of 1/3 -> 0/2 -> 0/1 -> 0/0.
+        int currentHazardLinked = CountTrackedSimulationNodes(trackedFireSimulationManagers);
+        int currentHazardLinkedBurning = CountBurningSimulationNodes(trackedFireSimulationManagers);
+        if (currentHazardLinked > peakHazardLinkedFireCount)
+        {
+            peakHazardLinkedFireCount = currentHazardLinked;
+        }
+
+        totalTrackedFires = peakHazardLinkedFireCount;
+        extinguishedFireCount = Mathf.Clamp(peakHazardLinkedFireCount - currentHazardLinkedBurning, 0, peakHazardLinkedFireCount);
         totalTrackedRescuables = trackedRescuables.Count;
         rescuedCount = CountRescuedTargets(trackedRescuables);
         totalTrackedVictims = trackedVictimConditions.Count;
@@ -96,7 +105,10 @@ public partial class IncidentMissionSystem
         return count;
     }
 
-    private static int CountExtinguishedSimulationNodes(List<FireSimulationManager> managers)
+    // Counts hazard-linked nodes that are currently still burning. The
+    // "extinguished" metric is derived as (peakHazardLinked - currentBurning) by
+    // RefreshProgress so that already-removed nodes still count toward progress.
+    private static int CountBurningSimulationNodes(List<FireSimulationManager> managers)
     {
         int count = 0;
         if (managers == null)
@@ -109,9 +121,7 @@ public partial class IncidentMissionSystem
             FireSimulationManager manager = managers[i];
             if (manager != null && manager.IsInitialized)
             {
-                int hazardLinked = manager.GetHazardLinkedNodeCount();
-                int hazardLinkedBurning = manager.GetHazardLinkedBurningNodeCount();
-                count += Mathf.Max(0, hazardLinked - hazardLinkedBurning);
+                count += manager.GetHazardLinkedBurningNodeCount();
             }
         }
 
