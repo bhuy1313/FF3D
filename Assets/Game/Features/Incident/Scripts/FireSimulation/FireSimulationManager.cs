@@ -12,13 +12,10 @@ public sealed partial class FireSimulationManager : MonoBehaviour
     [SerializeField] private FireClusterView clusterViewPrefab;
     [SerializeField] private Transform clusterViewRoot;
     [Header("Runtime Incident Nodes")]
-    [SerializeField] [Min(0.1f)] private float runtimeNodeInitialFuel = 1.1f;
     [SerializeField] [Min(0.01f)] private float runtimeNodeIgnitionThresholdMultiplier = 1f;
-    [SerializeField] [Range(0f, 1f)] private float runtimeNodeSpreadResistance = 0.1f;
     [SerializeField] [Min(0.1f)] private float runtimeNodeAutoConnectRadius = 2.6f;
     [SerializeField] private bool runtimeNodeDrawGizmos = true;
     [SerializeField] private Color runtimeNodeGizmoColor = new Color(1f, 0.45f, 0.1f, 0.8f);
-    [SerializeField] private bool removeRuntimeNodeWhenHeatReachesZero;
 
     [Header("Boot")]
     [SerializeField] private bool initializeOnEnable = true;

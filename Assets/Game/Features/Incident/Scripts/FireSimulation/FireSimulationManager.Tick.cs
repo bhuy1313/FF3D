@@ -5,6 +5,8 @@ public sealed partial class FireSimulationManager
     private bool TickSimulation(float deltaTime)
     {
         bool changed = false;
+
+        // Phase 1: decay suppression timers and queue spread from currently burning nodes.
         for (int i = 0; i < runtimeGraph.Count; i++)
         {
             FireRuntimeNode node = runtimeGraph.GetNode(i);
@@ -15,6 +17,10 @@ public sealed partial class FireSimulationManager
 
             changed |= TickNode(node, deltaTime);
         }
+
+        // Phase 2: apply queued heat deltas, clamp, mark saturation, remove if extinguished.
+        float maxHeat = simulationProfile != null ? simulationProfile.MaxHeat : 2f;
+        float extinguishThreshold = simulationProfile != null ? simulationProfile.ExtinguishThreshold : 0.08f;
 
         for (int i = 0; i < runtimeGraph.Count; i++)
         {
@@ -31,28 +37,28 @@ public sealed partial class FireSimulationManager
                 changed = true;
             }
 
-            if (!Mathf.Approximately(node.PendingWetnessDelta, 0f))
+            if (node.Heat >= maxHeat)
             {
-                node.Wetness = Mathf.Max(0f, node.Wetness + node.PendingWetnessDelta);
-                node.PendingWetnessDelta = 0f;
-                changed = true;
+                node.Heat = maxHeat;
+                node.HasReachedSpreadSaturation = true;
             }
 
-            if (node.RemainingFuel <= 0f)
-            {
-                node.Heat = Mathf.Min(node.Heat, simulationProfile.BurnedOutHeatRetention);
-            }
-            else if (node.Heat < simulationProfile.ExtinguishThreshold)
+            // Snap residual heat to 0 only after active suppression so ramp-up
+            // via slow neighbour spread is not constantly killed off. The
+            // SuppressionRecoveryTimer is set whenever a player/bot dampens this
+            // node, so this branch only fires once the node has actually been
+            // worked on.
+            if (node.SuppressionRecoveryTimer > 0f &&
+                node.Heat > 0f &&
+                node.Heat < extinguishThreshold)
             {
                 node.Heat = 0f;
             }
 
-            if (simulationProfile != null && node.Heat >= GetSpreadSaturationHeat(node))
-            {
-                node.HasReachedSpreadSaturation = true;
-            }
-
-            if (ShouldRemoveNodeAtZeroHeat(node))
+            // Only remove nodes that were actually engaged in the incident — Late
+            // nodes that never got touched by spread keep Heat=0 forever and must
+            // remain in the graph so neighbours can still ignite them later.
+            if (node.IsTrackedByIncident && node.Heat <= 0.0001f)
             {
                 RemoveRuntimeNode(node);
                 changed = true;
@@ -69,31 +75,26 @@ public sealed partial class FireSimulationManager
             return false;
         }
 
-        float previousHeat = node.Heat;
-        float previousWetness = node.Wetness;
-        float previousFuel = node.RemainingFuel;
         float previousSuppressionTimer = node.SuppressionRecoveryTimer;
-        node.Wetness = Mathf.Max(0f, node.Wetness - simulationProfile.WetnessRecoveryPerSecond * deltaTime);
         node.SuppressionRecoveryTimer = Mathf.Max(0f, node.SuppressionRecoveryTimer - deltaTime);
-        node.Heat = Mathf.Max(0f, node.Heat - simulationProfile.AmbientCoolingPerSecond * deltaTime);
-        node.Heat = Mathf.Max(0f, node.Heat - node.Wetness * simulationProfile.WetnessCoolingPerSecond * deltaTime);
 
         if (node.IsBurning)
         {
-            node.RemainingFuel = Mathf.Max(0f, node.RemainingFuel - simulationProfile.FuelBurnPerSecond * deltaTime);
             SpreadHeatToNeighbors(node, deltaTime);
         }
 
-        return
-            !Mathf.Approximately(previousHeat, node.Heat) ||
-            !Mathf.Approximately(previousWetness, node.Wetness) ||
-            !Mathf.Approximately(previousFuel, node.RemainingFuel) ||
-            !Mathf.Approximately(previousSuppressionTimer, node.SuppressionRecoveryTimer);
+        return !Mathf.Approximately(previousSuppressionTimer, node.SuppressionRecoveryTimer);
     }
 
     private void SpreadHeatToNeighbors(FireRuntimeNode source, float deltaTime)
     {
-        if (source == null || source.IsRemoved)
+        if (source == null || source.IsRemoved || simulationProfile == null)
+        {
+            return;
+        }
+
+        float transferPerSecond = simulationProfile.NeighborHeatTransferPerSecond;
+        if (transferPerSecond <= 0f)
         {
             return;
         }
@@ -101,24 +102,26 @@ public sealed partial class FireSimulationManager
         for (int i = 0; i < source.NeighborIndices.Count; i++)
         {
             FireRuntimeNode target = runtimeGraph.GetNode(source.NeighborIndices[i]);
-            if (target == null || target.IsRemoved || target.RemainingFuel <= 0f)
+            if (target == null || target.IsRemoved)
             {
                 continue;
             }
 
-            if (simulationProfile != null)
+            // Saturated nodes never accept spread again, even if subsequently cooled.
+            if (target.HasReachedSpreadSaturation)
             {
-                if (simulationProfile.StopReceivingSpreadAfterSaturation && target.HasReachedSpreadSaturation)
-                {
-                    continue;
-                }
-
-                if (simulationProfile.BlockIncomingSpreadDuringSuppressionRecovery && target.SuppressionRecoveryTimer > 0f)
-                {
-                    continue;
-                }
+                continue;
             }
 
+            // While a node is recovering from active suppression it cannot reignite
+            // from neighbours.
+            if (target.SuppressionRecoveryTimer > 0f)
+            {
+                continue;
+            }
+
+            // Propagate incident-tracking so Late nodes lit via spread are counted
+            // as part of the active incident.
             if (source.IsTrackedByIncident)
             {
                 target.IsTrackedByIncident = true;
@@ -128,19 +131,7 @@ public sealed partial class FireSimulationManager
                 }
             }
 
-            float heatTransfer = source.Heat * simulationProfile.NeighborHeatTransferPerSecond * deltaTime;
-            heatTransfer *= 1f - target.SpreadResistance;
-            if (target.SuppressionRecoveryTimer > 0f)
-            {
-                heatTransfer *= simulationProfile.SuppressionRecoveryHeatMultiplier;
-            }
-            heatTransfer *= source.SurfaceType == target.SurfaceType
-                ? simulationProfile.SameSurfaceTransferMultiplier
-                : simulationProfile.CrossSurfaceTransferMultiplier;
-
-            float verticalAlignment = Vector3.Dot(source.SurfaceNormal, target.SurfaceNormal);
-            heatTransfer *= Mathf.Lerp(simulationProfile.VerticalSpreadBias, 1f, Mathf.InverseLerp(-1f, 1f, verticalAlignment));
-            target.PendingHeatDelta += heatTransfer;
+            target.PendingHeatDelta += source.Heat * transferPerSecond * deltaTime;
         }
     }
 }

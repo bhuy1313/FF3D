@@ -8,7 +8,7 @@
 ## Runtime Layers
 1. `FireSurfaceNodeAuthoring`
 - Scene authoring point on floor, wall, ceiling, or object surface.
-- Stores fuel, ignition threshold multiplier, spread resistance, hazard type, and neighbor hints.
+- Stores ignition threshold multiplier, hazard type, and neighbor hints.
 
 2. `FireSurfaceGraph`
 - Collects authoring nodes from the scene.
@@ -16,7 +16,7 @@
 
 3. `FireSimulationManager`
 - Owns the runtime graph.
-- Ticks heat, wetness, fuel, ignition, and spread on a fixed interval.
+- Ticks heat, ignition, and neighbour spread on a fixed interval.
 - Rebuilds cluster snapshots on a slower interval for presentation.
 
 4. `FireClusterSnapshot`

@@ -1,5 +1,14 @@
 using UnityEngine;
 
+// Minimal fire simulation profile. Behaviour rules are intentionally hard-coded:
+//   - No ambient cooling, no wetness, no fuel depletion.
+//   - Heat only changes via neighbour spread or active suppression.
+//   - A node that reaches MaxHeat saturates and never accepts spread again.
+//   - A node receiving suppression cannot accept spread until the recovery timer
+//     elapses (suppressionRecoveryDelaySeconds).
+//   - Extinguished nodes (heat <= 0) are removed from the runtime graph.
+//   - Spread is uniform: surface kind / spread resistance / vertical orientation
+//     are ignored.
 [CreateAssetMenu(
     fileName = "FireSimulationProfile",
     menuName = "Game/Incident/Fire Simulation Profile")]
@@ -10,28 +19,20 @@ public sealed class FireSimulationProfile : ScriptableObject
     [SerializeField] [Min(0.05f)] private float clusterRefreshInterval = 0.2f;
 
     [Header("Heat")]
-    [SerializeField] [Min(0f)] private float ambientCoolingPerSecond = 0.12f;
-    [SerializeField] [Min(0f)] private float wetnessCoolingPerSecond = 0.8f;
-    [SerializeField] [Min(0f)] private float wetnessRecoveryPerSecond = 0.2f;
-    [SerializeField] [Min(0f)] private float passiveIgnitionThreshold = 1f;
+    [Tooltip("Heat ceiling. Once a node reaches this value it saturates and can " +
+             "no longer accept spread from neighbours, even if it is later " +
+             "partially suppressed.")]
+    [SerializeField] [Min(0.01f)] private float maxHeat = 2f;
+    [Tooltip("Heat threshold at which a node snaps to 0 and gets removed.")]
     [SerializeField] [Min(0f)] private float extinguishThreshold = 0.08f;
+    [Tooltip("Minimum heat for VFX rendering.")]
     [SerializeField] [Min(0f)] private float visualHeatThreshold = 0.01f;
+    [Tooltip("Seconds a suppressed node must wait before it can receive spread again.")]
     [SerializeField] [Min(0f)] private float suppressionRecoveryDelaySeconds = 1.5f;
-    [SerializeField] [Range(0f, 1f)] private float suppressionRecoveryHeatMultiplier = 0.15f;
-    [SerializeField] private bool blockIncomingSpreadDuringSuppressionRecovery;
-    [SerializeField] private bool stopReceivingSpreadAfterSaturation;
-    [SerializeField] [Min(1f)] private float spreadSaturationHeatMultiplier = 2f;
-    [SerializeField] private bool deleteNodeWhenHeatDropsToZero;
-
-    [Header("Fuel")]
-    [SerializeField] [Min(0f)] private float fuelBurnPerSecond = 0.1f;
-    [SerializeField] [Range(0f, 1f)] private float burnedOutHeatRetention = 0.15f;
 
     [Header("Spread")]
+    [Tooltip("Heat transferred per second from a burning node to each neighbour.")]
     [SerializeField] [Min(0f)] private float neighborHeatTransferPerSecond = 0.5f;
-    [SerializeField] [Range(0f, 4f)] private float sameSurfaceTransferMultiplier = 1.2f;
-    [SerializeField] [Range(0f, 4f)] private float crossSurfaceTransferMultiplier = 0.65f;
-    [SerializeField] [Range(0f, 4f)] private float verticalSpreadBias = 0.85f;
 
     [Header("Clustering")]
     [SerializeField] [Min(0.1f)] private float clusterMergeDistance = 2.5f;
@@ -39,24 +40,11 @@ public sealed class FireSimulationProfile : ScriptableObject
 
     public float SimulationTickInterval => simulationTickInterval;
     public float ClusterRefreshInterval => clusterRefreshInterval;
-    public float AmbientCoolingPerSecond => ambientCoolingPerSecond;
-    public float WetnessCoolingPerSecond => wetnessCoolingPerSecond;
-    public float WetnessRecoveryPerSecond => wetnessRecoveryPerSecond;
-    public float PassiveIgnitionThreshold => passiveIgnitionThreshold;
+    public float MaxHeat => maxHeat;
     public float ExtinguishThreshold => extinguishThreshold;
     public float VisualHeatThreshold => visualHeatThreshold;
     public float SuppressionRecoveryDelaySeconds => suppressionRecoveryDelaySeconds;
-    public float SuppressionRecoveryHeatMultiplier => suppressionRecoveryHeatMultiplier;
-    public bool BlockIncomingSpreadDuringSuppressionRecovery => blockIncomingSpreadDuringSuppressionRecovery;
-    public bool StopReceivingSpreadAfterSaturation => stopReceivingSpreadAfterSaturation;
-    public float SpreadSaturationHeatMultiplier => spreadSaturationHeatMultiplier;
-    public bool DeleteNodeWhenHeatDropsToZero => deleteNodeWhenHeatDropsToZero;
-    public float FuelBurnPerSecond => fuelBurnPerSecond;
-    public float BurnedOutHeatRetention => burnedOutHeatRetention;
     public float NeighborHeatTransferPerSecond => neighborHeatTransferPerSecond;
-    public float SameSurfaceTransferMultiplier => sameSurfaceTransferMultiplier;
-    public float CrossSurfaceTransferMultiplier => crossSurfaceTransferMultiplier;
-    public float VerticalSpreadBias => verticalSpreadBias;
     public float ClusterMergeDistance => clusterMergeDistance;
     public int MaxClusterViews => maxClusterViews;
 
@@ -64,21 +52,11 @@ public sealed class FireSimulationProfile : ScriptableObject
     {
         simulationTickInterval = Mathf.Max(0.02f, simulationTickInterval);
         clusterRefreshInterval = Mathf.Max(0.05f, clusterRefreshInterval);
-        ambientCoolingPerSecond = Mathf.Max(0f, ambientCoolingPerSecond);
-        wetnessCoolingPerSecond = Mathf.Max(0f, wetnessCoolingPerSecond);
-        wetnessRecoveryPerSecond = Mathf.Max(0f, wetnessRecoveryPerSecond);
-        passiveIgnitionThreshold = Mathf.Max(0f, passiveIgnitionThreshold);
+        maxHeat = Mathf.Max(0.01f, maxHeat);
         extinguishThreshold = Mathf.Max(0f, extinguishThreshold);
         visualHeatThreshold = Mathf.Max(0f, visualHeatThreshold);
         suppressionRecoveryDelaySeconds = Mathf.Max(0f, suppressionRecoveryDelaySeconds);
-        suppressionRecoveryHeatMultiplier = Mathf.Clamp01(suppressionRecoveryHeatMultiplier);
-        spreadSaturationHeatMultiplier = Mathf.Max(1f, spreadSaturationHeatMultiplier);
-        fuelBurnPerSecond = Mathf.Max(0f, fuelBurnPerSecond);
-        burnedOutHeatRetention = Mathf.Clamp01(burnedOutHeatRetention);
         neighborHeatTransferPerSecond = Mathf.Max(0f, neighborHeatTransferPerSecond);
-        sameSurfaceTransferMultiplier = Mathf.Max(0f, sameSurfaceTransferMultiplier);
-        crossSurfaceTransferMultiplier = Mathf.Max(0f, crossSurfaceTransferMultiplier);
-        verticalSpreadBias = Mathf.Max(0f, verticalSpreadBias);
         clusterMergeDistance = Mathf.Max(0.1f, clusterMergeDistance);
         maxClusterViews = Mathf.Max(1, maxClusterViews);
     }

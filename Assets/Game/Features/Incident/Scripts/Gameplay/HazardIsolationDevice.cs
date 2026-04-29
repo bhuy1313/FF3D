@@ -340,7 +340,6 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
 
             sb.Append('[').Append(node.IncidentNodeKind).Append("] idx=").Append(node.Index)
                 .Append(" heat=").Append(node.Heat.ToString("0.00"))
-                .Append(" fuel=").Append(node.RemainingFuel.ToString("0.00"))
                 .Append(node.IsBurning ? " (burning)" : " (idle)");
         }
 

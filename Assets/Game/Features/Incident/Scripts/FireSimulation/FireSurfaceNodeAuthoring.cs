@@ -20,9 +20,7 @@ public sealed class FireSurfaceNodeAuthoring : MonoBehaviour
     [SerializeField] private Vector3 surfaceNormal = Vector3.up;
 
     [Header("Combustion")]
-    [SerializeField] [Min(0.1f)] private float initialFuel = 1f;
     [SerializeField] [Min(0f)] private float ignitionThresholdMultiplier = 1f;
-    [SerializeField] [Range(0f, 1f)] private float spreadResistance = 0.15f;
     [SerializeField] private FireHazardType hazardType = FireHazardType.OrdinaryCombustibles;
     [SerializeField] private bool startIgnited;
 
@@ -39,9 +37,7 @@ public sealed class FireSurfaceNodeAuthoring : MonoBehaviour
     public string NodeId => string.IsNullOrWhiteSpace(nodeId) ? gameObject.name : nodeId;
     public SurfaceKind SurfaceType => surfaceKind;
     public Vector3 SurfaceNormal => surfaceNormal.sqrMagnitude > 0.001f ? surfaceNormal.normalized : transform.up;
-    public float InitialFuel => Mathf.Max(0f, initialFuel);
     public float IgnitionThresholdMultiplier => Mathf.Max(0.01f, ignitionThresholdMultiplier);
-    public float SpreadResistance => Mathf.Clamp01(spreadResistance);
     public FireHazardType HazardType => hazardType;
     public bool StartIgnited => startIgnited;
     public bool AutoConnectNearbyNodes => autoConnectNearbyNodes;
@@ -53,9 +49,7 @@ public sealed class FireSurfaceNodeAuthoring : MonoBehaviour
         string runtimeNodeId,
         SurfaceKind runtimeSurfaceKind,
         Vector3 runtimeSurfaceNormal,
-        float runtimeInitialFuel,
         float runtimeIgnitionThresholdMultiplier,
-        float runtimeSpreadResistance,
         FireHazardType runtimeHazardType,
         bool runtimeStartIgnited,
         bool runtimeAutoConnectNearbyNodes,
@@ -66,9 +60,7 @@ public sealed class FireSurfaceNodeAuthoring : MonoBehaviour
         nodeId = runtimeNodeId;
         surfaceKind = runtimeSurfaceKind;
         surfaceNormal = runtimeSurfaceNormal.sqrMagnitude > 0.001f ? runtimeSurfaceNormal.normalized : Vector3.up;
-        initialFuel = Mathf.Max(0.1f, runtimeInitialFuel);
         ignitionThresholdMultiplier = Mathf.Max(0.01f, runtimeIgnitionThresholdMultiplier);
-        spreadResistance = Mathf.Clamp01(runtimeSpreadResistance);
         hazardType = runtimeHazardType;
         startIgnited = runtimeStartIgnited;
         autoConnectNearbyNodes = runtimeAutoConnectNearbyNodes;
@@ -99,9 +91,7 @@ public sealed class FireSurfaceNodeAuthoring : MonoBehaviour
 
     private void OnValidate()
     {
-        initialFuel = Mathf.Max(0.1f, initialFuel);
         ignitionThresholdMultiplier = Mathf.Max(0.01f, ignitionThresholdMultiplier);
-        spreadResistance = Mathf.Clamp01(spreadResistance);
         autoConnectRadius = Mathf.Max(0.1f, autoConnectRadius);
         if (surfaceNormal.sqrMagnitude <= 0.001f)
         {

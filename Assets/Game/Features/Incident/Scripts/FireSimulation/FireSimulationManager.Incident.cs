@@ -168,9 +168,7 @@ public sealed partial class FireSimulationManager
                 $"RuntimeIncidentNode_{i + 1}",
                 ResolveRuntimeSurfaceKind(placement.SurfaceNormal),
                 placement.SurfaceNormal,
-                runtimeNodeInitialFuel,
                 runtimeNodeIgnitionThresholdMultiplier,
-                runtimeNodeSpreadResistance,
                 nodeHazardType,
                 runtimeStartIgnited: false,
                 runtimeAutoConnectNearbyNodes: true,
@@ -270,10 +268,7 @@ public sealed partial class FireSimulationManager
             }
 
             node.HazardType = node.Authoring != null ? node.Authoring.HazardType : FireHazardType.OrdinaryCombustibles;
-            node.RemainingFuel = node.InitialFuel;
-            node.Wetness = 0f;
             node.PendingHeatDelta = 0f;
-            node.PendingWetnessDelta = 0f;
             node.IsTrackedByIncident = false;
             node.IncidentNodeKind = FireIncidentNodeKind.Late;
             node.SuppressionRecoveryTimer = 0f;

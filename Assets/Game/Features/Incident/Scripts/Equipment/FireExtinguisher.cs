@@ -29,8 +29,6 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
     [SerializeField] private float coneHalfAngle = 28f;
     [SerializeField] private float coneBaseRadius = 0.15f;
     [SerializeField] private int coneSegments = 4;
-    [SerializeField] private LayerMask sprayMask = ~0;
-    [SerializeField] private LayerMask lineOfSightMask = 1; // Default layer
 
     [Header("References")]
     [SerializeField] private ParticleSystem sprayParticles;
@@ -48,7 +46,6 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
     [SerializeField] private bool drawConeGizmo = true;
     [SerializeField] private bool drawGizmoOnlyWhenSelected = true;
 
-    private readonly Collider[] hitBuffer = new Collider[64];
     private Rigidbody cachedRigidbody;
     public Rigidbody Rigidbody => cachedRigidbody;
     public float MovementWeightKg => Mathf.Max(0f, movementWeightKg);
@@ -299,6 +296,12 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
             return;
         }
 
+        FireSimulationManager simulationManager = ResolveFireSimulationManager();
+        if (simulationManager == null || !simulationManager.IsInitialized)
+        {
+            return;
+        }
+
         Transform origin = sprayParticles != null ? sprayParticles.transform : transform;
         Vector3 start = origin.position;
         Vector3 forward = origin.forward;
@@ -315,71 +318,17 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
         }
 
         float amount = playerDischargePerSecond * Time.deltaTime;
-        float segmentLength = maxSprayDistance / Mathf.Max(1, coneSegments);
-        FireSimulationManager simulationManager = ResolveFireSimulationManager();
-        System.Collections.Generic.HashSet<Fire> processedFires = new System.Collections.Generic.HashSet<Fire>();
+        int segments = Mathf.Max(1, coneSegments);
+        float segmentLength = maxSprayDistance / segments;
+        float tanHalfAngle = Mathf.Tan(coneHalfAngle * Mathf.Deg2Rad);
+        FireSuppressionAgent agent = SuppressionAgent;
 
-        for (int i = 0; i < coneSegments; i++)
+        for (int i = 0; i < segments; i++)
         {
             float distance = segmentLength * (i + 1);
-            float radius = coneBaseRadius + Mathf.Tan(coneHalfAngle * Mathf.Deg2Rad) * distance;
+            float radius = coneBaseRadius + tanHalfAngle * distance;
             Vector3 center = start + forward * distance;
-            if (simulationManager != null && simulationManager.IsInitialized)
-            {
-                simulationManager.ApplySuppressionSphere(center, radius, amount, SuppressionAgent);
-                continue;
-            }
-
-            int hitCount = Physics.OverlapSphereNonAlloc(center, radius, hitBuffer, sprayMask, QueryTriggerInteraction.Collide);
-
-            for (int hitIndex = 0; hitIndex < hitCount; hitIndex++)
-            {
-                Collider hit = hitBuffer[hitIndex];
-                if (hit == null)
-                {
-                    continue;
-                }
-
-                Vector3 closestPoint = GetClosestPointSafe(hit, start);
-                Vector3 toHit = closestPoint - start;
-                float hitDistance = toHit.magnitude;
-                if (hitDistance <= 0.001f || hitDistance > maxSprayDistance)
-                {
-                    continue;
-                }
-
-                float angle = Vector3.Angle(forward, toHit.normalized);
-                if (angle > coneHalfAngle)
-                {
-                    continue;
-                }
-
-                if (Physics.Linecast(start, closestPoint, out RaycastHit lineHit, lineOfSightMask, QueryTriggerInteraction.Ignore))
-                {
-                    continue;
-                }
-
-                ApplyWaterToColliderSafe(hit, amount, processedFires, SuppressionAgent, currentUser);
-            }
-        }
-    }
-
-    private static void ApplyWaterToColliderSafe(
-        Collider collider,
-        float amount,
-        System.Collections.Generic.HashSet<Fire> processedFires,
-        FireSuppressionAgent suppressionAgent,
-        GameObject sourceUser)
-    {
-        if (collider == null)
-        {
-            return;
-        }
-
-        Fire fire = FindFire(collider);
-        if (fire != null && processedFires.Add(fire))
-        {
-            fire.ApplySuppression(amount, suppressionAgent, sourceUser);
+            simulationManager.ApplySuppressionSphere(center, radius, amount, agent);
         }
     }
 
@@ -394,47 +343,6 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
             default:
                 return FireSuppressionAgent.DryChemical;
         }
-    }
-
-    private static Fire FindFire(Collider collider)
-    {
-        if (collider.TryGetComponent(out Fire direct))
-        {
-            return direct;
-        }
-
-        if (collider.attachedRigidbody != null && collider.attachedRigidbody.TryGetComponent(out Fire rigidbodyOwner))
-        {
-            return rigidbodyOwner;
-        }
-
-        Transform parent = collider.transform.parent;
-        if (parent != null && parent.TryGetComponent(out Fire parentFire))
-        {
-            return parentFire;
-        }
-
-        return null;
-    }
-
-    private static Vector3 GetClosestPointSafe(Collider collider, Vector3 position)
-    {
-        if (collider == null)
-        {
-            return position;
-        }
-
-        if (collider is BoxCollider || collider is SphereCollider || collider is CapsuleCollider)
-        {
-            return collider.ClosestPoint(position);
-        }
-
-        if (collider is MeshCollider meshCollider && meshCollider.convex)
-        {
-            return collider.ClosestPoint(position);
-        }
-
-        return collider.bounds.ClosestPoint(position);
     }
 
     private static bool IsFinite(Vector3 value)

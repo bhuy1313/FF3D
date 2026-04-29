@@ -57,11 +57,6 @@ public sealed partial class FireSimulationManager
         }
         else
         {
-            if (agent == FireSuppressionAgent.Water)
-            {
-                node.Wetness += amount;
-            }
-
             node.Heat = Mathf.Max(0f, node.Heat - amount * effectiveness);
             MarkNodeRecentlySuppressed(node);
         }
@@ -117,68 +112,13 @@ public sealed partial class FireSimulationManager
             else
             {
                 float heatRemoval = amount * effectiveness * normalizedFalloff;
-                if (agent == FireSuppressionAgent.Water)
-                {
-                    node.Wetness += amount * normalizedFalloff;
-                }
-
                 node.Heat = Mathf.Max(0f, node.Heat - heatRemoval);
-                if (heatRemoval > 0f || (agent == FireSuppressionAgent.Water && normalizedFalloff > 0f))
+                if (heatRemoval > 0f)
                 {
                     MarkNodeRecentlySuppressed(node);
                 }
             }
 
-            affectedNodeCount++;
-        }
-
-        if (affectedNodeCount > 0)
-        {
-            NotifyStateChanged();
-        }
-
-        return affectedNodeCount;
-    }
-
-    public int ApplySuppressionSphere(
-        Vector3 worldCenter,
-        float radius,
-        float wetnessAmount,
-        float heatRemovalAmount)
-    {
-        if (!initialized || runtimeGraph == null || radius <= 0f)
-        {
-            return 0;
-        }
-
-        int affectedNodeCount = 0;
-        float radiusSqr = radius * radius;
-        for (int i = 0; i < runtimeGraph.Count; i++)
-        {
-            FireRuntimeNode node = runtimeGraph.GetNode(i);
-            if (node == null || !node.IsTrackedByIncident)
-            {
-                continue;
-            }
-
-            float distanceSqr = (node.Position - worldCenter).sqrMagnitude;
-            if (distanceSqr > radiusSqr)
-            {
-                continue;
-            }
-
-            if (IsHazardSuppressionGated(node))
-            {
-                continue;
-            }
-
-            float normalizedFalloff = 1f - Mathf.Clamp01(Mathf.Sqrt(distanceSqr) / radius);
-            node.Wetness += wetnessAmount * normalizedFalloff;
-            node.Heat = Mathf.Max(0f, node.Heat - heatRemovalAmount * normalizedFalloff);
-            if (wetnessAmount > 0f || heatRemovalAmount > 0f)
-            {
-                MarkNodeRecentlySuppressed(node);
-            }
             affectedNodeCount++;
         }
 

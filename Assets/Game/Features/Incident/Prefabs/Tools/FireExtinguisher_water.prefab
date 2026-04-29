@@ -55,23 +55,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FireExtinguisher
   extinguisherType: 0
   movementWeightKg: 12
-  maxCharge: 55555
+  maxCharge: 50
   rechargePerSecond: 0
   minChargeToUse: 0.05
   toggleUse: 1
-  playerDischargePerSecond: 150
-  botDischargePerSecond: 250
+  playerDischargePerSecond: 0.15
+  botDischargePerSecond: 0.15
   maxSprayDistance: 2
   botStandDistanceFactor: 0
-  coneHalfAngle: 28
+  coneHalfAngle: 35
   coneBaseRadius: 0.15
-  coneSegments: 4
-  sprayMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  lineOfSightMask:
-    serializedVersion: 2
-    m_Bits: 1
+  coneSegments: 2
   sprayParticles: {fileID: 3386994986908344762}
   audioController: {fileID: 0}
   fireSimulationManager: {fileID: 0}

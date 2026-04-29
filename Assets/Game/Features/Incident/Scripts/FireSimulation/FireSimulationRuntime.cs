@@ -33,12 +33,9 @@ public sealed class FireRuntimeNode
         Position = authoring != null ? authoring.transform.position : Vector3.zero;
         SurfaceNormal = authoring != null ? authoring.SurfaceNormal : Vector3.up;
         SurfaceType = authoring != null ? authoring.SurfaceType : FireSurfaceNodeAuthoring.SurfaceKind.Object;
-        InitialFuel = authoring != null ? authoring.InitialFuel : 0f;
         AuthoringStartIgnited = authoring != null && authoring.StartIgnited;
         HazardType = authoring != null ? authoring.HazardType : FireHazardType.OrdinaryCombustibles;
-        RemainingFuel = InitialFuel;
         IgnitionThreshold = authoring != null ? authoring.IgnitionThresholdMultiplier : 1f;
-        SpreadResistance = authoring != null ? authoring.SpreadResistance : 0f;
         Heat = AuthoringStartIgnited ? IgnitionThreshold : 0f;
     }
 
@@ -49,22 +46,16 @@ public sealed class FireRuntimeNode
     public FireSurfaceNodeAuthoring.SurfaceKind SurfaceType { get; }
     public FireHazardType HazardType { get; set; }
     public List<int> NeighborIndices { get; } = new List<int>();
-    public float InitialFuel { get; }
     public bool AuthoringStartIgnited { get; }
     public float Heat { get; set; }
     public float PendingHeatDelta { get; set; }
-    public float PendingWetnessDelta { get; set; }
-    public float RemainingFuel { get; set; }
-    public float Wetness { get; set; }
     public float SuppressionRecoveryTimer { get; set; }
     public float IgnitionThreshold { get; }
-    public float SpreadResistance { get; }
     public bool IsTrackedByIncident { get; set; }
     public FireIncidentNodeKind IncidentNodeKind { get; set; } = FireIncidentNodeKind.Late;
     public bool HasReachedSpreadSaturation { get; set; }
     public bool IsRemoved { get; set; }
-    public bool IsBurning => !IsRemoved && Heat >= IgnitionThreshold && RemainingFuel > 0f;
-    public bool IsActive => !IsRemoved && (Heat > 0.001f || RemainingFuel > 0f);
+    public bool IsBurning => !IsRemoved && Heat >= IgnitionThreshold;
 }
 
 public sealed class FireRuntimeGraph

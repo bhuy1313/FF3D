@@ -109,7 +109,7 @@ public sealed partial class FireSimulationManager
 
     private float GetNodeVisualIntensity01(FireRuntimeNode node)
     {
-        if (node == null || node.IsRemoved || node.RemainingFuel <= 0f)
+        if (node == null || node.IsRemoved)
         {
             return 0f;
         }
@@ -119,7 +119,7 @@ public sealed partial class FireSimulationManager
 
     private bool ShouldRenderNodeInCluster(FireRuntimeNode node)
     {
-        if (node == null || node.IsRemoved || !node.IsTrackedByIncident || node.RemainingFuel <= 0f)
+        if (node == null || node.IsRemoved || !node.IsTrackedByIncident)
         {
             return false;
         }
@@ -135,19 +135,8 @@ public sealed partial class FireSimulationManager
             return float.PositiveInfinity;
         }
 
-        float multiplier = simulationProfile != null ? simulationProfile.SpreadSaturationHeatMultiplier : 2f;
-        return Mathf.Max(node.IgnitionThreshold, node.IgnitionThreshold * multiplier);
-    }
-
-    private bool ShouldRemoveNodeAtZeroHeat(FireRuntimeNode node)
-    {
-        if (node == null || node.IsRemoved || !node.IsTrackedByIncident)
-        {
-            return false;
-        }
-
-        bool deleteAtZero = removeRuntimeNodeWhenHeatReachesZero || (simulationProfile != null && simulationProfile.DeleteNodeWhenHeatDropsToZero);
-        return deleteAtZero && node.Heat <= 0.0001f;
+        float maxHeat = simulationProfile != null ? simulationProfile.MaxHeat : 2f;
+        return Mathf.Max(node.IgnitionThreshold, maxHeat);
     }
 
     private void RemoveRuntimeNode(FireRuntimeNode node)
@@ -161,9 +150,6 @@ public sealed partial class FireSimulationManager
         node.IsTrackedByIncident = false;
         node.Heat = 0f;
         node.PendingHeatDelta = 0f;
-        node.PendingWetnessDelta = 0f;
-        node.RemainingFuel = 0f;
-        node.Wetness = 0f;
         node.SuppressionRecoveryTimer = 0f;
     }
 
@@ -241,8 +227,6 @@ public sealed partial class FireSimulationManager
                 .Append(node.Heat.ToString("0.000"))
                 .Append('/')
                 .Append(node.IgnitionThreshold.ToString("0.000"))
-                .Append(", fuel=")
-                .Append(node.RemainingFuel.ToString("0.000"))
                 .Append(", burning=")
                 .Append(node.IsBurning ? 'Y' : 'N')
                 .Append(']');

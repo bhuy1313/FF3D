@@ -9,19 +9,20 @@ public partial class IncidentMissionSystem
         RemoveNullEntries(trackedRescuables);
         RemoveNullEntries(trackedVictimConditions);
 
-        // Hazard-linked nodes get cleaned up (IsTrackedByIncident=false, IsRemoved=true)
-        // once fully extinguished. Counting "currently tracked" would shrink the
-        // denominator as the player puts out fires. We instead keep a sticky peak so
-        // the objective shows 1/3 -> 2/3 -> 3/3 instead of 1/3 -> 0/2 -> 0/1 -> 0/0.
-        int currentHazardLinked = CountTrackedSimulationNodes(trackedFireSimulationManagers);
-        int currentHazardLinkedBurning = CountBurningSimulationNodes(trackedFireSimulationManagers);
-        if (currentHazardLinked > peakHazardLinkedFireCount)
+        // The HUD reflects "fires currently in the scene" — including Late spread
+        // nodes that ignite via propagation, not just the initial hazard-linked
+        // ignition points. Burning nodes get cleaned up after extinguish, so we
+        // keep a sticky peak of (max simultaneously burning) and derive
+        // extinguished = peak - currentBurning. This way the denominator grows
+        // when fire spreads, and the numerator counts every snuffed-out node.
+        int currentBurning = CountBurningSimulationNodes(trackedFireSimulationManagers);
+        if (currentBurning > peakHazardLinkedFireCount)
         {
-            peakHazardLinkedFireCount = currentHazardLinked;
+            peakHazardLinkedFireCount = currentBurning;
         }
 
         totalTrackedFires = peakHazardLinkedFireCount;
-        extinguishedFireCount = Mathf.Clamp(peakHazardLinkedFireCount - currentHazardLinkedBurning, 0, peakHazardLinkedFireCount);
+        extinguishedFireCount = Mathf.Clamp(peakHazardLinkedFireCount - currentBurning, 0, peakHazardLinkedFireCount);
         totalTrackedRescuables = trackedRescuables.Count;
         rescuedCount = CountRescuedTargets(trackedRescuables);
         totalTrackedVictims = trackedVictimConditions.Count;
@@ -105,9 +106,9 @@ public partial class IncidentMissionSystem
         return count;
     }
 
-    // Counts hazard-linked nodes that are currently still burning. The
-    // "extinguished" metric is derived as (peakHazardLinked - currentBurning) by
-    // RefreshProgress so that already-removed nodes still count toward progress.
+    // Counts every node that is currently burning regardless of incident kind
+    // (Primary, Secondary, and Late spread). RefreshProgress feeds this into a
+    // sticky peak so the HUD numerator/denominator both grow when fire spreads.
     private static int CountBurningSimulationNodes(List<FireSimulationManager> managers)
     {
         int count = 0;
@@ -121,7 +122,7 @@ public partial class IncidentMissionSystem
             FireSimulationManager manager = managers[i];
             if (manager != null && manager.IsInitialized)
             {
-                count += manager.GetHazardLinkedBurningNodeCount();
+                count += manager.GetBurningTrackedNodeCount();
             }
         }
 
