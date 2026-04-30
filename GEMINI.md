@@ -1,16 +1,24 @@
 # FF3D (Fightfigter 3D Simulator) - AI Agent Guidelines
 
 ## Project Overview
-**FF3D** is a first-person firefighter simulation game built with Unity (`m_EditorVersion: 6000.4.4f1`). The game focuses on simulating realistic firefighting scenarios where the player must assess the situation, select the right tools, control fire spread, and rescue victims under time pressure. 
+**FF3D** is a squad-based tactical firefighter simulation game built with Unity (`m_EditorVersion: 6000.4.4f1`). The game focuses on simulating realistic, procedural firefighting scenarios where the player acts as a frontline commander. They must assess incidents at the dispatch desk (Call Phase), lead a team of AI firefighters, select specialized tools, control dynamic fire spread, and execute complex rescue operations under strict time and survival pressures.
 
-Key gameplay systems include an FPS controller, interaction system, inventory, vitals management, and a comprehensive fire system covering intensity, spread, extinguishing mechanics, and damage.
+Key gameplay systems include:
+- **Call Phase & Incident Generation:** Dispatch desk interaction, risk assessment, and procedural incident seeding.
+- **Squad-Based AI (Bots):** Intelligent teammates capable of following orders to extinguish fires, breach obstacles, and rescue victims.
+- **Advanced Fire Simulation:** Material-based cluster spread, scorch decals, smoke hazards, and ventilation mechanics.
+- **Extensive Tool Arsenal:** A robust Tool Wheel featuring thermal cameras, masks, various extinguishers, hoses, ladders, and rescue cushions.
+- **Dynamic Mission System:** Highly configurable objectives, fail conditions, and scoring based on efficiency and casualties.
 
 ### Key Directories
-- `Assets/Game/Features`: Feature-based architecture containing core gameplay C# scripts (interaction, fire systems, player state, inventory).
+- `Assets/Game/Features/CallPhase`: Dispatch desk gameplay, transcript analysis, and incident seeding logic.
+- `Assets/Game/Features/Incident/Scripts/Bot`: Core AI Squad logic (pathfinding, behavior, commands, inventory).
+- `Assets/Game/Features/Incident/Scripts/Equipment` & `ToolWheel`: Specialized firefighting tools and UI selection.
+- `Assets/Game/Features/Incident/Scripts/FireSimulation`: Complex procedural fire, scorch marks, and smoke mechanics.
+- `Assets/Game/Features/Incident/Scripts/Gameplay`: Mission system, objectives, scoring, and cinematic flow.
 - `Assets/Game/UI`: Runtime UI logic and UI prefabs/materials.
-- `Assets/Game/Scenes`: Core playable scenes (e.g., Map1, Tutorial).
 - `ProjectSettings/`: Unity editor and project configuration files.
-- `Packages/manifest.json`: Unity package dependencies (URP, Input System, Test Framework, etc.).
+- `Packages/manifest.json`: Unity package dependencies.
 
 *Note: Treat `Library/`, `Temp/`, `Logs/`, and `UserSettings/` as generated/local-only content; do not commit changes to these directories.*
 
