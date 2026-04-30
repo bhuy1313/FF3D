@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using RayFire;
 using UnityEngine;
 using StarterAssets;
 
@@ -43,6 +44,22 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
     [Header("Damage")]
     [SerializeField] private float breakDamageThreshold = 0.1f;
 
+    [Header("Shatter Targets")]
+    [Tooltip("Glass panels to shatter when single sash breaks.")]
+    [SerializeField] private GameObject[] singleSashShatterTargets;
+    [Tooltip("Glass panels to shatter when left sash breaks.")]
+    [SerializeField] private GameObject[] leftSashShatterTargets;
+    [Tooltip("Glass panels to shatter when right sash breaks.")]
+    [SerializeField] private GameObject[] rightSashShatterTargets;
+
+    [Header("Fragment Fading")]
+    [Tooltip("Seconds before fragments start fading.")]
+    [SerializeField] private float fragmentLifeTime = 5f;
+    [Tooltip("Seconds for the fade animation.")]
+    [SerializeField] private float fragmentFadeTime = 1.5f;
+    [Tooltip("How fragments disappear.")]
+    [SerializeField] private FadeType fragmentFadeType = FadeType.ScaleDown;
+
     [Header("Climb Over")]
     [SerializeField] private bool enableClimbOver = true;
     [SerializeField] private Transform climbSideAAnchor;
@@ -56,6 +73,7 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
     [SerializeField] private float climbApproachArcHeight = 0.04f;
     [SerializeField] private float climbTraverseDuration = 0.55f;
     [SerializeField] private float climbTraverseArcHeight = 0.35f;
+    [SerializeField] private float climbTraverseTiltAngle = 8f;
     [SerializeField] private bool drawClimbDebug;
 
     [Header("Runtime")]
@@ -96,6 +114,9 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
         climbApproachArcHeight = Mathf.Max(0f, climbApproachArcHeight);
         climbTraverseDuration = Mathf.Max(0.01f, climbTraverseDuration);
         climbTraverseArcHeight = Mathf.Max(0f, climbTraverseArcHeight);
+        EnsureShatterTargetComponents(singleSashShatterTargets);
+        EnsureShatterTargetComponents(leftSashShatterTargets);
+        EnsureShatterTargetComponents(rightSashShatterTargets);
     }
 
     private void Update()
@@ -133,7 +154,7 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
         if (breakOnInteract)
         {
             Vector3 impactPoint = interactor != null ? interactor.transform.position : transform.position;
-            BreakPreferredSash(impactPoint, ResolveImpactDirection(interactor, impactPoint));
+            BreakPreferredSash(impactPoint, ResolveImpactDirection(interactor, impactPoint), interactor);
             return;
         }
 
@@ -150,7 +171,11 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
             InitializeState();
 
         for (int i = 0; i < sashes.Count; i++)
-            BreakSash(sashes[i], sashes[i]?.Transform != null ? sashes[i].Transform.position : transform.position, transform.forward);
+            BreakSash(
+                sashes[i],
+                sashes[i]?.Transform != null ? sashes[i].Transform.position : transform.position,
+                transform.forward,
+                null);
     }
 
     public void SetOpenState(bool isOpen)
@@ -206,7 +231,9 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
         Vector3 impactDirection = hitNormal.sqrMagnitude > 0.001f
             ? -hitNormal.normalized
             : ResolveImpactDirection(source, hitPoint);
-        BreakPreferredSash(hitPoint, impactDirection);
+
+        for (int i = 0; i < sashes.Count; i++)
+            BreakSash(sashes[i], hitPoint, impactDirection, source);
     }
 
     private void InitializeState()
@@ -249,10 +276,10 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
         sashes.Add(sash);
     }
 
-    private void BreakPreferredSash(Vector3 worldPoint, Vector3 impactDirection)
+    private void BreakPreferredSash(Vector3 worldPoint, Vector3 impactDirection, GameObject source)
     {
         SashRuntime sash = GetNearestBreakableSash(worldPoint);
-        BreakSash(sash, worldPoint, impactDirection);
+        BreakSash(sash, worldPoint, impactDirection, source);
     }
 
     private SashRuntime GetNearestBreakableSash(Vector3 worldPoint)
@@ -279,34 +306,28 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
 
     private void BreakSash(SashRuntime sash)
     {
-        BreakSash(sash, sash != null && sash.Transform != null ? sash.Transform.position : transform.position, transform.forward);
+        BreakSash(
+            sash,
+            sash != null && sash.Transform != null ? sash.Transform.position : transform.position,
+            transform.forward,
+            null);
     }
 
-    private void BreakSash(SashRuntime sash, Vector3 impactPoint, Vector3 impactDirection)
+    private void BreakSash(
+        SashRuntime sash,
+        Vector3 impactPoint,
+        Vector3 impactDirection,
+        GameObject source)
     {
         if (sash == null || sash.Transform == null || sash.IsBroken)
             return;
 
+        DemolishShatterTargets(ResolveShatterTargetsForSash(sash), source, impactPoint, impactDirection);
         sash.IsBroken = true;
         sash.IsOpen = true;
         sash.TargetLocalRotation = sash.OpenLocalRotation;
         sash.Transform.localRotation = sash.TargetLocalRotation;
-        ShatterSashGlass(sash.Transform, impactPoint, impactDirection);
         SyncRuntimeState();
-    }
-
-    private void ShatterSashGlass(Transform sashTransform, Vector3 impactPoint, Vector3 impactDirection)
-    {
-        if (sashTransform == null)
-            return;
-
-        MeshShatter[] shatterComponents = sashTransform.GetComponentsInChildren<MeshShatter>(true);
-        for (int i = 0; i < shatterComponents.Length; i++)
-        {
-            MeshShatter shatterComponent = shatterComponents[i];
-            if (shatterComponent != null)
-                shatterComponent.Shatter(impactPoint, impactDirection, 1f);
-        }
     }
 
     private Vector3 ResolveImpactDirection(GameObject source, Vector3 impactPoint)
@@ -431,14 +452,16 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
                 startPosition,
                 startRotation,
                 Mathf.Max(0f, climbApproachDuration),
-                Mathf.Max(0f, climbApproachArcHeight));
+                Mathf.Max(0f, climbApproachArcHeight),
+                0f);
 
             yield return MoveTransformRoutine(
                 interactorTransform,
                 endPosition,
                 endRotation,
                 Mathf.Max(0.01f, climbTraverseDuration),
-                Mathf.Max(0f, climbTraverseArcHeight));
+                Mathf.Max(0f, climbTraverseArcHeight),
+                climbTraverseTiltAngle);
         }
         finally
         {
@@ -458,7 +481,8 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
         Vector3 destinationPosition,
         Quaternion destinationRotation,
         float duration,
-        float arcHeight)
+        float arcHeight,
+        float tiltAngle)
     {
         if (target == null)
             yield break;
@@ -483,7 +507,14 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
             if (arcHeight > 0f)
                 position += Vector3.up * (Mathf.Sin(easedT * Mathf.PI) * arcHeight);
 
-            Quaternion rotation = Quaternion.Slerp(startRotation, destinationRotation, easedT);
+            Quaternion baseRotation = Quaternion.Slerp(startRotation, destinationRotation, easedT);
+            Quaternion rotation = baseRotation;
+            if (Mathf.Abs(tiltAngle) > 0.001f)
+            {
+                float currentTilt = Mathf.Sin(easedT * Mathf.PI) * tiltAngle;
+                rotation = baseRotation * Quaternion.Euler(0f, 0f, currentTilt);
+            }
+
             target.SetPositionAndRotation(position, rotation);
             yield return new WaitForEndOfFrame();
         }
@@ -627,5 +658,76 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
         }
 
         return count;
+    }
+
+    private GameObject[] ResolveShatterTargetsForSash(SashRuntime sash)
+    {
+        if (sash == null || sash.Transform == null)
+            return null;
+
+        if (sash.Transform == leftSashTransform)
+            return leftSashShatterTargets;
+
+        if (sash.Transform == rightSashTransform)
+            return rightSashShatterTargets;
+
+        return singleSashShatterTargets;
+    }
+
+    private void DemolishShatterTargets(
+        GameObject[] targets,
+        GameObject source,
+        Vector3 impactPoint,
+        Vector3 impactDirection)
+    {
+        if (targets == null)
+            return;
+
+        for (int i = 0; i < targets.Length; i++)
+        {
+            if (targets[i] != null && targets[i].TryGetComponent(out RayfireRigid rigid))
+            {
+                rigid.fading.onDemolition = true;
+                rigid.fading.lifeType = RFFadeLifeType.ByLifeTime;
+                rigid.fading.lifeTime = fragmentLifeTime;
+                rigid.fading.fadeType = fragmentFadeType;
+                rigid.fading.fadeTime = fragmentFadeTime;
+                RayfireBreakImpact.DemolishWithImpact(
+                    rigid,
+                    source,
+                    impactPoint,
+                    impactDirection,
+                    true,
+                    RayfireBreakImpact.DirectionMode.ImpactDirection);
+            }
+        }
+    }
+
+    private static void EnsureShatterTargetComponents(GameObject[] targets)
+    {
+#if UNITY_EDITOR
+        if (targets == null)
+            return;
+
+        for (int i = 0; i < targets.Length; i++)
+        {
+            GameObject target = targets[i];
+            if (target == null)
+                continue;
+
+            if (target.GetComponent<RayfireRigid>() == null)
+            {
+                RayfireRigid rigid = target.AddComponent<RayfireRigid>();
+                rigid.simulationType = SimType.Dynamic;
+                rigid.demolitionType = DemolitionType.Runtime;
+                rigid.meshDemolition.use = true;
+            }
+
+            if (target.GetComponent<RayfireShatter>() == null)
+            {
+                target.AddComponent<RayfireShatter>();
+            }
+        }
+#endif
     }
 }

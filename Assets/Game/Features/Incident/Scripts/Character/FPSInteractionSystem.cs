@@ -299,8 +299,20 @@ namespace StarterAssets
             }
 
             Vector3 fallbackDropPosition = transform.position + transform.right * 0.75f;
-            Vector3 dropPosition = safeZone.GetDropPoint(fallbackDropPosition);
-            carriedTarget.CompleteRescueAt(dropPosition);
+            Vector3 dropPosition;
+
+            if (safeZone.TryClaimSlot(gameObject, out Vector3 slotPosition))
+            {
+                dropPosition = slotPosition;
+            }
+            else
+            {
+                dropPosition = safeZone.GetDropPoint(fallbackDropPosition);
+            }
+
+            carriedTarget.CompleteRescueAt(dropPosition, safeZone.GetSlotRotation(dropPosition));
+            safeZone.OccupySlotAt(dropPosition);
+            safeZone.ReleaseSlot(gameObject);
             return true;
         }
 

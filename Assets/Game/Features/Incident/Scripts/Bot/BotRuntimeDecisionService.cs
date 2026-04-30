@@ -225,7 +225,7 @@ public sealed class BotRuntimeDecisionService
 
     public ISafeZoneTarget ResolveNearestSafeZone(Vector3 fromPosition, ISafeZoneTarget currentTarget)
     {
-        if (currentTarget != null)
+        if (currentTarget != null && currentTarget.HasAvailableSlot())
         {
             return currentTarget;
         }
@@ -235,7 +235,7 @@ public sealed class BotRuntimeDecisionService
 
         foreach (ISafeZoneTarget candidate in BotRuntimeRegistry.ActiveSafeZones)
         {
-            if (candidate == null)
+            if (candidate == null || !candidate.HasAvailableSlot())
             {
                 continue;
             }

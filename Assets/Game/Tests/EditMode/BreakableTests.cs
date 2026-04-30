@@ -162,53 +162,6 @@ public class BreakableTests
         }
     }
 
-    [Test]
-    public void CompleteBreak_ShattersChildGlassComponentsForGlassBreakables()
-    {
-        GameObject breakableObject = new GameObject("GlassBreakable");
-        GameObject glassChild = new GameObject("GlassPane");
-        Mesh mesh = CreateQuadMesh();
-
-        try
-        {
-            Component breakable = breakableObject.AddComponent(BreakableType);
-            Type breakableTypeEnum = FindNestedType(BreakableType, "BreakableType");
-            SetPrivateField(breakable, "breakableType", Enum.Parse(breakableTypeEnum, "Glass"));
-            SetPrivateField(breakable, "deactivateOnBreak", false);
-            SetPrivateField(breakable, "disableRenderersOnBreak", false);
-            SetPrivateField(breakable, "disableCollidersOnBreak", false);
-
-            glassChild.transform.SetParent(breakableObject.transform, false);
-            MeshFilter meshFilter = glassChild.AddComponent<MeshFilter>();
-            meshFilter.sharedMesh = mesh;
-            MeshRenderer meshRenderer = glassChild.AddComponent<MeshRenderer>();
-            glassChild.AddComponent<BoxCollider>();
-
-            Component glassShatter = glassChild.AddComponent(FindType("MeshShatter"));
-            SetPrivateField(glassShatter, "subdivisionDepth", 0);
-            SetPrivateField(glassShatter, "destroyAfterSeconds", 0f);
-
-            MethodInfo completeBreak = BreakableType.GetMethod("CompleteBreak", InstanceFlags);
-            Assert.That(completeBreak, Is.Not.Null, "Could not find method 'CompleteBreak'.");
-            completeBreak.Invoke(breakable, null);
-
-            bool isShattered = (bool)glassShatter.GetType().GetProperty("IsShattered", InstanceFlags).GetValue(glassShatter);
-            Assert.That(isShattered, Is.True);
-            Assert.That(meshRenderer.enabled, Is.False);
-        }
-        finally
-        {
-            GameObject shardRoot = GameObject.Find("GlassPane_Shards");
-            if (shardRoot != null)
-            {
-                UnityEngine.Object.DestroyImmediate(shardRoot);
-            }
-
-            UnityEngine.Object.DestroyImmediate(breakableObject);
-            UnityEngine.Object.DestroyImmediate(mesh);
-        }
-    }
-
     private static bool InvokeTryGetBreakStandPose(Component breakable, object[] args)
     {
         MethodInfo method = BreakableType.GetMethod("TryGetBreakStandPose", InstanceFlags);

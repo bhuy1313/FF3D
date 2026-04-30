@@ -268,7 +268,7 @@ public class BotEquippedItemPoseDriverTests
             return false;
         }
 
-        public void CompleteRescueAt(Vector3 dropPosition)
+        public void CompleteRescueAt(Vector3 dropPosition, Quaternion rotation)
         {
         }
 

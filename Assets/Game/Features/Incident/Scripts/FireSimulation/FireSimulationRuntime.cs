@@ -1,20 +1,22 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public readonly struct FireClusterMemberSnapshot
+public readonly struct FireNodeSnapshot
 {
-    public FireClusterMemberSnapshot(
+    public FireNodeSnapshot(
         int nodeIndex,
         Vector3 position,
         Vector3 surfaceNormal,
         float intensity,
-        FireHazardType hazardType)
+        FireHazardType hazardType,
+        FireIncidentNodeKind kind)
     {
         NodeIndex = nodeIndex;
         Position = position;
         SurfaceNormal = surfaceNormal;
         Intensity = intensity;
         HazardType = hazardType;
+        Kind = kind;
     }
 
     public int NodeIndex { get; }
@@ -22,6 +24,7 @@ public readonly struct FireClusterMemberSnapshot
     public Vector3 SurfaceNormal { get; }
     public float Intensity { get; }
     public FireHazardType HazardType { get; }
+    public FireIncidentNodeKind Kind { get; }
 }
 
 public sealed class FireRuntimeNode
@@ -79,36 +82,4 @@ public sealed class FireRuntimeGraph
 
         return nodes[index];
     }
-}
-
-public readonly struct FireClusterSnapshot
-{
-    public FireClusterSnapshot(
-        int clusterId,
-        Vector3 center,
-        Vector3 averageNormal,
-        float intensity,
-        float radius,
-        int burningNodeCount,
-        FireHazardType dominantHazardType,
-        IReadOnlyList<FireClusterMemberSnapshot> members)
-    {
-        ClusterId = clusterId;
-        Center = center;
-        AverageNormal = averageNormal;
-        Intensity = intensity;
-        Radius = radius;
-        BurningNodeCount = burningNodeCount;
-        DominantHazardType = dominantHazardType;
-        Members = members ?? System.Array.Empty<FireClusterMemberSnapshot>();
-    }
-
-    public int ClusterId { get; }
-    public Vector3 Center { get; }
-    public Vector3 AverageNormal { get; }
-    public float Intensity { get; }
-    public float Radius { get; }
-    public int BurningNodeCount { get; }
-    public FireHazardType DominantHazardType { get; }
-    public IReadOnlyList<FireClusterMemberSnapshot> Members { get; }
 }

@@ -261,7 +261,7 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
         return true;
     }
 
-    public void CompleteRescueAt(Vector3 dropPosition)
+    public void CompleteRescueAt(Vector3 dropPosition, Quaternion rotation)
     {
         if (isRescued)
         {
@@ -288,7 +288,7 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
 
         transform.SetParent(originalParent, true);
         transform.position = dropPosition;
-        transform.rotation = originalRotation;
+        transform.rotation = rotation;
         SetCarryState(false);
         activeCarryAnchor = null;
         ReleasePlayerLocks();
@@ -306,6 +306,11 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
         isRescueInProgress = true;
         isExtractionInProgress = true;
         extractionRoutine = StartCoroutine(FinishExtractionAfterDelay(extractionDuration));
+    }
+
+    public void CompleteRescueAt(Vector3 dropPosition)
+    {
+        CompleteRescueAt(dropPosition, originalRotation);
     }
 
     private IEnumerator BeginCarryAfterDelay(float duration)

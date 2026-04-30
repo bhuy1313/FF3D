@@ -90,7 +90,7 @@ public sealed class FireSimulationScorchDecalBinder : MonoBehaviour
             return;
         }
 
-        IReadOnlyList<FireClusterSnapshot> snapshots = simulationManager.ClusterSnapshots;
+        IReadOnlyList<FireNodeSnapshot> snapshots = simulationManager.NodeSnapshots;
         for (int i = 0; i < snapshots.Count; i++)
         {
             SyncSnapshot(snapshots[i]);
@@ -99,38 +99,33 @@ public sealed class FireSimulationScorchDecalBinder : MonoBehaviour
         HideStaleDecals();
     }
 
-    private void SyncSnapshot(FireClusterSnapshot snapshot)
+    private void SyncSnapshot(FireNodeSnapshot snapshot)
     {
-        IReadOnlyList<FireClusterMemberSnapshot> members = snapshot.Members;
-        for (int i = 0; i < members.Count; i++)
+        if (snapshot.Intensity <= 0.01f)
         {
-            FireClusterMemberSnapshot member = members[i];
-            if (member.Intensity <= 0.01f)
-            {
-                continue;
-            }
-
-            RuntimeScorchDecal decal = ResolveDecal(member.NodeIndex);
-            if (decal == null)
-            {
-                continue;
-            }
-
-            decal.LastSeenTime = Time.time;
-            decal.ScorchAmount = Mathf.Clamp01(decal.ScorchAmount + Time.deltaTime * growthPerSecond * Mathf.Max(0.2f, member.Intensity));
-            if (!TryPlaceProjector(decal.Projector, member.Position, member.SurfaceNormal))
-            {
-                decal.Projector.gameObject.SetActive(false);
-                continue;
-            }
-
-            float size = Mathf.Lerp(minSize, Mathf.Max(maxSize, snapshot.Radius), decal.ScorchAmount);
-            float opacity = Mathf.Clamp01(Mathf.Max(decal.ScorchAmount, member.Intensity * 0.25f)) * maxOpacity;
-            decal.Projector.size = new Vector3(size, size, projectorDepth);
-            decal.Projector.pivot = new Vector3(0f, 0f, projectorDepth * 0.5f);
-            decal.Projector.fadeFactor = opacity;
-            decal.Projector.gameObject.SetActive(opacity > 0.001f);
+            return;
         }
+
+        RuntimeScorchDecal decal = ResolveDecal(snapshot.NodeIndex);
+        if (decal == null)
+        {
+            return;
+        }
+
+        decal.LastSeenTime = Time.time;
+        decal.ScorchAmount = Mathf.Clamp01(decal.ScorchAmount + Time.deltaTime * growthPerSecond * Mathf.Max(0.2f, snapshot.Intensity));
+        if (!TryPlaceProjector(decal.Projector, snapshot.Position, snapshot.SurfaceNormal))
+        {
+            decal.Projector.gameObject.SetActive(false);
+            return;
+        }
+
+        float size = Mathf.Lerp(minSize, maxSize, decal.ScorchAmount);
+        float opacity = Mathf.Clamp01(Mathf.Max(decal.ScorchAmount, snapshot.Intensity * 0.25f)) * maxOpacity;
+        decal.Projector.size = new Vector3(size, size, projectorDepth);
+        decal.Projector.pivot = new Vector3(0f, 0f, projectorDepth * 0.5f);
+        decal.Projector.fadeFactor = opacity;
+        decal.Projector.gameObject.SetActive(opacity > 0.001f);
     }
 
     private RuntimeScorchDecal ResolveDecal(int nodeIndex)

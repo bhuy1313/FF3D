@@ -55,7 +55,7 @@ public sealed partial class FireSimulationManager
         ResetRuntimeStateToBaseline(useAuthoringIgnition: false);
         activeIncidentHazardType = hazardType;
         activeHazardSourceIsolated = hazardSourceIsolated;
-        RebuildClusters();
+        BuildNodeSnapshots();
         SyncEffects();
         NotifyStateChanged();
     }
@@ -119,11 +119,14 @@ public sealed partial class FireSimulationManager
             node.HazardType = activeIncidentHazardType;
         }
 
+        float maxHeat = simulationProfile != null
+            ? Mathf.Max(node.IgnitionThreshold, simulationProfile.MaxHeat)
+            : node.IgnitionThreshold * 2f;
         float heat = clampedHeat01 > 0f
-            ? Mathf.Lerp(node.IgnitionThreshold, node.IgnitionThreshold * 2f, clampedHeat01)
+            ? Mathf.Lerp(node.IgnitionThreshold, maxHeat, clampedHeat01)
             : 0f;
         node.Heat = Mathf.Max(node.Heat, heat);
-        RebuildClusters();
+        BuildNodeSnapshots();
         SyncEffects();
         NotifyStateChanged();
         return nodeIndex;

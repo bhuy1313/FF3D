@@ -69,7 +69,12 @@ public partial class BotCommandAgent
     private void ClearRescueRuntimeState()
     {
         SetCurrentRescueTarget(null);
+        if (currentSafeZoneTarget != null)
+        {
+            currentSafeZoneTarget.ReleaseSlot(gameObject);
+        }
         currentSafeZoneTarget = null;
+        claimedSlotPosition = null;
         currentRescueSubtask = BotRescueSubtask.None;
         rescueTaskDetail = "Awaiting rescue assignment.";
         lastRescueFailureReason = string.Empty;
@@ -108,7 +113,12 @@ public partial class BotCommandAgent
     internal void ReacquireRescueTarget(string detail)
     {
         SetCurrentRescueTarget(null);
+        if (currentSafeZoneTarget != null)
+        {
+            currentSafeZoneTarget.ReleaseSlot(gameObject);
+        }
         currentSafeZoneTarget = null;
+        claimedSlotPosition = null;
         lastRescueFailureReason = string.Empty;
         SetRescueSubtask(BotRescueSubtask.Recover, detail);
     }

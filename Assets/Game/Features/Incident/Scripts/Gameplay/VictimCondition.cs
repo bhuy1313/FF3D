@@ -44,6 +44,7 @@ public class VictimCondition : MonoBehaviour
     [SerializeField] private string criticalAnimatorParameter = "IsCritical";
     [SerializeField] private string deceasedAnimatorParameter = "IsDeceased";
     [SerializeField] private string carriedAnimatorParameter = "IsCarried";
+    [SerializeField] private string rescuedAnimatorParameter = "IsRescued";
 
     [Header("Events")]
     [SerializeField] private UnityEvent onConditionChanged;
@@ -402,6 +403,7 @@ public class VictimCondition : MonoBehaviour
     private void ApplyTriageAnimatorParameters()
     {
         SetAnimatorBoolParameter(carriedAnimatorParameter, rescuable != null && rescuable.IsCarried);
+        SetAnimatorBoolParameter(rescuedAnimatorParameter, rescuable != null && rescuable.IsRescued);
         SetAnimatorBoolParameter(urgentAnimatorParameter, triageState == TriageState.Urgent);
         SetAnimatorBoolParameter(criticalAnimatorParameter, triageState == TriageState.Critical);
         SetAnimatorBoolParameter(deceasedAnimatorParameter, triageState == TriageState.Deceased);

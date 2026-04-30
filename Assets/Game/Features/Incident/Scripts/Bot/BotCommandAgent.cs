@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Animations.Rigging;
@@ -196,6 +196,7 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     private bool lockedExtinguisherHasConfirmedLineOfSight;
     private IRescuableTarget currentRescueTarget;
     private ISafeZoneTarget currentSafeZoneTarget;
+    private Vector3? claimedSlotPosition;
     private IBotPryTarget currentBreachPryTarget;
     private IBotPryTarget currentBlockedPryTarget;
     private IBotHazardIsolationTarget currentHazardIsolationTarget;
@@ -638,6 +639,12 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     {
         get => currentSafeZoneTarget;
         set => currentSafeZoneTarget = value;
+    }
+
+    internal Vector3? ClaimedSlotPosition
+    {
+        get => claimedSlotPosition;
+        set => claimedSlotPosition = value;
     }
 
     internal bool MoveToCommand(Vector3 destination)

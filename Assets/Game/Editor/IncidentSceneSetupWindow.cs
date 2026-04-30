@@ -15,8 +15,6 @@ namespace FF3D.Editor
         private const string DefaultPayloadTaskName = "IncidentPayloadStartupTask";
         private const string DefaultStepsRootName = "SetupSteps";
         private const string DefaultDebugSpawnerName = "DebugIncidentSpawner";
-        private const string DefaultClusterViewTemplateName = "ClusterViewTemplate";
-        private const string DefaultClusterVisualRootName = "VisualRoot";
         private const string OriginAreaStepName = "IncidentOriginAreaSetupStep";
         private const string AnchorStepName = "IncidentAnchorHazardSetupStep";
         private const string VentilationStepName = "IncidentVentilationPresetSetupStep";
@@ -309,7 +307,6 @@ namespace FF3D.Editor
             FireSurfaceGraph surfaceGraph = FindFirstInScene<FireSurfaceGraph>(scene);
             DebugIncidentPayloadSpawner debugSpawner = FindFirstInScene<DebugIncidentPayloadSpawner>(scene);
             FireEffectManager effectManager = FindFirstInScene<FireEffectManager>(scene);
-            FireClusterView clusterView = FindFirstInScene<FireClusterView>(scene);
             IncidentOriginArea[] areas = FindAllInScene<IncidentOriginArea>(scene);
 
             if (startupFlow == null)
@@ -345,11 +342,6 @@ namespace FF3D.Editor
             if (ensureEffectManagerAndClusterTemplate && effectManager == null)
             {
                 warnings.Add("Missing FireEffectManager.");
-            }
-
-            if (ensureEffectManagerAndClusterTemplate && clusterView == null)
-            {
-                warnings.Add("Missing FireClusterView template.");
             }
 
             if (ensureDebugPayloadSpawner && debugSpawner == null)
@@ -389,11 +381,6 @@ namespace FF3D.Editor
                     if (managerSerialized.FindProperty("effectManager")?.objectReferenceValue == null)
                     {
                         warnings.Add("FireSimulationManager has no FireEffectManager assigned.");
-                    }
-
-                    if (managerSerialized.FindProperty("clusterViewPrefab")?.objectReferenceValue == null)
-                    {
-                        warnings.Add("FireSimulationManager has no FireClusterView assigned.");
                     }
                 }
             }
@@ -741,40 +728,15 @@ namespace FF3D.Editor
                 simulationRoot,
                 "FireEffectManager",
                 result);
-            FireClusterView clusterView = EnsureClusterViewTemplate(simulationRoot, result);
-
-            SerializedObject effectSerialized = new SerializedObject(effectManager);
-            effectSerialized.Update();
-            bool effectChanged = false;
-            effectChanged |= SetObjectReferenceProperty(
-                effectSerialized,
-                effectManager,
-                "clusterViewPrefab",
-                clusterView,
-                "FireEffectManager.clusterViewPrefab",
-                result);
-
-            if (effectChanged)
-            {
-                effectSerialized.ApplyModifiedProperties();
-            }
 
             SerializedObject managerSerialized = new SerializedObject(simulationManager);
             managerSerialized.Update();
-            bool managerChanged = false;
-            managerChanged |= SetObjectReferenceProperty(
+            bool managerChanged = SetObjectReferenceProperty(
                 managerSerialized,
                 simulationManager,
                 "effectManager",
                 effectManager,
                 "FireSimulationManager.effectManager",
-                result);
-            managerChanged |= SetObjectReferenceProperty(
-                managerSerialized,
-                simulationManager,
-                "clusterViewPrefab",
-                clusterView,
-                "FireSimulationManager.clusterViewPrefab",
                 result);
 
             if (managerChanged)
@@ -950,94 +912,6 @@ namespace FF3D.Editor
             }
 
             return step;
-        }
-
-        private static FireClusterView EnsureClusterViewTemplate(GameObject simulationRoot, SetupResult result)
-        {
-            GameObject templateRoot = EnsureChildObject(simulationRoot, DefaultClusterViewTemplateName, result);
-            if (templateRoot.activeSelf)
-            {
-                Undo.RecordObject(templateRoot, "Disable ClusterViewTemplate");
-                templateRoot.SetActive(false);
-                result.RepairedObjects.Add("ClusterViewTemplate.activeSelf");
-            }
-
-            FireClusterView clusterView = EnsureComponent<FireClusterView>(templateRoot, "FireClusterView", result);
-            Light clusterLight = EnsureComponent<Light>(templateRoot, "ClusterViewTemplate Light", result);
-            ConfigureClusterLight(clusterLight, result);
-            Transform visualRoot = EnsureChildObject(templateRoot, DefaultClusterVisualRootName, result).transform;
-            ConfigureClusterView(clusterView, visualRoot, clusterLight, result);
-            TryAddUniversalAdditionalLightData(clusterLight, result);
-            return clusterView;
-        }
-
-        private static void ConfigureClusterLight(Light clusterLight, SetupResult result)
-        {
-            if (clusterLight == null)
-            {
-                return;
-            }
-
-            Undo.RecordObject(clusterLight, "Configure ClusterView Light");
-            clusterLight.type = LightType.Point;
-            clusterLight.color = new Color(1f, 0.52f, 0.18f, 1f);
-            clusterLight.intensity = 2f;
-            clusterLight.range = 8f;
-            clusterLight.shadows = LightShadows.None;
-            result.RepairedObjects.Add("ClusterViewTemplate Light settings");
-        }
-
-        private static void ConfigureClusterView(
-            FireClusterView clusterView,
-            Transform visualRoot,
-            Light clusterLight,
-            SetupResult result)
-        {
-            if (clusterView == null)
-            {
-                return;
-            }
-
-            SerializedObject serializedObject = new SerializedObject(clusterView);
-            serializedObject.Update();
-            bool changed = false;
-            changed |= SetObjectReferenceProperty(
-                serializedObject,
-                clusterView,
-                "visualRoot",
-                visualRoot,
-                "FireClusterView.visualRoot",
-                result);
-            changed |= SetObjectReferenceProperty(
-                serializedObject,
-                clusterView,
-                "clusterLight",
-                clusterLight,
-                "FireClusterView.clusterLight",
-                result);
-
-            if (changed)
-            {
-                serializedObject.ApplyModifiedProperties();
-            }
-        }
-
-        private static void TryAddUniversalAdditionalLightData(Light clusterLight, SetupResult result)
-        {
-            if (clusterLight == null)
-            {
-                return;
-            }
-
-            Type additionalLightType = Type.GetType(
-                "UnityEngine.Rendering.Universal.UniversalAdditionalLightData, Unity.RenderPipelines.Universal.Runtime");
-            if (additionalLightType == null || clusterLight.GetComponent(additionalLightType) != null)
-            {
-                return;
-            }
-
-            Undo.AddComponent(clusterLight.gameObject, additionalLightType);
-            result.RepairedObjects.Add("ClusterViewTemplate UniversalAdditionalLightData");
         }
 
         private static GameObject EnsureRootObject(Scene scene, string objectName, SetupResult result)

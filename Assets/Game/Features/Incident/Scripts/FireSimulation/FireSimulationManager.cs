@@ -9,8 +9,11 @@ public sealed partial class FireSimulationManager : MonoBehaviour
     [SerializeField] private FireSimulationProfile simulationProfile;
     [SerializeField] private FireSuppressionProfile suppressionProfile;
     [SerializeField] private FireEffectManager effectManager;
-    [SerializeField] private FireClusterView clusterViewPrefab;
-    [SerializeField] private Transform clusterViewRoot;
+    [SerializeField] private FireNodeEffectView ordinaryEffectPrefab;
+    [SerializeField] private FireNodeEffectView electricalEffectPrefab;
+    [SerializeField] private FireNodeEffectView flammableLiquidEffectPrefab;
+    [SerializeField] private FireNodeEffectView gasEffectPrefab;
+    [SerializeField] private Transform effectRoot;
     [Header("Runtime Incident Nodes")]
     [SerializeField] [Min(0.01f)] private float runtimeNodeIgnitionThresholdMultiplier = 1f;
     [SerializeField] [Min(0.1f)] private float runtimeNodeAutoConnectRadius = 2.6f;
@@ -26,13 +29,12 @@ public sealed partial class FireSimulationManager : MonoBehaviour
     [SerializeField] private bool autoBindSceneConsumers = true;
     [SerializeField] private bool autoRegisterBotFireTargets = true;
 
-    private readonly List<FireClusterSnapshot> clusterSnapshots = new List<FireClusterSnapshot>();
+    private readonly List<FireNodeSnapshot> nodeSnapshots = new List<FireNodeSnapshot>();
     private readonly List<FireSurfaceNodeAuthoring> runtimeIncidentNodes = new List<FireSurfaceNodeAuthoring>();
     private readonly List<FireSimulationBotTarget> botFireTargets = new List<FireSimulationBotTarget>();
     private readonly List<FireSimulationAreaGroupTarget> botFireGroups = new List<FireSimulationAreaGroupTarget>();
     private FireRuntimeGraph runtimeGraph;
     private float simulationTickAccumulator;
-    private float clusterRefreshAccumulator;
     private float nodeHeatLogAccumulator;
     private bool initialized;
     private FireHazardType activeIncidentHazardType = FireHazardType.OrdinaryCombustibles;
@@ -40,7 +42,7 @@ public sealed partial class FireSimulationManager : MonoBehaviour
     private Transform runtimeIncidentNodeRoot;
     private Transform runtimeBotFireTargetRoot;
 
-    public IReadOnlyList<FireClusterSnapshot> ClusterSnapshots => clusterSnapshots;
+    public IReadOnlyList<FireNodeSnapshot> NodeSnapshots => nodeSnapshots;
     public FireRuntimeGraph RuntimeGraph => runtimeGraph;
     public bool IsInitialized => initialized;
     public FireHazardType ActiveIncidentHazardType => activeIncidentHazardType;
@@ -72,7 +74,6 @@ public sealed partial class FireSimulationManager : MonoBehaviour
         }
 
         simulationTickAccumulator += Time.deltaTime;
-        clusterRefreshAccumulator += Time.deltaTime;
         nodeHeatLogAccumulator += Time.deltaTime;
 
         float simulationTickInterval = simulationProfile.SimulationTickInterval;
@@ -85,13 +86,6 @@ public sealed partial class FireSimulationManager : MonoBehaviour
             }
         }
 
-        if (clusterRefreshAccumulator >= simulationProfile.ClusterRefreshInterval)
-        {
-            clusterRefreshAccumulator = 0f;
-            RebuildClusters();
-            SyncEffects();
-        }
-
         if (logNodeHeatProgress && nodeHeatLogAccumulator >= Mathf.Max(0.1f, nodeHeatLogInterval))
         {
             nodeHeatLogAccumulator = 0f;
@@ -99,13 +93,23 @@ public sealed partial class FireSimulationManager : MonoBehaviour
         }
     }
 
+    private void LateUpdate()
+    {
+        if (!initialized || runtimeGraph == null || simulationProfile == null)
+        {
+            return;
+        }
+
+        BuildNodeSnapshots();
+        SyncEffects();
+    }
+
     public void InitializeRuntimeGraph()
     {
         initialized = false;
         simulationTickAccumulator = 0f;
-        clusterRefreshAccumulator = 0f;
         nodeHeatLogAccumulator = 0f;
-        clusterSnapshots.Clear();
+        nodeSnapshots.Clear();
 
         if (surfaceGraph == null || simulationProfile == null)
         {
@@ -133,7 +137,7 @@ public sealed partial class FireSimulationManager : MonoBehaviour
             LogRuntimeGraphTopology();
         }
 
-        RebuildClusters();
+        BuildNodeSnapshots();
         SyncEffects();
         SyncBotFireTargets();
         SyncBotFireGroups();

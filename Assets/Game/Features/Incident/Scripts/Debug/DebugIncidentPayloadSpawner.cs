@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -7,66 +6,31 @@ using UnityEngine.Serialization;
 [DisallowMultipleComponent]
 public class DebugIncidentPayloadSpawner : MonoBehaviour
 {
-    private enum DebugOriginPreset
-    {
-        Laundry_WasherOutlet = 0,
-        Kitchen_StoveTop = 1,
-        Garage_WorkbenchCorner = 2,
-        Custom = 3
-    }
-
-    private enum DebugHazardPreset
-    {
-        Electrical = 0,
-        OrdinaryCombustibles = 1,
-        Gas = 2,
-        FlammableLiquid = 3
-    }
-
-    private enum DebugSpreadPreset
-    {
-        Conservative = 0,
-        Moderate = 1,
-        Aggressive = 2
-    }
-
-    private enum DebugSeverityPreset
-    {
-        Low = 0,
-        Medium = 1,
-        High = 2,
-        Critical = 3
-    }
-
-    private enum DebugIntensityPreset
-    {
-        Low = 0,
-        Medium = 1,
-        High = 2,
-        Custom = 3
-    }
-
-    private enum DebugFireCountPreset
-    {
-        Single = 0,
-        SmallCluster = 1,
-        MediumCluster = 2,
-        LargeCluster = 3,
-        Custom = 4
-    }
-
     [Header("Debug Settings")]
     [SerializeField] private bool enableDebugSpawning = true;
-    [SerializeField] private DebugOriginPreset debugOriginPreset = DebugOriginPreset.Laundry_WasherOutlet;
-    [SerializeField] private DebugHazardPreset debugHazardPreset = DebugHazardPreset.Electrical;
-    [SerializeField] private DebugSpreadPreset debugSpreadPreset = DebugSpreadPreset.Moderate;
-    [SerializeField] private DebugSeverityPreset debugSeverityPreset = DebugSeverityPreset.Medium;
-    [SerializeField] private DebugIntensityPreset debugIntensityPreset = DebugIntensityPreset.Medium;
-    [SerializeField] private DebugFireCountPreset debugFireCountPreset = DebugFireCountPreset.MediumCluster;
-    [SerializeField] [Range(0.1f, 1f)] private float customInitialFireIntensity = 0.65f;
-    [SerializeField] [Range(1, 5)] private int customInitialFireCount = 3;
-    [SerializeField] private string customFireOrigin = "Laundry_WasherOutlet";
-    [SerializeField] private string customLogicalFireLocation = "Laundry";
+
+    [Header("Payload")]
+    [SerializeField] private string caseId = "debug_case";
+    [SerializeField] private string scenarioId = "debug_scenario";
+    [FormerlySerializedAs("customFireOrigin")]
+    [SerializeField] private string fireOrigin = "Laundry_WasherOutlet";
+    [FormerlySerializedAs("customLogicalFireLocation")]
+    [SerializeField] private string logicalFireLocation = "Laundry";
+    [SerializeField] private string hazardType = "Electrical";
+    [SerializeField] private string isolationType = "Electrical";
+    [SerializeField] private bool requiresIsolation = true;
+    [FormerlySerializedAs("customInitialFireIntensity")]
+    [SerializeField, Range(0.1f, 1f)] private float initialFireIntensity = 0.65f;
+    [FormerlySerializedAs("customInitialFireCount")]
+    [SerializeField, Min(1)] private int initialFireCount = 3;
+    [SerializeField] private string fireSpreadPreset = "Moderate";
+    [SerializeField, Min(0f)] private float startSmokeDensity = 0.2f;
+    [SerializeField, Min(0f)] private float smokeAccumulationMultiplier = 1f;
+    [SerializeField] private string ventilationPreset = "Neutral";
+    [SerializeField] private string occupantRiskPreset = "Manageable";
+    [SerializeField] private string severityBand = "Medium";
+    [SerializeField, Range(0f, 1f)] private float confidenceScore = 1f;
+    [SerializeField] private int placementRandomSeed;
 
     [FormerlySerializedAs("debugFireOrigin")]
     [SerializeField, HideInInspector] private string legacyDebugFireOrigin = "Laundry_WasherOutlet";
@@ -97,32 +61,33 @@ public class DebugIncidentPayloadSpawner : MonoBehaviour
             return;
         }
 
-        string resolvedFireOrigin = ResolveFireOrigin();
-        string resolvedLogicalLocation = ResolveLogicalLocation();
-        string resolvedHazardType = ResolveHazardType();
-        float resolvedInitialIntensity = ResolveInitialFireIntensity();
-        int resolvedInitialFireCount = ResolveInitialFireCount();
-        string resolvedSeverityBand = ResolveSeverityBand();
-        string resolvedSpreadPreset = ResolveSpreadPreset();
+        string resolvedCaseId = ResolveText(caseId, "debug_case");
+        string resolvedScenarioId = ResolveText(scenarioId, "debug_scenario");
+        string resolvedFireOrigin = ResolveText(fireOrigin, ResolveText(legacyDebugFireOrigin, "Laundry_WasherOutlet"));
+        string resolvedLogicalLocation = ResolveText(logicalFireLocation, ResolveText(legacyDebugLogicalFireLocation, "Laundry"));
+        string resolvedHazardType = ResolveText(hazardType, ResolveText(legacyDebugHazardType, "Electrical"));
+        float resolvedInitialFireIntensity = initialFireIntensity > 0f ? initialFireIntensity : legacyDebugInitialFireIntensity;
+        int resolvedInitialFireCount = initialFireCount > 0 ? initialFireCount : legacyDebugInitialFireCount;
 
         pendingDebugPayload = new IncidentWorldSetupPayload
         {
-            caseId = "debug_case",
-            scenarioId = "debug_scenario",
+            caseId = resolvedCaseId,
+            scenarioId = resolvedScenarioId,
             fireOrigin = resolvedFireOrigin,
             logicalFireLocation = resolvedLogicalLocation,
             hazardType = resolvedHazardType,
-            isolationType = ResolveIsolationType(resolvedHazardType),
-            requiresIsolation = true,
-            initialFireIntensity = resolvedInitialIntensity,
-            initialFireCount = resolvedInitialFireCount,
-            fireSpreadPreset = resolvedSpreadPreset,
-            startSmokeDensity = 0.2f,
-            smokeAccumulationMultiplier = 1f,
-            ventilationPreset = "Neutral",
-            occupantRiskPreset = "Manageable",
-            severityBand = resolvedSeverityBand,
-            confidenceScore = 1f,
+            isolationType = ResolveText(isolationType, "None"),
+            requiresIsolation = requiresIsolation,
+            initialFireIntensity = Mathf.Clamp(resolvedInitialFireIntensity, 0.1f, 1f),
+            initialFireCount = Mathf.Max(1, resolvedInitialFireCount),
+            fireSpreadPreset = ResolveText(fireSpreadPreset, "Moderate"),
+            startSmokeDensity = Mathf.Max(0f, startSmokeDensity),
+            smokeAccumulationMultiplier = Mathf.Max(0f, smokeAccumulationMultiplier),
+            ventilationPreset = ResolveText(ventilationPreset, "Neutral"),
+            occupantRiskPreset = ResolveText(occupantRiskPreset, "Manageable"),
+            severityBand = ResolveText(severityBand, ResolveText(legacyDebugSeverityBand, "Medium")),
+            confidenceScore = Mathf.Clamp01(confidenceScore),
+            placementRandomSeed = placementRandomSeed,
         };
 
         LoadingFlowState.SetPendingIncidentPayload(pendingDebugPayload);
@@ -174,169 +139,67 @@ public class DebugIncidentPayloadSpawner : MonoBehaviour
         }
     }
 
-    private static string ResolveIsolationType(string hazard)
+    private static string ResolveText(string value, string fallback)
     {
-        if (string.Equals(hazard, "Electrical", StringComparison.OrdinalIgnoreCase))
-        {
-            return "Electrical";
-        }
-
-        if (string.Equals(hazard, "Gas", StringComparison.OrdinalIgnoreCase))
-        {
-            return "Gas";
-        }
-
-        return "None";
-    }
-
-    private string ResolveFireOrigin()
-    {
-        return debugOriginPreset switch
-        {
-            DebugOriginPreset.Kitchen_StoveTop => "Kitchen_StoveTop",
-            DebugOriginPreset.Garage_WorkbenchCorner => "Garage_WorkbenchCorner",
-            DebugOriginPreset.Custom => string.IsNullOrWhiteSpace(customFireOrigin) ? legacyDebugFireOrigin : customFireOrigin.Trim(),
-            _ => "Laundry_WasherOutlet",
-        };
-    }
-
-    private string ResolveLogicalLocation()
-    {
-        return debugOriginPreset switch
-        {
-            DebugOriginPreset.Kitchen_StoveTop => "Kitchen",
-            DebugOriginPreset.Garage_WorkbenchCorner => "Garage",
-            DebugOriginPreset.Custom => string.IsNullOrWhiteSpace(customLogicalFireLocation) ? legacyDebugLogicalFireLocation : customLogicalFireLocation.Trim(),
-            _ => "Laundry",
-        };
-    }
-
-    private string ResolveHazardType()
-    {
-        if (debugHazardPreset == DebugHazardPreset.Electrical &&
-            !string.IsNullOrWhiteSpace(legacyDebugHazardType))
-        {
-            if (string.Equals(legacyDebugHazardType, "Gas", StringComparison.OrdinalIgnoreCase))
-            {
-                return "Gas";
-            }
-
-            if (string.Equals(legacyDebugHazardType, "FlammableLiquid", StringComparison.OrdinalIgnoreCase))
-            {
-                return "FlammableLiquid";
-            }
-
-            if (string.Equals(legacyDebugHazardType, "OrdinaryCombustibles", StringComparison.OrdinalIgnoreCase))
-            {
-                return "OrdinaryCombustibles";
-            }
-        }
-
-        return debugHazardPreset switch
-        {
-            DebugHazardPreset.OrdinaryCombustibles => "OrdinaryCombustibles",
-            DebugHazardPreset.Gas => "Gas",
-            DebugHazardPreset.FlammableLiquid => "FlammableLiquid",
-            _ => "Electrical",
-        };
-    }
-
-    private string ResolveSpreadPreset()
-    {
-        return debugSpreadPreset switch
-        {
-            DebugSpreadPreset.Conservative => "Conservative",
-            DebugSpreadPreset.Aggressive => "Aggressive",
-            _ => "Moderate",
-        };
-    }
-
-    private string ResolveSeverityBand()
-    {
-        if (debugSeverityPreset == DebugSeverityPreset.Medium &&
-            !string.IsNullOrWhiteSpace(legacyDebugSeverityBand))
-        {
-            if (string.Equals(legacyDebugSeverityBand, "Low", StringComparison.OrdinalIgnoreCase))
-            {
-                return "Low";
-            }
-
-            if (string.Equals(legacyDebugSeverityBand, "High", StringComparison.OrdinalIgnoreCase))
-            {
-                return "High";
-            }
-
-            if (string.Equals(legacyDebugSeverityBand, "Critical", StringComparison.OrdinalIgnoreCase))
-            {
-                return "Critical";
-            }
-        }
-
-        return debugSeverityPreset switch
-        {
-            DebugSeverityPreset.Low => "Low",
-            DebugSeverityPreset.High => "High",
-            DebugSeverityPreset.Critical => "Critical",
-            _ => "Medium",
-        };
-    }
-
-    private float ResolveInitialFireIntensity()
-    {
-        if (debugIntensityPreset == DebugIntensityPreset.Medium &&
-            legacyDebugInitialFireIntensity > 0f)
-        {
-            return Mathf.Clamp(legacyDebugInitialFireIntensity, 0.1f, 1f);
-        }
-
-        return debugIntensityPreset switch
-        {
-            DebugIntensityPreset.Low => 0.35f,
-            DebugIntensityPreset.High => 0.9f,
-            DebugIntensityPreset.Custom => Mathf.Clamp(customInitialFireIntensity, 0.1f, 1f),
-            _ => 0.65f,
-        };
-    }
-
-    private int ResolveInitialFireCount()
-    {
-        if (debugFireCountPreset == DebugFireCountPreset.MediumCluster &&
-            legacyDebugInitialFireCount > 0)
-        {
-            return Mathf.Clamp(legacyDebugInitialFireCount, 1, 5);
-        }
-
-        return debugFireCountPreset switch
-        {
-            DebugFireCountPreset.Single => 1,
-            DebugFireCountPreset.SmallCluster => 2,
-            DebugFireCountPreset.LargeCluster => 5,
-            DebugFireCountPreset.Custom => Mathf.Clamp(customInitialFireCount, 1, 5),
-            _ => 3,
-        };
+        return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
     }
 
     private void OnValidate()
     {
-        customInitialFireIntensity = Mathf.Clamp(customInitialFireIntensity, 0.1f, 1f);
-        customInitialFireCount = Mathf.Clamp(customInitialFireCount, 1, 5);
+        initialFireIntensity = Mathf.Clamp(initialFireIntensity, 0.1f, 1f);
+        initialFireCount = Mathf.Max(1, initialFireCount);
+        startSmokeDensity = Mathf.Max(0f, startSmokeDensity);
+        smokeAccumulationMultiplier = Mathf.Max(0f, smokeAccumulationMultiplier);
+        confidenceScore = Mathf.Clamp01(confidenceScore);
 
-        if (string.IsNullOrWhiteSpace(customFireOrigin))
+        if (string.IsNullOrWhiteSpace(caseId))
         {
-            customFireOrigin = legacyDebugFireOrigin;
+            caseId = "debug_case";
         }
 
-        if (string.IsNullOrWhiteSpace(customLogicalFireLocation))
+        if (string.IsNullOrWhiteSpace(scenarioId))
         {
-            customLogicalFireLocation = legacyDebugLogicalFireLocation;
+            scenarioId = "debug_scenario";
         }
 
-        if (debugOriginPreset == DebugOriginPreset.Custom)
+        if (string.IsNullOrWhiteSpace(fireOrigin))
         {
-            return;
+            fireOrigin = ResolveText(legacyDebugFireOrigin, "Laundry_WasherOutlet");
         }
 
-        customFireOrigin = ResolveFireOrigin();
-        customLogicalFireLocation = ResolveLogicalLocation();
+        if (string.IsNullOrWhiteSpace(logicalFireLocation))
+        {
+            logicalFireLocation = ResolveText(legacyDebugLogicalFireLocation, "Laundry");
+        }
+
+        if (string.IsNullOrWhiteSpace(hazardType))
+        {
+            hazardType = ResolveText(legacyDebugHazardType, "Electrical");
+        }
+
+        if (string.IsNullOrWhiteSpace(isolationType))
+        {
+            isolationType = "None";
+        }
+
+        if (string.IsNullOrWhiteSpace(fireSpreadPreset))
+        {
+            fireSpreadPreset = "Moderate";
+        }
+
+        if (string.IsNullOrWhiteSpace(ventilationPreset))
+        {
+            ventilationPreset = "Neutral";
+        }
+
+        if (string.IsNullOrWhiteSpace(occupantRiskPreset))
+        {
+            occupantRiskPreset = "Manageable";
+        }
+
+        if (string.IsNullOrWhiteSpace(severityBand))
+        {
+            severityBand = ResolveText(legacyDebugSeverityBand, "Medium");
+        }
     }
 }

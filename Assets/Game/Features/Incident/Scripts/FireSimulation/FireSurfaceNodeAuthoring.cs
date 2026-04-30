@@ -1,5 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 [DisallowMultipleComponent]
 public sealed class FireSurfaceNodeAuthoring : MonoBehaviour
@@ -33,6 +36,17 @@ public sealed class FireSurfaceNodeAuthoring : MonoBehaviour
     [Header("Debug")]
     [SerializeField] private bool drawGizmos = true;
     [SerializeField] private Color gizmoColor = new Color(1f, 0.45f, 0.1f, 0.8f);
+    [SerializeField] private bool drawRuntimeHeatLabel = true;
+
+    [Header("Runtime Debug")]
+    [SerializeField] private float currentHeat;
+    [SerializeField] private float currentIgnitionThreshold;
+    [SerializeField] private float currentMaxHeat = 2f;
+    [SerializeField] private bool currentIsBurning;
+    [SerializeField] private bool currentIsTrackedByIncident;
+    [SerializeField] private bool currentIsRemoved;
+    [SerializeField] private FireIncidentNodeKind currentIncidentNodeKind = FireIncidentNodeKind.Late;
+    [SerializeField] private FireHazardType currentHazardType = FireHazardType.OrdinaryCombustibles;
 
     public string NodeId => string.IsNullOrWhiteSpace(nodeId) ? gameObject.name : nodeId;
     public SurfaceKind SurfaceType => surfaceKind;
@@ -44,6 +58,14 @@ public sealed class FireSurfaceNodeAuthoring : MonoBehaviour
     public float AutoConnectRadius => Mathf.Max(0.1f, autoConnectRadius);
     public IReadOnlyList<FireSurfaceNodeAuthoring> ExplicitNeighbors => explicitNeighbors;
     public IReadOnlyList<FireSurfaceNodeAuthoring> ResolvedNeighbors => resolvedNeighbors;
+    public float CurrentHeat => currentHeat;
+    public float CurrentIgnitionThreshold => currentIgnitionThreshold;
+    public float CurrentMaxHeat => currentMaxHeat;
+    public bool CurrentIsBurning => currentIsBurning;
+    public bool CurrentIsTrackedByIncident => currentIsTrackedByIncident;
+    public bool CurrentIsRemoved => currentIsRemoved;
+    public FireIncidentNodeKind CurrentIncidentNodeKind => currentIncidentNodeKind;
+    public FireHazardType CurrentHazardType => currentHazardType;
 
     public void ConfigureRuntimeNode(
         string runtimeNodeId,
@@ -89,6 +111,36 @@ public sealed class FireSurfaceNodeAuthoring : MonoBehaviour
         }
     }
 
+    public void SetRuntimeDebugState(FireRuntimeNode runtimeNode, float maxHeat)
+    {
+        if (runtimeNode == null)
+        {
+            ClearRuntimeDebugState();
+            return;
+        }
+
+        currentHeat = runtimeNode.Heat;
+        currentIgnitionThreshold = runtimeNode.IgnitionThreshold;
+        currentMaxHeat = Mathf.Max(runtimeNode.IgnitionThreshold, maxHeat);
+        currentIsBurning = runtimeNode.IsBurning;
+        currentIsTrackedByIncident = runtimeNode.IsTrackedByIncident;
+        currentIsRemoved = runtimeNode.IsRemoved;
+        currentIncidentNodeKind = runtimeNode.IncidentNodeKind;
+        currentHazardType = runtimeNode.HazardType;
+    }
+
+    public void ClearRuntimeDebugState()
+    {
+        currentHeat = 0f;
+        currentIgnitionThreshold = IgnitionThresholdMultiplier;
+        currentMaxHeat = 2f;
+        currentIsBurning = false;
+        currentIsTrackedByIncident = false;
+        currentIsRemoved = false;
+        currentIncidentNodeKind = FireIncidentNodeKind.Late;
+        currentHazardType = hazardType;
+    }
+
     private void OnValidate()
     {
         ignitionThresholdMultiplier = Mathf.Max(0.01f, ignitionThresholdMultiplier);
@@ -117,5 +169,14 @@ public sealed class FireSurfaceNodeAuthoring : MonoBehaviour
 
         Gizmos.color = new Color(gizmoColor.r, gizmoColor.g, gizmoColor.b, 0.2f);
         Gizmos.DrawWireSphere(transform.position, AutoConnectRadius);
+
+#if UNITY_EDITOR
+        if (drawRuntimeHeatLabel)
+        {
+            Handles.Label(
+                transform.position + (Vector3.up * 0.35f),
+                $"{NodeId}\nHeat {currentHeat:0.00}/{currentMaxHeat:0.00}  Ignite {currentIgnitionThreshold:0.00}\n{currentHazardType} {(currentIsBurning ? "BURNING" : "cold")}");
+        }
+#endif
     }
 }

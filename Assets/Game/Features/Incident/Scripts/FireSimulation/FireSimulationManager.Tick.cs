@@ -131,7 +131,8 @@ public sealed partial class FireSimulationManager
                 }
             }
 
-            target.PendingHeatDelta += source.Heat * transferPerSecond * deltaTime;
+            float spreadHeat = source.Heat * transferPerSecond * deltaTime;
+            target.PendingHeatDelta = Mathf.Max(target.PendingHeatDelta, spreadHeat);
         }
     }
 }

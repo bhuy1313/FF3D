@@ -1,4 +1,5 @@
 using System.Collections;
+using RayFire;
 using TrueJourney.BotBehavior;
 using UnityEngine;
 using UnityEngine.AI;
@@ -6,6 +7,8 @@ using UnityEngine.Events;
 using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
+[RequireComponent(typeof(RayfireRigid))]
+[RequireComponent(typeof(RayfireShatter))]
 public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
 {
     private const float SameSideTolerance = 0.2f;
@@ -90,12 +93,6 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
 
     [SerializeField]
     private bool disableRenderersOnBreak = true;
-
-    [SerializeField]
-    private GameObject brokenPrefab;
-
-    [SerializeField]
-    private Transform brokenSpawnPoint;
 
     [Header("Events")]
     [SerializeField]
@@ -287,13 +284,19 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
         GameObject breaker = activeBreaker;
         EndActiveBreakInteraction();
 
-        if (brokenPrefab != null)
+        RayfireRigid rayfireRigid = GetComponent<RayfireRigid>();
+        if (rayfireRigid != null)
         {
-            Transform spawn = brokenSpawnPoint != null ? brokenSpawnPoint : transform;
-            Instantiate(brokenPrefab, spawn.position, spawn.rotation);
+            Vector3 impactDirection = breaker != null
+                ? transform.position - breaker.transform.position
+                : transform.forward;
+            RayfireBreakImpact.DemolishWithImpact(
+                rayfireRigid,
+                breaker,
+                transform.position,
+                impactDirection,
+                false);
         }
-
-        TriggerShatterEffects(breaker);
 
         if (disableCollidersOnBreak)
         {
@@ -562,28 +565,7 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
         }
     }
 
-    private void TriggerShatterEffects(GameObject breaker)
-    {
-        MeshShatter[] shatterComponents = GetComponentsInChildren<MeshShatter>(true);
-        if (shatterComponents.Length == 0)
-        {
-            return;
-        }
 
-        Vector3 impactDirection =
-            breaker != null
-                ? (transform.position - breaker.transform.position).normalized
-                : transform.forward;
-
-        for (int i = 0; i < shatterComponents.Length; i++)
-        {
-            MeshShatter shatterComponent = shatterComponents[i];
-            if (shatterComponent != null)
-            {
-                shatterComponent.Shatter(transform.position, impactDirection, 1f);
-            }
-        }
-    }
 
     private bool TryResolveSeparationPlane(out Vector3 planePoint, out Vector3 planeNormal)
     {
@@ -776,4 +758,5 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
         direction.y = 0f;
         return direction.sqrMagnitude > 0.001f ? direction.normalized : Vector3.zero;
     }
+
 }

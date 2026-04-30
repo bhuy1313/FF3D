@@ -3820,7 +3820,7 @@ MonoBehaviour:
   movementWeightKg: 75
   botCarriedLocalPosition: {x: 0.07, y: -0.782, z: 0.591}
   botCarriedLocalEulerAngles: {x: 349.52753, y: 80.97423, z: 324.94092}
-  playerCarriedLocalPosition: {x: -0.25, y: 0.6, z: -0.2}
+  playerCarriedLocalPosition: {x: 0, y: 0.6, z: -0.5}
   playerCarriedLocalEulerAngles: {x: 0, y: 90, z: 0}
   disableCollidersWhileCarried: 1
   carryRightHandHoldPoint: {fileID: 672686474566434412}
@@ -3874,7 +3874,7 @@ Rigidbody:
   m_UseGravity: 1
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 0
+  m_Constraints: 90
   m_CollisionDetection: 0
 --- !u!114 &2178096496627332877
 MonoBehaviour:

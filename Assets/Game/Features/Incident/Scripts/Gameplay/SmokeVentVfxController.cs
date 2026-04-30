@@ -14,7 +14,6 @@ public class SmokeVentVfxController : MonoBehaviour
     [Header("Discovery")]
     [SerializeField] private bool autoFindNearestSmokeHazard = true;
     [SerializeField] private float autoFindRadius = 20f;
-    [SerializeField] private bool preferMeshShatterAnchorsForWindows = true;
 
     [Header("Preview")]
     [SerializeField] private bool usePreviewDensityWhenNoHazard;
@@ -245,28 +244,6 @@ public class SmokeVentVfxController : MonoBehaviour
                 {
                     Transform = emitPoint,
                     Renderer = emitPoint.GetComponent<Renderer>()
-                });
-            }
-        }
-
-        if (anchorBindings.Count == 0 &&
-            preferMeshShatterAnchorsForWindows &&
-            ventPointSource is Window window)
-        {
-            MeshShatter[] shatters = window.GetComponentsInChildren<MeshShatter>(true);
-            for (int i = 0; i < shatters.Length; i++)
-            {
-                MeshShatter shatter = shatters[i];
-                if (shatter == null)
-                {
-                    continue;
-                }
-
-                Transform anchorTransform = shatter.transform;
-                anchorBindings.Add(new AnchorBinding
-                {
-                    Transform = anchorTransform,
-                    Renderer = anchorTransform.GetComponent<Renderer>()
                 });
             }
         }

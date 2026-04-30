@@ -13,11 +13,10 @@ MonoBehaviour:
   m_Name: Map3_FireSimulationProfile
   m_EditorClassIdentifier: 
   simulationTickInterval: 0.2
-  clusterRefreshInterval: 0.3
-  maxHeat: 5
+  maxHeat: 10
   extinguishThreshold: 0.08
   visualHeatThreshold: 0.01
   suppressionRecoveryDelaySeconds: 5
   neighborHeatTransferPerSecond: 0.25
-  clusterMergeDistance: 2.75
-  maxClusterViews: 12
+  maxNodeEffects: 12
+  effectVisibleDistance: 0

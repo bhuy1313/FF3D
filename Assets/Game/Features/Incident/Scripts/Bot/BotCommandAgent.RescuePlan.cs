@@ -82,11 +82,19 @@ public partial class BotCommandAgent
                 agent.CurrentSafeZoneTarget);
             if (agent.CurrentSafeZoneTarget == null)
             {
-                agent.LogRescueActivityMessage("rescue-no-safezone", "No safe zone found.");
-                agent.FailActiveRescueOrder("No safe zone found for rescue.", BotTaskStatus.Blocked);
+                agent.LogRescueActivityMessage("rescue-no-safezone", "No safe zone with available slots found.");
+                agent.FailActiveRescueOrder("No safe zone with available slots found for rescue.", BotTaskStatus.Blocked);
                 return BotPlanTaskStatus.Failure;
             }
 
+            if (!agent.CurrentSafeZoneTarget.TryClaimSlot(agent.gameObject, out Vector3 slotPosition))
+            {
+                agent.LogRescueActivityMessage("rescue-no-slot", "Safe zone has no available slots.");
+                agent.FailActiveRescueOrder("Safe zone has no available slots.", BotTaskStatus.Blocked);
+                return BotPlanTaskStatus.Failure;
+            }
+
+            agent.ClaimedSlotPosition = slotPosition;
             return BotPlanTaskStatus.Success;
         }
 
@@ -243,8 +251,9 @@ public partial class BotCommandAgent
             }
 
             Vector3 fallbackDropPosition = agent.transform.position + agent.transform.TransformDirection(agent.rescueDropOffset);
-            Vector3 dropPosition = safeZone.GetDropPoint(fallbackDropPosition);
-            rescueTarget.CompleteRescueAt(dropPosition);
+            Vector3 dropPosition = agent.ClaimedSlotPosition ?? safeZone.GetDropPoint(fallbackDropPosition);
+            rescueTarget.CompleteRescueAt(dropPosition, safeZone.GetSlotRotation(dropPosition));
+            safeZone.OccupySlotAt(dropPosition);
             agent.LogRescueActivityMessage("rescue-complete", "Rescue completed.");
             agent.CompleteActiveRescueOrder();
             return BotPlanTaskStatus.Success;
@@ -310,7 +319,7 @@ public partial class BotCommandAgent
 
         PrepareCarryRescueCommand();
 
-        Vector3 safeZonePosition = safeZone.GetWorldPosition();
+        Vector3 safeZonePosition = claimedSlotPosition ?? safeZone.GetWorldPosition();
         float distanceToSafeZone = BotCommandAgent.GetHorizontalDistance(transform.position, safeZonePosition);
         bool hasReachedSafeZone =
             safeZone.ContainsPoint(transform.position) ||

@@ -104,7 +104,7 @@ public sealed partial class FireSimulationManager
             return false;
         }
 
-        return ShouldRenderNodeInCluster(runtimeGraph.GetNode(nodeIndex));
+        return ShouldRenderNodeEffect(runtimeGraph.GetNode(nodeIndex));
     }
 
     private float GetNodeVisualIntensity01(FireRuntimeNode node)
@@ -117,7 +117,7 @@ public sealed partial class FireSimulationManager
         return Mathf.InverseLerp(0f, Mathf.Max(0.01f, GetSpreadSaturationHeat(node)), node.Heat);
     }
 
-    private bool ShouldRenderNodeInCluster(FireRuntimeNode node)
+    private bool ShouldRenderNodeEffect(FireRuntimeNode node)
     {
         if (node == null || node.IsRemoved || !node.IsTrackedByIncident)
         {
