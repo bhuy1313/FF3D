@@ -12,6 +12,7 @@ namespace StarterAssets
         [SerializeField] private CharacterController characterController;
         [SerializeField] private FirstPersonController firstPersonController;
         [SerializeField] private FPSInventorySystem inventorySystem;
+        [SerializeField] private FPSInteractionSystem interactionSystem;
         [Tooltip("Velocity is converted into this local space before being sent to the animator.")]
         [SerializeField] private Transform velocityReference;
 
@@ -21,22 +22,6 @@ namespace StarterAssets
         [SerializeField] private float jumpVerticalVelocityThreshold = 0.1f;
         [SerializeField] private float fallVerticalVelocityThreshold = -0.1f;
         [SerializeField] private float parameterDampTime = 0.1f;
-
-        [Header("Float Parameters")]
-        [SerializeField] private string speedParameter = "Speed";
-        [SerializeField] private string horizontalSpeedParameter = "HorizontalSpeed";
-        [SerializeField] private string velocityXParameter = "VelocityX";
-        [SerializeField] private string velocityYParameter = "VelocityY";
-        [SerializeField] private string velocityZParameter = "VelocityZ";
-        [SerializeField] private string moveXParameter = "MoveX";
-        [SerializeField] private string moveYParameter = "MoveY";
-        [SerializeField] private string moveForwardParameter = "MoveForward";
-        [SerializeField] private string moveRightParameter = "MoveRight";
-        [SerializeField] private string upwardSpeedParameter = "UpwardSpeed";
-        [SerializeField] private string downwardSpeedParameter = "DownwardSpeed";
-        [SerializeField] private string movementBurdenParameter = "MovementBurden";
-        [SerializeField] private string fallDistanceParameter = "FallDistance";
-        [SerializeField] private string landingSpeedParameter = "LandingSpeed";
 
         [Header("Bool Parameters")]
         [SerializeField] private string isGroundedParameter = "IsGrounded";
@@ -54,6 +39,7 @@ namespace StarterAssets
         [SerializeField] private string isClimbingParameter = "IsClimbing";
         [SerializeField] private string isHoldingParameter = "IsHolding";
         [SerializeField] private string hasItemParameter = "HasItem";
+        [SerializeField] private string isCarryingVictimParameter = "IsCarryingVictim";
 
         [Header("Int Parameters")]
         [SerializeField] private string itemCountParameter = "ItemCount";
@@ -88,11 +74,17 @@ namespace StarterAssets
         [SerializeField] private int itemCount;
         [SerializeField] private string heldItemName;
         [SerializeField] private string heldItemTypeName;
+        [SerializeField] private bool isCarryingVictim;
 
         private readonly Dictionary<string, int> parameterHashes = new Dictionary<string, int>();
         private readonly Dictionary<string, int> dynamicHoldingParameterHashes = new Dictionary<string, int>();
+        private readonly HashSet<int> floatParameterHashes = new HashSet<int>();
+        private readonly HashSet<int> boolParameterHashes = new HashSet<int>();
+        private readonly HashSet<int> intParameterHashes = new HashSet<int>();
         private readonly HashSet<int> activeDynamicHoldingHashes = new HashSet<int>();
         private readonly List<int> dynamicHoldingHashesToDisable = new List<int>();
+        private readonly Dictionary<int, bool> boolParameterValues = new Dictionary<int, bool>();
+        private readonly Dictionary<int, int> intParameterValues = new Dictionary<int, int>();
 
         public Vector3 WorldVelocity => worldVelocity;
         public Vector3 LocalVelocity => localVelocity;
@@ -141,6 +133,11 @@ namespace StarterAssets
                 inventorySystem = GetComponent<FPSInventorySystem>();
             }
 
+            if (interactionSystem == null)
+            {
+                interactionSystem = GetComponent<FPSInteractionSystem>();
+            }
+
             if (animator == null)
             {
                 animator = GetComponentInChildren<Animator>();
@@ -155,21 +152,6 @@ namespace StarterAssets
         private void CacheParameterHashes()
         {
             parameterHashes.Clear();
-
-            CacheHash(speedParameter);
-            CacheHash(horizontalSpeedParameter);
-            CacheHash(velocityXParameter);
-            CacheHash(velocityYParameter);
-            CacheHash(velocityZParameter);
-            CacheHash(moveXParameter);
-            CacheHash(moveYParameter);
-            CacheHash(moveForwardParameter);
-            CacheHash(moveRightParameter);
-            CacheHash(upwardSpeedParameter);
-            CacheHash(downwardSpeedParameter);
-            CacheHash(movementBurdenParameter);
-            CacheHash(fallDistanceParameter);
-            CacheHash(landingSpeedParameter);
 
             CacheHash(isGroundedParameter);
             CacheHash(isMovingParameter);
@@ -186,10 +168,45 @@ namespace StarterAssets
             CacheHash(isClimbingParameter);
             CacheHash(isHoldingParameter);
             CacheHash(hasItemParameter);
+            CacheHash(isCarryingVictimParameter);
 
             CacheHash(itemCountParameter);
             CacheHash(heldItemNameHashParameter);
             CacheHash(heldItemTypeHashParameter);
+
+            CacheAnimatorParameters();
+        }
+
+        private void CacheAnimatorParameters()
+        {
+            floatParameterHashes.Clear();
+            boolParameterHashes.Clear();
+            intParameterHashes.Clear();
+            boolParameterValues.Clear();
+            intParameterValues.Clear();
+
+            if (animator == null)
+            {
+                return;
+            }
+
+            AnimatorControllerParameter[] parameters = animator.parameters;
+            for (int i = 0; i < parameters.Length; i++)
+            {
+                AnimatorControllerParameter parameter = parameters[i];
+                switch (parameter.type)
+                {
+                    case AnimatorControllerParameterType.Float:
+                        floatParameterHashes.Add(parameter.nameHash);
+                        break;
+                    case AnimatorControllerParameterType.Bool:
+                        boolParameterHashes.Add(parameter.nameHash);
+                        break;
+                    case AnimatorControllerParameterType.Int:
+                        intParameterHashes.Add(parameter.nameHash);
+                        break;
+                }
+            }
         }
 
         private void UpdateVelocityState()
@@ -238,6 +255,7 @@ namespace StarterAssets
 
             heldItemName = isHolding ? heldObject.name : string.Empty;
             heldItemTypeName = ResolveHeldItemTypeName(heldObject);
+            isCarryingVictim = interactionSystem != null && interactionSystem.IsCarryingVictim;
         }
 
         private void PushAnimatorParameters()
@@ -246,21 +264,6 @@ namespace StarterAssets
             {
                 return;
             }
-
-            SetFloat(speedParameter, speed);
-            SetFloat(horizontalSpeedParameter, horizontalSpeed);
-            SetFloat(velocityXParameter, localVelocity.x);
-            SetFloat(velocityYParameter, localVelocity.y);
-            SetFloat(velocityZParameter, localVelocity.z);
-            SetFloat(moveXParameter, localVelocity.x);
-            SetFloat(moveYParameter, localVelocity.z);
-            SetFloat(moveForwardParameter, Mathf.Max(0f, localVelocity.z));
-            SetFloat(moveRightParameter, localVelocity.x);
-            SetFloat(upwardSpeedParameter, upwardSpeed);
-            SetFloat(downwardSpeedParameter, downwardSpeed);
-            SetFloat(movementBurdenParameter, firstPersonController != null ? firstPersonController.CurrentMovementBurdenKg : 0f);
-            SetFloat(fallDistanceParameter, firstPersonController != null ? firstPersonController.CurrentTrackedFallDistance : 0f);
-            SetFloat(landingSpeedParameter, firstPersonController != null ? firstPersonController.LastResolvedLandingSpeed : 0f);
 
             SetBool(isGroundedParameter, isGrounded);
             SetBool(isMovingParameter, isMoving);
@@ -277,6 +280,7 @@ namespace StarterAssets
             SetBool(isClimbingParameter, isClimbing);
             SetBool(isHoldingParameter, isHolding);
             SetBool(hasItemParameter, itemCount > 0);
+            SetBool(isCarryingVictimParameter, isCarryingVictim);
 
             SetInt(itemCountParameter, itemCount);
             SetInt(heldItemNameHashParameter, string.IsNullOrWhiteSpace(heldItemName) ? 0 : Animator.StringToHash(heldItemName));
@@ -320,7 +324,7 @@ namespace StarterAssets
                 return;
             }
 
-            animator.SetBool(parameterHash, true);
+            SetBool(parameterHash, true);
             activeDynamicHoldingHashes.Add(parameterHash);
             dynamicHoldingHashesToDisable.Remove(parameterHash);
         }
@@ -334,7 +338,7 @@ namespace StarterAssets
         {
             for (int i = 0; i < dynamicHoldingHashesToDisable.Count; i++)
             {
-                animator.SetBool(dynamicHoldingHashesToDisable[i], false);
+                SetBool(dynamicHoldingHashesToDisable[i], false);
             }
 
             dynamicHoldingHashesToDisable.Clear();
@@ -371,7 +375,7 @@ namespace StarterAssets
                 return;
             }
 
-            animator.SetBool(parameterHash, value);
+            SetBool(parameterHash, value);
         }
 
         private void SetInt(string parameterName, int value)
@@ -382,7 +386,13 @@ namespace StarterAssets
                 return;
             }
 
+            if (intParameterValues.TryGetValue(parameterHash, out int currentValue) && currentValue == value)
+            {
+                return;
+            }
+
             animator.SetInteger(parameterHash, value);
+            intParameterValues[parameterHash] = value;
         }
 
         private bool HasAnimatorParameter(int parameterHash, AnimatorControllerParameterType type)
@@ -392,16 +402,17 @@ namespace StarterAssets
                 return false;
             }
 
-            AnimatorControllerParameter[] parameters = animator.parameters;
-            for (int i = 0; i < parameters.Length; i++)
+            switch (type)
             {
-                if (parameters[i].nameHash == parameterHash && parameters[i].type == type)
-                {
-                    return true;
-                }
+                case AnimatorControllerParameterType.Float:
+                    return floatParameterHashes.Contains(parameterHash);
+                case AnimatorControllerParameterType.Bool:
+                    return boolParameterHashes.Contains(parameterHash);
+                case AnimatorControllerParameterType.Int:
+                    return intParameterHashes.Contains(parameterHash);
+                default:
+                    return false;
             }
-
-            return false;
         }
 
         private void CacheHash(string parameterName)
@@ -423,6 +434,17 @@ namespace StarterAssets
             }
 
             return parameterHashes.TryGetValue(parameterName, out parameterHash) && parameterHash != 0;
+        }
+
+        private void SetBool(int parameterHash, bool value)
+        {
+            if (boolParameterValues.TryGetValue(parameterHash, out bool currentValue) && currentValue == value)
+            {
+                return;
+            }
+
+            animator.SetBool(parameterHash, value);
+            boolParameterValues[parameterHash] = value;
         }
 
         private static string ResolveHeldItemTypeName(GameObject heldObject)

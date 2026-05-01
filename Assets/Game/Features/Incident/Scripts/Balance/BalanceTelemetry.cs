@@ -220,7 +220,7 @@ public sealed class BalanceTelemetryRecorder : MonoBehaviour
             missionSystem = FindAnyObjectByType<IncidentMissionSystem>(FindObjectsInactive.Include);
         }
 
-        FireSimulationManager[] foundFires = FindObjectsByType<FireSimulationManager>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        FireSimulationManager[] foundFires = FindObjectsByType<FireSimulationManager>(FindObjectsInactive.Include);
         for (int i = 0; i < foundFires.Length; i++)
         {
             FireSimulationManager candidate = foundFires[i];
@@ -233,7 +233,7 @@ public sealed class BalanceTelemetryRecorder : MonoBehaviour
             trackedFireManagers.Add(candidate);
         }
 
-        VictimCondition[] foundVictims = FindObjectsByType<VictimCondition>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        VictimCondition[] foundVictims = FindObjectsByType<VictimCondition>(FindObjectsInactive.Include);
         for (int i = 0; i < foundVictims.Length; i++)
         {
             VictimCondition victim = foundVictims[i];

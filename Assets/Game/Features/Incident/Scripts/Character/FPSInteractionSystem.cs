@@ -55,8 +55,9 @@ namespace StarterAssets
                 : null;
         public bool AreHandsOccupied => HandOccupancyUtility.IsHandsOccupied(CurrentHandOccupyingObject, gameObject);
         public float CurrentGrabWeightKg => ResolveGrabbedBodyWeightKg(grabbedBody);
-        public float CurrentCarryWeightKg => ResolveRescuableCarryWeightKg(FindPlayerCarriedRescuable());
+        public float CurrentCarryWeightKg => ResolveRescuableCarryWeightKg(cachedCarriedRescuable);
         public float CurrentMovementBurdenKg => CurrentGrabWeightKg + CurrentCarryWeightKg;
+        public bool IsCarryingVictim => isCarryingVictim;
 
         private Rigidbody grabbedBody;
         private Transform grabbedOriginalParent;
@@ -76,6 +77,8 @@ namespace StarterAssets
         private Material grabbedPreviewMaterial;
         private ICustomGrabPlacement grabbedPlacementOverride;
         private readonly List<Fire> grabbedFireSources = new List<Fire>();
+        private IRescuableTarget cachedCarriedRescuable;
+        private bool isCarryingVictim;
 
         private void Awake()
         {
@@ -107,6 +110,9 @@ namespace StarterAssets
             {
                 return;
             }
+
+            cachedCarriedRescuable = FindPlayerCarriedRescuable();
+            isCarryingVictim = cachedCarriedRescuable != null;
 
             if (IsGrabActive)
             {
@@ -292,7 +298,7 @@ namespace StarterAssets
                 return false;
             }
 
-            IRescuableTarget carriedTarget = FindPlayerCarriedRescuable();
+            IRescuableTarget carriedTarget = cachedCarriedRescuable;
             if (carriedTarget == null)
             {
                 return false;

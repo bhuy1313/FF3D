@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   simulationTickInterval: 0.2
   maxHeat: 10
-  extinguishThreshold: 0.08
-  visualHeatThreshold: 0.01
+  extinguishThreshold: 1
+  visualHeatThreshold: 1
   suppressionRecoveryDelaySeconds: 5
   neighborHeatTransferPerSecond: 0.25
-  maxNodeEffects: 12
-  effectVisibleDistance: 0
+  maxNodeEffects: 100
+  effectVisibleDistance: 50

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public sealed class FireSpreadBatchRunner : MonoBehaviour
 {
@@ -50,7 +51,34 @@ public sealed class FireSpreadBatchRunner : MonoBehaviour
         runnerObject.hideFlags = HideFlags.HideAndDontSave;
         DontDestroyOnLoad(runnerObject);
         instance = runnerObject.AddComponent<FireSpreadBatchRunner>();
+        SceneManager.sceneLoaded += instance.HandleSceneLoaded;
         return instance;
+    }
+
+    private void OnDestroy()
+    {
+        SceneManager.sceneLoaded -= HandleSceneLoaded;
+        if (instance == this)
+        {
+            instance = null;
+        }
+    }
+
+    private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (mode == LoadSceneMode.Additive)
+        {
+            return;
+        }
+
+        if (Object.FindAnyObjectByType<GameMaster>() != null)
+        {
+            return;
+        }
+
+        registeredFires.Clear();
+        nextProcessIndex = 0;
+        Destroy(gameObject);
     }
 
     private void Update()

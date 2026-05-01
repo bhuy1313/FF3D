@@ -101,11 +101,29 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
     private bool objectiveViewsInitialized;
     private int lastObjectiveLayoutSignature = int.MinValue;
     private bool layoutRebuildPending;
+    private bool layoutActuallyChanged = false;
     private float nextLayoutRebuildTime;
 
     private float animatedTimerValue = 0f;
     private bool isTimerAnimating = false;
     private bool hasTimerAnimated = false;
+    private float refreshViewTimer = 0f;
+    private const float RefreshViewThrottleInterval = 0.2f; // 5 times per second
+
+    // String caching to reduce GC allocations
+    private string cachedTimerText = "--:--";
+    private float cachedTimerValue = -1f;
+    private string cachedMissionTitle = string.Empty;
+    private string cachedMissionTitleStored = string.Empty;
+    private string cachedObjectiveCounter = string.Empty;
+    private int cachedObjectiveCounterValue = -1;
+    private string cachedProgressText = string.Empty;
+    private int cachedCompletedObjectives = -1;
+    private int cachedTotalObjectives = -1;
+    private string cachedProgressValueText = string.Empty;
+    private float cachedProgressPercent = -1f;
+    private Dictionary<int, string> cachedObjectiveProgressTexts = new Dictionary<int, string>();
+    private Dictionary<int, float> cachedObjectiveProgressPercents = new Dictionary<int, float>();
 
     private void Awake()
     {
@@ -118,6 +136,7 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
     private void OnEnable()
     {
         ResolveReferences();
+        ClearStringCaches();
         RefreshView();
         RequestLayoutRebuild();
         ProcessPendingLayoutRebuild(forceImmediate: true);
@@ -125,7 +144,13 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
 
     private void Update()
     {
-        RefreshView();
+        refreshViewTimer += Time.deltaTime;
+        if (refreshViewTimer >= RefreshViewThrottleInterval)
+        {
+            refreshViewTimer = 0f;
+            RefreshView();
+        }
+
         ProcessPendingLayoutRebuild(forceImmediate: false);
     }
 
@@ -156,6 +181,9 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
             {
                 rootCanvasGroup = gameObject.AddComponent<CanvasGroup>();
             }
+
+            rootCanvasGroup.interactable = false;
+            rootCanvasGroup.blocksRaycasts = false;
         }
 
         missionTitleText ??= FindText("MissionTitleText");
@@ -172,9 +200,25 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
         accentBarImage ??= FindImage("Bar");
     }
 
+    private void ClearStringCaches()
+    {
+        cachedTimerText = "--:--";
+        cachedTimerValue = -1f;
+        cachedMissionTitle = string.Empty;
+        cachedMissionTitleStored = string.Empty;
+        cachedObjectiveCounter = string.Empty;
+        cachedObjectiveCounterValue = -1;
+        cachedProgressText = string.Empty;
+        cachedCompletedObjectives = -1;
+        cachedTotalObjectives = -1;
+        cachedProgressValueText = string.Empty;
+        cachedProgressPercent = -1f;
+        cachedObjectiveProgressTexts.Clear();
+        cachedObjectiveProgressPercents.Clear();
+    }
+
     private void RefreshView()
     {
-        ResolveReferences();
 
         bool visible = ShouldBeVisible();
         ApplyVisibility(visible);
@@ -204,12 +248,20 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
             accentBarImage.color = ResolveAccentColor(missionSystem.State);
         }
 
+        bool objectiveLayoutChanged = false;
         if (titleChanged)
         {
+            objectiveLayoutChanged = true;
             RequestLayoutRebuild();
         }
 
-        RefreshObjectiveList();
+        bool listLayoutChanged = RefreshObjectiveList();
+        if (listLayoutChanged)
+        {
+            objectiveLayoutChanged = true;
+        }
+        
+        layoutActuallyChanged = objectiveLayoutChanged;
     }
 
     private bool ShouldBeVisible()
@@ -230,8 +282,6 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
         }
 
         rootCanvasGroup.alpha = visible ? 1f : 0f;
-        rootCanvasGroup.interactable = false;
-        rootCanvasGroup.blocksRaycasts = false;
     }
 
     private string BuildMissionTitleText()
@@ -239,12 +289,25 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
         string fallbackTitle = LanguageManager.Tr(HubFallbackOperationKey, fallbackMissionTitle);
         if (missionSystem == null)
         {
-            return fallbackTitle;
+            string result = fallbackTitle;
+            if (result != cachedMissionTitleStored)
+            {
+                cachedMissionTitleStored = result;
+                cachedMissionTitle = result;
+            }
+            return cachedMissionTitle;
         }
 
-        return string.IsNullOrWhiteSpace(missionSystem.MissionOperationTitle)
+        string newTitle = string.IsNullOrWhiteSpace(missionSystem.MissionOperationTitle)
             ? fallbackTitle
             : missionSystem.MissionOperationTitle.Trim();
+        
+        if (newTitle != cachedMissionTitleStored)
+        {
+            cachedMissionTitleStored = newTitle;
+            cachedMissionTitle = newTitle;
+        }
+        return cachedMissionTitle;
     }
 
     private string BuildTimerText()
@@ -259,7 +322,12 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
         {
             hasTimerAnimated = false;
             isTimerAnimating = false;
-            return idleTimerText;
+            if (cachedTimerText != idleTimerText)
+            {
+                cachedTimerText = idleTimerText;
+                cachedTimerValue = -1f;
+            }
+            return cachedTimerText;
         }
 
         float targetSeconds = missionSystem.TimeLimitSeconds > 0f
@@ -284,28 +352,51 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
                     });
             }
             
-            return FormatClock(animatedTimerValue);
+            return UpdateCachedTimerText(animatedTimerValue);
         }
         
         // Nếu animation vẫn đang chạy, trả về giá trị đang được tween
         if (isTimerAnimating)
         {
-            return FormatClock(animatedTimerValue);
+            return UpdateCachedTimerText(animatedTimerValue);
         }
 
         // Khi kết thúc animation, hiển thị thời gian thực
-        return FormatClock(targetSeconds);
+        return UpdateCachedTimerText(targetSeconds);
+    }
+
+    private string UpdateCachedTimerText(float seconds)
+    {
+        // Only format if the displayed second value changed
+        int currentSecond = Mathf.CeilToInt(seconds);
+        int cachedSecond = Mathf.CeilToInt(cachedTimerValue);
+        if (currentSecond != cachedSecond)
+        {
+            cachedTimerValue = seconds;
+            cachedTimerText = FormatClock(seconds);
+        }
+        return cachedTimerText;
     }
 
     private string BuildObjectiveCounterText()
     {
         if (missionSystem == null)
         {
-            return string.Empty;
+            if (cachedObjectiveCounterValue != 0)
+            {
+                cachedObjectiveCounterValue = 0;
+                cachedObjectiveCounter = string.Empty;
+            }
+            return cachedObjectiveCounter;
         }
 
         int activeObjectiveNumber = ResolveActiveObjectiveNumber();
-        return string.Format(objectiveCounterFormat, activeObjectiveNumber);
+        if (activeObjectiveNumber != cachedObjectiveCounterValue)
+        {
+            cachedObjectiveCounterValue = activeObjectiveNumber;
+            cachedObjectiveCounter = string.Format(objectiveCounterFormat, activeObjectiveNumber);
+        }
+        return cachedObjectiveCounter;
     }
 
     private int ResolveActiveObjectiveNumber()
@@ -335,16 +426,30 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
     {
         int totalObjectives = missionSystem != null ? Mathf.Max(0, missionSystem.ObjectiveStatusCount) : 0;
         int completedObjectives = ResolveCompletedObjectiveCount();
-        return string.Format(
-            LanguageManager.Tr(HubObjectivesCompletedFormatKey, progressTextFormat),
-            completedObjectives,
-            totalObjectives);
+        
+        if (completedObjectives != cachedCompletedObjectives || totalObjectives != cachedTotalObjectives)
+        {
+            cachedCompletedObjectives = completedObjectives;
+            cachedTotalObjectives = totalObjectives;
+            cachedProgressText = string.Format(
+                LanguageManager.Tr(HubObjectivesCompletedFormatKey, progressTextFormat),
+                completedObjectives,
+                totalObjectives);
+        }
+        return cachedProgressText;
     }
 
     private string BuildProgressValueText()
     {
         float progressPercent = BuildProgressNormalized() * 100f;
-        return MissionLocalization.Format("mission.hud.progress.percent", progressValueFormat, progressPercent);
+        
+        // Only format if progress changed by at least 1%
+        if (Mathf.Abs(progressPercent - cachedProgressPercent) >= 1f)
+        {
+            cachedProgressPercent = progressPercent;
+            cachedProgressValueText = MissionLocalization.Format("mission.hud.progress.percent", progressValueFormat, progressPercent);
+        }
+        return cachedProgressValueText;
     }
 
     private float BuildProgressNormalized()
@@ -407,11 +512,11 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
         return completedCount;
     }
 
-    private void RefreshObjectiveList()
+    private bool RefreshObjectiveList()
     {
         if (missionSystem == null || objectivesListRoot == null)
         {
-            return;
+            return false;
         }
 
         EnsureObjectiveViewsInitialized();
@@ -435,7 +540,7 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
             }
 
             ObjectiveVisualState visualState = ResolveObjectiveVisualState(status, ref assignedActiveObjective);
-            layoutChanged |= BindObjectiveView(objectiveViews[visibleCount], status, visualState);
+            layoutChanged |= BindObjectiveView(objectiveViews[visibleCount], status, visualState, i);
             signature = (signature * 31) + (int)presentationKind;
             signature = (signature * 31) + (status.Summary?.GetHashCode() ?? 0);
             signature = (signature * 31) + status.Score;
@@ -451,6 +556,11 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
             {
                 layoutChanged = true;
             }
+            
+            // Clean up cache for hidden objectives
+            int objectiveId = i;
+            cachedObjectiveProgressTexts.Remove(objectiveId);
+            cachedObjectiveProgressPercents.Remove(objectiveId);
         }
 
         signature = (signature * 31) + visibleCount;
@@ -464,6 +574,8 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
         {
             RequestLayoutRebuild();
         }
+        
+        return layoutChanged;
     }
 
     private void EnsureObjectiveViewsInitialized()
@@ -629,7 +741,7 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
         return null;
     }
 
-    private bool BindObjectiveView(ObjectiveItemView view, MissionObjectiveStatusSnapshot status, ObjectiveVisualState visualState)
+    private bool BindObjectiveView(ObjectiveItemView view, MissionObjectiveStatusSnapshot status, ObjectiveVisualState visualState, int objectiveIndex)
     {
         if (view == null || !view.IsValid)
         {
@@ -667,7 +779,7 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
             view.ProgressValueText.gameObject.SetActive(showObjectiveScores);
             if (showObjectiveScores)
             {
-                string progressValue = MissionLocalization.Format("mission.hud.progress.percent", progressValueFormat, normalized * 100f);
+                string progressValue = GetCachedObjectiveProgressText(objectiveIndex, normalized);
                 changed |= SetText(view.ProgressValueText, progressValue);
             }
         }
@@ -678,6 +790,22 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
         }
 
         return changed;
+    }
+
+    private string GetCachedObjectiveProgressText(int objectiveId, float normalizedProgress)
+    {
+        float progressPercent = normalizedProgress * 100f;
+        bool hasCache = cachedObjectiveProgressTexts.TryGetValue(objectiveId, out string cached);
+        bool hasPercentCache = cachedObjectiveProgressPercents.TryGetValue(objectiveId, out float cachedPercent);
+        
+        // Only update if progress changed by at least 1%
+        if (!hasCache || !hasPercentCache || Mathf.Abs(progressPercent - cachedPercent) >= 1f)
+        {
+            cached = MissionLocalization.Format("mission.hud.progress.percent", progressValueFormat, progressPercent);
+            cachedObjectiveProgressTexts[objectiveId] = cached;
+            cachedObjectiveProgressPercents[objectiveId] = progressPercent;
+        }
+        return cached;
     }
 
     private float ResolveObjectiveNormalizedProgress(ObjectiveItemView view, MissionObjectiveStatusSnapshot status)
@@ -999,6 +1127,12 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
         {
             return;
         }
+        
+        // Guard: Only process if layout actually changed or forced
+        if (!forceImmediate && !layoutActuallyChanged)
+        {
+            return;
+        }
 
         float now = Time.unscaledTime;
         if (!forceImmediate && now < nextLayoutRebuildTime)
@@ -1029,6 +1163,7 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
         Canvas.ForceUpdateCanvases();
 
         layoutRebuildPending = false;
+        layoutActuallyChanged = false;
         nextLayoutRebuildTime = now + Mathf.Max(0f, layoutRebuildThrottleSeconds);
     }
 

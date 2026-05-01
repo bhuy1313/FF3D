@@ -1886,9 +1886,22 @@ public partial class LevelSelectSceneController : MonoBehaviour
             int popupSiblingIndex = levelInfoPopup.root.GetSiblingIndex();
             levelInfoOutsideCloseOverlayRoot.SetSiblingIndex(Mathf.Max(0, popupSiblingIndex));
             levelInfoPopup.root.SetAsLastSibling();
+            
+            // Ensure SuperDetail is above overlay for interaction
+            Transform superDetailPanel = parent != null ? parent.Find("SuperDetail") : null;
+            if (superDetailPanel != null)
+            {
+                superDetailPanel.SetAsLastSibling();
+            }
         }
 
         levelInfoOutsideCloseOverlayRoot.gameObject.SetActive(visible);
+        
+        Image overlayImage = levelInfoOutsideCloseOverlayRoot.GetComponent<Image>();
+        if (overlayImage != null)
+        {
+            overlayImage.raycastTarget = visible;
+        }
     }
 
     private void OnLevelInfoOutsideCloseOverlayClicked()
@@ -1896,6 +1909,12 @@ public partial class LevelSelectSceneController : MonoBehaviour
         if (IsScenarioDropdownOpen())
         {
             SetScenarioDropdownVisible(false);
+            return;
+        }
+
+        LevelPanelAnimation levelPanelAnim = UnityEngine.Object.FindAnyObjectByType<LevelPanelAnimation>();
+        if (levelPanelAnim != null && levelPanelAnim.IsSuperDetailOpen)
+        {
             return;
         }
 

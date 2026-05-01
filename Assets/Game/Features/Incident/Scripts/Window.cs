@@ -85,6 +85,12 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
     private readonly List<SashRuntime> sashes = new List<SashRuntime>(2);
     private bool initialized;
     private Coroutine activeClimbRoutine;
+    [Header("Locked Shake Effect")]
+    [SerializeField] private float lockedShakeDuration = 0.3f;
+    [SerializeField] private float lockedShakeIntensity = 4.5f;
+    [SerializeField] private float lockedShakeSpeed = 60f;
+
+    private float lockedShakeTimer;
 
     public bool IsOpen => CountOpenSashes() > 0;
     public bool IsBroken => CountBrokenSashes() > 0;
@@ -125,15 +131,31 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
             return;
 
         float t = 1f - Mathf.Exp(-animationSpeed * Time.deltaTime);
+
+        float shakeAngle = 0f;
+if (lockedShakeTimer > 0f)
+        {
+            lockedShakeTimer -= Time.deltaTime;
+            float intensity = lockedShakeTimer / lockedShakeDuration;
+            shakeAngle = Mathf.Sin(lockedShakeTimer * lockedShakeSpeed) * lockedShakeIntensity * intensity;
+        }
+
         for (int i = 0; i < sashes.Count; i++)
         {
             SashRuntime sash = sashes[i];
             if (sash?.Transform == null)
                 continue;
 
+            Quaternion actualTargetRot = sash.TargetLocalRotation;
+
+            if (shakeAngle != 0f && !sash.IsOpen && !sash.IsBroken)
+            {
+                actualTargetRot *= Quaternion.Euler(0f, 0f, shakeAngle);
+            }
+
             sash.Transform.localRotation = Quaternion.Slerp(
                 sash.Transform.localRotation,
-                sash.TargetLocalRotation,
+                actualTargetRot,
                 t);
         }
 
@@ -149,7 +171,10 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
             return;
 
         if (isLocked)
+        {
+            lockedShakeTimer = lockedShakeDuration;
             return;
+        }
 
         if (breakOnInteract)
         {

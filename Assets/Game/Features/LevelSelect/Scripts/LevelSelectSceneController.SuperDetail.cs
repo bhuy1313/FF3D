@@ -20,12 +20,68 @@ public partial class LevelSelectSceneController
     [SerializeField] private TMP_Text levelSuperDetailRecordsText;
     [SerializeField] private TMP_Text levelSuperDetailTipsText;
 
+    private bool superDetailButtonsBound = false;
+    private Button superDetailBtnScenario;
+    private RectTransform superDetailScenarioDropdownRoot;
+    private CanvasGroup superDetailScenarioDropdownCanvasGroup;
+    private RectTransform superDetailScenarioDropdownContentRoot;
+    private Button superDetailScenarioDropdownTemplateButton;
+    private Button superDetailScenarioToggleProxyButton;
+
+    private void EnsureSuperDetailButtons()
+    {
+        if (superDetailButtonsBound || levelSuperDetailContentRoot == null) return;
+
+        Button[] buttons = levelSuperDetailContentRoot.parent.GetComponentsInChildren<Button>(true);
+        foreach (Button b in buttons)
+        {
+            if (b.name == "btnStart")
+            {
+                b.onClick.RemoveAllListeners();
+                b.onClick.AddListener(PlaySelectedLevel);
+            }
+            else if (b.name == "btnScenario")
+            {
+                superDetailBtnScenario = b;
+                b.onClick.RemoveAllListeners();
+                b.onClick.AddListener(ToggleSuperDetailScenarioDropdown);
+            }
+            else if (b.name == "btnBack")
+            {
+                b.onClick.RemoveAllListeners();
+                b.onClick.AddListener(BackFromSuperDetail);
+            }
+            else if (b.name == "btnClose")
+            {
+                b.onClick.RemoveAllListeners();
+                b.onClick.AddListener(() => CloseLevelInfo());
+            }
+        }
+        
+        superDetailButtonsBound = true;
+    }
+
+    private void BackFromSuperDetail()
+    {
+        LevelPanelAnimation anim = UnityEngine.Object.FindAnyObjectByType<LevelPanelAnimation>();
+        if (anim != null)
+        {
+            anim.CloseSuperDetail();
+        }
+        else
+        {
+            HideLevelSuperDetailImmediate();
+        }
+    }
+
     private void RefreshLevelSuperDetail()
     {
         if (levelSuperDetailContentRoot == null || selectedLevelDefinition == null)
         {
             return;
         }
+
+        EnsureSuperDetailButtons();
 
         ScenarioDefinition scenario = GetDisplayedScenario(selectedLevelDefinition);
         string title = ResolveDisplayedLevelName(selectedLevelDefinition, scenario, selectedLevelSourceButton);
@@ -64,8 +120,9 @@ public partial class LevelSelectSceneController
         if (levelSuperDetailContentRoot != null)
         {
             levelSuperDetailContentRoot.DOKill();
-            levelSuperDetailContentRoot.anchoredPosition = new Vector2(0f, -40f);
-            levelSuperDetailContentRoot.DOAnchorPosY(0f, 0.5f).SetEase(Ease.OutBack);
+            // Start from the right side of the screen (e.g., X = 1920)
+            levelSuperDetailContentRoot.anchoredPosition = new Vector2(1920f, 0f);
+            levelSuperDetailContentRoot.DOAnchorPosX(0f, 0.5f).SetEase(Ease.OutQuint);
         }
     }
 
@@ -83,6 +140,8 @@ public partial class LevelSelectSceneController
             levelSuperDetailCanvasGroup.interactable = false;
             levelSuperDetailCanvasGroup.blocksRaycasts = false;
         }
+        
+        SetSuperDetailScenarioDropdownVisible(false);
     }
 
     private void RefreshSuperDetailMapPreview(RegionCard card, string title)
@@ -313,5 +372,170 @@ public partial class LevelSelectSceneController
         }
 
         LayoutRebuilder.ForceRebuildLayoutImmediate(levelSuperDetailContentRoot);
+    }
+
+    private void EnsureSuperDetailScenarioDropdown()
+    {
+        if (superDetailScenarioDropdownRoot != null) return;
+        
+        EnsureLevelInfoPopup(); // Make sure levelInfoPopup is initialized first
+        if (levelInfoPopup.scenarioDropdownRoot == null) return;
+
+        GameObject clone = UnityEngine.Object.Instantiate(levelInfoPopup.scenarioDropdownRoot.gameObject, levelSuperDetailContentRoot.parent);
+        clone.name = "SuperDetailScenarioDropdown";
+        superDetailScenarioDropdownRoot = clone.GetComponent<RectTransform>();
+        superDetailScenarioDropdownCanvasGroup = GetOrAddComponent<CanvasGroup>(clone);
+        
+        Transform contentTransform = superDetailScenarioDropdownRoot.Find("Content");
+        if (contentTransform == null && superDetailScenarioDropdownRoot.childCount > 0)
+        {
+            // If "Content" doesn't exist by name, fallback to the first child or search deeper
+            contentTransform = superDetailScenarioDropdownRoot.GetChild(0);
+        }
+        
+        if (contentTransform != null)
+        {
+            superDetailScenarioDropdownContentRoot = contentTransform as RectTransform;
+            superDetailScenarioDropdownTemplateButton = superDetailScenarioDropdownContentRoot.GetComponentInChildren<Button>(true);
+        }
+
+        GameObject proxy = new GameObject("SuperDetailScenarioToggleProxy", typeof(RectTransform), typeof(Button));
+        RectTransform proxyRect = proxy.GetComponent<RectTransform>();
+        proxyRect.SetParent(levelSuperDetailContentRoot.parent, false);
+        proxyRect.anchorMin = Vector2.zero;
+        proxyRect.anchorMax = Vector2.one;
+        proxyRect.sizeDelta = Vector2.zero;
+        superDetailScenarioToggleProxyButton = proxy.GetComponent<Button>();
+        superDetailScenarioToggleProxyButton.onClick.AddListener(() => SetSuperDetailScenarioDropdownVisible(false));
+        proxy.SetActive(false);
+
+        SetSuperDetailScenarioDropdownVisible(false);
+    }
+
+    private void ToggleSuperDetailScenarioDropdown()
+    {
+        if (selectedLevelDefinition == null)
+        {
+            return;
+        }
+
+        if (!HasMultipleConfiguredScenarios(selectedLevelDefinition))
+        {
+            Debug.Log("[SuperDetail] No multiple scenarios for this level, cannot open dropdown.");
+            return;
+        }
+
+        EnsureSuperDetailScenarioDropdown();
+        BuildSuperDetailScenarioDropdown(selectedLevelDefinition);
+        
+        bool isCurrentlyOpen = superDetailScenarioDropdownCanvasGroup != null && superDetailScenarioDropdownCanvasGroup.alpha > 0.001f;
+        SetSuperDetailScenarioDropdownVisible(!isCurrentlyOpen);
+    }
+
+    private void SetSuperDetailScenarioDropdownVisible(bool visible)
+    {
+        if (superDetailScenarioDropdownRoot == null || superDetailScenarioDropdownCanvasGroup == null) return;
+
+        superDetailScenarioDropdownRoot.gameObject.SetActive(true);
+        if (visible)
+        {
+            superDetailScenarioDropdownRoot.SetAsLastSibling();
+            PositionSuperDetailScenarioDropdown();
+        }
+
+        superDetailScenarioDropdownCanvasGroup.alpha = visible ? 1f : 0f;
+        superDetailScenarioDropdownCanvasGroup.interactable = visible;
+        superDetailScenarioDropdownCanvasGroup.blocksRaycasts = visible;
+
+        if (superDetailScenarioToggleProxyButton != null)
+        {
+            if (visible)
+            {
+                superDetailScenarioToggleProxyButton.transform.SetAsLastSibling();
+                superDetailScenarioDropdownRoot.SetAsLastSibling();
+            }
+            superDetailScenarioToggleProxyButton.gameObject.SetActive(visible);
+        }
+    }
+
+    private void PositionSuperDetailScenarioDropdown()
+    {
+        if (superDetailScenarioDropdownRoot == null || superDetailBtnScenario == null) return;
+        
+        // Make the dropdown bottom-center anchored so it grows upwards
+        superDetailScenarioDropdownRoot.anchorMin = new Vector2(0.5f, 0f);
+        superDetailScenarioDropdownRoot.anchorMax = new Vector2(0.5f, 0f);
+        superDetailScenarioDropdownRoot.pivot = new Vector2(0.5f, 0f);
+        
+        // Align pivot (bottom-center) exactly to the button's position (center)
+        superDetailScenarioDropdownRoot.position = superDetailBtnScenario.transform.position;
+        
+        // Offset UP by half the button's height plus a small margin
+        RectTransform btnRect = superDetailBtnScenario.transform as RectTransform;
+        float yOffset = btnRect != null ? (btnRect.rect.height * 0.5f) + 10f : 40f;
+        superDetailScenarioDropdownRoot.anchoredPosition += new Vector2(0, yOffset);
+    }
+
+    private void BuildSuperDetailScenarioDropdown(LevelDefinition definition)
+    {
+        ScenarioDefinition[] scenarios = GetConfiguredScenarios(definition);
+
+        if (superDetailScenarioDropdownContentRoot == null || superDetailScenarioDropdownTemplateButton == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < scenarios.Length; i++)
+        {
+            Button itemButton = GetOrCreateSuperDetailScenarioDropdownItem(i);
+            if (itemButton == null) continue;
+
+            TMP_Text label = itemButton.GetComponentInChildren<TMP_Text>(true);
+            if (label != null)
+            {
+                label.text = ResolveScenarioDisplayName(scenarios[i], definition);
+            }
+
+            ScenarioDefinition capturedScenario = scenarios[i];
+            itemButton.onClick.RemoveAllListeners();
+            itemButton.onClick.AddListener(() => 
+            {
+                OnScenarioDropdownItemClicked(definition, capturedScenario);
+                SetSuperDetailScenarioDropdownVisible(false);
+                RefreshLevelSuperDetail(); 
+            });
+            itemButton.gameObject.SetActive(true);
+            ApplyScenarioDropdownItemVisual(itemButton, capturedScenario);
+        }
+
+        for (int i = scenarios.Length; i < superDetailScenarioDropdownContentRoot.childCount; i++)
+        {
+            Transform extra = superDetailScenarioDropdownContentRoot.GetChild(i);
+            if (extra != null)
+            {
+                extra.gameObject.SetActive(false);
+            }
+        }
+    }
+
+    private Button GetOrCreateSuperDetailScenarioDropdownItem(int index)
+    {
+        if (index == 0)
+        {
+            return superDetailScenarioDropdownTemplateButton;
+        }
+
+        if (index < superDetailScenarioDropdownContentRoot.childCount)
+        {
+            Transform child = superDetailScenarioDropdownContentRoot.GetChild(index);
+            Button btn = child.GetComponent<Button>();
+            if (btn != null)
+            {
+                return btn;
+            }
+        }
+
+        GameObject newItem = UnityEngine.Object.Instantiate(superDetailScenarioDropdownTemplateButton.gameObject, superDetailScenarioDropdownContentRoot);
+        return newItem.GetComponent<Button>();
     }
 }

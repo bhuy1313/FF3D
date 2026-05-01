@@ -2852,6 +2852,12 @@ MonoBehaviour:
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  singleSashShatterTargets: []
+  leftSashShatterTargets: []
+  rightSashShatterTargets: []
+  fragmentLifeTime: 5
+  fragmentFadeTime: 1.5
+  fragmentFadeType: 3
   enableClimbOver: 1
   climbSideAAnchor: {fileID: 0}
   climbSideBAnchor: {fileID: 0}
@@ -5555,6 +5561,12 @@ MonoBehaviour:
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  singleSashShatterTargets: []
+  leftSashShatterTargets: []
+  rightSashShatterTargets: []
+  fragmentLifeTime: 5
+  fragmentFadeTime: 1.5
+  fragmentFadeType: 3
   enableClimbOver: 1
   climbSideAAnchor: {fileID: 0}
   climbSideBAnchor: {fileID: 0}
@@ -6704,6 +6716,12 @@ MonoBehaviour:
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  singleSashShatterTargets: []
+  leftSashShatterTargets: []
+  rightSashShatterTargets: []
+  fragmentLifeTime: 5
+  fragmentFadeTime: 1.5
+  fragmentFadeType: 3
   enableClimbOver: 1
   climbSideAAnchor: {fileID: 0}
   climbSideBAnchor: {fileID: 0}
@@ -7224,6 +7242,12 @@ MonoBehaviour:
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  singleSashShatterTargets: []
+  leftSashShatterTargets: []
+  rightSashShatterTargets: []
+  fragmentLifeTime: 5
+  fragmentFadeTime: 1.5
+  fragmentFadeType: 3
   enableClimbOver: 1
   climbSideAAnchor: {fileID: 0}
   climbSideBAnchor: {fileID: 0}
@@ -8164,6 +8188,12 @@ MonoBehaviour:
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  singleSashShatterTargets: []
+  leftSashShatterTargets: []
+  rightSashShatterTargets: []
+  fragmentLifeTime: 5
+  fragmentFadeTime: 1.5
+  fragmentFadeType: 3
   enableClimbOver: 1
   climbSideAAnchor: {fileID: 0}
   climbSideBAnchor: {fileID: 0}
@@ -10653,6 +10683,12 @@ MonoBehaviour:
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  singleSashShatterTargets: []
+  leftSashShatterTargets: []
+  rightSashShatterTargets: []
+  fragmentLifeTime: 5
+  fragmentFadeTime: 1.5
+  fragmentFadeType: 3
   enableClimbOver: 1
   climbSideAAnchor: {fileID: 0}
   climbSideBAnchor: {fileID: 0}
@@ -11355,16 +11391,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DebugIncidentPayloadSpawner
   enableDebugSpawning: 1
-  debugOriginPreset: 3
-  debugHazardPreset: 0
-  debugSpreadPreset: 1
-  debugSeverityPreset: 1
-  debugIntensityPreset: 1
-  debugFireCountPreset: 4
-  customInitialFireIntensity: 0.65
-  customInitialFireCount: 3
-  customFireOrigin: Area_00
-  customLogicalFireLocation: Area_00
+  caseId: debug_case
+  scenarioId: debug_scenario
+  fireOrigin: Area_00
+  logicalFireLocation: Area_00
+  hazardType: Electrical
+  isolationType: Electrical
+  requiresIsolation: 1
+  initialFireIntensity: 0.65
+  initialFireCount: 3
+  fireSpreadPreset: Moderate
+  startSmokeDensity: 0.2
+  smokeAccumulationMultiplier: 1
+  ventilationPreset: Neutral
+  occupantRiskPreset: Manageable
+  severityBand: Medium
+  confidenceScore: 1
+  placementRandomSeed: 0
   legacyDebugFireOrigin: Laundry_WasherOutlet
   legacyDebugLogicalFireLocation: Laundry
   legacyDebugHazardType: Electrical
@@ -16881,6 +16924,12 @@ MonoBehaviour:
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  singleSashShatterTargets: []
+  leftSashShatterTargets: []
+  rightSashShatterTargets: []
+  fragmentLifeTime: 5
+  fragmentFadeTime: 1.5
+  fragmentFadeType: 3
   enableClimbOver: 1
   climbSideAAnchor: {fileID: 0}
   climbSideBAnchor: {fileID: 0}
@@ -17013,6 +17062,7 @@ MonoBehaviour:
   dropPoint: {fileID: 426843736}
   zoneCollider: {fileID: 1977667515}
   fallbackRadius: 2
+  slotPoints: []
 --- !u!4 &466191199
 Transform:
   m_ObjectHideFlags: 0
@@ -19800,6 +19850,12 @@ MonoBehaviour:
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  singleSashShatterTargets: []
+  leftSashShatterTargets: []
+  rightSashShatterTargets: []
+  fragmentLifeTime: 5
+  fragmentFadeTime: 1.5
+  fragmentFadeType: 3
   enableClimbOver: 1
   climbSideAAnchor: {fileID: 0}
   climbSideBAnchor: {fileID: 0}
@@ -22842,6 +22898,12 @@ MonoBehaviour:
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  singleSashShatterTargets: []
+  leftSashShatterTargets: []
+  rightSashShatterTargets: []
+  fragmentLifeTime: 5
+  fragmentFadeTime: 1.5
+  fragmentFadeType: 3
   enableClimbOver: 1
   climbSideAAnchor: {fileID: 0}
   climbSideBAnchor: {fileID: 0}
@@ -28558,6 +28620,12 @@ MonoBehaviour:
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  singleSashShatterTargets: []
+  leftSashShatterTargets: []
+  rightSashShatterTargets: []
+  fragmentLifeTime: 5
+  fragmentFadeTime: 1.5
+  fragmentFadeType: 3
   enableClimbOver: 1
   climbSideAAnchor: {fileID: 0}
   climbSideBAnchor: {fileID: 0}
@@ -35707,6 +35775,12 @@ MonoBehaviour:
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  singleSashShatterTargets: []
+  leftSashShatterTargets: []
+  rightSashShatterTargets: []
+  fragmentLifeTime: 5
+  fragmentFadeTime: 1.5
+  fragmentFadeType: 3
   enableClimbOver: 1
   climbSideAAnchor: {fileID: 0}
   climbSideBAnchor: {fileID: 0}
@@ -38405,6 +38479,12 @@ MonoBehaviour:
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  singleSashShatterTargets: []
+  leftSashShatterTargets: []
+  rightSashShatterTargets: []
+  fragmentLifeTime: 5
+  fragmentFadeTime: 1.5
+  fragmentFadeType: 3
   enableClimbOver: 1
   climbSideAAnchor: {fileID: 0}
   climbSideBAnchor: {fileID: 0}
@@ -43086,6 +43166,12 @@ MonoBehaviour:
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  singleSashShatterTargets: []
+  leftSashShatterTargets: []
+  rightSashShatterTargets: []
+  fragmentLifeTime: 5
+  fragmentFadeTime: 1.5
+  fragmentFadeType: 3
   enableClimbOver: 1
   climbSideAAnchor: {fileID: 0}
   climbSideBAnchor: {fileID: 0}
@@ -43428,6 +43514,12 @@ MonoBehaviour:
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  singleSashShatterTargets: []
+  leftSashShatterTargets: []
+  rightSashShatterTargets: []
+  fragmentLifeTime: 5
+  fragmentFadeTime: 1.5
+  fragmentFadeType: 3
   enableClimbOver: 1
   climbSideAAnchor: {fileID: 0}
   climbSideBAnchor: {fileID: 0}
@@ -45836,6 +45928,12 @@ MonoBehaviour:
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  singleSashShatterTargets: []
+  leftSashShatterTargets: []
+  rightSashShatterTargets: []
+  fragmentLifeTime: 5
+  fragmentFadeTime: 1.5
+  fragmentFadeType: 3
   enableClimbOver: 1
   climbSideAAnchor: {fileID: 0}
   climbSideBAnchor: {fileID: 0}
@@ -60536,6 +60634,12 @@ MonoBehaviour:
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  singleSashShatterTargets: []
+  leftSashShatterTargets: []
+  rightSashShatterTargets: []
+  fragmentLifeTime: 5
+  fragmentFadeTime: 1.5
+  fragmentFadeType: 3
   enableClimbOver: 1
   climbSideAAnchor: {fileID: 0}
   climbSideBAnchor: {fileID: 0}
@@ -66099,6 +66203,12 @@ MonoBehaviour:
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  singleSashShatterTargets: []
+  leftSashShatterTargets: []
+  rightSashShatterTargets: []
+  fragmentLifeTime: 5
+  fragmentFadeTime: 1.5
+  fragmentFadeType: 3
   enableClimbOver: 1
   climbSideAAnchor: {fileID: 0}
   climbSideBAnchor: {fileID: 0}
@@ -68658,6 +68768,12 @@ MonoBehaviour:
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  singleSashShatterTargets: []
+  leftSashShatterTargets: []
+  rightSashShatterTargets: []
+  fragmentLifeTime: 5
+  fragmentFadeTime: 1.5
+  fragmentFadeType: 3
   enableClimbOver: 1
   climbSideAAnchor: {fileID: 0}
   climbSideBAnchor: {fileID: 0}
@@ -75372,6 +75488,12 @@ MonoBehaviour:
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  singleSashShatterTargets: []
+  leftSashShatterTargets: []
+  rightSashShatterTargets: []
+  fragmentLifeTime: 5
+  fragmentFadeTime: 1.5
+  fragmentFadeType: 3
   enableClimbOver: 1
   climbSideAAnchor: {fileID: 0}
   climbSideBAnchor: {fileID: 0}
@@ -75892,6 +76014,12 @@ MonoBehaviour:
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  singleSashShatterTargets: []
+  leftSashShatterTargets: []
+  rightSashShatterTargets: []
+  fragmentLifeTime: 5
+  fragmentFadeTime: 1.5
+  fragmentFadeType: 3
   enableClimbOver: 1
   climbSideAAnchor: {fileID: 0}
   climbSideBAnchor: {fileID: 0}
@@ -79711,6 +79839,12 @@ MonoBehaviour:
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  singleSashShatterTargets: []
+  leftSashShatterTargets: []
+  rightSashShatterTargets: []
+  fragmentLifeTime: 5
+  fragmentFadeTime: 1.5
+  fragmentFadeType: 3
   enableClimbOver: 1
   climbSideAAnchor: {fileID: 0}
   climbSideBAnchor: {fileID: 0}
@@ -82890,6 +83024,14 @@ PrefabInstance:
       propertyPath: startDelay
       value: 7
       objectReference: {fileID: 0}
+    - target: {fileID: 6783775267924060584, guid: e3bf8c7099d32bf40a2b5184c8c127a1, type: 3}
+      propertyPath: autoStartOnEnable
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6783775267924060584, guid: e3bf8c7099d32bf40a2b5184c8c127a1, type: 3}
+      propertyPath: missionDefinition
+      value: 
+      objectReference: {fileID: 11400000, guid: ff520bc3a0234e22b9c1a643cae89635, type: 2}
     - target: {fileID: 7857196384671778857, guid: e3bf8c7099d32bf40a2b5184c8c127a1, type: 3}
       propertyPath: entries.Array.data[0].targetObject
       value: 
@@ -86471,6 +86613,12 @@ MonoBehaviour:
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  singleSashShatterTargets: []
+  leftSashShatterTargets: []
+  rightSashShatterTargets: []
+  fragmentLifeTime: 5
+  fragmentFadeTime: 1.5
+  fragmentFadeType: 3
   enableClimbOver: 1
   climbSideAAnchor: {fileID: 0}
   climbSideBAnchor: {fileID: 0}

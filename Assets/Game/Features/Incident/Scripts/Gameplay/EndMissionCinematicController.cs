@@ -458,9 +458,7 @@ public class EndMissionCinematicController : MonoBehaviour
 
     private static Transform FindNamedCameraContainer()
     {
-        Transform[] transforms = FindObjectsByType<Transform>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
+        Transform[] transforms = FindObjectsByType<Transform>(FindObjectsInactive.Include);
         Transform fallback = null;
         for (int i = 0; i < transforms.Length; i++)
         {
@@ -789,9 +787,7 @@ public class EndMissionCinematicController : MonoBehaviour
     private int ResolveRuntimeCameraPriority()
     {
         int resolvedPriority = Mathf.Max(100, cameraPriority);
-        CinemachineCamera[] cameras = FindObjectsByType<CinemachineCamera>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
+        CinemachineCamera[] cameras = FindObjectsByType<CinemachineCamera>(FindObjectsInactive.Include);
         for (int i = 0; i < cameras.Length; i++)
         {
             CinemachineCamera candidate = cameras[i];
@@ -817,9 +813,7 @@ public class EndMissionCinematicController : MonoBehaviour
             return;
         }
 
-        CinemachineCamera[] cameras = FindObjectsByType<CinemachineCamera>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None);
+        CinemachineCamera[] cameras = FindObjectsByType<CinemachineCamera>(FindObjectsInactive.Include);
         for (int i = 0; i < cameras.Length; i++)
         {
             CinemachineCamera candidate = cameras[i];

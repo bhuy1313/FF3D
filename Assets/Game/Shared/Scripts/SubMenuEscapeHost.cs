@@ -359,10 +359,7 @@ public class SubMenuEscapeHost : MonoBehaviour
         }
 
         missionEndOverlayController = null;
-        MissionEndOverlayController[] controllers = FindObjectsByType<MissionEndOverlayController>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None
-        );
+        MissionEndOverlayController[] controllers = FindObjectsByType<MissionEndOverlayController>(FindObjectsInactive.Include);
         Scene currentScene = gameObject.scene;
         for (int i = 0; i < controllers.Length; i++)
         {

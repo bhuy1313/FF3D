@@ -5,6 +5,22 @@ using UnityEngine.UI;
 
 public class KeyHintPanelController_All : MonoBehaviour
 {
+    private enum ObjectKind
+    {
+        None,
+        Door,
+        Rescuable,
+        SafeZone,
+        HoseConnection,
+        Breakable,
+        FireHose,
+        Tool,
+        Explosive,
+        Grabbable,
+        Usable,
+        Other,
+    }
+
     private readonly struct ActionHint
     {
         public ActionHint(string actionName, string displayNameOverride = null)
@@ -27,6 +43,118 @@ public class KeyHintPanelController_All : MonoBehaviour
 
         public string Key { get; }
         public string Label { get; }
+    }
+
+    private readonly struct ObjectContextAnalysis
+    {
+        public ObjectContextAnalysis(
+            GameObject targetObject,
+            ObjectKind kind,
+            bool targetIsPickupable,
+            bool targetIsGrabbable,
+            FireHose fireHose,
+            Tool tool,
+            IUsable usable,
+            SafeZone safeZone,
+            Door door,
+            Rescuable rescuable,
+            FireHoseConnectionPoint hoseConnection,
+            Breakable breakable,
+            Explosive explosive,
+            IInteractable interactable,
+            ICommandable commandable)
+        {
+            TargetObject = targetObject;
+            Kind = kind;
+            TargetIsPickupable = targetIsPickupable;
+            TargetIsGrabbable = targetIsGrabbable;
+            FireHose = fireHose;
+            Tool = tool;
+            Usable = usable;
+            SafeZone = safeZone;
+            Door = door;
+            Rescuable = rescuable;
+            HoseConnection = hoseConnection;
+            Breakable = breakable;
+            Explosive = explosive;
+            Interactable = interactable;
+            Commandable = commandable;
+        }
+
+        public GameObject TargetObject { get; }
+        public ObjectKind Kind { get; }
+        public bool TargetIsPickupable { get; }
+        public bool TargetIsGrabbable { get; }
+        public FireHose FireHose { get; }
+        public Tool Tool { get; }
+        public IUsable Usable { get; }
+        public SafeZone SafeZone { get; }
+        public Door Door { get; }
+        public Rescuable Rescuable { get; }
+        public FireHoseConnectionPoint HoseConnection { get; }
+        public Breakable Breakable { get; }
+        public Explosive Explosive { get; }
+        public IInteractable Interactable { get; }
+        public ICommandable Commandable { get; }
+    }
+
+    private readonly struct ContextState
+    {
+        public ContextState(
+            IncidentMissionSystem.MissionState missionState,
+            string missionId,
+            string stageId,
+            string controlScheme,
+            int inventoryItemCount,
+            bool isGrabActive,
+            bool isCarryingRescuable,
+            bool isAwaitingCommandDestination,
+            GameObject hoveredCommandTarget,
+            GameObject selectedCommandTarget,
+            GameObject currentTarget,
+            ObjectKind targetKind,
+            bool targetDoorIsOpen,
+            bool targetRequiresStabilization,
+            Object connectedHose,
+            GameObject heldObject,
+            ObjectKind heldKind)
+        {
+            MissionState = missionState;
+            MissionId = missionId ?? string.Empty;
+            StageId = stageId ?? string.Empty;
+            ControlScheme = controlScheme ?? string.Empty;
+            InventoryItemCount = inventoryItemCount;
+            IsGrabActive = isGrabActive;
+            IsCarryingRescuable = isCarryingRescuable;
+            IsAwaitingCommandDestination = isAwaitingCommandDestination;
+            HoveredCommandTarget = hoveredCommandTarget;
+            SelectedCommandTarget = selectedCommandTarget;
+            CurrentTarget = currentTarget;
+            TargetKind = targetKind;
+            TargetDoorIsOpen = targetDoorIsOpen;
+            TargetRequiresStabilization = targetRequiresStabilization;
+            ConnectedHose = connectedHose;
+            HeldObject = heldObject;
+            HeldKind = heldKind;
+        }
+
+        public IncidentMissionSystem.MissionState MissionState { get; }
+        public string MissionId { get; }
+        public string StageId { get; }
+        public string ControlScheme { get; }
+        public int InventoryItemCount { get; }
+        public bool IsGrabActive { get; }
+        public bool IsCarryingRescuable { get; }
+        public bool IsAwaitingCommandDestination { get; }
+        public GameObject HoveredCommandTarget { get; }
+        public GameObject SelectedCommandTarget { get; }
+        public GameObject CurrentTarget { get; }
+        public ObjectKind TargetKind { get; }
+        public bool TargetDoorIsOpen { get; }
+        public bool TargetRequiresStabilization { get; }
+        public Object ConnectedHose { get; }
+        public GameObject HeldObject { get; }
+        public ObjectKind HeldKind { get; }
     }
 
     [System.Serializable]
@@ -68,11 +196,16 @@ public class KeyHintPanelController_All : MonoBehaviour
     [SerializeField] private bool hideHintsOutsideRunningMission = true;
     [SerializeField] private bool fallbackToAllActionsWhenNoContextMatch = true;
     [SerializeField] private bool useBuiltInTutorialProfiles = true;
+    [SerializeField] private float contextualCheckInterval = 0.1f;
     [SerializeField] private List<string> defaultContextActionNames = new List<string>();
     [SerializeField] private List<ContextualHintProfile> contextualHintProfiles = new List<ContextualHintProfile>();
 
     private readonly List<KeyHintItemView> spawned = new();
-    private string lastContextSignature = string.Empty;
+    private readonly List<ActionHint> hintEntriesBuffer = new();
+    private readonly List<RenderedHint> renderedHintsBuffer = new();
+    private ContextState lastContextState;
+    private bool rebuildRequested = true;
+    private float nextContextCheckTime;
 
     private void Awake()
     {
@@ -87,18 +220,36 @@ public class KeyHintPanelController_All : MonoBehaviour
         InputSystem.onActionChange += OnActionChange;
         LanguageManager.LanguageChanged += OnLanguageChanged;
 
-        Rebuild();
+        RequestRebuild();
     }
 
     private void Update()
     {
         if (!useContextualMissionHints)
         {
+            if (rebuildRequested)
+            {
+                Rebuild();
+            }
+
             return;
         }
 
-        string currentSignature = BuildContextSignature();
-        if (!string.Equals(currentSignature, lastContextSignature, System.StringComparison.Ordinal))
+        if (rebuildRequested)
+        {
+            Rebuild();
+            return;
+        }
+
+        float now = Time.unscaledTime;
+        if (now < nextContextCheckTime)
+        {
+            return;
+        }
+
+        nextContextCheckTime = now + Mathf.Max(0.01f, contextualCheckInterval);
+        ContextState currentState = CaptureContextState();
+        if (!AreContextStatesEqual(currentState, lastContextState))
         {
             Rebuild();
         }
@@ -115,24 +266,26 @@ public class KeyHintPanelController_All : MonoBehaviour
 
     private void OnControlsChanged(PlayerInput _)
     {
-        Rebuild();
+        RequestRebuild();
     }
 
     private void OnActionChange(object obj, InputActionChange change)
     {
         if (change == InputActionChange.BoundControlsChanged)
-            Rebuild();
+            RequestRebuild();
     }
 
     private void OnLanguageChanged(AppLanguage _)
     {
-        Rebuild();
+        RequestRebuild();
     }
 
     [ContextMenu("Rebuild Now")]
     public void Rebuild()
     {
         ResolveReferences();
+        rebuildRequested = false;
+        nextContextCheckTime = Time.unscaledTime + Mathf.Max(0.01f, contextualCheckInterval);
 
         if (playerInput == null || playerInput.actions == null || itemPrefab == null) return;
 
@@ -141,27 +294,27 @@ public class KeyHintPanelController_All : MonoBehaviour
         if (map == null) return;
 
         string scheme = playerInput.currentControlScheme ?? "";
-        var renderedHints = new List<RenderedHint>();
-        if (TryRebuildFromService(map, scheme, renderedHints))
+        renderedHintsBuffer.Clear();
+        if (TryRebuildFromService(map, scheme, renderedHintsBuffer))
         {
-            ApplyRenderedHints(renderedHints);
-            lastContextSignature = BuildContextSignature();
+            ApplyRenderedHints(renderedHintsBuffer);
+            UpdateCachedContextState();
             return;
         }
 
-        var hintEntries = new List<ActionHint>();
-        AppendLiveContextHints(hintEntries);
+        hintEntriesBuffer.Clear();
+        AppendLiveContextHints(hintEntriesBuffer);
 
         if (TryResolveCurrentContextActionNames(out List<string> contextualActionNames))
         {
             for (int i = 0; i < contextualActionNames.Count; i++)
             {
-                AddUniqueHint(hintEntries, contextualActionNames[i]);
+                AddUniqueHint(hintEntriesBuffer, contextualActionNames[i]);
             }
 
-            AddHintEntries(map, hintEntries, scheme, renderedHints);
-            ApplyRenderedHints(renderedHints);
-            lastContextSignature = BuildContextSignature();
+            AddHintEntries(map, hintEntriesBuffer, scheme, renderedHintsBuffer);
+            ApplyRenderedHints(renderedHintsBuffer);
+            UpdateCachedContextState();
             return;
         }
 
@@ -173,12 +326,12 @@ public class KeyHintPanelController_All : MonoBehaviour
             if (!includeValueActions && action.type != InputActionType.Button)
                 continue;
 
-            AddUniqueHint(hintEntries, action.name);
+            AddUniqueHint(hintEntriesBuffer, action.name);
         }
 
-        AddHintEntries(map, hintEntries, scheme, renderedHints);
-        ApplyRenderedHints(renderedHints);
-        lastContextSignature = BuildContextSignature();
+        AddHintEntries(map, hintEntriesBuffer, scheme, renderedHintsBuffer);
+        ApplyRenderedHints(renderedHintsBuffer);
+        UpdateCachedContextState();
     }
 
     private void OnDestroy()
@@ -222,6 +375,11 @@ public class KeyHintPanelController_All : MonoBehaviour
         }
 
         if (container == null) container = transform;
+    }
+
+    private void RequestRebuild()
+    {
+        rebuildRequested = true;
     }
 
     private bool TryRebuildFromService(InputActionMap map, string scheme, List<RenderedHint> renderedHints)
@@ -399,10 +557,16 @@ public class KeyHintPanelController_All : MonoBehaviour
 
     private void ApplyRenderedHints(List<RenderedHint> renderedHints)
     {
+        bool layoutChanged = false;
+
         if (renderedHints == null)
         {
-            DeactivateUnusedItems(0);
-            ForceContainerLayoutRebuild();
+            layoutChanged = DeactivateUnusedItems(0);
+            if (layoutChanged)
+            {
+                ForceContainerLayoutRebuild();
+            }
+
             return;
         }
 
@@ -417,13 +581,17 @@ public class KeyHintPanelController_All : MonoBehaviour
             if (!item.gameObject.activeSelf)
             {
                 item.gameObject.SetActive(true);
+                layoutChanged = true;
             }
 
-            item.Set(renderedHints[i].Key, renderedHints[i].Label);
+            layoutChanged |= item.Set(renderedHints[i].Key, renderedHints[i].Label);
         }
 
-        DeactivateUnusedItems(renderedHints.Count);
-        ForceContainerLayoutRebuild();
+        layoutChanged |= DeactivateUnusedItems(renderedHints.Count);
+        if (layoutChanged)
+        {
+            ForceContainerLayoutRebuild();
+        }
     }
 
     private KeyHintItemView GetOrCreateItem(int index)
@@ -437,15 +605,19 @@ public class KeyHintPanelController_All : MonoBehaviour
         return spawned[index];
     }
 
-    private void DeactivateUnusedItems(int usedCount)
+    private bool DeactivateUnusedItems(int usedCount)
     {
+        bool changed = false;
         for (int i = usedCount; i < spawned.Count; i++)
         {
             if (spawned[i] != null && spawned[i].gameObject.activeSelf)
             {
                 spawned[i].gameObject.SetActive(false);
+                changed = true;
             }
         }
+
+        return changed;
     }
 
     private void DestroySpawnedItems()
@@ -497,21 +669,22 @@ public class KeyHintPanelController_All : MonoBehaviour
         GameObject occupyingObject = interactionSystem.CurrentHandOccupyingObject;
         bool canPickupMoreItems = inventorySystem != null && inventorySystem.ItemCount < inventorySystem.MaxSlots;
         bool heldItemBlocksStow = HandOccupancyUtility.BlocksInventoryStow(occupyingObject, inventorySystem != null ? inventorySystem.gameObject : null);
+        ObjectContextAnalysis heldAnalysis = AnalyzeObjectContext(heldObject);
+        ObjectContextAnalysis targetAnalysis = AnalyzeObjectContext(currentTarget);
 
-        FireHose heldFireHose = FindComponentInTargetHierarchy<FireHose>(heldObject);
-        Tool heldTool = FindComponentInTargetHierarchy<Tool>(heldObject);
-        IUsable heldUsable = FindComponentInTargetHierarchy<IUsable>(heldObject);
-
-        bool targetIsPickupable = FindComponentInTargetHierarchy<IPickupable>(currentTarget) != null;
-        bool targetIsGrabbable = FindComponentInTargetHierarchy<IGrabbable>(currentTarget) != null;
-        SafeZone targetSafeZone = FindComponentInTargetHierarchy<SafeZone>(currentTarget);
-        Door targetDoor = FindComponentInTargetHierarchy<Door>(currentTarget);
-        Rescuable targetRescuable = FindComponentInTargetHierarchy<Rescuable>(currentTarget);
-        FireHoseConnectionPoint targetHoseConnection = FindComponentInTargetHierarchy<FireHoseConnectionPoint>(currentTarget);
-        Breakable targetBreakable = FindComponentInTargetHierarchy<Breakable>(currentTarget);
-        Explosive targetExplosive = FindComponentInTargetHierarchy<Explosive>(currentTarget);
-        IInteractable targetInteractable = FindComponentInTargetHierarchy<IInteractable>(currentTarget);
-        ICommandable targetCommandable = FindComponentInTargetHierarchy<ICommandable>(currentTarget);
+        FireHose heldFireHose = heldAnalysis.FireHose;
+        Tool heldTool = heldAnalysis.Tool;
+        IUsable heldUsable = heldAnalysis.Usable;
+        bool targetIsPickupable = targetAnalysis.TargetIsPickupable;
+        bool targetIsGrabbable = targetAnalysis.TargetIsGrabbable;
+        SafeZone targetSafeZone = targetAnalysis.SafeZone;
+        Door targetDoor = targetAnalysis.Door;
+        Rescuable targetRescuable = targetAnalysis.Rescuable;
+        FireHoseConnectionPoint targetHoseConnection = targetAnalysis.HoseConnection;
+        Breakable targetBreakable = targetAnalysis.Breakable;
+        Explosive targetExplosive = targetAnalysis.Explosive;
+        IInteractable targetInteractable = targetAnalysis.Interactable;
+        ICommandable targetCommandable = targetAnalysis.Commandable;
 
         if (isCarryingRescuable)
         {
@@ -647,12 +820,13 @@ public class KeyHintPanelController_All : MonoBehaviour
             return "Pick Up";
         }
 
-        if (FindComponentInTargetHierarchy<FireHose>(target) != null)
+        ObjectContextAnalysis analysis = AnalyzeObjectContext(target);
+        if (analysis.FireHose != null)
         {
             return "Pick Up Hose";
         }
 
-        if (FindComponentInTargetHierarchy<Tool>(target) != null)
+        if (analysis.Tool != null)
         {
             return "Pick Up Tool";
         }
@@ -712,12 +886,29 @@ public class KeyHintPanelController_All : MonoBehaviour
         return null;
     }
 
-    private string BuildContextSignature()
+    private ContextState CaptureContextState()
     {
         string scheme = playerInput != null ? playerInput.currentControlScheme ?? string.Empty : string.Empty;
         if (!useContextualMissionHints || missionSystem == null)
         {
-            return $"all|{scheme}";
+            return new ContextState(
+                IncidentMissionSystem.MissionState.Idle,
+                string.Empty,
+                string.Empty,
+                scheme,
+                0,
+                false,
+                false,
+                false,
+                null,
+                null,
+                null,
+                ObjectKind.None,
+                false,
+                false,
+                null,
+                null,
+                ObjectKind.None);
         }
 
         GameObject currentTarget = interactionSystem != null ? interactionSystem.CurrentTarget : null;
@@ -727,103 +918,140 @@ public class KeyHintPanelController_All : MonoBehaviour
         bool isCarryingRescuable = interactionSystem != null && interactionSystem.CurrentCarryWeightKg > 0.01f;
         int inventoryItemCount = inventorySystem != null ? inventorySystem.ItemCount : 0;
         bool isAwaitingCommandDestination = commandSystem != null && commandSystem.IsAwaitingDestination;
-        string hoveredCommandTargetName = commandSystem != null && commandSystem.HoveredCommandTarget != null
-            ? commandSystem.HoveredCommandTarget.name
-            : string.Empty;
-        string selectedCommandTargetName = commandSystem != null && commandSystem.SelectedCommandTarget != null
-            ? commandSystem.SelectedCommandTarget.name
-            : string.Empty;
+        GameObject hoveredCommandTarget = commandSystem != null && commandSystem.HoveredCommandTarget != null
+            ? commandSystem.HoveredCommandTarget
+            : null;
+        GameObject selectedCommandTarget = commandSystem != null && commandSystem.SelectedCommandTarget != null
+            ? commandSystem.SelectedCommandTarget
+            : null;
+        ObjectContextAnalysis targetAnalysis = AnalyzeObjectContext(currentTarget);
+        ObjectContextAnalysis heldAnalysis = AnalyzeObjectContext(occupyingObject);
 
-        return $"{missionSystem.State}|{missionSystem.MissionId}|{missionSystem.CurrentStageId}|{scheme}|items:{inventoryItemCount}|grab:{isGrabActive}|carry:{isCarryingRescuable}|cmdAwait:{isAwaitingCommandDestination}|cmdHover:{hoveredCommandTargetName}|cmdSelected:{selectedCommandTargetName}|{BuildTargetContextDescriptor(currentTarget)}|held:{BuildHeldObjectDescriptor(occupyingObject)}";
+        return new ContextState(
+            missionSystem.State,
+            missionSystem.MissionId,
+            missionSystem.CurrentStageId,
+            scheme,
+            inventoryItemCount,
+            isGrabActive,
+            isCarryingRescuable,
+            isAwaitingCommandDestination,
+            hoveredCommandTarget,
+            selectedCommandTarget,
+            currentTarget,
+            targetAnalysis.Kind,
+            targetAnalysis.Door != null && targetAnalysis.Door.IsOpen,
+            targetAnalysis.Rescuable != null && targetAnalysis.Rescuable.RequiresStabilization,
+            targetAnalysis.HoseConnection != null ? targetAnalysis.HoseConnection.ConnectedHose : null,
+            occupyingObject,
+            heldAnalysis.Kind);
     }
 
-    private static string BuildTargetContextDescriptor(GameObject currentTarget)
+    private void UpdateCachedContextState()
     {
-        if (currentTarget == null)
+        lastContextState = CaptureContextState();
+    }
+
+    private static bool AreContextStatesEqual(ContextState left, ContextState right)
+    {
+        return left.MissionState == right.MissionState &&
+               left.InventoryItemCount == right.InventoryItemCount &&
+               left.IsGrabActive == right.IsGrabActive &&
+               left.IsCarryingRescuable == right.IsCarryingRescuable &&
+               left.IsAwaitingCommandDestination == right.IsAwaitingCommandDestination &&
+               left.CurrentTarget == right.CurrentTarget &&
+               left.TargetKind == right.TargetKind &&
+               left.TargetDoorIsOpen == right.TargetDoorIsOpen &&
+               left.TargetRequiresStabilization == right.TargetRequiresStabilization &&
+               left.ConnectedHose == right.ConnectedHose &&
+               left.HeldObject == right.HeldObject &&
+               left.HeldKind == right.HeldKind &&
+               left.HoveredCommandTarget == right.HoveredCommandTarget &&
+               left.SelectedCommandTarget == right.SelectedCommandTarget &&
+               string.Equals(left.MissionId, right.MissionId, System.StringComparison.Ordinal) &&
+               string.Equals(left.StageId, right.StageId, System.StringComparison.Ordinal) &&
+               string.Equals(left.ControlScheme, right.ControlScheme, System.StringComparison.Ordinal);
+    }
+
+    private static ObjectContextAnalysis AnalyzeObjectContext(GameObject target)
+    {
+        if (target == null)
         {
-            return "target:none";
+            return new ObjectContextAnalysis(null, ObjectKind.None, false, false, null, null, null, null, null, null, null, null, null, null, null);
         }
 
-        Door door = FindComponentInTargetHierarchy<Door>(currentTarget);
+        FireHose fireHose = FindComponentInTargetHierarchy<FireHose>(target);
+        Tool tool = FindComponentInTargetHierarchy<Tool>(target);
+        IUsable usable = FindComponentInTargetHierarchy<IUsable>(target);
+        SafeZone safeZone = FindComponentInTargetHierarchy<SafeZone>(target);
+        Door door = FindComponentInTargetHierarchy<Door>(target);
+        Rescuable rescuable = FindComponentInTargetHierarchy<Rescuable>(target);
+        FireHoseConnectionPoint hoseConnection = FindComponentInTargetHierarchy<FireHoseConnectionPoint>(target);
+        Breakable breakable = FindComponentInTargetHierarchy<Breakable>(target);
+        Explosive explosive = FindComponentInTargetHierarchy<Explosive>(target);
+        IInteractable interactable = FindComponentInTargetHierarchy<IInteractable>(target);
+        ICommandable commandable = FindComponentInTargetHierarchy<ICommandable>(target);
+        bool targetIsPickupable = FindComponentInTargetHierarchy<IPickupable>(target) != null;
+        bool targetIsGrabbable = FindComponentInTargetHierarchy<IGrabbable>(target) != null;
+
+        ObjectKind kind = ObjectKind.Other;
         if (door != null)
         {
-            return $"target:door:{door.name}:open:{door.IsOpen}";
+            kind = ObjectKind.Door;
         }
-
-        Rescuable rescuable = FindComponentInTargetHierarchy<Rescuable>(currentTarget);
-        if (rescuable != null)
+        else if (rescuable != null)
         {
-            return $"target:rescuable:{rescuable.name}:stabilize:{rescuable.RequiresStabilization}";
+            kind = ObjectKind.Rescuable;
         }
-
-        SafeZone safeZone = FindComponentInTargetHierarchy<SafeZone>(currentTarget);
-        if (safeZone != null)
+        else if (safeZone != null)
         {
-            return $"target:safezone:{safeZone.name}";
+            kind = ObjectKind.SafeZone;
         }
-
-        FireHoseConnectionPoint hoseConnection = FindComponentInTargetHierarchy<FireHoseConnectionPoint>(currentTarget);
-        if (hoseConnection != null)
+        else if (hoseConnection != null)
         {
-            string connectedHoseName = hoseConnection.ConnectedHose != null ? hoseConnection.ConnectedHose.name : string.Empty;
-            return $"target:hose-connection:{hoseConnection.name}:connected:{connectedHoseName}";
+            kind = ObjectKind.HoseConnection;
         }
-
-        Breakable breakable = FindComponentInTargetHierarchy<Breakable>(currentTarget);
-        if (breakable != null)
+        else if (breakable != null)
         {
-            return $"target:breakable:{breakable.name}";
+            kind = ObjectKind.Breakable;
         }
-
-        FireHose hose = FindComponentInTargetHierarchy<FireHose>(currentTarget);
-        if (hose != null)
+        else if (fireHose != null)
         {
-            return $"target:hose:{hose.name}";
+            kind = ObjectKind.FireHose;
         }
-
-        Tool tool = FindComponentInTargetHierarchy<Tool>(currentTarget);
-        if (tool != null)
+        else if (tool != null)
         {
-            return $"target:tool:{tool.name}";
+            kind = ObjectKind.Tool;
         }
-
-        Explosive explosive = FindComponentInTargetHierarchy<Explosive>(currentTarget);
-        if (explosive != null)
+        else if (explosive != null)
         {
-            return $"target:explosive:{explosive.name}";
+            kind = ObjectKind.Explosive;
         }
-
-        if (FindComponentInTargetHierarchy<IGrabbable>(currentTarget) != null)
+        else if (targetIsGrabbable)
         {
-            return $"target:grabbable:{currentTarget.name}";
+            kind = ObjectKind.Grabbable;
         }
-
-        return $"target:{currentTarget.name}";
-    }
-
-    private static string BuildHeldObjectDescriptor(GameObject heldObject)
-    {
-        if (heldObject == null)
+        else if (usable != null)
         {
-            return "none";
+            kind = ObjectKind.Usable;
         }
 
-        if (FindComponentInTargetHierarchy<FireHose>(heldObject) != null)
-        {
-            return $"hose:{heldObject.name}";
-        }
-
-        if (FindComponentInTargetHierarchy<Tool>(heldObject) != null)
-        {
-            return $"tool:{heldObject.name}";
-        }
-
-        if (FindComponentInTargetHierarchy<IUsable>(heldObject) != null)
-        {
-            return $"usable:{heldObject.name}";
-        }
-
-        return heldObject.name;
+        return new ObjectContextAnalysis(
+            target,
+            kind,
+            targetIsPickupable,
+            targetIsGrabbable,
+            fireHose,
+            tool,
+            usable,
+            safeZone,
+            door,
+            rescuable,
+            hoseConnection,
+            breakable,
+            explosive,
+            interactable,
+            commandable);
     }
 
     private static string GetActionDisplayName(string actionName)

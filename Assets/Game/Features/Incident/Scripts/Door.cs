@@ -52,6 +52,12 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
     [SerializeField] private bool isLocked;
     [SerializeField] private bool isPryInProgress;
     [SerializeField] private GameObject activePryer;
+    [Header("Locked Shake Effect")]
+    [SerializeField] private float lockedShakeDuration = 0.3f;
+    [SerializeField] private float lockedShakeIntensity = 4.5f;
+    [SerializeField] private float lockedShakeSpeed = 60f;
+
+    private float lockedShakeTimer;
 
     private Transform doorTransform;
     private Quaternion closedLocalRotation;
@@ -118,6 +124,15 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
         }
 
         float t = 1f - Mathf.Exp(-animationSpeed * Time.deltaTime);
+
+        float shakeAngle = 0f;
+        if (lockedShakeTimer > 0f)
+        {
+            lockedShakeTimer -= Time.deltaTime;
+            float intensity = lockedShakeTimer / lockedShakeDuration;
+            shakeAngle = Mathf.Sin(lockedShakeTimer * lockedShakeSpeed) * lockedShakeIntensity * intensity;
+        }
+
         if (openMode == DoorOpenMode.DoubleSliding)
         {
             leftSlidingDoorTransform.localPosition = Vector3.Lerp(leftSlidingDoorTransform.localPosition, leftTargetLocalPosition, t);
@@ -125,7 +140,13 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
             return;
         }
 
-        doorTransform.localRotation = Quaternion.Slerp(doorTransform.localRotation, targetLocalRotation, t);
+        Quaternion actualTargetRot = targetLocalRotation;
+        if (shakeAngle != 0f && !isOpen)
+        {
+            actualTargetRot *= Quaternion.Euler(0f, shakeAngle, 0f);
+        }
+
+        doorTransform.localRotation = Quaternion.Slerp(doorTransform.localRotation, actualTargetRot, t);
     }
 
     public void Interact(GameObject interactor)
@@ -153,6 +174,7 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
 
         if (isLocked)
         {
+            lockedShakeTimer = lockedShakeDuration;
             return;
         }
 

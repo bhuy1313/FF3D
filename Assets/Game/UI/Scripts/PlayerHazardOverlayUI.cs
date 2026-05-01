@@ -73,8 +73,6 @@ public class PlayerHazardOverlayUI : MonoBehaviour
 
     private void Update()
     {
-        ResolveReferences();
-        EnsureOverlayImages();
         UpdateMaskLayers();
         UpdateSmokeOverlay();
         UpdateFireOverlay();
@@ -271,8 +269,6 @@ public class PlayerHazardOverlayUI : MonoBehaviour
         if (!Mathf.Approximately(lastAppliedAlpha, alpha))
         {
             smokeOverlay.canvasRenderer.SetAlpha(alpha);
-            smokeOverlay.SetVerticesDirty();
-            smokeOverlay.SetMaterialDirty();
             lastAppliedAlpha = alpha;
         }
     }
@@ -320,8 +316,6 @@ public class PlayerHazardOverlayUI : MonoBehaviour
             }
 
             fireOverlay.canvasRenderer.SetAlpha(alpha);
-            fireOverlay.SetVerticesDirty();
-            fireOverlay.SetMaterialDirty();
             lastAppliedFireAlphas[i] = alpha;
         }
     }

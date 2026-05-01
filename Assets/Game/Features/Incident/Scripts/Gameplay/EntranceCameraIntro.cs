@@ -3,9 +3,18 @@ using StarterAssets;
 using Unity.Cinemachine;
 using UnityEngine;
 
+public enum IntroPreset
+{
+    Custom,
+    GetOutOfCar
+}
+
 [DisallowMultipleComponent]
 public class EntranceCameraIntro : MonoBehaviour
 {
+    [Header("Preset")]
+    [SerializeField] private IntroPreset preset = IntroPreset.Custom;
+
     [Header("Flow")]
     [SerializeField] private bool playOnStart = true;
     [SerializeField] private bool onlyOncePerSceneLoad = true;
@@ -17,7 +26,7 @@ public class EntranceCameraIntro : MonoBehaviour
     [SerializeField] private AnimationCurve motionCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
     [SerializeField] private int introPriority = 100;
 
-    [Header("Shot")]
+    [Header("Shot (Used by Custom Preset)")]
     [SerializeField] private Transform pivot;
     [SerializeField] private Transform lookAtTarget;
     [SerializeField] private bool flattenPivotYaw = true;
@@ -128,6 +137,7 @@ public class EntranceCameraIntro : MonoBehaviour
             lens.FieldOfView = fieldOfView;
             introCamera.Lens = lens;
 
+            // Force the camera to the very first pose immediately BEFORE the first frame
             ApplyShotPose(introCamera.transform, shotPivot, shotLookAt, 0f);
             introCamera.ForceCameraPosition(introCamera.transform.position, introCamera.transform.rotation);
 
@@ -243,21 +253,76 @@ public class EntranceCameraIntro : MonoBehaviour
             return;
         }
 
+        Vector3 currentStartOffset = startOffset;
+        Vector3 currentEndOffset = endOffset;
+        Vector3 currentLookAtOffset = lookAtOffset;
+        float positionT = t;
+
+        if (preset == IntroPreset.GetOutOfCar)
+        {
+            currentStartOffset = new Vector3(0f, 2.4f, 0f); 
+            currentEndOffset = new Vector3(0f, 1.6f, 0f);     // End at player head height
+            
+            // Drop much faster: hit the ground at t=0.35. Accelerate downwards (gravity) using t*t
+            float dropProgress = Mathf.Clamp01(t / 0.35f);
+            positionT = dropProgress * dropProgress;
+        }
+
         Quaternion shotRotation = flattenPivotYaw
             ? Quaternion.Euler(0f, shotPivot.eulerAngles.y, 0f)
             : shotPivot.rotation;
 
-        Vector3 worldStart = shotPivot.position + shotRotation * startOffset;
-        Vector3 worldEnd = shotPivot.position + shotRotation * endOffset;
-        Vector3 worldPosition = Vector3.Lerp(worldStart, worldEnd, Mathf.Clamp01(t));
+        Vector3 worldStart = shotPivot.position + shotRotation * currentStartOffset;
+        Vector3 worldEnd = shotPivot.position + shotRotation * currentEndOffset;
+        Vector3 worldPosition = Vector3.Lerp(worldStart, worldEnd, Mathf.Clamp01(positionT));
+
+        // Add procedural bounce for GetOutOfCar instantly upon impact (t >= 0.35)
+        // (Bounce removed to fix unwanted vibration)
+
 
         Vector3 lookTargetPosition = shotLookAt != null
-            ? shotLookAt.TransformPoint(lookAtOffset)
-            : shotPivot.position + shotRotation * lookAtOffset;
+            ? shotLookAt.TransformPoint(currentLookAtOffset)
+            : shotPivot.position + shotRotation * currentLookAtOffset;
+
+        if (preset == IntroPreset.GetOutOfCar)
+        {
+            float dropProgress = Mathf.Clamp01(t / 0.35f);
+            
+            // Look slightly down at start to see the ground rushing up, then look straight ahead at landing
+            Vector3 startLookTarget = shotPivot.position + shotRotation * new Vector3(0f, 1.0f, 4f);
+            Vector3 endLookTarget = shotPivot.position + shotRotation * new Vector3(0f, 1.6f, 5f);
+            
+            lookTargetPosition = Vector3.Lerp(startLookTarget, endLookTarget, dropProgress);
+        }
+        
         Vector3 forward = lookTargetPosition - worldPosition;
         Quaternion worldRotation = forward.sqrMagnitude > 0.0001f
             ? Quaternion.LookRotation(forward.normalized, Vector3.up)
             : introCameraTransform.rotation;
+
+        // Add procedural tilt/rotation shake for GetOutOfCar instantly upon impact
+        if (preset == IntroPreset.GetOutOfCar && t >= 0.35f)
+        {
+            float shakeProgress = (t - 0.35f) / 0.65f; // 0 to 1 over the remaining time
+            
+            // Single-hit impact: Left (roll -) then Right (roll +)
+            // t = 0.35: Left (-4.0), t = 0.5: Right (+2.0), t = 1.0: Center (0)
+            float rollTilt = 0f;
+            if (shakeProgress < 0.2f) {
+                // Initial hit to left
+                rollTilt = Mathf.Lerp(0f, -4.0f, shakeProgress * 5f);
+            } else if (shakeProgress < 0.5f) {
+                // Kick to right
+                float t2 = (shakeProgress - 0.2f) / 0.3f;
+                rollTilt = Mathf.Lerp(-4.0f, 2.5f, t2);
+            } else {
+                // Settle back to center
+                float t3 = (shakeProgress - 0.5f) / 0.5f;
+                rollTilt = Mathf.Lerp(2.5f, 0f, t3);
+            }
+            
+            worldRotation *= Quaternion.Euler(0f, 0f, rollTilt);
+        }
 
         introCameraTransform.SetPositionAndRotation(worldPosition, worldRotation);
     }

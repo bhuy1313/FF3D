@@ -24,21 +24,6 @@ namespace TrueJourney.BotBehavior
         [SerializeField] private float directionalMoveThreshold = 0.05f;
         [SerializeField] private float parameterDampTime = 0.1f;
 
-        [Header("Float Parameters")]
-        [SerializeField] private string speedParameter = "Speed";
-        [SerializeField] private string horizontalSpeedParameter = "HorizontalSpeed";
-        [SerializeField] private string desiredSpeedParameter = "DesiredSpeed";
-        [SerializeField] private string velocityXParameter = "VelocityX";
-        [SerializeField] private string velocityYParameter = "VelocityY";
-        [SerializeField] private string velocityZParameter = "VelocityZ";
-        [SerializeField] private string moveXParameter = "MoveX";
-        [SerializeField] private string moveYParameter = "MoveY";
-        [SerializeField] private string moveForwardParameter = "MoveForward";
-        [SerializeField] private string moveRightParameter = "MoveRight";
-        [SerializeField] private string turnParameter = "Turn";
-        [SerializeField] private string movementBurdenParameter = "MovementBurden";
-        [SerializeField] private string extinguishStanceParameter = "ExtinguishStance";
-
         [Header("Bool Parameters")]
         [SerializeField] private string isGroundedParameter = "IsGrounded";
         [SerializeField] private string isMovingParameter = "IsMoving";
@@ -102,8 +87,13 @@ namespace TrueJourney.BotBehavior
 
         private readonly Dictionary<string, int> parameterHashes = new Dictionary<string, int>();
         private readonly Dictionary<string, int> dynamicParameterHashes = new Dictionary<string, int>();
+        private readonly HashSet<int> floatParameterHashes = new HashSet<int>();
+        private readonly HashSet<int> boolParameterHashes = new HashSet<int>();
+        private readonly HashSet<int> intParameterHashes = new HashSet<int>();
         private readonly HashSet<int> activeDynamicHashes = new HashSet<int>();
         private readonly List<int> dynamicHashesToDisable = new List<int>();
+        private readonly Dictionary<int, bool> boolParameterValues = new Dictionary<int, bool>();
+        private readonly Dictionary<int, int> intParameterValues = new Dictionary<int, int>();
 
         private void Reset()
         {
@@ -167,20 +157,6 @@ namespace TrueJourney.BotBehavior
         {
             parameterHashes.Clear();
 
-            CacheHash(speedParameter);
-            CacheHash(horizontalSpeedParameter);
-            CacheHash(desiredSpeedParameter);
-            CacheHash(velocityXParameter);
-            CacheHash(velocityYParameter);
-            CacheHash(velocityZParameter);
-            CacheHash(moveXParameter);
-            CacheHash(moveYParameter);
-            CacheHash(moveForwardParameter);
-            CacheHash(moveRightParameter);
-            CacheHash(turnParameter);
-            CacheHash(movementBurdenParameter);
-            CacheHash(extinguishStanceParameter);
-
             CacheHash(isGroundedParameter);
             CacheHash(isMovingParameter);
             CacheHash(isIdleParameter);
@@ -204,6 +180,40 @@ namespace TrueJourney.BotBehavior
             CacheHash(heldItemNameHashParameter);
             CacheHash(heldItemTypeHashParameter);
             CacheHash(activeCommandTypeParameter);
+
+            CacheAnimatorParameters();
+        }
+
+        private void CacheAnimatorParameters()
+        {
+            floatParameterHashes.Clear();
+            boolParameterHashes.Clear();
+            intParameterHashes.Clear();
+            boolParameterValues.Clear();
+            intParameterValues.Clear();
+
+            if (animator == null)
+            {
+                return;
+            }
+
+            AnimatorControllerParameter[] parameters = animator.parameters;
+            for (int i = 0; i < parameters.Length; i++)
+            {
+                AnimatorControllerParameter parameter = parameters[i];
+                switch (parameter.type)
+                {
+                    case AnimatorControllerParameterType.Float:
+                        floatParameterHashes.Add(parameter.nameHash);
+                        break;
+                    case AnimatorControllerParameterType.Bool:
+                        boolParameterHashes.Add(parameter.nameHash);
+                        break;
+                    case AnimatorControllerParameterType.Int:
+                        intParameterHashes.Add(parameter.nameHash);
+                        break;
+                }
+            }
         }
 
         private void UpdateMovementState()
@@ -277,20 +287,6 @@ namespace TrueJourney.BotBehavior
                 return;
             }
 
-            SetFloat(speedParameter, speed);
-            SetFloat(horizontalSpeedParameter, horizontalSpeed);
-            SetFloat(desiredSpeedParameter, desiredSpeed);
-            SetFloat(velocityXParameter, localVelocity.x);
-            SetFloat(velocityYParameter, localVelocity.y);
-            SetFloat(velocityZParameter, localVelocity.z);
-            SetFloat(moveXParameter, localVelocity.x);
-            SetFloat(moveYParameter, localVelocity.z);
-            SetFloat(moveForwardParameter, Mathf.Max(0f, localVelocity.z));
-            SetFloat(moveRightParameter, localVelocity.x);
-            SetFloat(turnParameter, turnAmount);
-            SetFloat(movementBurdenParameter, movementBurden);
-            SetFloat(extinguishStanceParameter, extinguishStance);
-
             SetBool(isGroundedParameter, isGrounded);
             SetBool(isMovingParameter, isMoving);
             SetBool(isIdleParameter, isIdle);
@@ -356,7 +352,7 @@ namespace TrueJourney.BotBehavior
                 return;
             }
 
-            animator.SetBool(parameterHash, true);
+            SetBool(parameterHash, true);
             activeDynamicHashes.Add(parameterHash);
             dynamicHashesToDisable.Remove(parameterHash);
         }
@@ -365,7 +361,7 @@ namespace TrueJourney.BotBehavior
         {
             for (int i = 0; i < dynamicHashesToDisable.Count; i++)
             {
-                animator.SetBool(dynamicHashesToDisable[i], false);
+                SetBool(dynamicHashesToDisable[i], false);
             }
 
             dynamicHashesToDisable.Clear();
@@ -436,7 +432,7 @@ namespace TrueJourney.BotBehavior
                 return;
             }
 
-            animator.SetBool(parameterHash, value);
+            SetBool(parameterHash, value);
         }
 
         private void SetInt(string parameterName, int value)
@@ -447,7 +443,13 @@ namespace TrueJourney.BotBehavior
                 return;
             }
 
+            if (intParameterValues.TryGetValue(parameterHash, out int currentValue) && currentValue == value)
+            {
+                return;
+            }
+
             animator.SetInteger(parameterHash, value);
+            intParameterValues[parameterHash] = value;
         }
 
         private bool HasAnimatorParameter(int parameterHash, AnimatorControllerParameterType type)
@@ -457,16 +459,17 @@ namespace TrueJourney.BotBehavior
                 return false;
             }
 
-            AnimatorControllerParameter[] parameters = animator.parameters;
-            for (int i = 0; i < parameters.Length; i++)
+            switch (type)
             {
-                if (parameters[i].nameHash == parameterHash && parameters[i].type == type)
-                {
-                    return true;
-                }
+                case AnimatorControllerParameterType.Float:
+                    return floatParameterHashes.Contains(parameterHash);
+                case AnimatorControllerParameterType.Bool:
+                    return boolParameterHashes.Contains(parameterHash);
+                case AnimatorControllerParameterType.Int:
+                    return intParameterHashes.Contains(parameterHash);
+                default:
+                    return false;
             }
-
-            return false;
         }
 
         private void CacheHash(string parameterName)
@@ -488,6 +491,17 @@ namespace TrueJourney.BotBehavior
             }
 
             return parameterHashes.TryGetValue(parameterName, out parameterHash) && parameterHash != 0;
+        }
+
+        private void SetBool(int parameterHash, bool value)
+        {
+            if (boolParameterValues.TryGetValue(parameterHash, out bool currentValue) && currentValue == value)
+            {
+                return;
+            }
+
+            animator.SetBool(parameterHash, value);
+            boolParameterValues[parameterHash] = value;
         }
 
         private static string BuildDynamicParameterName(string prefix, string value)

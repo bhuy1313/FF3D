@@ -1,6 +1,7 @@
 using System.Collections;
 using RayFire;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public static class RayfireBreakImpact
 {
@@ -212,7 +213,45 @@ public static class RayfireBreakImpact
         return runner;
     }
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics()
+    {
+        runner = null;
+    }
+
     private sealed class Runner : MonoBehaviour
     {
+        private void OnEnable()
+        {
+            SceneManager.sceneLoaded += HandleSceneLoaded;
+        }
+
+        private void OnDisable()
+        {
+            SceneManager.sceneLoaded -= HandleSceneLoaded;
+        }
+
+        private void OnDestroy()
+        {
+            if (runner == this)
+            {
+                runner = null;
+            }
+        }
+
+        private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            if (mode == LoadSceneMode.Additive)
+            {
+                return;
+            }
+
+            if (Object.FindAnyObjectByType<GameMaster>() != null)
+            {
+                return;
+            }
+
+            Destroy(gameObject);
+        }
     }
 }

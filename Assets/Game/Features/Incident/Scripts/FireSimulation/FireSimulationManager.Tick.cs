@@ -43,14 +43,16 @@ public sealed partial class FireSimulationManager
                 node.HasReachedSpreadSaturation = true;
             }
 
-            // Snap residual heat to 0 only after active suppression so ramp-up
-            // via slow neighbour spread is not constantly killed off. The
-            // SuppressionRecoveryTimer is set whenever a player/bot dampens this
-            // node, so this branch only fires once the node has actually been
-            // worked on.
+            // Snap residual heat to 0 while a node is still in its
+            // suppression recovery window. The guard prevents ramp-up via slow
+            // neighbour spread from being killed off. Using IgnitionThreshold
+            // (instead of the much smaller extinguishThreshold) ensures that
+            // nodes suppressed to e.g. 0.5 heat are properly cleaned up before
+            // the timer expires, rather than lingering as zombie nodes that are
+            // not burning but never removed.
             if (node.SuppressionRecoveryTimer > 0f &&
                 node.Heat > 0f &&
-                node.Heat < extinguishThreshold)
+                node.Heat < node.IgnitionThreshold)
             {
                 node.Heat = 0f;
             }

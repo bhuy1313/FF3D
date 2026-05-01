@@ -111,17 +111,12 @@ public class MissionEndOverlayController : MonoBehaviour
     [SerializeField]
     private float deathCameraFallForwardDistance = 0.3f;
 
-    [SerializeField]
-    private float deathCameraFallPitch = 75f;
 
-    [SerializeField]
-    private float deathCameraFallRoll = 12f;
 
     [SerializeField]
     private float deathCameraFallYawJitter = 4f;
 
-    [SerializeField]
-    private float deathCameraGroundClearance = 0.1f;
+
 
     [SerializeField]
     private float deathCameraGroundProbeHeight = 0.8f;
@@ -139,14 +134,7 @@ public class MissionEndOverlayController : MonoBehaviour
     [SerializeField]
     private float deathCameraShakePositionAmplitude = 0.045f;
 
-    [SerializeField]
-    private float deathCameraShakeRotationAmplitude = 2.8f;
 
-    [SerializeField]
-    private float deathCameraShakeFrequency = 13f;
-
-    [SerializeField]
-    private float deathCameraShakeDamping = 1.7f;
 
     [Header("Labels")]
     [SerializeField]
@@ -313,11 +301,6 @@ public class MissionEndOverlayController : MonoBehaviour
         {
             return;
         }
-
-        ResolveReferences();
-        SubscribePlayerDeathEvent();
-        ResolveSceneOverlay();
-        BindButtonCallbacks();
 
         if (hasOpenedResult)
         {
@@ -518,10 +501,7 @@ public class MissionEndOverlayController : MonoBehaviour
             return deathCameraPivot != null;
         }
 
-        CinemachineCamera[] cinemachineCameras = FindObjectsByType<CinemachineCamera>(
-            FindObjectsInactive.Exclude,
-            FindObjectsSortMode.None
-        );
+        CinemachineCamera[] cinemachineCameras = FindObjectsByType<CinemachineCamera>(FindObjectsInactive.Exclude);
         for (int i = 0; i < cinemachineCameras.Length; i++)
         {
             CinemachineCamera cinemachineCamera = cinemachineCameras[i];
