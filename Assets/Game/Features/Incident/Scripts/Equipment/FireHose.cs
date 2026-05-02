@@ -614,8 +614,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         float amount = currentApplyWaterRate * Time.deltaTime;
         float timeStep = effectiveLifetime / segments;
         FireSimulationManager simulationManager = ResolveFireSimulationManager();
-        System.Collections.Generic.HashSet<FireGroup> processedGroups = new System.Collections.Generic.HashSet<FireGroup>();
-        System.Collections.Generic.HashSet<Fire> processedFires = new System.Collections.Generic.HashSet<Fire>();
+        System.Collections.Generic.HashSet<IFireGroupTarget> processedGroups = new System.Collections.Generic.HashSet<IFireGroupTarget>();
 
         Vector3 currentPos = startPos;
 
@@ -653,7 +652,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
 
                 for (int i = 0; i < hits.Length; i++)
                 {
-                    ApplyWaterToColliderSafe(hits[i].collider, amount, processedGroups, processedFires, currentUser);
+                    ApplyWaterToColliderSafe(hits[i].collider, amount, processedGroups, currentUser);
                 }
             }
 
@@ -665,7 +664,16 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
     {
         if (fireSimulationManager == null)
         {
-            fireSimulationManager = FindAnyObjectByType<FireSimulationManager>(FindObjectsInactive.Include);
+            fireSimulationManager = GetComponentInParent<FireSimulationManager>(true);
+        }
+
+        if (fireSimulationManager == null)
+        {
+            Transform root = transform.root;
+            if (root != null)
+            {
+                fireSimulationManager = root.GetComponentInChildren<FireSimulationManager>(true);
+            }
         }
 
         return fireSimulationManager;
@@ -716,50 +724,61 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         return maxLifetime;
     }
 
-    private static void ApplyWaterToColliderSafe(
+    private void ApplyWaterToColliderSafe(
         Collider collider,
         float amount,
-        System.Collections.Generic.HashSet<FireGroup> processedGroups,
-        System.Collections.Generic.HashSet<Fire> processedFires,
+        System.Collections.Generic.HashSet<IFireGroupTarget> processedGroups,
         GameObject sourceUser)
     {
         if (collider == null)
             return;
 
-        FireGroup fireGroup = FindFireGroup(collider);
+        IFireGroupTarget fireGroup = FindFireGroup(collider);
         if (fireGroup != null && processedGroups.Add(fireGroup))
         {
             fireGroup.ApplyWater(amount, sourceUser, FireSuppressionAgent.Water);
             return;
         }
-
-        Fire fire = FindFire(collider);
-        if (fire != null && processedFires.Add(fire))
-            fire.ApplySuppression(amount, FireSuppressionAgent.Water, sourceUser);
     }
 
-    private static FireGroup FindFireGroup(Collider collider)
+    private static IFireGroupTarget FindFireGroup(Collider collider)
     {
-        if (collider.TryGetComponent(out FireGroup direct)) return direct;
-        if (collider.attachedRigidbody != null && collider.attachedRigidbody.TryGetComponent(out FireGroup rigidbodyOwner)) return rigidbodyOwner;
-        Transform parent = collider.transform.parent;
-        if (parent != null && parent.TryGetComponent(out FireGroup parentGroup)) return parentGroup;
+        if (TryGetFireGroupTarget(collider, out IFireGroupTarget direct)) return direct;
+        if (collider.attachedRigidbody != null && TryGetFireGroupTarget(collider.attachedRigidbody, out IFireGroupTarget rigidbodyOwner)) return rigidbodyOwner;
+
+        Transform current = collider.transform.parent;
+        while (current != null)
+        {
+            if (TryGetFireGroupTarget(current, out IFireGroupTarget parentGroup))
+            {
+                return parentGroup;
+            }
+
+            current = current.parent;
+        }
+
         return null;
     }
 
-    private static Fire FindFire(Collider collider)
+    private static bool TryGetFireGroupTarget(Component component, out IFireGroupTarget fireGroupTarget)
     {
-        if (collider.TryGetComponent(out Fire direct))
-            return direct;
+        fireGroupTarget = null;
+        if (component == null)
+        {
+            return false;
+        }
 
-        if (collider.attachedRigidbody != null && collider.attachedRigidbody.TryGetComponent(out Fire rigidbodyOwner))
-            return rigidbodyOwner;
+        MonoBehaviour[] behaviours = component.GetComponents<MonoBehaviour>();
+        for (int i = 0; i < behaviours.Length; i++)
+        {
+            if (behaviours[i] is IFireGroupTarget candidate)
+            {
+                fireGroupTarget = candidate;
+                return true;
+            }
+        }
 
-        Transform parent = collider.transform.parent;
-        if (parent != null && parent.TryGetComponent(out Fire parentFire))
-            return parentFire;
-
-        return null;
+        return false;
     }
 
     private void AlignWaterVfxToSprayOrigin()

@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -29,8 +30,26 @@ public class DebugIncidentPayloadSpawner : MonoBehaviour
     [SerializeField] private string ventilationPreset = "Neutral";
     [SerializeField] private string occupantRiskPreset = "Manageable";
     [SerializeField] private string severityBand = "Medium";
+    [SerializeField] private bool estimatedTrappedCountKnown;
+    [SerializeField, Min(0)] private int estimatedTrappedCountMin;
+    [SerializeField, Min(0)] private int estimatedTrappedCountMax;
     [SerializeField, Range(0f, 1f)] private float confidenceScore = 1f;
     [SerializeField] private int placementRandomSeed;
+
+    [Header("Report Snapshot")]
+    [SerializeField] private string reportAddress = "123 Debug St";
+    [SerializeField] private string reportFireLocation = "Laundry room";
+    [SerializeField] private string reportOccupantRisk = "Unknown";
+    [SerializeField] private string reportHazard = "Electrical appliance";
+    [SerializeField] private string reportSpreadStatus = "Contained";
+    [SerializeField] private string reportCallerSafety = "Caller outside";
+    [SerializeField] private string reportSeverity = "Medium";
+
+    [Header("Applied Signals")]
+    [SerializeField] private string[] appliedSignals =
+    {
+        "Debug payload injected manually."
+    };
 
     [FormerlySerializedAs("debugFireOrigin")]
     [SerializeField, HideInInspector] private string legacyDebugFireOrigin = "Laundry_WasherOutlet";
@@ -68,6 +87,8 @@ public class DebugIncidentPayloadSpawner : MonoBehaviour
         string resolvedHazardType = ResolveText(hazardType, ResolveText(legacyDebugHazardType, "Electrical"));
         float resolvedInitialFireIntensity = initialFireIntensity > 0f ? initialFireIntensity : legacyDebugInitialFireIntensity;
         int resolvedInitialFireCount = initialFireCount > 0 ? initialFireCount : legacyDebugInitialFireCount;
+        IncidentWorldSetupReportSnapshot resolvedReportSnapshot = BuildReportSnapshot();
+        List<string> resolvedAppliedSignals = BuildAppliedSignals();
 
         pendingDebugPayload = new IncidentWorldSetupPayload
         {
@@ -86,8 +107,15 @@ public class DebugIncidentPayloadSpawner : MonoBehaviour
             ventilationPreset = ResolveText(ventilationPreset, "Neutral"),
             occupantRiskPreset = ResolveText(occupantRiskPreset, "Manageable"),
             severityBand = ResolveText(severityBand, ResolveText(legacyDebugSeverityBand, "Medium")),
+            estimatedTrappedCountKnown = estimatedTrappedCountKnown,
+            estimatedTrappedCountMin = estimatedTrappedCountKnown ? Mathf.Max(0, estimatedTrappedCountMin) : 0,
+            estimatedTrappedCountMax = estimatedTrappedCountKnown
+                ? Mathf.Max(Mathf.Max(0, estimatedTrappedCountMin), estimatedTrappedCountMax)
+                : 0,
             confidenceScore = Mathf.Clamp01(confidenceScore),
             placementRandomSeed = placementRandomSeed,
+            reportSnapshot = resolvedReportSnapshot,
+            appliedSignals = resolvedAppliedSignals,
         };
 
         LoadingFlowState.SetPendingIncidentPayload(pendingDebugPayload);
@@ -144,10 +172,52 @@ public class DebugIncidentPayloadSpawner : MonoBehaviour
         return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
     }
 
+    private IncidentWorldSetupReportSnapshot BuildReportSnapshot()
+    {
+        return new IncidentWorldSetupReportSnapshot
+        {
+            address = ResolveText(reportAddress, "123 Debug St"),
+            fireLocation = ResolveText(reportFireLocation, logicalFireLocation),
+            occupantRisk = ResolveText(reportOccupantRisk, occupantRiskPreset),
+            hazard = ResolveText(reportHazard, hazardType),
+            spreadStatus = ResolveText(reportSpreadStatus, fireSpreadPreset),
+            callerSafety = ResolveText(reportCallerSafety, "Unknown"),
+            severity = ResolveText(reportSeverity, severityBand)
+        };
+    }
+
+    private List<string> BuildAppliedSignals()
+    {
+        List<string> results = new List<string>();
+        if (appliedSignals == null || appliedSignals.Length == 0)
+        {
+            results.Add("Debug payload injected manually.");
+            return results;
+        }
+
+        for (int i = 0; i < appliedSignals.Length; i++)
+        {
+            string value = appliedSignals[i];
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                results.Add(value.Trim());
+            }
+        }
+
+        if (results.Count == 0)
+        {
+            results.Add("Debug payload injected manually.");
+        }
+
+        return results;
+    }
+
     private void OnValidate()
     {
         initialFireIntensity = Mathf.Clamp(initialFireIntensity, 0.1f, 1f);
         initialFireCount = Mathf.Max(1, initialFireCount);
+        estimatedTrappedCountMin = Mathf.Max(0, estimatedTrappedCountMin);
+        estimatedTrappedCountMax = Mathf.Max(estimatedTrappedCountMin, estimatedTrappedCountMax);
         startSmokeDensity = Mathf.Max(0f, startSmokeDensity);
         smokeAccumulationMultiplier = Mathf.Max(0f, smokeAccumulationMultiplier);
         confidenceScore = Mathf.Clamp01(confidenceScore);
@@ -200,6 +270,46 @@ public class DebugIncidentPayloadSpawner : MonoBehaviour
         if (string.IsNullOrWhiteSpace(severityBand))
         {
             severityBand = ResolveText(legacyDebugSeverityBand, "Medium");
+        }
+
+        if (string.IsNullOrWhiteSpace(reportAddress))
+        {
+            reportAddress = "123 Debug St";
+        }
+
+        if (string.IsNullOrWhiteSpace(reportFireLocation))
+        {
+            reportFireLocation = logicalFireLocation;
+        }
+
+        if (string.IsNullOrWhiteSpace(reportOccupantRisk))
+        {
+            reportOccupantRisk = occupantRiskPreset;
+        }
+
+        if (string.IsNullOrWhiteSpace(reportHazard))
+        {
+            reportHazard = hazardType;
+        }
+
+        if (string.IsNullOrWhiteSpace(reportSpreadStatus))
+        {
+            reportSpreadStatus = fireSpreadPreset;
+        }
+
+        if (string.IsNullOrWhiteSpace(reportCallerSafety))
+        {
+            reportCallerSafety = "Unknown";
+        }
+
+        if (string.IsNullOrWhiteSpace(reportSeverity))
+        {
+            reportSeverity = severityBand;
+        }
+
+        if (appliedSignals == null || appliedSignals.Length == 0)
+        {
+            appliedSignals = new[] { "Debug payload injected manually." };
         }
     }
 }

@@ -283,12 +283,22 @@ public partial class BotCommandAgent
         IFireTarget pointFireTarget,
         IFireGroupTarget fireGroupTarget)
     {
+        IFireGroupTarget previousFireGroupTarget = commandedFireGroupTarget;
         commandedPointFireTarget = mode == BotExtinguishCommandMode.PointFire && pointFireTarget != null && pointFireTarget.IsBurning
             ? pointFireTarget
             : null;
         commandedFireGroupTarget = mode == BotExtinguishCommandMode.FireGroup && fireGroupTarget != null && fireGroupTarget.HasActiveFires
             ? fireGroupTarget
             : null;
+
+        if (!ReferenceEquals(previousFireGroupTarget, commandedFireGroupTarget))
+        {
+            ReleaseReservation(previousFireGroupTarget);
+            if (commandedFireGroupTarget != null)
+            {
+                RefreshReservation(commandedFireGroupTarget);
+            }
+        }
     }
 
     private IFireTarget ResolveIssuedPointFireTarget(Vector3 scanOrigin)
@@ -323,8 +333,49 @@ public partial class BotCommandAgent
             return commandedFireGroupTarget;
         }
 
+        IFireGroupTarget previousFireGroupTarget = commandedFireGroupTarget;
         commandedFireGroupTarget = FindClosestActiveFireGroup(orderPoint);
+        if (!ReferenceEquals(previousFireGroupTarget, commandedFireGroupTarget))
+        {
+            ReleaseReservation(previousFireGroupTarget);
+            if (commandedFireGroupTarget != null)
+            {
+                RefreshReservation(commandedFireGroupTarget);
+            }
+        }
+
         return commandedFireGroupTarget;
+    }
+
+    private IFireTarget ResolveRepresentativeFireTarget(IFireGroupTarget fireGroup, Vector3 fromPosition)
+    {
+        if (fireGroup == null || !fireGroup.HasActiveFires)
+        {
+            return null;
+        }
+
+        Vector3 representativePosition = fireGroup.GetClosestActiveFirePosition(fromPosition);
+        IFireTarget representativeTarget = null;
+        float bestDistanceSq = float.PositiveInfinity;
+
+        foreach (IFireTarget candidate in BotRuntimeRegistry.ActiveFireTargets)
+        {
+            if (candidate == null || !candidate.IsBurning)
+            {
+                continue;
+            }
+
+            float distanceSq = (candidate.GetWorldPosition() - representativePosition).sqrMagnitude;
+            if (distanceSq >= bestDistanceSq)
+            {
+                continue;
+            }
+
+            bestDistanceSq = distanceSq;
+            representativeTarget = candidate;
+        }
+
+        return representativeTarget;
     }
 
     private bool IsToolStillUsable(IBotExtinguisherItem tool, BotExtinguishCommandMode orderMode, Vector3 orderPoint, Vector3 firePosition, IFireGroupTarget fireGroup, IFireTarget fireTarget)

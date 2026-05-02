@@ -185,8 +185,10 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     private IBotBreakTool temporarilyRejectedBreakTool;
     private IBotBreakableTarget currentBlockedBreakable;
     private IBotBreakableTarget temporarilyRejectedBreakable;
+    private IFireGroupTarget currentRouteBlockingFireGroupTarget;
     private IFireTarget currentRouteBlockingFire;
     private RouteFirePhase currentRouteFirePhase;
+    private IFireGroupTarget currentFireGroupTarget;
     private IFireTarget currentFireTarget;
     private IFireTarget commandedPointFireTarget;
     private IFireGroupTarget commandedFireGroupTarget;

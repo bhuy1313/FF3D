@@ -13,15 +13,17 @@ namespace FF3D.Editor
         private const string SimulationRootPrefix = "FireSimulation_";
         private const string DefaultWindowLockTaskName = "WindowLockRandomizerStartupTask";
         private const string DefaultPayloadTaskName = "IncidentPayloadStartupTask";
+        private const string DefaultVictimPlacementTaskName = "VictimPlacementStartupTask";
         private const string DefaultStepsRootName = "SetupSteps";
         private const string DefaultDebugSpawnerName = "DebugIncidentSpawner";
-        private const string OriginAreaStepName = "IncidentOriginAreaSetupStep";
-        private const string AnchorStepName = "IncidentAnchorHazardSetupStep";
-        private const string VentilationStepName = "IncidentVentilationPresetSetupStep";
+        private const string OriginAreaTaskName = "IncidentOriginAreaMapSetupTask";
+        private const string AnchorTaskName = "IncidentAnchorHazardMapSetupTask";
+        private const string VentilationTaskName = "IncidentVentilationPresetMapSetupTask";
 
         [SerializeField] private bool ensureSceneStartupFlow = true;
         [SerializeField] private bool ensureWindowLockStartupTask = true;
         [SerializeField] private bool ensurePayloadStartupTask = true;
+        [SerializeField] private bool ensureVictimPlacementStartupTask = true;
         [SerializeField] private bool ensureMapSetupRoot = true;
         [SerializeField] private bool ensureSimulationManager = true;
         [SerializeField] private bool ensureDefaultSteps = true;
@@ -82,9 +84,10 @@ namespace FF3D.Editor
             ensureSceneStartupFlow = EditorGUILayout.ToggleLeft("Ensure SceneStartupFlow", ensureSceneStartupFlow);
             ensureWindowLockStartupTask = EditorGUILayout.ToggleLeft("Ensure WindowLockRandomizerStartupTask", ensureWindowLockStartupTask);
             ensurePayloadStartupTask = EditorGUILayout.ToggleLeft("Ensure IncidentPayloadStartupTask", ensurePayloadStartupTask);
+            ensureVictimPlacementStartupTask = EditorGUILayout.ToggleLeft("Ensure VictimPlacementStartupTask", ensureVictimPlacementStartupTask);
             ensureMapSetupRoot = EditorGUILayout.ToggleLeft("Ensure IncidentMapSetupRoot", ensureMapSetupRoot);
             ensureSimulationManager = EditorGUILayout.ToggleLeft("Ensure FireSimulationManager + FireSurfaceGraph", ensureSimulationManager);
-            ensureDefaultSteps = EditorGUILayout.ToggleLeft("Ensure default IncidentMapSetupSteps", ensureDefaultSteps);
+            ensureDefaultSteps = EditorGUILayout.ToggleLeft("Ensure default IncidentMapSetupTasks", ensureDefaultSteps);
             ensureDebugPayloadSpawner = EditorGUILayout.ToggleLeft("Ensure DebugIncidentPayloadSpawner", ensureDebugPayloadSpawner);
             ensureEffectManagerAndClusterTemplate = EditorGUILayout.ToggleLeft("Ensure FireEffectManager + ClusterViewTemplate", ensureEffectManagerAndClusterTemplate);
             assignSceneMatchedProfiles = EditorGUILayout.ToggleLeft("Assign scene-matched profiles", assignSceneMatchedProfiles);
@@ -156,9 +159,12 @@ namespace FF3D.Editor
                 if (ensureDefaultSteps && mapSetupRoot != null)
                 {
                     GameObject stepsRoot = EnsureChildObject(incidentRoot, DefaultStepsRootName, result);
-                    EnsureSetupStep<IncidentOriginAreaSetupStep>(stepsRoot, OriginAreaStepName, 0, result);
-                    EnsureSetupStep<IncidentAnchorHazardSetupStep>(stepsRoot, AnchorStepName, 10, result);
-                    EnsureSetupStep<IncidentVentilationPresetSetupStep>(stepsRoot, VentilationStepName, 20, result);
+                    IncidentOriginAreaMapSetupTask originAreaTask = EnsureSetupTask<IncidentOriginAreaMapSetupTask>(stepsRoot, OriginAreaTaskName, result);
+                    IncidentAnchorHazardMapSetupTask anchorTask = EnsureSetupTask<IncidentAnchorHazardMapSetupTask>(stepsRoot, AnchorTaskName, result);
+                    IncidentVentilationPresetMapSetupTask ventilationTask = EnsureSetupTask<IncidentVentilationPresetMapSetupTask>(stepsRoot, VentilationTaskName, result);
+                    AddMapSetupTask(mapSetupRoot, originAreaTask, result);
+                    AddMapSetupTask(mapSetupRoot, anchorTask, result);
+                    AddMapSetupTask(mapSetupRoot, ventilationTask, result);
                 }
 
                 if (ensurePayloadStartupTask)
@@ -170,6 +176,7 @@ namespace FF3D.Editor
                         result);
                     ConfigureStartupTask(payloadTask, result);
                     AssignPayloadTaskBindings(payloadTask, mapSetupRoot, result);
+                    AddStartupTaskToFlow(startupFlow, payloadTask, result);
                 }
 
                 if (ensureWindowLockStartupTask)
@@ -181,6 +188,19 @@ namespace FF3D.Editor
                         result);
                     ConfigureStartupTask(windowLockTask, result);
                     ConfigureWindowLockStartupTask(windowLockTask, result);
+                    AddStartupTaskToFlow(startupFlow, windowLockTask, result);
+                }
+
+                if (ensureVictimPlacementStartupTask)
+                {
+                    GameObject victimPlacementTaskRoot = EnsureChildObject(incidentRoot, DefaultVictimPlacementTaskName, result);
+                    VictimPlacementStartupTask victimPlacementTask = EnsureComponent<VictimPlacementStartupTask>(
+                        victimPlacementTaskRoot,
+                        "VictimPlacementStartupTask",
+                        result);
+                    ConfigureStartupTask(victimPlacementTask, result);
+                    ConfigureVictimPlacementStartupTask(scene, victimPlacementTask, result);
+                    AddStartupTaskToFlow(startupFlow, victimPlacementTask, result);
                 }
 
                 if (ensureDebugPayloadSpawner)
@@ -303,6 +323,7 @@ namespace FF3D.Editor
             IncidentMapSetupRoot mapSetupRoot = FindFirstInScene<IncidentMapSetupRoot>(scene);
             IncidentPayloadStartupTask payloadTask = FindFirstInScene<IncidentPayloadStartupTask>(scene);
             WindowLockRandomizerStartupTask windowLockTask = FindFirstInScene<WindowLockRandomizerStartupTask>(scene);
+            VictimPlacementStartupTask victimPlacementTask = FindFirstInScene<VictimPlacementStartupTask>(scene);
             FireSimulationManager simulationManager = FindFirstInScene<FireSimulationManager>(scene);
             FireSurfaceGraph surfaceGraph = FindFirstInScene<FireSurfaceGraph>(scene);
             DebugIncidentPayloadSpawner debugSpawner = FindFirstInScene<DebugIncidentPayloadSpawner>(scene);
@@ -322,6 +343,11 @@ namespace FF3D.Editor
             if (windowLockTask == null)
             {
                 warnings.Add("Missing WindowLockRandomizerStartupTask.");
+            }
+
+            if (ensureVictimPlacementStartupTask && victimPlacementTask == null)
+            {
+                warnings.Add("Missing VictimPlacementStartupTask.");
             }
 
             if (mapSetupRoot == null)
@@ -637,21 +663,37 @@ namespace FF3D.Editor
 
         private static void ConfigureStartupTask(SceneStartupTask startupTask, SetupResult result)
         {
-            if (startupTask == null)
+        }
+
+        private static void AddStartupTaskToFlow(SceneStartupFlow startupFlow, SceneStartupTask startupTask, SetupResult result)
+        {
+            if (startupFlow == null || startupTask == null)
             {
                 return;
             }
 
-            SerializedObject serializedObject = new SerializedObject(startupTask);
+            SerializedObject serializedObject = new SerializedObject(startupFlow);
             serializedObject.Update();
-            bool changed = false;
-
-            changed |= SetBoolProperty(serializedObject, startupTask, "runTask", true, $"{startupTask.GetType().Name}.runTask", result);
-
-            if (changed)
+            SerializedProperty tasksProperty = serializedObject.FindProperty("explicitTasks");
+            if (tasksProperty == null)
             {
-                serializedObject.ApplyModifiedProperties();
+                return;
             }
+
+            for (int i = 0; i < tasksProperty.arraySize; i++)
+            {
+                SerializedProperty element = tasksProperty.GetArrayElementAtIndex(i);
+                if (element != null && element.objectReferenceValue == startupTask)
+                {
+                    return;
+                }
+            }
+
+            Undo.RecordObject(startupFlow, $"Add {startupTask.GetType().Name} To SceneStartupFlow");
+            tasksProperty.InsertArrayElementAtIndex(tasksProperty.arraySize);
+            tasksProperty.GetArrayElementAtIndex(tasksProperty.arraySize - 1).objectReferenceValue = startupTask;
+            serializedObject.ApplyModifiedProperties();
+            result.RepairedObjects.Add($"SceneStartupFlow.explicitTasks += {startupTask.GetType().Name}");
         }
 
         private static void ConfigureWindowLockStartupTask(WindowLockRandomizerStartupTask startupTask, SetupResult result)
@@ -665,8 +707,48 @@ namespace FF3D.Editor
             serializedObject.Update();
             bool changed = false;
 
-            changed |= SetIntProperty(serializedObject, startupTask, "order", -10, "WindowLockRandomizerStartupTask.order", result);
             changed |= SetBoolProperty(serializedObject, startupTask, "useDeterministicSeed", false, "WindowLockRandomizerStartupTask.useDeterministicSeed", result);
+
+            if (changed)
+            {
+                serializedObject.ApplyModifiedProperties();
+            }
+        }
+
+        private static void ConfigureVictimPlacementStartupTask(
+            Scene scene,
+            VictimPlacementStartupTask startupTask,
+            SetupResult result)
+        {
+            if (startupTask == null)
+            {
+                return;
+            }
+
+            SerializedObject serializedObject = new SerializedObject(startupTask);
+            serializedObject.Update();
+            bool changed = false;
+
+            changed |= SetBoolProperty(serializedObject, startupTask, "deterministicPlacement", true, "VictimPlacementStartupTask.deterministicPlacement", result);
+            changed |= SetBoolProperty(serializedObject, startupTask, "refreshMissionObjectivesAfterSpawn", true, "VictimPlacementStartupTask.refreshMissionObjectivesAfterSpawn", result);
+
+            GameObject victimPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Game/Features/Incident/Prefabs/Bot/Joe.prefab");
+            changed |= SetObjectReferenceProperty(
+                serializedObject,
+                startupTask,
+                "victimPrefab",
+                victimPrefab,
+                "VictimPlacementStartupTask.victimPrefab",
+                result);
+
+            IncidentMissionSystem missionSystem = FindFirstInScene<IncidentMissionSystem>(scene);
+            changed |= SetObjectReferenceProperty(
+                serializedObject,
+                startupTask,
+                "incidentMissionSystem",
+                missionSystem,
+                "VictimPlacementStartupTask.incidentMissionSystem",
+                result);
 
             if (changed)
             {
@@ -685,9 +767,6 @@ namespace FF3D.Editor
             serializedObject.Update();
             bool changed = false;
 
-            changed |= SetBoolProperty(serializedObject, startupFlow, "collectTasksFromChildren", true, "SceneStartupFlow.collectTasksFromChildren", result);
-            changed |= SetBoolProperty(serializedObject, startupFlow, "includeInactiveTasks", true, "SceneStartupFlow.includeInactiveTasks", result);
-
             if (changed)
             {
                 serializedObject.ApplyModifiedProperties();
@@ -696,22 +775,6 @@ namespace FF3D.Editor
 
         private static void ConfigureMapSetupRoot(IncidentMapSetupRoot mapSetupRoot, SetupResult result)
         {
-            if (mapSetupRoot == null)
-            {
-                return;
-            }
-
-            SerializedObject serializedObject = new SerializedObject(mapSetupRoot);
-            serializedObject.Update();
-            bool changed = false;
-
-            changed |= SetBoolProperty(serializedObject, mapSetupRoot, "collectStepsFromChildren", true, "IncidentMapSetupRoot.collectStepsFromChildren", result);
-            changed |= SetBoolProperty(serializedObject, mapSetupRoot, "includeInactiveSteps", true, "IncidentMapSetupRoot.includeInactiveSteps", result);
-
-            if (changed)
-            {
-                serializedObject.ApplyModifiedProperties();
-            }
         }
 
         private static void EnsureSimulationEffects(
@@ -880,38 +943,41 @@ namespace FF3D.Editor
             }
         }
 
-        private static T EnsureSetupStep<T>(GameObject parent, string objectName, int order, SetupResult result) where T : IncidentMapSetupStep
+        private static T EnsureSetupTask<T>(GameObject parent, string objectName, SetupResult result) where T : IncidentMapSetupTask
         {
-            GameObject stepRoot = EnsureChildObject(parent, objectName, result);
-            T step = EnsureComponent<T>(stepRoot, typeof(T).Name, result);
+            GameObject taskRoot = EnsureChildObject(parent, objectName, result);
+            return EnsureComponent<T>(taskRoot, typeof(T).Name, result);
+        }
 
-            SerializedObject serializedObject = new SerializedObject(step);
+        private static void AddMapSetupTask(IncidentMapSetupRoot mapSetupRoot, IncidentMapSetupTask setupTask, SetupResult result)
+        {
+            if (mapSetupRoot == null || setupTask == null)
+            {
+                return;
+            }
+
+            SerializedObject serializedObject = new SerializedObject(mapSetupRoot);
             serializedObject.Update();
-            SerializedProperty orderProperty = serializedObject.FindProperty("order");
-            SerializedProperty runStepProperty = serializedObject.FindProperty("runStep");
-            bool changed = false;
-
-            if (orderProperty != null && orderProperty.intValue != order)
+            SerializedProperty tasksProperty = serializedObject.FindProperty("explicitTasks");
+            if (tasksProperty == null)
             {
-                Undo.RecordObject(step, "Assign IncidentMapSetupStep Order");
-                orderProperty.intValue = order;
-                changed = true;
+                return;
             }
 
-            if (runStepProperty != null && !runStepProperty.boolValue)
+            for (int i = 0; i < tasksProperty.arraySize; i++)
             {
-                Undo.RecordObject(step, "Enable IncidentMapSetupStep");
-                runStepProperty.boolValue = true;
-                changed = true;
+                SerializedProperty element = tasksProperty.GetArrayElementAtIndex(i);
+                if (element != null && element.objectReferenceValue == setupTask)
+                {
+                    return;
+                }
             }
 
-            if (changed)
-            {
-                serializedObject.ApplyModifiedProperties();
-                result.RepairedObjects.Add($"{typeof(T).Name}.order/runStep");
-            }
-
-            return step;
+            Undo.RecordObject(mapSetupRoot, $"Add {setupTask.GetType().Name} To IncidentMapSetupRoot");
+            tasksProperty.InsertArrayElementAtIndex(tasksProperty.arraySize);
+            tasksProperty.GetArrayElementAtIndex(tasksProperty.arraySize - 1).objectReferenceValue = setupTask;
+            serializedObject.ApplyModifiedProperties();
+            result.RepairedObjects.Add($"IncidentMapSetupRoot.explicitTasks += {setupTask.GetType().Name}");
         }
 
         private static GameObject EnsureRootObject(Scene scene, string objectName, SetupResult result)

@@ -65,6 +65,36 @@ public sealed partial class FireSimulationManager
         return CountNodes(node => node != null && node.IsTrackedByIncident && node.IsBurning && bounds.Contains(node.Position));
     }
 
+    public bool HasActiveFire(Bounds bounds)
+    {
+        return GetBurningTrackedNodeCount(bounds) > 0;
+    }
+
+    public void GetBurningNodes(Bounds bounds, List<FireRuntimeNode> buffer)
+    {
+        if (buffer == null)
+        {
+            return;
+        }
+
+        buffer.Clear();
+        if (!initialized || runtimeGraph == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < runtimeGraph.Count; i++)
+        {
+            FireRuntimeNode node = runtimeGraph.GetNode(i);
+            if (node == null || !node.IsTrackedByIncident || !node.IsBurning || !bounds.Contains(node.Position))
+            {
+                continue;
+            }
+
+            buffer.Add(node);
+        }
+    }
+
     public float GetBurningTrackedIntensitySum(Bounds bounds)
     {
         if (!initialized || runtimeGraph == null)
@@ -85,6 +115,50 @@ public sealed partial class FireSimulationManager
         }
 
         return intensitySum;
+    }
+
+    public float GetAreaIntensity01(Bounds bounds)
+    {
+        int burningCount = GetBurningTrackedNodeCount(bounds);
+        if (burningCount <= 0)
+        {
+            return 0f;
+        }
+
+        return Mathf.Clamp01(GetBurningTrackedIntensitySum(bounds) / burningCount);
+    }
+
+    public Vector3 GetClosestBurningNodePosition(Bounds bounds, Vector3 fromPosition, Vector3 fallbackPosition)
+    {
+        if (!initialized || runtimeGraph == null)
+        {
+            return fallbackPosition;
+        }
+
+        float bestDistanceSqr = float.PositiveInfinity;
+        Vector3 bestPosition = fallbackPosition;
+        bool found = false;
+
+        for (int i = 0; i < runtimeGraph.Count; i++)
+        {
+            FireRuntimeNode node = runtimeGraph.GetNode(i);
+            if (node == null || !node.IsTrackedByIncident || !node.IsBurning || !bounds.Contains(node.Position))
+            {
+                continue;
+            }
+
+            float distanceSqr = (node.Position - fromPosition).sqrMagnitude;
+            if (distanceSqr >= bestDistanceSqr)
+            {
+                continue;
+            }
+
+            bestDistanceSqr = distanceSqr;
+            bestPosition = node.Position;
+            found = true;
+        }
+
+        return found ? bestPosition : fallbackPosition;
     }
 
     public float GetNodeVisualIntensity01(int nodeIndex)

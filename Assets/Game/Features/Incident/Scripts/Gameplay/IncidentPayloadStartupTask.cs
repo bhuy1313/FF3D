@@ -29,7 +29,7 @@ public class IncidentPayloadStartupTask : SceneStartupTask
         }
         else
         {
-            FireSimulationManager resolvedSimulationManager = setupRoot != null ? setupRoot.FireSimulationManager : FindAnyObjectByType<FireSimulationManager>(FindObjectsInactive.Include);
+            FireSimulationManager resolvedSimulationManager = setupRoot != null ? setupRoot.FireSimulationManager : GetComponentInChildren<FireSimulationManager>(true);
             if (resolvedSimulationManager == null)
             {
                 Debug.LogWarning(
@@ -94,7 +94,7 @@ public class IncidentPayloadStartupTask : SceneStartupTask
 
     private IncidentPayloadAnchor ResolveAnchor(IncidentWorldSetupPayload payload)
     {
-        return IncidentAnchorHazardSetupStep.ResolveBestAnchor(payload, ResolveAnchors());
+        return IncidentAnchorHazardMapSetupTask.ResolveBestAnchor(payload, ResolveAnchors());
     }
 
     private IncidentPayloadAnchor[] ResolveAnchors()

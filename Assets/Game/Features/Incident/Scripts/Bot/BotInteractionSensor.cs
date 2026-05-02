@@ -145,10 +145,22 @@ namespace TrueJourney.BotBehavior
             return TryFindFireNear(center, radius, transform.position, transform.position.y, out fireTarget);
         }
 
+        public bool TryFindNearbyFireGroup(float radius, out IFireGroupTarget fireGroupTarget, out IFireTarget representativeFireTarget)
+        {
+            Vector3 center = transform.position + Vector3.up * sensorYOffset;
+            return TryFindFireGroupNear(center, radius, transform.position, transform.position.y, out fireGroupTarget, out representativeFireTarget);
+        }
+
         public bool TryFindFireNearPoint(Vector3 worldPoint, float radius, out IFireTarget fireTarget)
         {
             Vector3 center = worldPoint + Vector3.up * sensorYOffset;
             return TryFindFireNear(center, radius, transform.position, worldPoint.y, out fireTarget);
+        }
+
+        public bool TryFindFireGroupNearPoint(Vector3 worldPoint, float radius, out IFireGroupTarget fireGroupTarget, out IFireTarget representativeFireTarget)
+        {
+            Vector3 center = worldPoint + Vector3.up * sensorYOffset;
+            return TryFindFireGroupNear(center, radius, transform.position, worldPoint.y, out fireGroupTarget, out representativeFireTarget);
         }
 
         public bool TryFindBreakableAhead(out IBotBreakableTarget breakableTarget)
@@ -442,6 +454,12 @@ namespace TrueJourney.BotBehavior
         private bool TryFindFireNear(Vector3 center, float radius, Vector3 fromPosition, float referenceHeight, out IFireTarget fireTarget)
         {
             fireTarget = null;
+            if (TryFindFireGroupNear(center, radius, fromPosition, referenceHeight, out _, out IFireTarget representativeFireTarget))
+            {
+                fireTarget = representativeFireTarget;
+                return fireTarget != null;
+            }
+
             EnsureFireBuffer();
 
             float effectiveRadius = Mathf.Max(0.05f, radius);
@@ -490,6 +508,75 @@ namespace TrueJourney.BotBehavior
             return fireTarget != null;
         }
 
+        private bool TryFindFireGroupNear(
+            Vector3 center,
+            float radius,
+            Vector3 fromPosition,
+            float referenceHeight,
+            out IFireGroupTarget fireGroupTarget,
+            out IFireTarget representativeFireTarget)
+        {
+            fireGroupTarget = null;
+            representativeFireTarget = null;
+            EnsureFireBuffer();
+
+            float effectiveRadius = Mathf.Max(0.05f, radius);
+            int hitCount = Physics.OverlapSphereNonAlloc(
+                center,
+                effectiveRadius,
+                fireBuffer,
+                fireMask,
+                QueryTriggerInteraction.Collide);
+            if (hitCount <= 0)
+            {
+                return false;
+            }
+
+            float bestDistanceSq = float.PositiveInfinity;
+            for (int i = 0; i < hitCount; i++)
+            {
+                Collider hit = fireBuffer[i];
+                fireBuffer[i] = null;
+
+                IFireGroupTarget candidateGroup = FindFireGroupTarget(hit);
+                if (candidateGroup == null || !candidateGroup.HasActiveFires)
+                {
+                    continue;
+                }
+
+                Vector3 candidatePosition = candidateGroup.GetClosestActiveFirePosition(fromPosition);
+                if (Mathf.Abs(candidatePosition.y - referenceHeight) > Mathf.Max(0.05f, fireVerticalTolerance))
+                {
+                    continue;
+                }
+
+                float distanceSq = (candidatePosition - fromPosition).sqrMagnitude;
+                if (distanceSq >= bestDistanceSq)
+                {
+                    continue;
+                }
+
+                bestDistanceSq = distanceSq;
+                fireGroupTarget = candidateGroup;
+            }
+
+            if (fireGroupTarget == null)
+            {
+                return false;
+            }
+
+            representativeFireTarget = FindClosestRegisteredFireTarget(
+                fireGroupTarget.GetClosestActiveFirePosition(fromPosition),
+                effectiveRadius * effectiveRadius);
+            RememberFireGroup(fireGroupTarget, fromPosition);
+            if (representativeFireTarget != null)
+            {
+                RememberFire(representativeFireTarget);
+            }
+
+            return representativeFireTarget != null;
+        }
+
         public void RememberRescuable(IRescuableTarget target)
         {
             if (target == null)
@@ -510,6 +597,17 @@ namespace TrueJourney.BotBehavior
 
             perceptionMemory?.RememberFire(target);
             BotRuntimeRegistry.SharedIncidentBlackboard.RememberFire(target);
+        }
+
+        public void RememberFireGroup(IFireGroupTarget target, Vector3 referencePosition)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            perceptionMemory?.RememberFireGroup(target, referencePosition);
+            BotRuntimeRegistry.SharedIncidentBlackboard.RememberFireGroup(target, referencePosition);
         }
 
         public void RememberBreakable(IBotBreakableTarget target)
@@ -674,6 +772,83 @@ namespace TrueJourney.BotBehavior
             }
 
             return null;
+        }
+
+        private static IFireGroupTarget FindFireGroupTarget(Collider collider)
+        {
+            if (collider == null)
+            {
+                return null;
+            }
+
+            if (TryGetFireGroupTarget(collider, out IFireGroupTarget direct))
+            {
+                return direct;
+            }
+
+            if (collider.attachedRigidbody != null && TryGetFireGroupTarget(collider.attachedRigidbody, out IFireGroupTarget rigidbodyOwner))
+            {
+                return rigidbodyOwner;
+            }
+
+            Transform parent = collider.transform.parent;
+            while (parent != null)
+            {
+                if (TryGetFireGroupTarget(parent, out IFireGroupTarget parentGroup))
+                {
+                    return parentGroup;
+                }
+
+                parent = parent.parent;
+            }
+
+            return null;
+        }
+
+        private static bool TryGetFireGroupTarget(Component component, out IFireGroupTarget fireGroupTarget)
+        {
+            fireGroupTarget = null;
+            if (component == null)
+            {
+                return false;
+            }
+
+            MonoBehaviour[] behaviours = component.GetComponents<MonoBehaviour>();
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                if (behaviours[i] is IFireGroupTarget candidate)
+                {
+                    fireGroupTarget = candidate;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static IFireTarget FindClosestRegisteredFireTarget(Vector3 worldPosition, float maxDistanceSq)
+        {
+            IFireTarget bestTarget = null;
+            float bestDistanceSq = maxDistanceSq;
+
+            foreach (IFireTarget candidate in BotRuntimeRegistry.ActiveFireTargets)
+            {
+                if (candidate == null || !candidate.IsBurning)
+                {
+                    continue;
+                }
+
+                float distanceSq = (candidate.GetWorldPosition() - worldPosition).sqrMagnitude;
+                if (distanceSq >= bestDistanceSq)
+                {
+                    continue;
+                }
+
+                bestDistanceSq = distanceSq;
+                bestTarget = candidate;
+            }
+
+            return bestTarget;
         }
 
         private static IBotPryTarget FindPryTarget(Collider collider)

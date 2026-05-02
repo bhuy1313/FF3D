@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: Map1_IncidentMission
   m_EditorClassIdentifier: Assembly-CSharp::MissionDefinition
   missionId: map1-incident
-  operationTitleLocalizationKey: 
+  operationTitleLocalizationKey: mission.map1.operation
   operationTitle: 'OPERATION: SUBURBAN FIRE'
-  missionTitleLocalizationKey: 
+  missionTitleLocalizationKey: mission.map1.title
   missionTitle: Resolve Map1 Incident
-  missionDescriptionLocalizationKey: 
+  missionDescriptionLocalizationKey: mission.map1.description
   missionDescription: Rescue all remaining victims in Map1.
   timeLimitSeconds: 0
   scoreConfig:
@@ -54,7 +54,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d22fafc10ff4fcdbef9c5d66f63d16f, type: 3}
   m_Name: Map1_IncidentMission_ExtinguishFiresObjectiveDefinition
   m_EditorClassIdentifier: Assembly-CSharp::ExtinguishFiresObjectiveDefinition
-  objectiveTitleLocalizationKey: 
+  objectiveTitleLocalizationKey: mission.objective.extinguish_fires.title
   objectiveTitle: 
   objectiveDescriptionLocalizationKey: 
   objectiveDescription: 
@@ -92,7 +92,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b6c5c86e3c8f4a5f97e42d1df5b43f35, type: 3}
   m_Name: Map1_RescueTargetsObjective_RescueTargetsObjectiveDefinition
   m_EditorClassIdentifier: Assembly-CSharp::RescueTargetsObjectiveDefinition
-  objectiveTitleLocalizationKey: 
+  objectiveTitleLocalizationKey: mission.objective.rescue_targets.title
   objectiveTitle: Rescue Victims
   objectiveDescriptionLocalizationKey: 
   objectiveDescription: Rescue all remaining victims in Map1.

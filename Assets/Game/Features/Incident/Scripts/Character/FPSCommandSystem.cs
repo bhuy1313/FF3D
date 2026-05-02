@@ -997,21 +997,21 @@ namespace StarterAssets
                 return true;
             }
 
-            if (TryFindInHitHierarchy(hit.collider, out IFireTarget fireTarget) &&
-                fireTarget != null &&
-                fireTarget.IsBurning)
-            {
-                commandType = BotCommandType.Extinguish;
-                destination = fireTarget.GetWorldPosition();
-                return true;
-            }
-
             if (TryFindInHitHierarchy(hit.collider, out IFireGroupTarget fireGroupTarget) &&
                 fireGroupTarget != null &&
                 fireGroupTarget.HasActiveFires)
             {
                 commandType = BotCommandType.Extinguish;
                 destination = fireGroupTarget.GetWorldCenter();
+                return true;
+            }
+
+            if (TryFindInHitHierarchy(hit.collider, out IFireTarget fireTarget) &&
+                fireTarget != null &&
+                fireTarget.IsBurning)
+            {
+                commandType = BotCommandType.Extinguish;
+                destination = fireTarget.GetWorldPosition();
                 return true;
             }
 

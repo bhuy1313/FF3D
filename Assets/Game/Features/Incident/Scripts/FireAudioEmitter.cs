@@ -1,13 +1,14 @@
+using TrueJourney.BotBehavior;
 using UnityEngine;
 
 [DisallowMultipleComponent]
-[RequireComponent(typeof(Fire))]
 public sealed class FireAudioEmitter : MonoBehaviour
 {
     [Header("Audio")]
     [SerializeField] private AudioId sound = AudioId.FireLoop;
 
-    private Fire fire;
+    private MonoBehaviour fireSourceBehaviour;
+    private IFireTarget fireTarget;
     private AudioSource loopSource;
     private bool isBound;
     private bool cachedBurningState;
@@ -19,42 +20,39 @@ public sealed class FireAudioEmitter : MonoBehaviour
 
     private void Awake()
     {
-        Initialize(GetComponent<Fire>());
+        Initialize(ResolveFireSourceBehaviour());
     }
 
     private void OnEnable()
     {
         if (!isBound)
         {
-            Initialize(GetComponent<Fire>());
+            Initialize(ResolveFireSourceBehaviour());
             return;
         }
 
-        cachedBurningState = fire != null && fire.IsBurning;
+        cachedBurningState = fireTarget != null && fireTarget.IsBurning;
         RefreshLoopState();
     }
 
-    public void Initialize(Fire targetFire)
+    public void Initialize(MonoBehaviour targetFireSource)
     {
-        if (targetFire == null)
+        if (targetFireSource == null || targetFireSource is not IFireTarget targetFire)
         {
             return;
         }
 
-        if (fire == targetFire && isBound)
+        if (fireSourceBehaviour == targetFireSource && isBound)
         {
-            cachedBurningState = fire.IsBurning;
+            cachedBurningState = fireTarget != null && fireTarget.IsBurning;
             RefreshLoopState();
             return;
         }
 
         Unbind();
-        fire = targetFire;
-        cachedBurningState = fire.IsBurning;
-
-        fire.BurningStateChanged += HandleBurningStateChanged;
-        fire.Ignited += HandleIgnited;
-        fire.Extinguished += HandleExtinguished;
+        fireSourceBehaviour = targetFireSource;
+        fireTarget = targetFire;
+        cachedBurningState = fireTarget.IsBurning;
         isBound = true;
 
         RefreshLoopState();
@@ -73,40 +71,22 @@ public sealed class FireAudioEmitter : MonoBehaviour
 
     private void Update()
     {
-        if (!isBound || fire == null || (!cachedBurningState && loopSource == null))
+        if (!isBound || fireTarget == null || (!cachedBurningState && loopSource == null))
         {
             return;
         }
 
-        if (cachedBurningState != fire.IsBurning)
+        if (cachedBurningState != fireTarget.IsBurning)
         {
-            cachedBurningState = fire.IsBurning;
+            cachedBurningState = fireTarget.IsBurning;
         }
 
-        RefreshLoopState();
-    }
-
-    private void HandleIgnited()
-    {
-        cachedBurningState = true;
-        RefreshLoopState();
-    }
-
-    private void HandleExtinguished()
-    {
-        cachedBurningState = false;
-        RefreshLoopState();
-    }
-
-    private void HandleBurningStateChanged(bool isBurning)
-    {
-        cachedBurningState = isBurning;
         RefreshLoopState();
     }
 
     private void RefreshLoopState()
     {
-        if (!isBound || fire == null)
+        if (!isBound || fireTarget == null)
         {
             return;
         }
@@ -123,7 +103,7 @@ public sealed class FireAudioEmitter : MonoBehaviour
             return;
         }
 
-        float intensity01 = fire.NormalizedHp;
+        float intensity01 = Mathf.Clamp01(fireTarget.GetWorldRadius());
         float volumeScale = Mathf.Lerp(MinLoopVolume, MaxLoopVolume, intensity01);
         float pitch = Mathf.Lerp(MinPitch, MaxPitch, intensity01);
 
@@ -156,17 +136,30 @@ public sealed class FireAudioEmitter : MonoBehaviour
     {
         StopLoop();
 
-        if (!isBound || fire == null)
+        if (!isBound || fireSourceBehaviour == null)
         {
-            fire = null;
+            fireSourceBehaviour = null;
+            fireTarget = null;
             isBound = false;
             return;
         }
 
-        fire.BurningStateChanged -= HandleBurningStateChanged;
-        fire.Ignited -= HandleIgnited;
-        fire.Extinguished -= HandleExtinguished;
-        fire = null;
+        fireSourceBehaviour = null;
+        fireTarget = null;
         isBound = false;
+    }
+
+    private MonoBehaviour ResolveFireSourceBehaviour()
+    {
+        MonoBehaviour[] behaviours = GetComponents<MonoBehaviour>();
+        for (int i = 0; i < behaviours.Length; i++)
+        {
+            if (behaviours[i] is IFireTarget)
+            {
+                return behaviours[i];
+            }
+        }
+
+        return null;
     }
 }

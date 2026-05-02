@@ -412,12 +412,20 @@ public class PlayerHazardExposure : MonoBehaviour
 
     private float GetFireTargetStrength(IFireTarget fireTarget)
     {
-        if (fireTarget is Fire fire)
+        if (fireTarget == null)
         {
-            return Mathf.Lerp(0.5f, 1f, fire.NormalizedHp);
+            return 0f;
         }
 
-        return Mathf.Clamp01(Mathf.Max(0.5f, fireTarget.GetWorldRadius()));
+        float radiusStrength = Mathf.Clamp01(Mathf.Max(0.5f, fireTarget.GetWorldRadius()));
+        float hazardModifier = fireTarget.FireType switch
+        {
+            FireHazardType.GasFed => 1f,
+            FireHazardType.FlammableLiquid => 0.95f,
+            FireHazardType.Electrical => 0.85f,
+            _ => 0.9f
+        };
+        return Mathf.Clamp01(radiusStrength * hazardModifier);
     }
 
     private bool ShouldIgnoreFireGlareOccluder(

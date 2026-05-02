@@ -76,7 +76,8 @@ namespace StarterAssets
         private GameObject grabbedPreviewRoot;
         private Material grabbedPreviewMaterial;
         private ICustomGrabPlacement grabbedPlacementOverride;
-        private readonly List<Fire> grabbedFireSources = new List<Fire>();
+        private readonly List<MonoBehaviour> grabbedBurnableSources = new List<MonoBehaviour>();
+        private bool hasLoggedLegacyGrabFireWarning;
         private IRescuableTarget cachedCarriedRescuable;
         private bool isCarryingVictim;
 
@@ -447,7 +448,7 @@ namespace StarterAssets
             grabbedTransform.localPosition = Vector3.zero;
             grabbedTransform.localRotation = Quaternion.identity;
             grabbedPlacementOverride = FindCustomGrabPlacement(grabbedTransform);
-            CacheGrabbedFireSources(grabbedTransform);
+            CacheGrabbedBurnSources(grabbedTransform);
             grabbedPlacementOverride?.OnGrabStarted();
             RebuildGrabPreview();
         }
@@ -478,7 +479,7 @@ namespace StarterAssets
             grabbedPlacementOverride?.OnGrabCancelled();
 
             DestroyGrabPreview();
-            grabbedFireSources.Clear();
+            grabbedBurnableSources.Clear();
             grabbedBody = null;
             grabbedOriginalParent = null;
             grabbedPlacementOverride = null;
@@ -687,7 +688,7 @@ namespace StarterAssets
             }
 
             DestroyGrabPreview();
-            grabbedFireSources.Clear();
+            grabbedBurnableSources.Clear();
             grabbedBody = null;
             grabbedOriginalParent = null;
             grabbedPlacementOverride = null;
@@ -1078,26 +1079,26 @@ namespace StarterAssets
                 return;
             }
 
-            if (grabbedFireSources.Count == 0)
+            if (grabbedBurnableSources.Count == 0)
             {
-                CacheGrabbedFireSources(grabbedBody.transform);
-                if (grabbedFireSources.Count == 0)
+                CacheGrabbedBurnSources(grabbedBody.transform);
+                if (grabbedBurnableSources.Count == 0)
                 {
                     return;
                 }
             }
 
             float maxDamagePerSecond = 0f;
-            for (int i = grabbedFireSources.Count - 1; i >= 0; i--)
+            for (int i = grabbedBurnableSources.Count - 1; i >= 0; i--)
             {
-                Fire fire = grabbedFireSources[i];
-                if (fire == null)
+                MonoBehaviour source = grabbedBurnableSources[i];
+                if (source == null || source is not IBurnable burnable)
                 {
-                    grabbedFireSources.RemoveAt(i);
+                    grabbedBurnableSources.RemoveAt(i);
                     continue;
                 }
 
-                maxDamagePerSecond = Mathf.Max(maxDamagePerSecond, fire.CurrentContactDamagePerSecond);
+                maxDamagePerSecond = Mathf.Max(maxDamagePerSecond, burnable.CurrentFireContactDamagePerSecond);
             }
 
             if (maxDamagePerSecond > 0f)
@@ -1106,20 +1107,39 @@ namespace StarterAssets
             }
         }
 
-        private void CacheGrabbedFireSources(Transform grabbedTransform)
+        private void CacheGrabbedBurnSources(Transform grabbedTransform)
         {
-            grabbedFireSources.Clear();
+            grabbedBurnableSources.Clear();
             if (grabbedTransform == null)
             {
                 return;
             }
 
-            if (grabbedTransform.TryGetComponent(out IBurnable burnable) && burnable.FireSource != null)
+            if (grabbedTransform.TryGetComponent(out MonoBehaviour directBurnableBehaviour) &&
+                directBurnableBehaviour is IBurnable directBurnable &&
+                directBurnable.CurrentFireContactDamagePerSecond > 0f)
             {
-                grabbedFireSources.Add(burnable.FireSource);
+                grabbedBurnableSources.Add(directBurnableBehaviour);
+                return;
             }
 
-            grabbedTransform.GetComponentsInChildren(true, grabbedFireSources);
+            MonoBehaviour[] behaviours = grabbedTransform.GetComponentsInChildren<MonoBehaviour>(true);
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                MonoBehaviour behaviour = behaviours[i];
+                if (behaviour is IBurnable burnable && burnable.CurrentFireContactDamagePerSecond > 0f)
+                {
+                    grabbedBurnableSources.Add(behaviour);
+                }
+            }
+
+            if (!hasLoggedLegacyGrabFireWarning && grabbedBurnableSources.Count > 0)
+            {
+                hasLoggedLegacyGrabFireWarning = true;
+                Debug.LogWarning(
+                    $"{nameof(FPSInteractionSystem)} detected burnable sources on grabbed objects through legacy-compatible paths. Prefer node-based fire integrations for new interactable content.",
+                    this);
+            }
         }
 
         private static ICustomGrabPlacement FindCustomGrabPlacement(Transform grabbedTransform)

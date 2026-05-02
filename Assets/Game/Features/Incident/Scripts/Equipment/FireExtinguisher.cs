@@ -369,7 +369,16 @@ public class FireExtinguisher : MonoBehaviour, IInteractable, IPickupable, IUsab
     {
         if (fireSimulationManager == null)
         {
-            fireSimulationManager = FindAnyObjectByType<FireSimulationManager>(FindObjectsInactive.Include);
+            fireSimulationManager = GetComponentInParent<FireSimulationManager>(true);
+        }
+
+        if (fireSimulationManager == null)
+        {
+            Transform root = transform.root;
+            if (root != null)
+            {
+                fireSimulationManager = root.GetComponentInChildren<FireSimulationManager>(true);
+            }
         }
 
         return fireSimulationManager;

@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: Map3_IncidentMission
   m_EditorClassIdentifier: Assembly-CSharp::MissionDefinition
   missionId: incident
-  operationTitleLocalizationKey: 
+  operationTitleLocalizationKey: mission.map3.operation
   operationTitle: 'OPERATION: SUBURBAN FIRE'
-  missionTitleLocalizationKey: 
+  missionTitleLocalizationKey: mission.map3.title
   missionTitle: Resolve Incident
-  missionDescriptionLocalizationKey: 
+  missionDescriptionLocalizationKey: mission.map3.description
   missionDescription: Extinguish fires and rescue civilians.
   timeLimitSeconds: 0
   scoreConfig:
@@ -54,7 +54,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b6c5c86e3c8f4a5f97e42d1df5b43f35, type: 3}
   m_Name: Map3_IncidentMission_RescueTargetsObjectiveDefinition
   m_EditorClassIdentifier: Assembly-CSharp::RescueTargetsObjectiveDefinition
-  objectiveTitleLocalizationKey: 
+  objectiveTitleLocalizationKey: mission.objective.rescue_targets.title
   objectiveTitle: 
   objectiveDescriptionLocalizationKey: 
   objectiveDescription: 
@@ -73,7 +73,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d22fafc10ff4fcdbef9c5d66f63d16f, type: 3}
   m_Name: Map3_IncidentMission_ExtinguishFiresObjectiveDefinition
   m_EditorClassIdentifier: Assembly-CSharp::ExtinguishFiresObjectiveDefinition
-  objectiveTitleLocalizationKey: 
+  objectiveTitleLocalizationKey: mission.objective.extinguish_fires.title
   objectiveTitle: 
   objectiveDescriptionLocalizationKey: 
   objectiveDescription: 

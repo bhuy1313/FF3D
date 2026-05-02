@@ -20,12 +20,6 @@ public class SceneStartupFlow : MonoBehaviour
     private bool runOnStart = true;
 
     [SerializeField]
-    private bool collectTasksFromChildren = true;
-
-    [SerializeField]
-    private bool includeInactiveTasks = true;
-
-    [SerializeField]
     private bool lockPlayerUntilReady = true;
 
     [SerializeField]
@@ -73,11 +67,18 @@ public class SceneStartupFlow : MonoBehaviour
     private PlayerActionLock runtimeActionLock;
     private StarterAssetsInputs runtimeInputs;
     private bool runtimeLockAcquired;
+    private int totalTaskCount;
+    private int completedTaskCount;
 
     public StartupState State => state;
     public bool IsRunning => state == StartupState.Running;
     public bool IsGameplayReady => state == StartupState.Completed;
     public SceneStartupTask ActiveTask => activeTask;
+    public IReadOnlyList<SceneStartupTask> ExplicitTasks => explicitTasks;
+    public int TotalTaskCount => totalTaskCount;
+    public int CompletedTaskCount => completedTaskCount;
+    public bool HasCompletedAllTasks => state == StartupState.Completed && completedTaskCount >= totalTaskCount;
+    public bool HasStarted => state != StartupState.Idle;
 
     private void Start()
     {
@@ -103,6 +104,9 @@ public class SceneStartupFlow : MonoBehaviour
     {
         state = StartupState.Running;
         bool completed = false;
+        List<SceneStartupTask> tasks = BuildTaskList();
+        totalTaskCount = tasks.Count;
+        completedTaskCount = 0;
 
         runtimeActionLock = ResolvePlayerActionLock(lockPlayerUntilReady);
         runtimeInputs = ResolvePlayerInputs();
@@ -121,11 +125,10 @@ public class SceneStartupFlow : MonoBehaviour
                 ClearPlayerInputs(runtimeInputs);
             }
 
-            List<SceneStartupTask> tasks = BuildTaskList();
             for (int i = 0; i < tasks.Count; i++)
             {
                 SceneStartupTask task = tasks[i];
-                if (task == null || !task.RunTask)
+                if (task == null)
                 {
                     continue;
                 }
@@ -137,6 +140,7 @@ public class SceneStartupFlow : MonoBehaviour
                 }
 
                 yield return task.Run(this);
+                completedTaskCount++;
             }
 
             // Trigger entrance animation (one-shot) if configured
@@ -195,6 +199,8 @@ public class SceneStartupFlow : MonoBehaviour
         runtimeInputs = null;
         activeTask = null;
         startupRoutine = null;
+        totalTaskCount = 0;
+        completedTaskCount = 0;
 
         if (state == StartupState.Running)
         {
@@ -218,51 +224,7 @@ public class SceneStartupFlow : MonoBehaviour
             results.Add(task);
         }
 
-        if (collectTasksFromChildren)
-        {
-            SceneStartupTask[] childTasks = GetComponentsInChildren<SceneStartupTask>(
-                includeInactiveTasks
-            );
-            for (int i = 0; i < childTasks.Length; i++)
-            {
-                SceneStartupTask task = childTasks[i];
-                if (task == null || !seen.Add(task))
-                {
-                    continue;
-                }
-
-                results.Add(task);
-            }
-        }
-
-        results.Sort(CompareTasks);
         return results;
-    }
-
-    private static int CompareTasks(SceneStartupTask left, SceneStartupTask right)
-    {
-        if (ReferenceEquals(left, right))
-        {
-            return 0;
-        }
-
-        if (left == null)
-        {
-            return 1;
-        }
-
-        if (right == null)
-        {
-            return -1;
-        }
-
-        int orderComparison = left.Order.CompareTo(right.Order);
-        if (orderComparison != 0)
-        {
-            return orderComparison;
-        }
-
-        return string.CompareOrdinal(left.TaskName, right.TaskName);
     }
 
     public PlayerActionLock ResolvePlayerActionLock(bool createIfMissing = true)

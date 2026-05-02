@@ -1,3 +1,4 @@
+using TrueJourney.BotBehavior;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
@@ -5,7 +6,7 @@ using UnityEngine.Rendering.Universal;
 public sealed class FireScorchDecalController : MonoBehaviour
 {
     [Header("References")]
-    [SerializeField] private Fire fire;
+    [SerializeField] private MonoBehaviour fireSourceBehaviour;
     [SerializeField] private Material scorchMaterial;
 
     [Header("Projection")]
@@ -29,42 +30,21 @@ public sealed class FireScorchDecalController : MonoBehaviour
     private bool wasBurning;
     private bool extinguished;
     private bool warnedMissingMaterial;
+    private IFireTarget fireTarget;
 
     private static Transform decalRoot;
 
     private void Awake()
     {
-        if (fire == null)
-        {
-            fire = GetComponentInParent<Fire>();
-        }
-
+        ResolveFireTarget();
         EnsureProjector();
         SyncImmediate();
     }
 
     private void OnEnable()
     {
-        if (fire == null)
-        {
-            fire = GetComponentInParent<Fire>();
-        }
-
-        if (fire != null)
-        {
-            fire.BurningStateChanged += HandleBurningStateChanged;
-            fire.Extinguished += HandleExtinguished;
-            wasBurning = fire.IsBurning;
-        }
-    }
-
-    private void OnDisable()
-    {
-        if (fire != null)
-        {
-            fire.BurningStateChanged -= HandleBurningStateChanged;
-            fire.Extinguished -= HandleExtinguished;
-        }
+        ResolveFireTarget();
+        wasBurning = fireTarget != null && fireTarget.IsBurning;
     }
 
     private void OnDestroy()
@@ -77,13 +57,13 @@ public sealed class FireScorchDecalController : MonoBehaviour
 
     private void Update()
     {
-        if (fire == null)
+        if (fireTarget == null)
         {
             return;
         }
 
-        bool isBurning = fire.IsBurning;
-        float intensity01 = isBurning ? fire.NormalizedHp : 0f;
+        bool isBurning = fireTarget.IsBurning;
+        float intensity01 = isBurning ? ResolveFireIntensity01() : 0f;
         if (isBurning)
         {
             extinguished = false;
@@ -119,30 +99,16 @@ public sealed class FireScorchDecalController : MonoBehaviour
         }
     }
 
-    private void HandleBurningStateChanged(bool isBurning)
-    {
-        wasBurning = isBurning;
-    }
-
-    private void HandleExtinguished()
-    {
-        extinguished = true;
-        if (projector != null && persistAfterExtinguished)
-        {
-            projector.gameObject.SetActive(scorchAmount > 0.001f);
-        }
-    }
-
     private void SyncImmediate()
     {
-        if (fire == null)
+        if (fireTarget == null)
         {
             return;
         }
 
-        scorchAmount = fire.IsBurning ? Mathf.Max(scorchAmount, fire.NormalizedHp * 0.35f) : scorchAmount;
+        scorchAmount = fireTarget.IsBurning ? Mathf.Max(scorchAmount, ResolveFireIntensity01() * 0.35f) : scorchAmount;
         UpdateProjectorPlacement();
-        ApplyProjectorVisuals(fire.IsBurning ? fire.NormalizedHp : 0f);
+        ApplyProjectorVisuals(fireTarget.IsBurning ? ResolveFireIntensity01() : 0f);
     }
 
     private void EnsureProjector()
@@ -208,7 +174,7 @@ public sealed class FireScorchDecalController : MonoBehaviour
             return;
         }
 
-        float fireRadius = fire != null ? fire.GetWorldRadius() : 1f;
+        float fireRadius = fireTarget != null ? fireTarget.GetWorldRadius() : 1f;
         float targetSize = Mathf.Lerp(minSize, Mathf.Max(maxSize, fireRadius), Mathf.Clamp01(scorchAmount));
         float opacity = Mathf.Clamp01(Mathf.Max(scorchAmount, intensity01 * 0.25f)) * maxOpacity;
 
@@ -216,6 +182,40 @@ public sealed class FireScorchDecalController : MonoBehaviour
         projector.pivot = new Vector3(0f, 0f, projector.size.z * 0.5f);
         projector.fadeFactor = opacity;
         projector.gameObject.SetActive(opacity > 0.001f || (persistAfterExtinguished && scorchAmount > 0.001f));
+    }
+
+    private void ResolveFireTarget()
+    {
+        if (fireSourceBehaviour == null)
+        {
+            MonoBehaviour[] parentBehaviours = GetComponentsInParent<MonoBehaviour>(true);
+            for (int i = 0; i < parentBehaviours.Length; i++)
+            {
+                MonoBehaviour candidate = parentBehaviours[i];
+                if (candidate is IFireTarget)
+                {
+                    fireSourceBehaviour = candidate;
+                    break;
+                }
+            }
+        }
+
+        fireTarget = fireSourceBehaviour as IFireTarget;
+    }
+
+    private float ResolveFireIntensity01()
+    {
+        if (fireTarget == null || !fireTarget.IsBurning)
+        {
+            return 0f;
+        }
+
+        if (fireSourceBehaviour is IThermalSignatureSource thermalSource)
+        {
+            return Mathf.Clamp01(thermalSource.GetThermalSignatureStrength());
+        }
+
+        return Mathf.Clamp01(fireTarget.GetWorldRadius());
     }
 
     private static Vector3 ResolveTangent(Vector3 normal)

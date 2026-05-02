@@ -371,7 +371,14 @@ public class SmokeHazard : MonoBehaviour
     private void ResolveLinkedObjects(bool forceRefresh)
     {
         if (fireSimulationManager == null)
-            fireSimulationManager = FindAnyObjectByType<FireSimulationManager>(FindObjectsInactive.Include);
+            fireSimulationManager = GetComponentInParent<FireSimulationManager>(true);
+
+        if (fireSimulationManager == null)
+        {
+            Transform root = transform.root;
+            if (root != null)
+                fireSimulationManager = root.GetComponentInChildren<FireSimulationManager>(true);
+        }
 
         if (autoCollectChildVentPoints && (forceRefresh || linkedVentPoints == null || linkedVentPoints.Length == 0))
             linkedVentPoints = CollectAutoVentPoints();

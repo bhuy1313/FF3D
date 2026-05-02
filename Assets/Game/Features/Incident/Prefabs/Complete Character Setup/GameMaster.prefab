@@ -10,9 +10,8 @@ GameObject:
   m_Component:
   - component: {fileID: 642135791357913580}
   - component: {fileID: 642135791357913581}
-  - component: {fileID: 642135791357913582}
   m_Layer: 0
-  m_Name: IncidentPayloadStartup
+  m_Name: IncidentPayloadStartupTask
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -31,8 +30,9 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 642135791357913584}
-  - {fileID: 642135791357913587}
+  - {fileID: 4776230327826014583}
+  - {fileID: 5961269165052138949}
+  - {fileID: 5603700801687358895}
   m_Father: {fileID: 5835050266681781383}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &642135791357913581
@@ -47,154 +47,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4f07f3d00d1e47ae9e59d76e56cb2e7d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IncidentPayloadStartupTask
-  runTask: 1
-  order: -100
-  taskNameOverride: Apply Incident Payload
   clearPendingPayloadAfterApply: 1
   logResolvedPayload: 1
-  explicitMapSetupRoot: {fileID: 642135791357913582}
+  explicitMapSetupRoot: {fileID: 6795961276938328196}
   explicitAnchors: []
---- !u!114 &642135791357913582
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 642135791357913579}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 246728361db84eef8fd115f8a61752e3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IncidentMapSetupRoot
-  fireSpawnProfile: {fileID: 11400000, guid: 0b83c2d57031b0f43bf49a07481f2ff0, type: 2}
-  fireSimulationManager: {fileID: 9103052700435118138}
-  collectStepsFromChildren: 1
-  includeInactiveSteps: 1
-  explicitSteps: []
-  logSetupSteps: 1
---- !u!1 &642135791357913583
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 642135791357913584}
-  - component: {fileID: 642135791357913585}
-  - component: {fileID: 642135791357913589}
-  m_Layer: 0
-  m_Name: AnchorHazardSetup
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &642135791357913584
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 642135791357913583}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 642135791357913580}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &642135791357913585
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 642135791357913583}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0f8384b17db44f3798165a0ce2fd7358, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IncidentAnchorHazardSetupStep
-  runStep: 1
-  order: 0
-  stepNameOverride: Apply Anchor Hazard
-  explicitAnchors: []
-  includeInactiveAnchors: 1
-  warnWhenIsolationDeviceMissing: 1
---- !u!114 &642135791357913589
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 642135791357913583}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: db4c5d5ea9e243969ec980ecdb99e4aa, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IncidentOriginAreaSetupStep
-  runStep: 1
-  order: -25
-  stepNameOverride: Resolve Origin Area
-  explicitAreas: []
-  collectAreasFromScene: 1
-  includeInactiveAreas: 1
-  warnWhenIsolationDeviceMissing: 1
-  logResolvedIgnitionSource: 0
---- !u!1 &642135791357913586
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 642135791357913587}
-  - component: {fileID: 642135791357913588}
-  m_Layer: 0
-  m_Name: VentilationPresetSetup
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &642135791357913587
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 642135791357913586}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 642135791357913580}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &642135791357913588
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 642135791357913586}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b06b19d7b7e24ca1b3ed3314d2907db2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IncidentVentilationPresetSetupStep
-  runStep: 1
-  order: -50
-  stepNameOverride: Apply Ventilation Preset
-  explicitBindings: []
-  collectBindingsFromScene: 1
-  includeInactiveBindings: 1
-  stopAfterFirstAppliedBinding: 0
-  warnWhenPresetUnmapped: 0
 --- !u!1 &1056660501349176053
 GameObject:
   m_ObjectHideFlags: 0
@@ -263,7 +119,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LanguageManager
   defaultLanguage: 0
   localizationTable: {fileID: 11400000, guid: 1d7332cf891b3294ea373abb22fcfb31, type: 2}
-  keepAliveAcrossScenes: 1
+  keepAliveAcrossScenes: 0
   vietnameseTMPFont: {fileID: 0}
   englishTMPFont: {fileID: 0}
   vietnameseLegacyFont: {fileID: 0}
@@ -283,12 +139,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cda909ff7cfb4c1e8f7f530ec4d2f176, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IncidentMissionSystem
-  missionDefinition: {fileID: 0}
+  missionDefinition: {fileID: 11400000, guid: 389139607eb3d2f46a78cbf27c73a640, type: 2}
   sceneObjectRegistry: {fileID: 7857196384671778857}
   missionId: incident
   missionTitle: Resolve Incident
   missionDescription: Extinguish fires and rescue civilians.
-  autoStartOnEnable: 0
+  autoStartOnEnable: 1
   timeLimitSeconds: 0
   startDelay: 0
   showMissionOverlay: 0
@@ -319,6 +175,7 @@ MonoBehaviour:
   currentStartDelay: 0
   totalTrackedFires: 0
   extinguishedFireCount: 0
+  peakHazardLinkedFireCount: 0
   totalTrackedRescuables: 0
   rescuedCount: 0
   totalTrackedVictims: 0
@@ -396,10 +253,7 @@ MonoBehaviour:
   deathCameraFallDuration: 0.9
   deathCameraFallDropDistance: 0.6
   deathCameraFallForwardDistance: 0.3
-  deathCameraFallPitch: 75
-  deathCameraFallRoll: 12
   deathCameraFallYawJitter: 4
-  deathCameraGroundClearance: 0.1
   deathCameraGroundProbeHeight: 0.8
   deathCameraGroundProbeDistance: 3
   deathCameraGroundMask:
@@ -430,9 +284,6 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   deathCameraShakePositionAmplitude: 0.045
-  deathCameraShakeRotationAmplitude: 2.8
-  deathCameraShakeFrequency: 13
-  deathCameraShakeDamping: 1.7
   resultLabel: RESULT
   completedTitle: Mission Complete
   failedTitle: Mission Failed
@@ -464,12 +315,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SceneStartupFlow
   runOnStart: 1
-  collectTasksFromChildren: 1
-  includeInactiveTasks: 1
   lockPlayerUntilReady: 1
   clearInputsWhileLocked: 1
   explicitTasks:
+  - {fileID: 8257045420443869963}
   - {fileID: 0}
+  - {fileID: 2207755680025630218}
+  - {fileID: 5724600685280160435}
+  - {fileID: 7199952912551866077}
   playerControllerOverride: {fileID: 0}
   playerActionLock: {fileID: 0}
   playerInputs: {fileID: 0}
@@ -490,217 +343,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::IncidentMapSetupRoot
   fireSpawnProfile: {fileID: 11400000, guid: 0b83c2d57031b0f43bf49a07481f2ff0, type: 2}
   fireSimulationManager: {fileID: 9103052700435118138}
-  collectStepsFromChildren: 1
-  includeInactiveSteps: 1
-  explicitSteps: []
-  logSetupSteps: 0
---- !u!1 &1253849046977209006
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 8726618591125819029}
-  - component: {fileID: 6598967934756895505}
-  - component: {fileID: 1418926316527961714}
-  - component: {fileID: 7604033889564652186}
-  m_Layer: 0
-  m_Name: ClusterViewTemplate
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!4 &8726618591125819029
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1253849046977209006}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 6627407048159654623}
-  m_Father: {fileID: 3725515602443661945}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &6598967934756895505
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1253849046977209006}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e2899d485f9c497f819911111c4119f5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::FireClusterView
-  visualRoot: {fileID: 6627407048159654623}
-  clusterLight: {fileID: 1418926316527961714}
-  particleSystems: []
-  maxVisualRadius: 2.5
-  maxLightIntensity: 2
-  flameScaleRange: {x: 0.7, y: 1.35}
-  memberVisualOffset: {x: 0, y: 0.25, z: 0}
-  clusterLightLocalOffset: {x: 0, y: 0.5, z: 0}
-  ordinaryFireVisualPrefab: {fileID: 2886283455753138478, guid: 36143e07e569f9c43a4d99f7f892da68, type: 3}
-  electricalFireVisualPrefab: {fileID: 2886283455753138478, guid: 056ae51b33d10964e815a77b5ced7589, type: 3}
-  flammableLiquidFireVisualPrefab: {fileID: 2886283455753138478, guid: 9e88bd0cbfe197b4eb9e8796b900d5cb, type: 3}
-  gasFireVisualPrefab: {fileID: 2886283455753138478, guid: 18fee232004d8064aa84acc732629a23, type: 3}
-  createFallbackVisualWhenNoParticles: 1
-  fallbackCoreColor: {r: 1, g: 0.45, b: 0.1, a: 0.95}
-  fallbackGlowColor: {r: 1, g: 0.2, b: 0.02, a: 0.55}
---- !u!108 &1418926316527961714
-Light:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1253849046977209006}
-  m_Enabled: 1
-  serializedVersion: 13
-  m_Type: 2
-  m_Color: {r: 1, g: 0.52, b: 0.18, a: 1}
-  m_Intensity: 2
-  m_Range: 8
-  m_SpotAngle: 30
-  m_InnerSpotAngle: 21.80208
-  m_CookieSize2D: {x: 0.5, y: 0.5}
-  m_Shadows:
-    m_Type: 0
-    m_Resolution: -1
-    m_CustomResolution: -1
-    m_Strength: 1
-    m_Bias: 0.05
-    m_NormalBias: 0.4
-    m_NearPlane: 0.2
-    m_CullingMatrixOverride:
-      e00: 1
-      e01: 0
-      e02: 0
-      e03: 0
-      e10: 0
-      e11: 1
-      e12: 0
-      e13: 0
-      e20: 0
-      e21: 0
-      e22: 1
-      e23: 0
-      e30: 0
-      e31: 0
-      e32: 0
-      e33: 1
-    m_UseCullingMatrixOverride: 0
-  m_Cookie: {fileID: 0}
-  m_DrawHalo: 0
-  m_Flare: {fileID: 0}
-  m_RenderMode: 0
-  m_CullingMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_RenderingLayerMask: 1
-  m_Lightmapping: 4
-  m_LightShadowCasterMode: 0
-  m_AreaSize: {x: 1, y: 1}
-  m_BounceIntensity: 1
-  m_ColorTemperature: 6570
-  m_UseColorTemperature: 0
-  m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
-  m_UseBoundingSphereOverride: 0
-  m_UseViewFrustumForShadowCasterCull: 1
-  m_ForceVisible: 0
-  m_ShapeRadius: 0.025
-  m_ShadowAngle: 0
-  m_LightUnit: 1
-  m_LuxAtDistance: 1
-  m_EnableSpotReflector: 1
---- !u!114 &7604033889564652186
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1253849046977209006}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
-  m_UsePipelineSettings: 1
-  m_AdditionalLightsShadowResolutionTier: 2
-  m_CustomShadowLayers: 0
-  m_LightCookieSize: {x: 1, y: 1}
-  m_LightCookieOffset: {x: 0, y: 0}
-  m_SoftShadowQuality: 0
-  m_RenderingLayersMask:
-    serializedVersion: 0
-    m_Bits: 1
-  m_ShadowRenderingLayersMask:
-    serializedVersion: 0
-    m_Bits: 1
-  m_Version: 4
-  m_LightLayerMask: 1
-  m_ShadowLayerMask: 1
-  m_RenderingLayers: 1
-  m_ShadowRenderingLayers: 1
---- !u!1 &2437859856606150143
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 8650706310272585343}
-  - component: {fileID: 4719502053131520393}
-  m_Layer: 0
-  m_Name: IncidentPayloadStartupTask
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &8650706310272585343
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2437859856606150143}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 5835050266681781383}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &4719502053131520393
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2437859856606150143}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4f07f3d00d1e47ae9e59d76e56cb2e7d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IncidentPayloadStartupTask
-  runTask: 1
-  order: 0
-  taskNameOverride: 
-  clearPendingPayloadAfterApply: 1
-  logResolvedPayload: 1
-  explicitMapSetupRoot: {fileID: 6795961276938328196}
-  explicitAnchors: []
+  explicitTasks:
+  - {fileID: 8507947331613684910}
+  - {fileID: 3233890747504547911}
+  - {fileID: 1116706657359872176}
+  logSetupTasks: 0
 --- !u!1 &4046201125533456000
 GameObject:
   m_ObjectHideFlags: 0
@@ -712,7 +359,7 @@ GameObject:
   - component: {fileID: 5603700801687358895}
   - component: {fileID: 1116706657359872176}
   m_Layer: 0
-  m_Name: IncidentVentilationPresetSetupStep
+  m_Name: IncidentVentilationPresetMapSetupTask
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -726,12 +373,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4046201125533456000}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 5835050266681781383}
+  m_Father: {fileID: 642135791357913580}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1116706657359872176
 MonoBehaviour:
@@ -744,46 +391,12 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b06b19d7b7e24ca1b3ed3314d2907db2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IncidentVentilationPresetSetupStep
-  runStep: 1
-  order: 20
-  stepNameOverride: 
+  m_EditorClassIdentifier: Assembly-CSharp::IncidentVentilationPresetMapSetupTask
   explicitBindings: []
   collectBindingsFromScene: 1
   includeInactiveBindings: 1
   stopAfterFirstAppliedBinding: 0
   warnWhenPresetUnmapped: 0
---- !u!1 &4966667938867564820
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 6627407048159654623}
-  m_Layer: 0
-  m_Name: VisualRoot
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &6627407048159654623
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4966667938867564820}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 8726618591125819029}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &5936671440419410941
 GameObject:
   m_ObjectHideFlags: 0
@@ -828,9 +441,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 381e45a3ce7b4a5db79f924353e5ab51, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WindowLockRandomizerStartupTask
-  runTask: 1
-  order: -10
-  taskNameOverride: 
   lockedPercentage: 20
   includeInactiveWindows: 1
   useDeterministicSeed: 0
@@ -881,6 +491,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d1a6d4956e1e48f0a4a0d7de56fa1021, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EntranceCameraIntro
+  preset: 1
   playOnStart: 0
   onlyOncePerSceneLoad: 1
   resolveTargetTimeout: 2
@@ -916,10 +527,10 @@ MonoBehaviour:
   pivot: {fileID: 0}
   lookAtTarget: {fileID: 0}
   flattenPivotYaw: 1
-  startOffset: {x: -3.25, y: 1.7, z: -5.5}
+  startOffset: {x: 0, y: 1.7, z: 0}
   endOffset: {x: 0.85, y: 1.75, z: -1.2}
   lookAtOffset: {x: 0, y: 0, z: 0}
-  fieldOfView: 34
+  fieldOfView: 75
   lockPlayerDuringIntro: 1
   playerControllerOverride: {fileID: 0}
   playerActionLock: {fileID: 0}
@@ -936,9 +547,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6fa3810b4d47418d9538878e81cbc36b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EntranceCameraStartupTask
-  runTask: 1
-  order: 0
-  taskNameOverride: 
   entranceCameraIntro: {fileID: 4687050247040898487}
 --- !u!1 &7133681939997042460
 GameObject:
@@ -951,7 +559,7 @@ GameObject:
   - component: {fileID: 5961269165052138949}
   - component: {fileID: 3233890747504547911}
   m_Layer: 0
-  m_Name: IncidentAnchorHazardSetupStep
+  m_Name: IncidentAnchorHazardMapSetupTask
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -965,12 +573,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7133681939997042460}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 5835050266681781383}
+  m_Father: {fileID: 642135791357913580}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &3233890747504547911
 MonoBehaviour:
@@ -983,13 +591,70 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0f8384b17db44f3798165a0ce2fd7358, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IncidentAnchorHazardSetupStep
-  runStep: 1
-  order: 10
-  stepNameOverride: 
+  m_EditorClassIdentifier: Assembly-CSharp::IncidentAnchorHazardMapSetupTask
   explicitAnchors: []
   includeInactiveAnchors: 1
   warnWhenIsolationDeviceMissing: 1
+--- !u!1 &7392570791204957274
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3088695656355248109}
+  - component: {fileID: 7199952912551866077}
+  m_Layer: 0
+  m_Name: VictimPlacementStartupTask
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3088695656355248109
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7392570791204957274}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5835050266681781383}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7199952912551866077
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7392570791204957274}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7e7b9fc00c9f4e5ea2d3479652df574f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VictimPlacementStartupTask
+  victimPrefab: {fileID: 8675152600097378572, guid: 557eb5e26df167a4fb747c5bea651109, type: 3}
+  runtimeParent: {fileID: 0}
+  explicitSpawnPoints:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  includeInactiveSpawnPoints: 1
+  fallbackVictimCountWhenUnknown: 2
+  compromisedRiskFallbackVictimCount: 1
+  maxVictimCount: 4
+  deterministicPlacement: 1
+  clearExistingVictimsBeforeSpawn: 1
+  incidentMissionSystem: {fileID: 6783775267924060584}
+  refreshMissionObjectivesAfterSpawn: 1
+  logSummary: 1
 --- !u!1 &7540332092357022194
 GameObject:
   m_ObjectHideFlags: 0
@@ -1022,8 +687,7 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 8726618591125819029}
+  m_Children: []
   m_Father: {fileID: 8916907086897807096}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &7286251771642285745
@@ -1057,15 +721,15 @@ MonoBehaviour:
   simulationProfile: {fileID: 11400000, guid: b4ab4f88c49d4bf2a92ee58b4d54bff2, type: 2}
   suppressionProfile: {fileID: 11400000, guid: b8e3f5a91d4c2e8074a6f9c3b21d5e80, type: 2}
   effectManager: {fileID: 9202031649153982278}
-  clusterViewPrefab: {fileID: 6598967934756895505}
-  clusterViewRoot: {fileID: 0}
-  runtimeNodeInitialFuel: 5555
+  ordinaryEffectPrefab: {fileID: 0}
+  electricalEffectPrefab: {fileID: 0}
+  flammableLiquidEffectPrefab: {fileID: 0}
+  gasEffectPrefab: {fileID: 0}
+  effectRoot: {fileID: 0}
   runtimeNodeIgnitionThresholdMultiplier: 1
-  runtimeNodeSpreadResistance: 0.1
   runtimeNodeAutoConnectRadius: 2.6
   runtimeNodeDrawGizmos: 1
   runtimeNodeGizmoColor: {r: 1, g: 0.45, b: 0.1, a: 0.8}
-  removeRuntimeNodeWhenHeatReachesZero: 0
   initializeOnEnable: 1
   logInitializationWarnings: 1
   logNodeHeatProgress: 0
@@ -1084,8 +748,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3e5af57a620dc1a41a63fad61cdfe93b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FireEffectManager
-  clusterViewPrefab: {fileID: 6598967934756895505}
-  clusterViewRoot: {fileID: 0}
+  ordinaryEffectPrefab: {fileID: 3247462331156504935, guid: 36143e07e569f9c43a4d99f7f892da68, type: 3}
+  electricalEffectPrefab: {fileID: 3156758923114580112, guid: 056ae51b33d10964e815a77b5ced7589, type: 3}
+  flammableLiquidEffectPrefab: {fileID: 6531741778656793356, guid: 9e88bd0cbfe197b4eb9e8796b900d5cb, type: 3}
+  gasEffectPrefab: {fileID: 3279744518791058138, guid: 18fee232004d8064aa84acc732629a23, type: 3}
+  effectRoot: {fileID: 0}
+  maxVisibleEffects: 4
+  referenceCamera: {fileID: 0}
+  maxVisibleDistance: 50
 --- !u!114 &5801840532896120417
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1150,12 +820,9 @@ Transform:
   m_Children:
   - {fileID: 4490921490145338205}
   - {fileID: 642135791357913580}
-  - {fileID: 4776230327826014583}
-  - {fileID: 5961269165052138949}
-  - {fileID: 5603700801687358895}
-  - {fileID: 8650706310272585343}
   - {fileID: 1977364216806456673}
   - {fileID: 5307433241529742939}
+  - {fileID: 3088695656355248109}
   m_Father: {fileID: 8916907086897807096}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &7695642254483989376
@@ -1202,9 +869,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4a1ad724917f0c647a1e0a38ce952484, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DoorLockRandomizerStartupTask
-  runTask: 1
-  order: -10
-  taskNameOverride: 
   lockedPercentage: 20
   includeInactiveDoors: 1
   useDeterministicSeed: 0
@@ -1221,7 +885,7 @@ GameObject:
   - component: {fileID: 4776230327826014583}
   - component: {fileID: 8507947331613684910}
   m_Layer: 0
-  m_Name: IncidentOriginAreaSetupStep
+  m_Name: IncidentOriginAreaMapSetupTask
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1235,12 +899,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8214017301321242446}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 5835050266681781383}
+  m_Father: {fileID: 642135791357913580}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &8507947331613684910
 MonoBehaviour:
@@ -1253,10 +917,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: db4c5d5ea9e243969ec980ecdb99e4aa, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IncidentOriginAreaSetupStep
-  runStep: 1
-  order: 0
-  stepNameOverride: 
+  m_EditorClassIdentifier: Assembly-CSharp::IncidentOriginAreaMapSetupTask
   explicitAreas: []
   collectAreasFromScene: 1
   includeInactiveAreas: 1

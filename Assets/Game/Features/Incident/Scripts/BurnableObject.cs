@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TrueJourney.BotBehavior;
 using Unity.AI.Navigation;
 using UnityEngine;
 
@@ -14,11 +15,12 @@ public class BurnableObject : MonoBehaviour, IBurnable
     }
 
     [Header("References")]
-    [SerializeField] private Fire fireSource;
+    [SerializeField] private MonoBehaviour fireSourceBehaviour;
     [SerializeField] private MeshFilter targetMeshFilter;
     [SerializeField] private MeshRenderer targetMeshRenderer;
     [SerializeField] private bool autoResolveChildFire = true;
     [SerializeField] private bool autoResolveMeshTarget = true;
+    [SerializeField] private float defaultFireContactDamagePerSecond = 10f;
 
     [Header("Burn Progress")]
     [SerializeField] private float burnProgress;
@@ -48,8 +50,9 @@ public class BurnableObject : MonoBehaviour, IBurnable
     private MaterialPropertyBlock propertyBlock;
     private BurnVisualStage appliedStage = BurnVisualStage.Intact;
     private bool visualStateCached;
+    private IFireTarget fireSourceTarget;
 
-    public Fire FireSource => fireSource;
+    public float CurrentFireContactDamagePerSecond => ResolveCurrentFireContactDamagePerSecond();
     public float BurnProgress => burnProgress;
     public bool HasDeformableMesh => targetMeshFilter != null;
 
@@ -65,13 +68,7 @@ public class BurnableObject : MonoBehaviour, IBurnable
         AutoAssignReferences();
         CacheInitialVisualState();
         CacheRendererState();
-        SubscribeToFireEvents(true);
         RefreshVisualState();
-    }
-
-    private void OnDisable()
-    {
-        SubscribeToFireEvents(false);
     }
 
     private void OnValidate()
@@ -103,16 +100,6 @@ public class BurnableObject : MonoBehaviour, IBurnable
         RefreshVisualState();
     }
 
-    private void HandleFireStateChanged(bool _)
-    {
-        RefreshVisualState();
-    }
-
-    private void HandleFireStateChanged()
-    {
-        RefreshVisualState();
-    }
-
     private void RefreshVisualState()
     {
         currentStage = EvaluateStage(Mathf.Clamp01(burnProgress));
@@ -122,10 +109,21 @@ public class BurnableObject : MonoBehaviour, IBurnable
 
     private void AutoAssignReferences()
     {
-        if (autoResolveChildFire && fireSource == null)
+        if (autoResolveChildFire && fireSourceBehaviour == null)
         {
-            fireSource = GetComponentInChildren<Fire>(true);
+            MonoBehaviour[] behaviours = GetComponentsInChildren<MonoBehaviour>(true);
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                MonoBehaviour candidate = behaviours[i];
+                if (candidate is IFireTarget)
+                {
+                    fireSourceBehaviour = candidate;
+                    break;
+                }
+            }
         }
+
+        fireSourceTarget = fireSourceBehaviour as IFireTarget;
 
         if (!autoResolveMeshTarget)
         {
@@ -148,7 +146,7 @@ public class BurnableObject : MonoBehaviour, IBurnable
                     continue;
                 }
 
-                if (fireSource != null && candidate.GetComponentInParent<Fire>() == fireSource)
+                if (fireSourceBehaviour != null && candidate.transform.IsChildOf(fireSourceBehaviour.transform))
                 {
                     continue;
                 }
@@ -177,29 +175,6 @@ public class BurnableObject : MonoBehaviour, IBurnable
         }
 
         visualStateCached = true;
-    }
-
-    private void SubscribeToFireEvents(bool subscribe)
-    {
-        if (fireSource == null)
-        {
-            return;
-        }
-
-        if (subscribe)
-        {
-            fireSource.Ignited -= HandleFireStateChanged;
-            fireSource.Extinguished -= HandleFireStateChanged;
-            fireSource.BurningStateChanged -= HandleFireStateChanged;
-            fireSource.Ignited += HandleFireStateChanged;
-            fireSource.Extinguished += HandleFireStateChanged;
-            fireSource.BurningStateChanged += HandleFireStateChanged;
-            return;
-        }
-
-        fireSource.Ignited -= HandleFireStateChanged;
-        fireSource.Extinguished -= HandleFireStateChanged;
-        fireSource.BurningStateChanged -= HandleFireStateChanged;
     }
 
     private void CacheRendererState()
@@ -345,23 +320,38 @@ public class BurnableObject : MonoBehaviour, IBurnable
 
     private float GetCurrentFireIntensity()
     {
-        return fireSource != null && fireSource.IsBurning
-            ? Mathf.Clamp01(fireSource.NormalizedHp)
-            : 0f;
+        if (fireSourceTarget == null || !fireSourceTarget.IsBurning)
+        {
+            return 0f;
+        }
+
+        if (fireSourceBehaviour is IThermalSignatureSource thermalSource)
+        {
+            return Mathf.Clamp01(thermalSource.GetThermalSignatureStrength());
+        }
+
+        return Mathf.Clamp01(fireSourceTarget.GetWorldRadius());
+    }
+
+    private float ResolveCurrentFireContactDamagePerSecond()
+    {
+        if (fireSourceTarget == null || !fireSourceTarget.IsBurning)
+        {
+            return 0f;
+        }
+
+        float intensity01 = GetCurrentFireIntensity();
+        return Mathf.Max(0f, defaultFireContactDamagePerSecond) * Mathf.Max(0.25f, intensity01);
     }
 
     [ContextMenu("Setup Demo Fire Child")]
     private void SetupDemoFireChild()
     {
-        if (fireSource != null)
-        {
-            return;
-        }
-
-        GameObject fireObject = new GameObject("Fire");
-        fireObject.transform.SetParent(transform, false);
-        fireObject.AddComponent<SphereCollider>().isTrigger = true;
-        fireObject.AddComponent<NavMeshModifier>().ignoreFromBuild = true;
-        fireSource = fireObject.AddComponent<Fire>();
+#if UNITY_EDITOR
+        Debug.LogWarning(
+            $"{nameof(BurnableObject)} demo setup no longer creates legacy fire children. " +
+            $"Prefer authoring node-based fire simulation content instead.",
+            this);
+#endif
     }
 }

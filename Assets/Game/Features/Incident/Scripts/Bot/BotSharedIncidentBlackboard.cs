@@ -20,6 +20,13 @@ namespace TrueJourney.BotBehavior
             public float LastSeenTime;
         }
 
+        private sealed class FireGroupRecord
+        {
+            public IFireGroupTarget Target;
+            public Vector3 LastKnownPosition;
+            public float LastSeenTime;
+        }
+
         private sealed class BreakableRecord
         {
             public IBotBreakableTarget Target;
@@ -56,6 +63,7 @@ namespace TrueJourney.BotBehavior
 
         private readonly Dictionary<IRescuableTarget, RescueRecord> rescueRecords = new Dictionary<IRescuableTarget, RescueRecord>();
         private readonly Dictionary<IFireTarget, FireRecord> fireRecords = new Dictionary<IFireTarget, FireRecord>();
+        private readonly Dictionary<IFireGroupTarget, FireGroupRecord> fireGroupRecords = new Dictionary<IFireGroupTarget, FireGroupRecord>();
         private readonly Dictionary<IBotBreakableTarget, BreakableRecord> breakableRecords = new Dictionary<IBotBreakableTarget, BreakableRecord>();
         private readonly Dictionary<IBotExtinguisherItem, ExtinguisherRecord> extinguisherRecords = new Dictionary<IBotExtinguisherItem, ExtinguisherRecord>();
         private readonly Dictionary<IBotBreakTool, BreakToolRecord> breakToolRecords = new Dictionary<IBotBreakTool, BreakToolRecord>();
@@ -162,6 +170,27 @@ namespace TrueJourney.BotBehavior
             record.LastSeenTime = Time.time;
         }
 
+        public void RememberFireGroup(IFireGroupTarget target, Vector3 referencePosition)
+        {
+            if (IsUnityObjectDestroyed(target) || target == null || !target.HasActiveFires)
+            {
+                return;
+            }
+
+            CleanupExpiredFireGroupRecords();
+            if (!fireGroupRecords.TryGetValue(target, out FireGroupRecord record) || record == null)
+            {
+                record = new FireGroupRecord
+                {
+                    Target = target
+                };
+                fireGroupRecords[target] = record;
+            }
+
+            record.LastKnownPosition = target.GetClosestActiveFirePosition(referencePosition);
+            record.LastSeenTime = Time.time;
+        }
+
         public bool TryGetNearestRecentFire(Vector3 fromPosition, float maxDistance, out IFireTarget target)
         {
             CleanupExpiredFireRecords();
@@ -179,6 +208,36 @@ namespace TrueJourney.BotBehavior
                 }
 
                 float distanceSq = (candidate.GetWorldPosition() - fromPosition).sqrMagnitude;
+                if (distanceSq > maxDistanceSq || distanceSq >= bestDistanceSq)
+                {
+                    continue;
+                }
+
+                bestDistanceSq = distanceSq;
+                target = candidate;
+            }
+
+            return target != null;
+        }
+
+        public bool TryGetNearestRecentFireGroup(Vector3 fromPosition, float maxDistance, out IFireGroupTarget target)
+        {
+            CleanupExpiredFireGroupRecords();
+
+            target = null;
+            float bestDistanceSq = float.PositiveInfinity;
+            float maxDistanceSq = Mathf.Max(0.05f, maxDistance) * Mathf.Max(0.05f, maxDistance);
+
+            foreach (KeyValuePair<IFireGroupTarget, FireGroupRecord> pair in fireGroupRecords)
+            {
+                IFireGroupTarget candidate = pair.Value?.Target;
+                if (IsUnityObjectDestroyed(candidate) || candidate == null || !candidate.HasActiveFires)
+                {
+                    continue;
+                }
+
+                Vector3 candidatePosition = candidate.GetClosestActiveFirePosition(fromPosition);
+                float distanceSq = (candidatePosition - fromPosition).sqrMagnitude;
                 if (distanceSq > maxDistanceSq || distanceSq >= bestDistanceSq)
                 {
                     continue;
@@ -460,6 +519,12 @@ namespace TrueJourney.BotBehavior
         {
             CleanupExpiredRecords(fireRecords, FireMemorySeconds, static record =>
                 record == null || IsUnityObjectDestroyed(record.Target) || !record.Target.IsBurning, static record => record.LastSeenTime);
+        }
+
+        private void CleanupExpiredFireGroupRecords()
+        {
+            CleanupExpiredRecords(fireGroupRecords, FireMemorySeconds, static record =>
+                record == null || IsUnityObjectDestroyed(record.Target) || record.Target == null || !record.Target.HasActiveFires, static record => record.LastSeenTime);
         }
 
         private void CleanupExpiredBreakableRecords()

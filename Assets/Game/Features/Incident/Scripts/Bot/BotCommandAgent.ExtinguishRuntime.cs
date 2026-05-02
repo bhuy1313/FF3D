@@ -647,41 +647,12 @@ public partial class BotCommandAgent
 
     private IFireTarget FindClosestActiveFire(Vector3 orderPoint)
     {
-        IFireTarget bestFire = null;
-        IFireTarget nearestFire = null;
-        float bestDistanceSq = float.PositiveInfinity;
-        float nearestDistanceSq = float.PositiveInfinity;
-        float searchRadiusSq = fireSearchRadius * fireSearchRadius;
-
-        foreach (IFireTarget candidate in BotRuntimeRegistry.ActiveFireTargets)
+        IFireTarget representativeTarget = FindClosestRepresentativeFireFromGroups(orderPoint, transform.position, fireSearchRadius);
+        if (representativeTarget != null && representativeTarget.IsBurning)
         {
-            if (candidate == null || !candidate.IsBurning)
-            {
-                continue;
-            }
-
-            if (BotRuntimeRegistry.Reservations.IsReservedByOther(candidate, gameObject))
-            {
-                continue;
-            }
-
-            float distanceSq = (candidate.GetWorldPosition() - orderPoint).sqrMagnitude;
-            if (distanceSq < nearestDistanceSq)
-            {
-                nearestDistanceSq = distanceSq;
-                nearestFire = candidate;
-            }
-
-            if (distanceSq > searchRadiusSq || distanceSq >= bestDistanceSq)
-            {
-                continue;
-            }
-
-            bestDistanceSq = distanceSq;
-            bestFire = candidate;
+            return representativeTarget;
         }
-
-        return bestFire != null ? bestFire : nearestFire;
+        return FindClosestFallbackFireTarget(orderPoint, transform.position, fireSearchRadius, preferWithinRadius: true);
     }
 
     private IFireTarget ResolveActiveFireTarget(Vector3 orderPoint)
@@ -700,10 +671,34 @@ public partial class BotCommandAgent
             return currentFireTarget;
         }
 
-        SetCurrentFireTarget(FindClosestActiveFire(orderPoint));
-        if (currentFireTarget == null && perceptionMemory != null && perceptionMemory.TryGetNearestRecentFire(orderPoint, fireSearchRadius, out IFireTarget rememberedFire))
+        IFireTarget representativeTarget = FindClosestRepresentativeFireFromGroups(orderPoint, transform.position, fireSearchRadius);
+        if (representativeTarget != null && representativeTarget.IsBurning)
+        {
+            SetCurrentFireTarget(representativeTarget);
+        }
+        else
+        {
+            SetCurrentFireTarget(FindClosestActiveFire(orderPoint));
+        }
+
+        if (currentFireTarget == null &&
+            perceptionMemory != null &&
+            perceptionMemory.TryGetNearestRecentFireGroup(orderPoint, fireSearchRadius, out IFireGroupTarget rememberedGroup))
+        {
+            SetCurrentFireTarget(ResolveRepresentativeFireTarget(rememberedGroup, transform.position));
+        }
+
+        if (currentFireTarget == null &&
+            perceptionMemory != null &&
+            perceptionMemory.TryGetNearestRecentFire(orderPoint, fireSearchRadius, out IFireTarget rememberedFire))
         {
             SetCurrentFireTarget(rememberedFire);
+        }
+
+        if (currentFireTarget == null &&
+            BotRuntimeRegistry.SharedIncidentBlackboard.TryGetNearestRecentFireGroup(orderPoint, fireSearchRadius, out IFireGroupTarget sharedGroup))
+        {
+            SetCurrentFireTarget(ResolveRepresentativeFireTarget(sharedGroup, transform.position));
         }
 
         if (currentFireTarget == null &&
@@ -737,17 +732,27 @@ public partial class BotCommandAgent
         }
 
         if (interactionSensor != null &&
-            interactionSensor.TryFindNearbyFire(keepRange, out IFireTarget nearbyFire))
+            interactionSensor.TryFindNearbyFireGroup(keepRange, out _, out IFireTarget nearbyFire))
         {
             SetCurrentFireTarget(nearbyFire);
             return currentFireTarget;
         }
 
         if (interactionSensor != null &&
-            interactionSensor.TryFindFireNearPoint(scanOrigin, fireSearchRadius, out IFireTarget scanOriginFire))
+            interactionSensor.TryFindFireGroupNearPoint(scanOrigin, fireSearchRadius, out _, out IFireTarget scanOriginFire))
         {
             SetCurrentFireTarget(scanOriginFire);
             return currentFireTarget;
+        }
+
+        if (perceptionMemory != null &&
+            perceptionMemory.TryGetNearestRecentFireGroup(scanOrigin, fireSearchRadius, out IFireGroupTarget rememberedGroup))
+        {
+            SetCurrentFireTarget(ResolveRepresentativeFireTarget(rememberedGroup, transform.position));
+            if (currentFireTarget != null)
+            {
+                return currentFireTarget;
+            }
         }
 
         if (perceptionMemory != null &&
@@ -755,6 +760,15 @@ public partial class BotCommandAgent
         {
             SetCurrentFireTarget(rememberedFire);
             return currentFireTarget;
+        }
+
+        if (BotRuntimeRegistry.SharedIncidentBlackboard.TryGetNearestRecentFireGroup(scanOrigin, fireSearchRadius, out IFireGroupTarget sharedGroup))
+        {
+            SetCurrentFireTarget(ResolveRepresentativeFireTarget(sharedGroup, transform.position));
+            if (currentFireTarget != null)
+            {
+                return currentFireTarget;
+            }
         }
 
         if (BotRuntimeRegistry.SharedIncidentBlackboard.TryGetNearestRecentFire(scanOrigin, fireSearchRadius, out IFireTarget sharedFire))
@@ -788,76 +802,113 @@ public partial class BotCommandAgent
 
         if (IsNearOrderPoint(orderPoint))
         {
+            IFireTarget representativeTarget = FindClosestRepresentativeFireFromGroups(
+                orderPoint,
+                transform.position,
+                GetExtinguisherOrderAreaRadius());
+            if (representativeTarget != null && representativeTarget.IsBurning)
+            {
+                SetCurrentFireTarget(representativeTarget);
+                return currentFireTarget;
+            }
+
             SetCurrentFireTarget(FindClosestActiveFireAroundOrderPoint(orderPoint, transform.position, GetExtinguisherOrderAreaRadius()));
             return currentFireTarget;
         }
 
-        IFireTarget corridorFire = null;
-        IFireTarget bestFire = null;
-        IFireTarget fallbackFire = null;
-        float bestCorridorProgress = float.PositiveInfinity;
-        float bestCorridorOffsetSq = float.PositiveInfinity;
-        float bestDistanceSq = float.PositiveInfinity;
-        float fallbackDistanceSq = float.PositiveInfinity;
-        float searchRadiusSq = fireSearchRadius * fireSearchRadius;
-        Vector3 botPosition = transform.position;
-
-        foreach (IFireTarget candidate in BotRuntimeRegistry.ActiveFireTargets)
+        IFireTarget corridorRepresentativeTarget = FindClosestRepresentativeFireFromGroups(orderPoint, transform.position, fireSearchRadius);
+        if (corridorRepresentativeTarget != null && corridorRepresentativeTarget.IsBurning)
         {
-            if (candidate == null || !candidate.IsBurning)
+            Vector3 representativePosition = corridorRepresentativeTarget.GetWorldPosition();
+            float representativeToOrderSq = (representativePosition - orderPoint).sqrMagnitude;
+            float representativeToBotSq = (representativePosition - transform.position).sqrMagnitude;
+            float representativeProgress;
+            float representativeOffsetSq = GetDistanceToSegmentXZSquared(transform.position, orderPoint, representativePosition, out representativeProgress);
+            if ((representativeProgress >= 0f && representativeProgress <= 1.05f &&
+                 representativeOffsetSq <= extinguisherRouteCorridorWidth * extinguisherRouteCorridorWidth) ||
+                representativeToOrderSq < fireSearchRadius * fireSearchRadius)
             {
-                continue;
+                SetCurrentFireTarget(corridorRepresentativeTarget);
+                return currentFireTarget;
             }
 
-            if (BotRuntimeRegistry.Reservations.IsReservedByOther(candidate, gameObject))
+            if (representativeToBotSq < fireSearchRadius * fireSearchRadius)
             {
-                continue;
-            }
-
-            Vector3 firePosition = candidate.GetWorldPosition();
-            float toOrderSq = (firePosition - orderPoint).sqrMagnitude;
-            float toBotSq = (firePosition - botPosition).sqrMagnitude;
-            float progress;
-            float lateralDistanceSq = GetDistanceToSegmentXZSquared(botPosition, orderPoint, firePosition, out progress);
-
-            if (progress >= 0f && progress <= 1.05f && lateralDistanceSq <= extinguisherRouteCorridorWidth * extinguisherRouteCorridorWidth)
-            {
-                if (progress < bestCorridorProgress || (Mathf.Approximately(progress, bestCorridorProgress) && lateralDistanceSq < bestCorridorOffsetSq))
-                {
-                    bestCorridorProgress = progress;
-                    bestCorridorOffsetSq = lateralDistanceSq;
-                    corridorFire = candidate;
-                }
-            }
-
-            if (toOrderSq < searchRadiusSq && toBotSq < bestDistanceSq)
-            {
-                bestDistanceSq = toBotSq;
-                bestFire = candidate;
-            }
-
-            if (toBotSq < fallbackDistanceSq)
-            {
-                fallbackDistanceSq = toBotSq;
-                fallbackFire = candidate;
+                SetCurrentFireTarget(corridorRepresentativeTarget);
+                return currentFireTarget;
             }
         }
 
-        SetCurrentFireTarget(corridorFire != null
-            ? corridorFire
-            : bestFire != null
-                ? bestFire
-                : fallbackFire);
+        SetCurrentFireTarget(FindClosestFallbackFireTarget(orderPoint, transform.position, fireSearchRadius, preferWithinRadius: true));
         return currentFireTarget;
     }
 
     private IFireTarget FindClosestActiveFireAroundOrderPoint(Vector3 orderPoint, Vector3 fromPosition, float searchRadius)
     {
+        IFireTarget representativeTarget = FindClosestRepresentativeFireFromGroups(orderPoint, fromPosition, searchRadius);
+        if (representativeTarget != null && representativeTarget.IsBurning)
+        {
+            float distanceToOrderSq = (representativeTarget.GetWorldPosition() - orderPoint).sqrMagnitude;
+            if (distanceToOrderSq <= searchRadius * searchRadius)
+            {
+                return representativeTarget;
+            }
+        }
+
+        return FindClosestFallbackFireTarget(orderPoint, fromPosition, searchRadius, preferWithinRadius: true);
+    }
+
+    private IFireTarget FindClosestRepresentativeFireFromGroups(Vector3 orderPoint, Vector3 fromPosition, float searchRadius)
+    {
+        IFireTarget bestTarget = null;
+        float bestDistanceSq = float.PositiveInfinity;
+        float searchRadiusSq = Mathf.Max(0.05f, searchRadius) * Mathf.Max(0.05f, searchRadius);
+
+        foreach (IFireGroupTarget candidateGroup in BotRuntimeRegistry.ActiveFireGroups)
+        {
+            if (candidateGroup == null || !candidateGroup.HasActiveFires)
+            {
+                continue;
+            }
+
+            Vector3 candidatePosition = candidateGroup.GetClosestActiveFirePosition(fromPosition);
+            float distanceToOrderSq = (candidatePosition - orderPoint).sqrMagnitude;
+            if (distanceToOrderSq > searchRadiusSq)
+            {
+                continue;
+            }
+
+            IFireTarget representativeTarget = ResolveRepresentativeFireTarget(candidateGroup, fromPosition);
+            if (representativeTarget == null || !representativeTarget.IsBurning)
+            {
+                continue;
+            }
+
+            if (BotRuntimeRegistry.Reservations.IsReservedByOther(representativeTarget, gameObject))
+            {
+                continue;
+            }
+
+            float distanceToBotSq = (representativeTarget.GetWorldPosition() - fromPosition).sqrMagnitude;
+            if (distanceToBotSq >= bestDistanceSq)
+            {
+                continue;
+            }
+
+            bestDistanceSq = distanceToBotSq;
+            bestTarget = representativeTarget;
+        }
+
+        return bestTarget;
+    }
+
+    private IFireTarget FindClosestFallbackFireTarget(Vector3 orderPoint, Vector3 fromPosition, float searchRadius, bool preferWithinRadius)
+    {
         IFireTarget bestFire = null;
         IFireTarget fallbackFire = null;
         float bestDistanceSq = float.PositiveInfinity;
         float fallbackDistanceSq = float.PositiveInfinity;
-        float searchRadiusSq = searchRadius * searchRadius;
+        float searchRadiusSq = Mathf.Max(0.05f, searchRadius) * Mathf.Max(0.05f, searchRadius);
 
         foreach (IFireTarget candidate in BotRuntimeRegistry.ActiveFireTargets)
         {
@@ -875,7 +926,7 @@ public partial class BotCommandAgent
             float toFromSq = (firePosition - fromPosition).sqrMagnitude;
             float toOrderSq = (firePosition - orderPoint).sqrMagnitude;
 
-            if (toOrderSq <= searchRadiusSq && toFromSq < bestDistanceSq)
+            if ((!preferWithinRadius || toOrderSq <= searchRadiusSq) && toFromSq < bestDistanceSq)
             {
                 bestDistanceSq = toFromSq;
                 bestFire = candidate;
@@ -985,9 +1036,10 @@ public partial class BotCommandAgent
         ReleaseCommittedTool();
         activeExtinguisher = null;
         preferredExtinguishTool = null;
-        SetCurrentFireTarget(null);
         commandedPointFireTarget = null;
         commandedFireGroupTarget = null;
+        SetCurrentFireGroupTarget(null);
+        SetCurrentFireTarget(null);
         currentExtinguishTargetPosition = default;
         currentExtinguishAimPoint = default;
         currentExtinguishLaunchDirection = default;

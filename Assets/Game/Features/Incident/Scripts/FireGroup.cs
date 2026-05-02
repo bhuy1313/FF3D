@@ -1,34 +1,21 @@
-using System.Collections.Generic;
 using TrueJourney.BotBehavior;
 using UnityEngine;
 
 [RequireComponent(typeof(BoxCollider))]
 public class FireGroup : MonoBehaviour, IFireGroupTarget
 {
-    private enum WaterDistributionMode
-    {
-        EvenSplit = 0,
-        WeightedByCurrentHp = 1
-    }
-
     [Header("Configuration")]
     [SerializeField] private string waterTag = "Water";
-    [Tooltip("If true, automatically uses the BoxCollider to find all Fire scripts within its volume at Start.")]
-    [SerializeField] private bool autoCollectOnStart = true;
-    [SerializeField] private WaterDistributionMode waterDistributionMode = WaterDistributionMode.EvenSplit;
-    
-    [Header("Status")]
-    [SerializeField] private List<Fire> managedFires = new List<Fire>();
+    [SerializeField] private FireSimulationManager fireSimulationManager;
 
     private BoxCollider boxCollider;
     private FireGroupAudioController fireGroupAudioController;
-
-    public IReadOnlyList<Fire> ManagedFires => managedFires;
 
     private void Awake()
     {
         boxCollider = GetComponent<BoxCollider>();
         boxCollider.isTrigger = true;
+        ResolveFireSimulationManager();
     }
 
     private void OnEnable()
@@ -43,40 +30,30 @@ public class FireGroup : MonoBehaviour, IFireGroupTarget
         BotRuntimeRegistry.UnregisterFireGroup(this);
     }
 
-    private void Start()
+    private void OnValidate()
     {
-        if (autoCollectOnStart)
+        if (boxCollider == null)
         {
-            CollectFires();
+            boxCollider = GetComponent<BoxCollider>();
         }
+
+        if (boxCollider != null)
+        {
+            boxCollider.isTrigger = true;
+        }
+
+        ResolveFireSimulationManager();
+    }
+
+    public void SetFireSimulationManager(FireSimulationManager manager)
+    {
+        fireSimulationManager = manager;
     }
 
     [ContextMenu("Refresh Fire List")]
     public void CollectFires()
     {
-        managedFires.Clear();
-
-        if (boxCollider == null)
-            boxCollider = GetComponent<BoxCollider>();
-
-        Vector3 center = transform.TransformPoint(boxCollider.center);
-        Vector3 halfExtents = Vector3.Scale(boxCollider.size, transform.lossyScale) * 0.5f;
-
-        // Use OverlapBox to find all colliders within the box volume, specifically looking for triggers 
-        // because Fire scripts typically use trigger SphereColliders.
-        Collider[] hits = Physics.OverlapBox(center, halfExtents, transform.rotation, ~0, QueryTriggerInteraction.Collide);
-        
-        foreach (Collider hit in hits)
-        {
-            Fire fire = hit.GetComponent<Fire>();
-            if (fire == null)
-                fire = hit.GetComponentInParent<Fire>();
-
-            if (fire != null && !managedFires.Contains(fire))
-            {
-                managedFires.Add(fire);
-            }
-        }
+        ResolveFireSimulationManager();
     }
 
     private void EnsureFireGroupAudioController()
@@ -104,53 +81,40 @@ public class FireGroup : MonoBehaviour, IFireGroupTarget
             return;
         }
 
-        CleanupManagedFires();
-
-        int activeFireCount = 0;
-        float totalWeight = 0f;
-        for (int i = 0; i < managedFires.Count; i++)
+        FireSimulationManager simulationManager = ResolveFireSimulationManager();
+        if (simulationManager == null || !simulationManager.IsInitialized)
         {
-            Fire fire = managedFires[i];
-            if (fire == null || !fire.IsBurning)
-            {
-                continue;
-            }
-
-            activeFireCount++;
-            if (waterDistributionMode == WaterDistributionMode.WeightedByCurrentHp)
-            {
-                totalWeight += Mathf.Max(0f, fire.CurrentHp);
-            }
+            return;
         }
 
+        Bounds bounds = GetWorldBounds();
+        int activeFireCount = simulationManager.GetBurningTrackedNodeCount(bounds);
         if (activeFireCount <= 0)
         {
             return;
         }
 
-        FireGroupWaterDistributionMode distributionMode =
-            waterDistributionMode == WaterDistributionMode.WeightedByCurrentHp
-                ? FireGroupWaterDistributionMode.WeightedByCurrentHp
-                : FireGroupWaterDistributionMode.EvenSplit;
-
-        for (int i = 0; i < managedFires.Count; i++)
+        float distributedAmount = amount / activeFireCount;
+        if (distributedAmount <= 0f)
         {
-            Fire fire = managedFires[i];
-            if (fire == null || !fire.IsBurning)
+            return;
+        }
+
+        FireRuntimeGraph graph = simulationManager.RuntimeGraph;
+        if (graph == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < graph.Count; i++)
+        {
+            FireRuntimeNode node = graph.GetNode(i);
+            if (node == null || !node.IsTrackedByIncident || !node.IsBurning || !bounds.Contains(node.Position))
             {
                 continue;
             }
 
-            float distributedAmount = FireGroupWaterDistributionUtility.GetDistributedAmount(
-                amount,
-                distributionMode,
-                activeFireCount,
-                Mathf.Max(0f, fire.CurrentHp),
-                totalWeight);
-            if (distributedAmount > 0f)
-            {
-                fire.ApplySuppression(distributedAmount, suppressionAgent, sourceUser);
-            }
+            simulationManager.ApplySuppressionToNode(i, distributedAmount, suppressionAgent);
         }
     }
 
@@ -158,48 +122,23 @@ public class FireGroup : MonoBehaviour, IFireGroupTarget
     {
         get
         {
-            CleanupManagedFires();
-            for (int i = 0; i < managedFires.Count; i++)
-            {
-                if (managedFires[i] != null && managedFires[i].IsBurning)
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            FireSimulationManager simulationManager = ResolveFireSimulationManager();
+            return simulationManager != null &&
+                simulationManager.IsInitialized &&
+                simulationManager.HasActiveFire(GetWorldBounds());
         }
     }
 
     public Vector3 GetClosestActiveFirePosition(Vector3 fromPosition)
     {
-        CleanupManagedFires();
-
-        float bestDistanceSq = float.PositiveInfinity;
-        Vector3 bestPosition = GetWorldCenter();
-        bool found = false;
-
-        for (int i = 0; i < managedFires.Count; i++)
+        Vector3 fallbackPosition = GetWorldCenter();
+        FireSimulationManager simulationManager = ResolveFireSimulationManager();
+        if (simulationManager == null || !simulationManager.IsInitialized)
         {
-            Fire fire = managedFires[i];
-            if (fire == null || !fire.IsBurning)
-            {
-                continue;
-            }
-
-            Vector3 candidate = fire.transform.position;
-            float distanceSq = (candidate - fromPosition).sqrMagnitude;
-            if (distanceSq >= bestDistanceSq)
-            {
-                continue;
-            }
-
-            bestDistanceSq = distanceSq;
-            bestPosition = candidate;
-            found = true;
+            return fallbackPosition;
         }
 
-        return found ? bestPosition : GetWorldCenter();
+        return simulationManager.GetClosestBurningNodePosition(GetWorldBounds(), fromPosition, fallbackPosition);
     }
 
     public Vector3 GetWorldCenter()
@@ -212,6 +151,29 @@ public class FireGroup : MonoBehaviour, IFireGroupTarget
         return boxCollider != null
             ? transform.TransformPoint(boxCollider.center)
             : transform.position;
+    }
+
+    public void GetActiveFireMetrics(out int activeFireCount, out float averageIntensity01, out float totalIntensity01)
+    {
+        activeFireCount = 0;
+        averageIntensity01 = 0f;
+        totalIntensity01 = 0f;
+
+        FireSimulationManager simulationManager = ResolveFireSimulationManager();
+        if (simulationManager == null || !simulationManager.IsInitialized)
+        {
+            return;
+        }
+
+        Bounds bounds = GetWorldBounds();
+        activeFireCount = simulationManager.GetBurningTrackedNodeCount(bounds);
+        if (activeFireCount <= 0)
+        {
+            return;
+        }
+
+        totalIntensity01 = simulationManager.GetBurningTrackedIntensitySum(bounds);
+        averageIntensity01 = Mathf.Clamp01(totalIntensity01 / activeFireCount);
     }
 
     private void OnParticleCollision(GameObject other)
@@ -240,19 +202,25 @@ public class FireGroup : MonoBehaviour, IFireGroupTarget
         }
     }
 
-    private void CleanupManagedFires()
+    private Bounds GetWorldBounds()
     {
-        for (int i = managedFires.Count - 1; i >= 0; i--)
+        if (boxCollider == null)
         {
-            if (managedFires[i] == null)
-            {
-                managedFires.RemoveAt(i);
-            }
+            boxCollider = GetComponent<BoxCollider>();
         }
 
-        if (managedFires.Count == 0 && autoCollectOnStart)
+        return boxCollider != null
+            ? boxCollider.bounds
+            : new Bounds(transform.position, Vector3.zero);
+    }
+
+    private FireSimulationManager ResolveFireSimulationManager()
+    {
+        if (fireSimulationManager == null)
         {
-            CollectFires();
+            fireSimulationManager = FindAnyObjectByType<FireSimulationManager>(FindObjectsInactive.Include);
         }
+
+        return fireSimulationManager;
     }
 }

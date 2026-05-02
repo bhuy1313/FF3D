@@ -9,6 +9,7 @@ public partial class BotCommandAgent
 
     private IRescuableTarget reservedRescueTarget;
     private IFireTarget reservedFireTarget;
+    private IFireGroupTarget reservedFireGroupTarget;
     private IBotBreakableTarget reservedBreakableTarget;
     private IBotPryTarget reservedPryTarget;
     private IBotHazardIsolationTarget reservedHazardIsolationTarget;
@@ -26,10 +27,14 @@ public partial class BotCommandAgent
 
         if (IsRouteFireClearingActive())
         {
-            Component routeFireComponent = currentRouteBlockingFire as Component;
+            RefreshReservation(currentRouteBlockingFireGroupTarget);
+            RefreshReservation(currentRouteBlockingFire);
+            Component routeFireComponent = (currentRouteBlockingFireGroupTarget as Component) ?? (currentRouteBlockingFire as Component);
             Vector3? routeFirePosition = currentRouteBlockingFire != null
                 ? (Vector3?)currentRouteBlockingFire.GetWorldPosition()
-                : hasIssuedDestination ? (Vector3?)lastIssuedDestination : (Vector3?)null;
+                : currentRouteBlockingFireGroupTarget != null
+                    ? (Vector3?)currentRouteBlockingFireGroupTarget.GetClosestActiveFirePosition(transform.position)
+                    : hasIssuedDestination ? (Vector3?)lastIssuedDestination : (Vector3?)null;
 
             switch (currentRouteFirePhase)
             {
@@ -91,13 +96,17 @@ public partial class BotCommandAgent
 
         if (behaviorContext.HasExtinguishOrder)
         {
+            RefreshReservation(currentFireGroupTarget);
+            RefreshReservation(commandedFireGroupTarget);
             RefreshReservation(currentFireTarget);
             BeginOrRefreshTask(
                 BotTaskType.Extinguish,
                 GetActiveExtinguishTaskDetail(),
-                currentFireTarget as Component,
+                (currentFireGroupTarget as Component) ?? (currentFireTarget as Component),
                 currentFireTarget != null
                     ? (Vector3?)currentFireTarget.GetWorldPosition()
+                    : currentFireGroupTarget != null
+                        ? (Vector3?)currentFireGroupTarget.GetClosestActiveFirePosition(transform.position)
                     : hasIssuedDestination ? lastIssuedDestination : (Vector3?)null);
             return;
         }
@@ -262,14 +271,41 @@ public partial class BotCommandAgent
 
     private void SetCurrentFireTarget(IFireTarget target)
     {
+        SetCurrentFireGroupTarget(commandedFireGroupTarget != null && commandedFireGroupTarget.HasActiveFires
+            ? commandedFireGroupTarget
+            : null);
+
         if (ReferenceEquals(currentFireTarget, target))
         {
+            if (commandedFireGroupTarget != null && commandedFireGroupTarget.HasActiveFires)
+            {
+                RefreshReservation(commandedFireGroupTarget);
+            }
+
             RefreshReservation(target);
             return;
         }
 
         ReleaseReservation(currentFireTarget);
         currentFireTarget = target;
+        if (commandedFireGroupTarget != null && commandedFireGroupTarget.HasActiveFires)
+        {
+            ReserveTarget(commandedFireGroupTarget, BotTaskType.Extinguish);
+        }
+
+        ReserveTarget(target, BotTaskType.Extinguish);
+    }
+
+    private void SetCurrentFireGroupTarget(IFireGroupTarget target)
+    {
+        if (ReferenceEquals(currentFireGroupTarget, target))
+        {
+            RefreshReservation(target);
+            return;
+        }
+
+        ReleaseReservation(currentFireGroupTarget);
+        currentFireGroupTarget = target;
         ReserveTarget(target, BotTaskType.Extinguish);
     }
 
@@ -316,6 +352,9 @@ public partial class BotCommandAgent
             case IFireTarget fireTarget:
                 reservedFireTarget = fireTarget;
                 break;
+            case IFireGroupTarget fireGroupTarget:
+                reservedFireGroupTarget = fireGroupTarget;
+                break;
             case IBotBreakableTarget breakableTarget:
                 reservedBreakableTarget = breakableTarget;
                 break;
@@ -355,6 +394,10 @@ public partial class BotCommandAgent
         {
             reservedFireTarget = null;
         }
+        else if (ReferenceEquals(target, reservedFireGroupTarget))
+        {
+            reservedFireGroupTarget = null;
+        }
         else if (ReferenceEquals(target, reservedBreakableTarget))
         {
             reservedBreakableTarget = null;
@@ -373,12 +416,14 @@ public partial class BotCommandAgent
     {
         ReleaseReservation(reservedRescueTarget);
         ReleaseReservation(reservedFireTarget);
+        ReleaseReservation(reservedFireGroupTarget);
         ReleaseReservation(reservedBreakableTarget);
         ReleaseReservation(reservedPryTarget);
         ReleaseReservation(reservedHazardIsolationTarget);
         BotRuntimeRegistry.Reservations.ReleaseAllOwnedBy(gameObject);
         reservedRescueTarget = null;
         reservedFireTarget = null;
+        reservedFireGroupTarget = null;
         reservedBreakableTarget = null;
         reservedPryTarget = null;
         reservedHazardIsolationTarget = null;

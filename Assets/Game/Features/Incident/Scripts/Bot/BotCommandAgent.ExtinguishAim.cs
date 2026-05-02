@@ -199,6 +199,14 @@ public partial class BotCommandAgent
     private float GetTrackedExtinguisherFireRadius(IFireTarget fireTarget)
     {
         float currentRadius = fireTarget != null ? Mathf.Max(0f, fireTarget.GetWorldRadius()) : 0f;
+        if (currentFireGroupTarget != null && currentFireGroupTarget.HasActiveFires)
+        {
+            Vector3 groupFirePosition = currentFireGroupTarget.GetClosestActiveFirePosition(transform.position);
+            float distanceToGroupFire = GetHorizontalDistance(transform.position, groupFirePosition);
+            float groupCoverageRadius = Mathf.Max(0f, distanceToGroupFire - GetDesiredExtinguisherStandOffDistance(activeExtinguisher));
+            currentRadius = Mathf.Max(currentRadius, groupCoverageRadius);
+        }
+
         if (fireTarget == null || !ReferenceEquals(lockedExtinguisherFireTarget, fireTarget))
         {
             return currentRadius;
@@ -278,9 +286,17 @@ public partial class BotCommandAgent
 
     private IFireTarget GetLockedExtinguisherFireTarget()
     {
-        return lockedExtinguisherFireTarget != null && lockedExtinguisherFireTarget.IsBurning
-            ? lockedExtinguisherFireTarget
-            : null;
+        if (lockedExtinguisherFireTarget != null && lockedExtinguisherFireTarget.IsBurning)
+        {
+            return lockedExtinguisherFireTarget;
+        }
+
+        if (currentFireGroupTarget != null && currentFireGroupTarget.HasActiveFires)
+        {
+            return ResolveRepresentativeFireTarget(currentFireGroupTarget, transform.position);
+        }
+
+        return null;
     }
 
     private static float DistanceToSegment2D(Vector3 point, Vector3 segmentStart, Vector3 segmentEnd, out float t)

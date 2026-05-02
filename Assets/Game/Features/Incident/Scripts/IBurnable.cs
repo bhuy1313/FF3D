@@ -2,7 +2,7 @@ using UnityEngine;
 
 public interface IBurnable
 {
-    Fire FireSource { get; }
+    float CurrentFireContactDamagePerSecond { get; }
     float BurnProgress { get; }
     bool HasDeformableMesh { get; }
 }

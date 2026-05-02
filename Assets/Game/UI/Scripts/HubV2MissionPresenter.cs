@@ -76,6 +76,10 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
     [SerializeField] private string progressTextFormat = "{0}/{1} OBJECTIVES COMPLETED";
     [SerializeField] private string progressValueFormat = "{0:0}%";
 
+    [Header("Localization")]
+    [SerializeField] private LanguageFontRole missionTitleFontRole = LanguageFontRole.Heading;
+    [SerializeField] private LanguageFontRole bodyFontRole = LanguageFontRole.Default;
+
     [Header("Timer Animation")]
     [Tooltip("Bật hiệu ứng đếm số cho Timer khi bắt đầu nhiệm vụ")]
     [SerializeField] private bool animateTimerOnStart = true;
@@ -128,6 +132,7 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
     private void Awake()
     {
         ResolveReferences();
+        ApplyCurrentFonts();
         RefreshView();
         RequestLayoutRebuild();
         ProcessPendingLayoutRebuild(forceImmediate: true);
@@ -135,11 +140,19 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
 
     private void OnEnable()
     {
+        LanguageManager.LanguageChanged -= OnLanguageChanged;
+        LanguageManager.LanguageChanged += OnLanguageChanged;
         ResolveReferences();
         ClearStringCaches();
+        ApplyCurrentFonts();
         RefreshView();
         RequestLayoutRebuild();
         ProcessPendingLayoutRebuild(forceImmediate: true);
+    }
+
+    private void OnDisable()
+    {
+        LanguageManager.LanguageChanged -= OnLanguageChanged;
     }
 
     private void Update()
@@ -200,6 +213,15 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
         accentBarImage ??= FindImage("Bar");
     }
 
+    private void OnLanguageChanged(AppLanguage _)
+    {
+        ClearStringCaches();
+        ApplyCurrentFonts();
+        RefreshView();
+        RequestLayoutRebuild();
+        ProcessPendingLayoutRebuild(forceImmediate: true);
+    }
+
     private void ClearStringCaches()
     {
         cachedTimerText = "--:--";
@@ -215,6 +237,39 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
         cachedProgressPercent = -1f;
         cachedObjectiveProgressTexts.Clear();
         cachedObjectiveProgressPercents.Clear();
+    }
+
+    private void ApplyCurrentFonts()
+    {
+        LanguageManager manager = LanguageManager.Instance;
+        if (manager == null)
+        {
+            return;
+        }
+
+        ApplyFont(missionTitleText, manager.GetCurrentTMPFont(missionTitleFontRole));
+        ApplyFont(timerText, manager.GetCurrentTMPFont(bodyFontRole));
+        ApplyFont(objectiveCounterText, manager.GetCurrentTMPFont(bodyFontRole));
+        ApplyFont(progressText, manager.GetCurrentTMPFont(bodyFontRole));
+        ApplyFont(progressValueText, manager.GetCurrentTMPFont(bodyFontRole));
+
+        for (int i = 0; i < objectiveViews.Count; i++)
+        {
+            ApplyObjectiveViewFonts(objectiveViews[i], manager);
+        }
+    }
+
+    private void ApplyObjectiveViewFonts(ObjectiveItemView view, LanguageManager manager)
+    {
+        if (view == null || manager == null)
+        {
+            return;
+        }
+
+        TMP_FontAsset bodyFont = manager.GetCurrentTMPFont(bodyFontRole);
+        ApplyFont(view.Label, bodyFont);
+        ApplyFont(view.ProgressValueText, bodyFont);
+        ApplyFont(view.RescueCounterText, bodyFont);
     }
 
     private void RefreshView()
@@ -684,6 +739,7 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
         if (view != null)
         {
             objectiveViews.Add(view);
+            ApplyObjectiveViewFonts(view, LanguageManager.Instance);
         }
     }
 
@@ -749,7 +805,7 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
         }
 
         bool changed = view.SetActive(true);
-        string objectiveText = BuildObjectiveText(status);
+        string objectiveText = BuildObjectiveText(view, status);
         changed |= SetText(view.Label, objectiveText);
 
         Color color = ResolveObjectiveColor(visualState);
@@ -871,8 +927,13 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
         }
     }
 
-    private string BuildObjectiveText(MissionObjectiveStatusSnapshot status)
+    private string BuildObjectiveText(ObjectiveItemView view, MissionObjectiveStatusSnapshot status)
     {
+        if (view != null && (view.IsFireItem || view.IsRescueItem))
+        {
+            return !string.IsNullOrWhiteSpace(status.Title) ? status.Title : status.Summary;
+        }
+
         return !string.IsNullOrWhiteSpace(status.Summary) ? status.Summary : status.Title;
     }
 
@@ -1060,6 +1121,16 @@ public sealed class HubV2MissionPresenter : MonoBehaviour
 
         textComponent.text = resolved;
         return true;
+    }
+
+    private static void ApplyFont(TMP_Text textComponent, TMP_FontAsset fontAsset)
+    {
+        if (textComponent == null || fontAsset == null || textComponent.font == fontAsset)
+        {
+            return;
+        }
+
+        textComponent.font = fontAsset;
     }
 
     private static string FormatClock(float seconds)

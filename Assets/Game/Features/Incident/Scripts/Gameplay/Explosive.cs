@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -16,34 +15,31 @@ public class Explosive : MonoBehaviour, IInteractable, IEventListener
 
     [Header("Fire Activation")]
     [SerializeField] private float detectionRadius = 5f;
-    [SerializeField] private int maxDetectedColliders = 32;
-    [SerializeField] private LayerMask detectionMask = ~0;
-    [SerializeField] private QueryTriggerInteraction triggerInteraction = QueryTriggerInteraction.Collide;
+    [SerializeField] private FireSimulationManager fireSimulationManager;
+    [SerializeField] private float ignitionDraftHeatAmount = 0.75f;
 
     [Header("After Explosion")]
     [SerializeField] private bool disableSourceObjectOnExplosion = true;
     [SerializeField] private bool destroySourceObjectOnExplosion = false;
 
-    private readonly HashSet<Fire> detectedFires = new HashSet<Fire>();
-    private Collider[] detectionBuffer;
     private Coroutine explodeRoutine;
     private bool isActivated;
     private bool hasExploded;
 
     private void Awake()
     {
-        EnsureDetectionBuffer();
+        ResolveFireSimulationManager();
     }
 
     private void Reset()
     {
-        EnsureDetectionBuffer();
     }
 
     private void OnValidate()
     {
-        maxDetectedColliders = Mathf.Max(1, maxDetectedColliders);
         detectionRadius = Mathf.Max(0f, detectionRadius);
+        ignitionDraftHeatAmount = Mathf.Max(0f, ignitionDraftHeatAmount);
+        ResolveFireSimulationManager();
     }
 
     public void Interact(GameObject interactor)
@@ -154,49 +150,39 @@ public class Explosive : MonoBehaviour, IInteractable, IEventListener
 
     private void ActivateNearbyFirePoints()
     {
-        EnsureDetectionBuffer();
-
         Vector3 center = effectSpawnPoint != null ? effectSpawnPoint.position : transform.position;
-        int hitCount = Physics.OverlapSphereNonAlloc(
-            center,
-            detectionRadius,
-            detectionBuffer,
-            detectionMask,
-            triggerInteraction);
-
-        detectedFires.Clear();
-        for (int i = 0; i < hitCount; i++)
+        FireSimulationManager simulationManager = ResolveFireSimulationManager();
+        if (simulationManager != null && simulationManager.IsInitialized)
         {
-            Collider hit = detectionBuffer[i];
-            if (hit == null)
-            {
-                continue;
-            }
-
-            Fire fire = hit.GetComponentInParent<Fire>();
-            if (fire == null || !detectedFires.Add(fire))
-            {
-                continue;
-            }
-
-            if (!fire.AllowRegrowFromZero)
-            {
-                fire.SetAllowRegrowFromZero(true);
-            }
+            Bounds ignitionBounds = new Bounds(Vector3.zero, Vector3.one * detectionRadius * 2f);
+            ignitionBounds.center = center;
+            simulationManager.ApplyDraftHeatInBounds(ignitionBounds, ignitionDraftHeatAmount);
+        }
+        else
+        {
+            Debug.LogWarning(
+                $"{nameof(Explosive)} on '{name}' could not resolve an initialized {nameof(FireSimulationManager)}. Legacy Fire fallback has been removed.",
+                this);
         }
     }
 
-    private void EnsureDetectionBuffer()
+    private FireSimulationManager ResolveFireSimulationManager()
     {
-        if (maxDetectedColliders < 1)
+        if (fireSimulationManager == null)
         {
-            maxDetectedColliders = 1;
+            fireSimulationManager = GetComponentInParent<FireSimulationManager>(true);
         }
 
-        if (detectionBuffer == null || detectionBuffer.Length != maxDetectedColliders)
+        if (fireSimulationManager == null)
         {
-            detectionBuffer = new Collider[maxDetectedColliders];
+            Transform root = transform.root;
+            if (root != null)
+            {
+                fireSimulationManager = root.GetComponentInChildren<FireSimulationManager>(true);
+            }
         }
+
+        return fireSimulationManager;
     }
 
     private void OnDrawGizmosSelected()

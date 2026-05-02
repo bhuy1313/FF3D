@@ -4,7 +4,6 @@ using UnityEngine;
 [DefaultExecutionOrder(250)]
 public sealed class FireScorchDecalRuntime : MonoBehaviour
 {
-    [SerializeField] private bool autoBindFireComponents = false;
     [SerializeField] private bool autoBindFireSimulationManagers = false;
     [SerializeField] private Material scorchMaterial;
     [SerializeField] private LayerMask surfaceMask = ~0;
@@ -42,30 +41,9 @@ public sealed class FireScorchDecalRuntime : MonoBehaviour
     {
         nextScanTime = Time.unscaledTime + scanInterval;
 
-        if (autoBindFireComponents)
-        {
-            BindFireComponents();
-        }
-
         if (autoBindFireSimulationManagers)
         {
             BindSimulationManagers();
-        }
-    }
-
-    private void BindFireComponents()
-    {
-        Fire[] fires = FindObjectsByType<Fire>(FindObjectsInactive.Exclude);
-        for (int i = 0; i < fires.Length; i++)
-        {
-            Fire fire = fires[i];
-            if (fire == null || fire.GetComponent<FireScorchDecalController>() != null)
-            {
-                continue;
-            }
-
-            FireScorchDecalController controller = fire.gameObject.AddComponent<FireScorchDecalController>();
-            controller.Configure(scorchMaterial, surfaceMask);
         }
     }
 

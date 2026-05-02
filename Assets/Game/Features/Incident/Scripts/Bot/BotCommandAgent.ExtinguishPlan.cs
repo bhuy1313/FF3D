@@ -57,7 +57,7 @@ public partial class BotCommandAgent
                 : agent.ResolveIssuedFireGroupTarget(targetSearchPoint);
             IFireTarget fireTarget = agent.extinguishPlanState.Mode == BotExtinguishCommandMode.PointFire
                 ? agent.ResolveIssuedPointFireTarget(targetSearchPoint)
-                : agent.ResolveActiveFireTarget(targetSearchPoint);
+                : agent.ResolveRepresentativeFireTarget(fireGroup, agent.transform.position);
 
             if ((fireGroup == null || !fireGroup.HasActiveFires) && (fireTarget == null || !fireTarget.IsBurning))
             {
@@ -176,7 +176,7 @@ public partial class BotCommandAgent
                     : agent.ResolveIssuedFireGroupTarget(state.TargetSearchPoint);
                 IFireTarget fireTarget = state.FireTarget != null && state.FireTarget.IsBurning
                     ? state.FireTarget
-                    : agent.ResolveActiveFireTarget(state.TargetSearchPoint);
+                    : agent.ResolveRepresentativeFireTarget(fireGroup, agent.transform.position);
                 if ((fireGroup == null || !fireGroup.HasActiveFires) && (fireTarget == null || !fireTarget.IsBurning))
                 {
                     agent.CompleteExtinguishOrder("FireGroup extinguished.");
@@ -461,7 +461,7 @@ public partial class BotCommandAgent
             : ResolveIssuedFireGroupTarget(state.TargetSearchPoint);
         IFireTarget fireTarget = state.FireTarget != null && state.FireTarget.IsBurning
             ? state.FireTarget
-            : ResolveActiveFireTarget(state.TargetSearchPoint);
+            : ResolveRepresentativeFireTarget(fireGroup, botPosition);
         if ((fireGroup == null || !fireGroup.HasActiveFires) && (fireTarget == null || !fireTarget.IsBurning))
         {
             CompleteExtinguishOrder("No active fire target remained near the assigned point.");

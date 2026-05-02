@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -59,24 +58,7 @@ public sealed class FireGroupAudioController : MonoBehaviour
             return;
         }
 
-        IReadOnlyList<Fire> managedFires = fireGroup.ManagedFires;
-        int activeFireCount = 0;
-        float totalIntensity = 0f;
-
-        if (managedFires != null)
-        {
-            for (int i = 0; i < managedFires.Count; i++)
-            {
-                Fire fire = managedFires[i];
-                if (fire == null || !fire.IsBurning)
-                {
-                    continue;
-                }
-
-                activeFireCount++;
-                totalIntensity += fire.NormalizedHp;
-            }
-        }
+        fireGroup.GetActiveFireMetrics(out int activeFireCount, out float averageIntensity01, out float totalIntensity01);
 
         if (activeFireCount <= 0)
         {
@@ -90,9 +72,8 @@ public sealed class FireGroupAudioController : MonoBehaviour
             return;
         }
 
-        float averageIntensity01 = Mathf.Clamp01(totalIntensity / activeFireCount);
         float countContribution = Mathf.Clamp01(activeFireCount * 0.08f);
-        float intensityContribution = Mathf.Clamp01(totalIntensity * 0.05f);
+        float intensityContribution = Mathf.Clamp01(totalIntensity01 * 0.05f);
         float volumeScale = Mathf.Clamp01(minBedVolume + (countContribution * maxBedVolume) + intensityContribution);
         float pitch = Mathf.Lerp(minPitch, maxPitch, averageIntensity01);
 
