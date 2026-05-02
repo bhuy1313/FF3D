@@ -31,6 +31,12 @@ public class CallPhaseScenarioData : ScriptableObject
     [Header("Incident Seed")]
     public CallPhaseScenarioIncidentSeedData incidentSeed = new CallPhaseScenarioIncidentSeedData();
 
+    [Header("Victims")]
+    [Min(0)] public int actualVictimCount;
+    public bool dispatchEstimatedVictimCountKnown;
+    [Min(0)] public int dispatchEstimatedVictimCountMin;
+    [Min(0)] public int dispatchEstimatedVictimCountMax;
+
     [Header("Scenario Expectations")]
     public CallPhaseScenarioExpectedReportData expectedReport = new CallPhaseScenarioExpectedReportData();
     public CallPhaseScenarioAssessRiskData assessRisk = new CallPhaseScenarioAssessRiskData();

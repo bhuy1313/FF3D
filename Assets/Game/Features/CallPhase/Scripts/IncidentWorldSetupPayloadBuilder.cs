@@ -44,6 +44,14 @@ public static class IncidentWorldSetupPayloadBuilder
         string spreadPreset = Sanitize(baseSeed.fireSpreadPreset, "Moderate");
         string ventilationPreset = ResolveVentilationPreset(baseSeed.ventilationPreset, snapshot, logicalFireLocation, appliedSignals);
         string occupantRiskPreset = ResolveOccupantRiskPreset(snapshot.occupantRisk, appliedSignals);
+        bool estimatedTrappedCountKnown = scenarioData != null && scenarioData.dispatchEstimatedVictimCountKnown;
+        int estimatedTrappedCountMin = 0;
+        int estimatedTrappedCountMax = 0;
+        ResolveEstimatedTrappedCountRange(
+            scenarioData,
+            estimatedTrappedCountKnown,
+            out estimatedTrappedCountMin,
+            out estimatedTrappedCountMax);
 
         ApplySeverityInfluence(severityBand, ref intensity, ref fireCount, ref smokeDensity, ref smokeMultiplier, appliedSignals);
         ApplySpreadInfluence(snapshot.spreadStatus, ref intensity, ref fireCount, ref smokeDensity, ref smokeMultiplier, ref spreadPreset, appliedSignals);
@@ -51,6 +59,11 @@ public static class IncidentWorldSetupPayloadBuilder
         ApplyOccupantRiskInfluence(occupantRiskPreset, ref smokeDensity, ref smokeMultiplier, appliedSignals);
         ApplyVentilationInfluence(ventilationPreset, ref intensity, ref smokeDensity, ref smokeMultiplier, appliedSignals);
         ApplyCallerSafetyInfluence(snapshot.callerSafety, ref smokeDensity, ref smokeMultiplier, appliedSignals);
+        ApplyEstimatedVictimSignal(
+            estimatedTrappedCountKnown,
+            estimatedTrappedCountMin,
+            estimatedTrappedCountMax,
+            appliedSignals);
 
         return new IncidentWorldSetupPayload
         {
@@ -69,10 +82,35 @@ public static class IncidentWorldSetupPayloadBuilder
             ventilationPreset = ventilationPreset,
             occupantRiskPreset = occupantRiskPreset,
             severityBand = severityBand,
+            estimatedTrappedCountKnown = estimatedTrappedCountKnown,
+            estimatedTrappedCountMin = estimatedTrappedCountMin,
+            estimatedTrappedCountMax = estimatedTrappedCountMax,
             confidenceScore = ComputeConfidenceScore(incidentReportController, snapshot),
             reportSnapshot = snapshot,
             appliedSignals = appliedSignals
         };
+    }
+
+    private static void ResolveEstimatedTrappedCountRange(
+        CallPhaseScenarioData scenarioData,
+        bool estimatedTrappedCountKnown,
+        out int estimatedTrappedCountMin,
+        out int estimatedTrappedCountMax)
+    {
+        estimatedTrappedCountMin = 0;
+        estimatedTrappedCountMax = 0;
+
+        if (!estimatedTrappedCountKnown || scenarioData == null)
+        {
+            return;
+        }
+
+        estimatedTrappedCountMin = Mathf.Max(0, scenarioData.dispatchEstimatedVictimCountMin);
+        estimatedTrappedCountMax = Mathf.Max(0, scenarioData.dispatchEstimatedVictimCountMax);
+        if (estimatedTrappedCountMax < estimatedTrappedCountMin)
+        {
+            estimatedTrappedCountMax = estimatedTrappedCountMin;
+        }
     }
 
     private static IncidentWorldSetupReportSnapshot BuildSnapshot(IncidentReportController incidentReportController)
@@ -414,6 +452,39 @@ public static class IncidentWorldSetupPayloadBuilder
             smokeMultiplier += 0.05f;
             appliedSignals.Add("Caller still inside suggests earlier untenable smoke conditions.");
         }
+    }
+
+    private static void ApplyEstimatedVictimSignal(
+        bool estimatedTrappedCountKnown,
+        int estimatedTrappedCountMin,
+        int estimatedTrappedCountMax,
+        List<string> appliedSignals)
+    {
+        if (!estimatedTrappedCountKnown)
+        {
+            return;
+        }
+
+        string estimateLabel = FormatEstimatedVictimRange(estimatedTrappedCountMin, estimatedTrappedCountMax);
+        if (string.IsNullOrWhiteSpace(estimateLabel))
+        {
+            return;
+        }
+
+        appliedSignals.Add($"Dispatch estimate indicates {estimateLabel} trapped victim(s).");
+    }
+
+    private static string FormatEstimatedVictimRange(int estimatedTrappedCountMin, int estimatedTrappedCountMax)
+    {
+        estimatedTrappedCountMin = Mathf.Max(0, estimatedTrappedCountMin);
+        estimatedTrappedCountMax = Mathf.Max(estimatedTrappedCountMin, estimatedTrappedCountMax);
+
+        if (estimatedTrappedCountMin == estimatedTrappedCountMax)
+        {
+            return estimatedTrappedCountMin.ToString();
+        }
+
+        return $"{estimatedTrappedCountMin}-{estimatedTrappedCountMax}";
     }
 
     private static float ComputeConfidenceScore(IncidentReportController incidentReportController, IncidentWorldSetupReportSnapshot snapshot)

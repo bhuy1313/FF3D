@@ -132,6 +132,9 @@ public class CallPhaseIncidentSeedDebugController : MonoBehaviour
         builder.Append("ventilationPreset: ").AppendLine(NullToPlaceholder(payload.ventilationPreset));
         builder.Append("occupantRiskPreset: ").AppendLine(NullToPlaceholder(payload.occupantRiskPreset));
         builder.Append("severityBand: ").AppendLine(NullToPlaceholder(payload.severityBand));
+        builder.Append("estimatedTrappedCountKnown: ").AppendLine(payload.estimatedTrappedCountKnown ? "true" : "false");
+        builder.Append("estimatedTrappedCountMin: ").AppendLine(payload.estimatedTrappedCountMin.ToString());
+        builder.Append("estimatedTrappedCountMax: ").AppendLine(payload.estimatedTrappedCountMax.ToString());
         builder.Append("confidenceScore: ").AppendLine(payload.confidenceScore.ToString("0.00"));
         builder.AppendLine();
         builder.AppendLine("Report Snapshot");

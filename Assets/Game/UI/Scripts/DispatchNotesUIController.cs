@@ -318,6 +318,11 @@ public class DispatchNotesUIController : MonoBehaviour
 
             string severityColor = GetSeverityColor(payload.reportSnapshot.severity);
             AppendField(sb, "SEVERITY", payload.reportSnapshot.severity, severityColor);
+            if (payload.estimatedTrappedCountKnown)
+            {
+                AppendField(sb, "EST. TRAPPED", FormatEstimatedTrappedCount(payload), "#8f2d2d");
+            }
+
             ApplyStampSeverity(payload.reportSnapshot.severity);
         }
         else
@@ -1020,5 +1025,17 @@ public class DispatchNotesUIController : MonoBehaviour
         if (s.Contains("low") || s.Contains("minor"))
             return "#1f6a3a";
         return null;
+    }
+
+    private static string FormatEstimatedTrappedCount(IncidentWorldSetupPayload payload)
+    {
+        if (payload == null)
+        {
+            return "---";
+        }
+
+        int min = Mathf.Max(0, payload.estimatedTrappedCountMin);
+        int max = Mathf.Max(min, payload.estimatedTrappedCountMax);
+        return min == max ? min.ToString() : $"{min}-{max}";
     }
 }

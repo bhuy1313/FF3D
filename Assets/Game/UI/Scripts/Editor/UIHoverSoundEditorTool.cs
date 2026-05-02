@@ -32,7 +32,7 @@ namespace FF3D.Editor
         private void AddHoverSoundToButtons()
         {
             // Find all buttons in the active scene
-            Button[] buttons = FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            Button[] buttons = FindObjectsByType<Button>(FindObjectsInactive.Include);
             int addedCount = 0;
 
             foreach (Button btn in buttons)

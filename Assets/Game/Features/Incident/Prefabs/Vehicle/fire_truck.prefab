@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 9104680913224289246}
   - component: {fileID: 8592132813343185595}
   - component: {fileID: 2839516263083362028}
+  - component: {fileID: 7012088159597466617}
   m_Layer: 0
   m_Name: fire_truck
   m_TagString: Untagged
@@ -111,3 +112,24 @@ NavMeshObstacle:
   m_CarveOnlyStationary: 1
   m_Center: {x: 0, y: -0.017, z: 1.5230001}
   m_TimeToStationary: 0.5
+--- !u!65 &7012088159597466617
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3854445215284361970}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 2.7077339, y: 8.732213, z: 3.0660653}
+  m_Center: {x: 0.00000005960467, y: -0.017214188, z: 1.5228077}

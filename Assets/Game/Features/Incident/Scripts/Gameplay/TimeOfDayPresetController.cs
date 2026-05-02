@@ -11,7 +11,8 @@ public class TimeOfDayPresetController : MonoBehaviour
         Morning = 0,
         Noon = 1,
         Evening = 2,
-        Night = 3
+        Night = 3,
+        EmergencyNight = 4
     }
 
     private struct PresetValues
@@ -286,6 +287,28 @@ public class TimeOfDayPresetController : MonoBehaviour
                     sunColor = new Color(0.62f, 0.73f, 0.95f),
                     sunIntensity = 0.22f,
                     sunEulerAngles = new Vector3(340f, -24f, 0f)
+                };
+
+            case TimeOfDayPreset.EmergencyNight:
+                return new PresetValues
+                {
+                    skybox = nightSkybox,
+
+                    fogColor = new Color(0.18f, 0.20f, 0.28f), // sáng hơn + xanh hơn
+                    fogStart = 0f,
+
+                    ambientSkyColor = new Color(0.18f, 0.22f, 0.32f),
+                    ambientEquatorColor = new Color(0.14f, 0.17f, 0.22f),
+ambientGroundColor = new Color(0.06f, 0.07f, 0.09f),
+
+                    ambientIntensity = 0.75f, // 🔥 tăng sáng global
+
+                    reflectionIntensity = 0.18f, // phản xạ rõ hơn
+
+                    sunColor = new Color(0.788f, 0.851f, 1f), // #C9D9FF
+                    sunIntensity = 0.45f, // 🔥 tăng fill light
+
+                    sunEulerAngles = new Vector3(20f, -20f, 0f)
                 };
 
             default:
