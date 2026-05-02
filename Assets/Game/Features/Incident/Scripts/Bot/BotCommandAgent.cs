@@ -110,6 +110,7 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     [SerializeField] private float fireHoseCrouchDelay = 0.35f;
     [SerializeField] private float extinguisherRouteCorridorWidth = 3f;
     [SerializeField] private float extinguisherApproachRetargetDistance = 0.75f;
+    [SerializeField] private float blockedExtinguishToolRetryDelay = 1f;
     [SerializeField] private float pointFireApproachSearchRadius = 8f;
     [SerializeField] private float pointFireApproachSampleStep = 1.5f;
     [SerializeField] private int pointFireApproachDirections = 12;
@@ -180,6 +181,7 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     private IBotExtinguisherItem activeExtinguisher;
     private IBotExtinguisherItem preferredExtinguishTool;
     private IBotExtinguisherItem committedExtinguishTool;
+    private IBotExtinguisherItem temporarilyRejectedExtinguishTool;
     private IBotBreakTool activeBreakTool;
     private IBotBreakTool committedBreakTool;
     private IBotBreakTool temporarilyRejectedBreakTool;
@@ -230,6 +232,7 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     private float nextBreakUseTime;
     private float nextPathClearingRefreshTime;
     private float pathClearingResumeGraceUntilTime;
+    private float temporarilyRejectedExtinguishToolUntilTime;
     private float temporarilyRejectedBreakToolUntilTime;
     private readonly List<string> commandPlanDebugLines = new List<string>(16);
     private readonly List<string> commandPlanPendingTaskNames = new List<string>(8);

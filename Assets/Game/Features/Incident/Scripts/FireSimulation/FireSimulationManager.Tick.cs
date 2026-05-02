@@ -43,6 +43,11 @@ public sealed partial class FireSimulationManager
                 node.HasReachedSpreadSaturation = true;
             }
 
+            if (node.IsBurning)
+            {
+                node.HasEverBurned = true;
+            }
+
             // Snap residual heat to 0 while a node is still in its
             // suppression recovery window. The guard prevents ramp-up via slow
             // neighbour spread from being killed off. Using IgnitionThreshold
@@ -60,7 +65,7 @@ public sealed partial class FireSimulationManager
             // Only remove nodes that were actually engaged in the incident — Late
             // nodes that never got touched by spread keep Heat=0 forever and must
             // remain in the graph so neighbours can still ignite them later.
-            if (node.IsTrackedByIncident && node.Heat <= 0.0001f)
+            if (node.IsTrackedByIncident && node.HasEverBurned && node.Heat <= 0.0001f)
             {
                 RemoveRuntimeNode(node);
                 changed = true;

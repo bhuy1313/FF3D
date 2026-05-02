@@ -199,7 +199,7 @@ public sealed partial class FireSimulationManager
         }
 
         float threshold = simulationProfile != null ? simulationProfile.VisualHeatThreshold : 0.01f;
-        return node.Heat > threshold;
+        return node.Heat >= threshold;
     }
 
     private float GetSpreadSaturationHeat(FireRuntimeNode node)
@@ -225,6 +225,7 @@ public sealed partial class FireSimulationManager
         node.Heat = 0f;
         node.PendingHeatDelta = 0f;
         node.SuppressionRecoveryTimer = 0f;
+        node.HasEverBurned = false;
     }
 
     private int FindClosestNodeIndex(Vector3 worldPosition)

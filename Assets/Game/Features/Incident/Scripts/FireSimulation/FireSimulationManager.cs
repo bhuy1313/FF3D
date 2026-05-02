@@ -41,6 +41,7 @@ public sealed partial class FireSimulationManager : MonoBehaviour
     private bool activeHazardSourceIsolated;
     private Transform runtimeIncidentNodeRoot;
     private Transform runtimeBotFireTargetRoot;
+    private Transform runtimeFireEffectRoot;
 
     public IReadOnlyList<FireNodeSnapshot> NodeSnapshots => nodeSnapshots;
     public FireRuntimeGraph RuntimeGraph => runtimeGraph;

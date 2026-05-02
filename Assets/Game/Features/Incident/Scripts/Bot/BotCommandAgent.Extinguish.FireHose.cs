@@ -122,6 +122,18 @@ public partial class BotCommandAgent
             $"disthose:{horizontalDistanceToFire:F2}:{desiredHorizontalDistance:F2}",
             $"Fire hose distance to target. horizontal={horizontalDistanceToFire:F2}, desired={desiredHorizontalDistance:F2}, max={activeExtinguisher.MaxSprayDistance:F2}, vertical={Mathf.Abs(firePosition.y - botPosition.y):F2}.");
 
+        if (!CanApplyWaterToFireGroup(activeExtinguisher, fireGroup, firePosition))
+        {
+            SetExtinguishSubtask(BotExtinguishSubtask.AimAtFire, "Waiting for a clear suppression line.");
+            StopExtinguisher();
+            sprayReadyTime = -1f;
+            LogVerboseExtinguish(
+                VerboseExtinguishLogCategory.Spray,
+                $"blockedhose:{GetToolName(activeExtinguisher)}:{firePosition}",
+                $"Fire hose suppression blocked by range, aim, or line of sight. fire={firePosition}.");
+            return;
+        }
+
         SetExtinguishSubtask(BotExtinguishSubtask.Spray, "Spraying fire.");
         UpdateExtinguishDebugStage(ExtinguishDebugStage.Spraying, $"Spraying fire hose at {firePosition}.");
         activeExtinguisher.SetExternalSprayState(true, gameObject);

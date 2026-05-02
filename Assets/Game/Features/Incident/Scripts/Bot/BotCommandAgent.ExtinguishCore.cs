@@ -111,32 +111,35 @@ public partial class BotCommandAgent
     {
         IBotExtinguisherItem bestTool = null;
         float bestScore = float.PositiveInfinity;
-        System.Collections.Generic.List<IBotExtinguisherItem> inventoryTools = new System.Collections.Generic.List<IBotExtinguisherItem>();
-        inventorySystem.CollectItems(inventoryTools);
-        for (int i = 0; i < inventoryTools.Count; i++)
+        if (inventorySystem != null)
         {
-            IBotExtinguisherItem candidate = inventoryTools[i];
-            if (candidate == null || !candidate.HasUsableCharge || !candidate.IsAvailableTo(gameObject))
+            System.Collections.Generic.List<IBotExtinguisherItem> inventoryTools = new System.Collections.Generic.List<IBotExtinguisherItem>();
+            inventorySystem.CollectItems(inventoryTools);
+            for (int i = 0; i < inventoryTools.Count; i++)
             {
-                continue;
-            }
+                IBotExtinguisherItem candidate = inventoryTools[i];
+                if (candidate == null || IsExtinguishToolTemporarilyRejected(candidate) || !candidate.HasUsableCharge || !candidate.IsAvailableTo(gameObject))
+                {
+                    continue;
+                }
 
-            if (IsUnsafeSuppressionToolForFire(candidate, fireTarget))
-            {
-                continue;
-            }
+                if (IsUnsafeSuppressionToolForFire(candidate, fireTarget))
+                {
+                    continue;
+                }
 
-            if (!DoesToolMatchExtinguishMode(candidate, orderMode) ||
-                !CanToolReachFire(candidate, orderMode, orderPoint, firePosition, fireGroup, fireTarget))
-            {
-                continue;
-            }
+                if (!DoesToolMatchExtinguishMode(candidate, orderMode) ||
+                    !CanToolReachFire(candidate, orderMode, orderPoint, firePosition, fireGroup, fireTarget))
+                {
+                    continue;
+                }
 
-            float score = ScoreSuppressionTool(candidate, orderPoint, firePosition, transform.position, fireTarget);
-            if (score < bestScore)
-            {
-                bestScore = score;
-                bestTool = candidate;
+                float score = ScoreSuppressionTool(candidate, orderPoint, firePosition, transform.position, fireTarget);
+                if (score < bestScore)
+                {
+                    bestScore = score;
+                    bestTool = candidate;
+                }
             }
         }
 
@@ -181,7 +184,12 @@ public partial class BotCommandAgent
         ref float bestScore)
     {
         Component candidateComponent = candidate as Component;
-        if (candidateComponent == null || candidate.IsHeld || candidate.Rigidbody == null || !candidate.HasUsableCharge || !candidate.IsAvailableTo(gameObject))
+        if (candidateComponent == null ||
+            IsExtinguishToolTemporarilyRejected(candidate) ||
+            candidate.IsHeld ||
+            candidate.Rigidbody == null ||
+            !candidate.HasUsableCharge ||
+            !candidate.IsAvailableTo(gameObject))
         {
             return;
         }
@@ -413,6 +421,50 @@ public partial class BotCommandAgent
             committedExtinguishTool.ReleaseClaim(gameObject);
             committedExtinguishTool = null;
         }
+    }
+
+    private bool IsExtinguishToolTemporarilyRejected(IBotExtinguisherItem tool)
+    {
+        if (tool == null || temporarilyRejectedExtinguishTool == null)
+        {
+            return false;
+        }
+
+        if (Time.time >= temporarilyRejectedExtinguishToolUntilTime)
+        {
+            temporarilyRejectedExtinguishTool = null;
+            temporarilyRejectedExtinguishToolUntilTime = 0f;
+            return false;
+        }
+
+        return ReferenceEquals(tool, temporarilyRejectedExtinguishTool);
+    }
+
+    private void TemporarilyRejectExtinguishTool(IBotExtinguisherItem tool)
+    {
+        if (tool == null)
+        {
+            return;
+        }
+
+        if (ReferenceEquals(activeExtinguisher, tool))
+        {
+            StopExtinguisher();
+            activeExtinguisher = null;
+        }
+
+        if (ReferenceEquals(preferredExtinguishTool, tool))
+        {
+            preferredExtinguishTool = null;
+        }
+
+        if (ReferenceEquals(committedExtinguishTool, tool))
+        {
+            ReleaseCommittedTool();
+        }
+
+        temporarilyRejectedExtinguishTool = tool;
+        temporarilyRejectedExtinguishToolUntilTime = Time.time + Mathf.Max(0.1f, blockedExtinguishToolRetryDelay);
     }
 
     private bool TryDropActiveBulkySuppressionToolForReplacement(IBotExtinguisherItem desiredTool)

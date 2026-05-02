@@ -27,13 +27,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6458282959159376556}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.10047921, y: -0.2741274, z: 0.02881195, w: 0.9559958}
+  m_LocalRotation: {x: 0.10047921, y: -0.27412733, z: 0.028811943, w: 0.95599586}
   m_LocalPosition: {x: 0, y: 3, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+  m_LocalEulerAnglesHint: {x: 12, y: -32, z: 0}
 --- !u!108 &4489993831332419238
 Light:
   m_ObjectHideFlags: 0
@@ -44,8 +44,8 @@ Light:
   m_Enabled: 1
   serializedVersion: 13
   m_Type: 1
-  m_Color: {r: 1, g: 0.72, b: 0.52, a: 1}
-  m_Intensity: 0.88
+  m_Color: {r: 0.788, g: 0.851, b: 1, a: 1}
+  m_Intensity: 0.45
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -140,10 +140,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 54eab5657c1f4767afba15fd59f81695, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TimeOfDayPresetController
-  selectedPreset: 2
+  selectedPreset: 4
   applyOnEnable: 1
+  enableFog: 0
+  fogEnd: 240
   sunLight: {fileID: 4489993831332419238}
   morningSkybox: {fileID: 2100000, guid: 8b7dd0809c7c6498789fa32a61eaa6cb, type: 2}
-  noonSkybox: {fileID: 2100000, guid: c56e28e54cac24b04ae3dd957d214534, type: 2}
+  noonSkybox: {fileID: 2100000, guid: 1083bae5bed0f5344a2f22028410f6f7, type: 2}
   eveningSkybox: {fileID: 2100000, guid: 7416536dbe0334cfd888dd1beb75a9fb, type: 2}
   nightSkybox: {fileID: 2100000, guid: c494c335823f54b52b2e87e1b7a63a23, type: 2}
+  rotateSkybox: 1
+  initialSkyboxRotation: 0
+  skyboxRotationSpeed: 0.25

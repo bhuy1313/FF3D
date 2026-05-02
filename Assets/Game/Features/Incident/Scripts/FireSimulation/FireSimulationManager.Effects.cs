@@ -59,12 +59,13 @@ public sealed partial class FireSimulationManager
         }
 
         int maxEffects = simulationProfile != null ? simulationProfile.MaxNodeEffects : 0;
+        UnityEngine.Transform resolvedEffectRoot = effectRoot != null ? effectRoot : EnsureRuntimeFireEffectRoot();
         effectManager.Configure(
             ordinaryEffectPrefab,
             electricalEffectPrefab,
             flammableLiquidEffectPrefab,
             gasEffectPrefab,
-            effectRoot,
+            resolvedEffectRoot,
             maxEffects);
 
         if (simulationProfile != null)
@@ -73,5 +74,21 @@ public sealed partial class FireSimulationManager
         }
 
         return effectManager;
+    }
+
+    private UnityEngine.Transform EnsureRuntimeFireEffectRoot()
+    {
+        if (runtimeFireEffectRoot != null)
+        {
+            return runtimeFireEffectRoot;
+        }
+
+        UnityEngine.GameObject rootObject = new UnityEngine.GameObject("RuntimeFireEffects");
+        runtimeFireEffectRoot = rootObject.transform;
+        runtimeFireEffectRoot.SetParent(transform, false);
+        runtimeFireEffectRoot.localPosition = UnityEngine.Vector3.zero;
+        runtimeFireEffectRoot.localRotation = UnityEngine.Quaternion.identity;
+        runtimeFireEffectRoot.localScale = UnityEngine.Vector3.one;
+        return runtimeFireEffectRoot;
     }
 }

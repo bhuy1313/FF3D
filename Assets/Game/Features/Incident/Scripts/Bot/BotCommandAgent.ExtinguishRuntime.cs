@@ -19,11 +19,28 @@ public partial class BotCommandAgent
         }
     }
 
-    private void TryApplyWaterToFireGroup(IBotExtinguisherItem tool, IFireGroupTarget fireGroup, Vector3 firePosition)
+    private bool TryApplyWaterToFireGroup(IBotExtinguisherItem tool, IFireGroupTarget fireGroup, Vector3 firePosition)
     {
-        if (tool == null || fireGroup == null)
+        if (!CanApplyWaterToFireGroup(tool, fireGroup, firePosition))
         {
-            return;
+            return false;
+        }
+
+        float waterAmount = Mathf.Max(0f, tool.ApplyWaterPerSecond) * Time.deltaTime;
+        if (waterAmount <= 0f)
+        {
+            return false;
+        }
+
+        fireGroup.ApplyWater(waterAmount, gameObject, tool.SuppressionAgent);
+        return true;
+    }
+
+    private bool CanApplyWaterToFireGroup(IBotExtinguisherItem tool, IFireGroupTarget fireGroup, Vector3 firePosition)
+    {
+        if (tool == null || fireGroup == null || !fireGroup.HasActiveFires)
+        {
+            return false;
         }
 
         Vector3 aimOrigin = UsesPreciseAim(tool) ? GetPreciseAimOrigin() : transform.position;
@@ -32,7 +49,7 @@ public partial class BotCommandAgent
             : GetAimPoint(tool, firePosition) - aimOrigin;
         if (toFire.sqrMagnitude <= 0.001f)
         {
-            return;
+            return false;
         }
 
         if (!UsesPreciseAim(tool))
@@ -43,7 +60,7 @@ public partial class BotCommandAgent
         Vector3 forward = UsesPreciseAim(tool) ? GetPreciseAimForward() : transform.forward;
         if (forward.sqrMagnitude <= 0.001f)
         {
-            return;
+            return false;
         }
 
         if (!UsesPreciseAim(tool))
@@ -54,16 +71,18 @@ public partial class BotCommandAgent
         float facingDot = Vector3.Dot(forward.normalized, toFire.normalized);
         if (facingDot < sprayFacingThreshold)
         {
-            return;
+            return false;
         }
 
-        float waterAmount = Mathf.Max(0f, tool.ApplyWaterPerSecond) * Time.deltaTime;
-        if (waterAmount <= 0f)
+        float horizontalDistance = GetHorizontalDistance(aimOrigin, firePosition);
+        float verticalDistance = Mathf.Abs(firePosition.y - aimOrigin.y);
+        if (horizontalDistance > tool.MaxSprayDistance + ExtinguisherRangeSlack ||
+            verticalDistance > tool.MaxVerticalReach + ExtinguisherRangeSlack)
         {
-            return;
+            return false;
         }
 
-        fireGroup.ApplyWater(waterAmount, gameObject, tool.SuppressionAgent);
+        return HasLineOfSightToFireTarget(aimOrigin, firePosition, null);
     }
 
     private void TryApplyWaterToFireTarget(IBotExtinguisherItem tool, IFireTarget fireTarget, Vector3 firePosition)
@@ -979,8 +998,12 @@ public partial class BotCommandAgent
         CompleteCurrentTask(detail);
         UpdateExtinguishDebugStage(ExtinguishDebugStage.Completed, detail);
         ClearExtinguishRuntimeState();
-        behaviorContext.ClearExtinguishOrder();
-        navMeshAgent.isStopped = false;
+        behaviorContext?.ClearExtinguishOrder();
+        if (navMeshAgent != null && navMeshAgent.enabled && navMeshAgent.isOnNavMesh)
+        {
+            navMeshAgent.ResetPath();
+            navMeshAgent.isStopped = false;
+        }
     }
 
     private void FailActiveExtinguishOrder(string detail, BotTaskStatus failureStatus = BotTaskStatus.Failed)
@@ -1053,6 +1076,8 @@ public partial class BotCommandAgent
         extinguishTaskDetail = "Awaiting extinguish assignment.";
         lastExtinguishFailureReason = string.Empty;
         extinguishSubtaskStartedAtTime = 0f;
+        temporarilyRejectedExtinguishTool = null;
+        temporarilyRejectedExtinguishToolUntilTime = 0f;
         activityDebug?.ResetExtinguish();
     }
 }

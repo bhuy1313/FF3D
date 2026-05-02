@@ -126,6 +126,11 @@ public sealed partial class FireSimulationManager
             ? Mathf.Lerp(node.IgnitionThreshold, maxHeat, clampedHeat01)
             : 0f;
         node.Heat = Mathf.Max(node.Heat, heat);
+        if (node.IsBurning)
+        {
+            node.HasEverBurned = true;
+        }
+
         BuildNodeSnapshots();
         SyncEffects();
         NotifyStateChanged();
@@ -275,6 +280,7 @@ public sealed partial class FireSimulationManager
             node.IsTrackedByIncident = false;
             node.IncidentNodeKind = FireIncidentNodeKind.Late;
             node.SuppressionRecoveryTimer = 0f;
+            node.HasEverBurned = useAuthoringIgnition && node.AuthoringStartIgnited;
             node.HasReachedSpreadSaturation = false;
             node.IsRemoved = false;
             node.Heat = useAuthoringIgnition && node.AuthoringStartIgnited

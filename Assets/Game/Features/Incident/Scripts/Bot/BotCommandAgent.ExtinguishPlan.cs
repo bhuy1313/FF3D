@@ -311,6 +311,7 @@ public partial class BotCommandAgent
         }
 
         StopExtinguisher();
+        TemporarilyRejectExtinguishTool(activeExtinguisher);
         sprayReadyTime = -1f;
         ClearHeadAimFocus();
         ClearHandAimFocus();
@@ -339,6 +340,7 @@ public partial class BotCommandAgent
         }
 
         StopExtinguisher();
+        TemporarilyRejectExtinguishTool(activeExtinguisher);
         sprayReadyTime = -1f;
         ClearHeadAimFocus();
         ClearHandAimFocus();
@@ -398,6 +400,13 @@ public partial class BotCommandAgent
         }
 
         state.UsesPreciseAim = BotCommandAgent.UsesPreciseAim(state.PlannedTool);
+        if (!state.UsesPreciseAim && TryReplanExtinguishOrderForPointFireTool(state))
+        {
+            SetExtinguishSubtask(BotExtinguishSubtask.Recover, "Replanning handheld extinguisher against a point fire.");
+            InvalidateActiveCommandPlan();
+            return BotPlanTaskStatus.Success;
+        }
+
         if (!TryAdvanceSuppressionToolAcquisition(state.PlannedTool, true))
         {
             if (TryPrepareSuppressionToolMovePickup(state.PlannedTool))
@@ -424,6 +433,42 @@ public partial class BotCommandAgent
         }
 
         return BotPlanTaskStatus.Success;
+    }
+
+    private bool TryReplanExtinguishOrderForPointFireTool(BotExtinguishPlanState state)
+    {
+        if (state == null ||
+            state.Mode == BotExtinguishCommandMode.PointFire ||
+            state.PlannedTool == null ||
+            BotCommandAgent.UsesPreciseAim(state.PlannedTool) ||
+            state.FireTarget == null ||
+            !state.FireTarget.IsBurning ||
+            behaviorContext == null ||
+            navMeshAgent == null ||
+            !navMeshAgent.enabled ||
+            !navMeshAgent.isOnNavMesh)
+        {
+            return false;
+        }
+
+        Vector3 scanOrigin = state.FireTarget.GetWorldPosition();
+        Vector3 destination = scanOrigin;
+        if (TryResolvePointFireApproachPosition(scanOrigin, out Vector3 approachDestination))
+        {
+            destination = approachDestination;
+        }
+        else if (navMeshSampleDistance > 0f &&
+                 UnityEngine.AI.NavMesh.SamplePosition(scanOrigin, out UnityEngine.AI.NavMeshHit navMeshHit, navMeshSampleDistance, navMeshAgent.areaMask))
+        {
+            destination = navMeshHit.position;
+        }
+
+        CacheIssuedExtinguishTargets(BotExtinguishCommandMode.PointFire, state.FireTarget, null);
+        behaviorContext.SetExtinguishOrder(destination, scanOrigin, BotExtinguishCommandMode.PointFire);
+        extinguishStartupPending = true;
+        lastIssuedDestination = destination;
+        hasIssuedDestination = true;
+        return true;
     }
 
     private MoveTaskDirective UpdateExtinguishPositionMove()
