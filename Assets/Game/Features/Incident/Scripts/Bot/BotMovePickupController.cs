@@ -24,6 +24,7 @@ internal sealed class BotMovePickupController
     private IPickupable currentMovePickupTarget;
 
     internal bool HasTarget => currentMovePickupTarget != null;
+    internal IPickupable CurrentTarget => currentMovePickupTarget;
 
     internal void SetTarget(IPickupable target)
     {

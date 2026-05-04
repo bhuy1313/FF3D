@@ -9,6 +9,15 @@ public sealed class FireNodeEffectView : MonoBehaviour
     [SerializeField] private float maxLightIntensity = 2f;
     [SerializeField] private Vector2 flameScaleRange = new Vector2(0.7f, 1.35f);
     [SerializeField] private Vector3 visualOffset = Vector3.zero;
+    [SerializeField] private bool scaleVisualOffsetWithEffectScale = true;
+    [Header("Visual Variation")]
+    [SerializeField] private bool randomizeScalePerNode = true;
+    [SerializeField] private Vector2 randomScaleMultiplierRange = new Vector2(0.4f, 1f);
+    [SerializeField] private int randomScaleSeed = 9173;
+    [Header("Retire")]
+    [SerializeField] [Min(0f)] private float retireShrinkDuration = 0.45f;
+    [SerializeField] [Min(0f)] private float retireEndScaleMultiplier = 0.05f;
+    [SerializeField] private bool stopParticlesWhenRetiring = true;
     [Header("Fallback Visual")]
     [SerializeField] private bool createFallbackVisualWhenNoParticles = true;
     [SerializeField] private Color fallbackCoreColor = new Color(1f, 0.45f, 0.1f, 0.95f);
@@ -22,10 +31,18 @@ public sealed class FireNodeEffectView : MonoBehaviour
     private Material fallbackCoreMaterial;
     private Material fallbackGlowMaterial;
     private bool fallbackVisualInitialized;
+    private float nodeScaleMultiplier = 1f;
+    private Vector3 lastNodePosition;
+    private Vector3 lastResolvedOffset;
+    private float lastFinalScale = 1f;
+    private float retireElapsed;
+    private float retireStartScale = 1f;
+    private bool retiring;
 
     public int BoundNodeIndex => boundNodeIndex;
     public FireHazardType BoundHazardType => boundHazardType;
     public bool IsBound => boundNodeIndex >= 0;
+    public bool IsRetiring => retiring;
 
     private void Awake()
     {
@@ -49,6 +66,9 @@ public sealed class FireNodeEffectView : MonoBehaviour
     {
         boundNodeIndex = nodeIndex;
         boundHazardType = hazardType;
+        retiring = false;
+        retireElapsed = 0f;
+        nodeScaleMultiplier = ResolveScaleMultiplier(nodeIndex);
         if (!gameObject.activeSelf)
         {
             gameObject.SetActive(true);
@@ -58,6 +78,9 @@ public sealed class FireNodeEffectView : MonoBehaviour
     public void Unbind()
     {
         boundNodeIndex = -1;
+        retiring = false;
+        retireElapsed = 0f;
+        nodeScaleMultiplier = 1f;
         SetParticlesActive(false);
 
         if (gameObject.activeSelf)
@@ -70,12 +93,19 @@ public sealed class FireNodeEffectView : MonoBehaviour
     {
         EnsureFallbackVisual();
 
-        transform.position = snapshot.Position + visualOffset;
-        transform.rotation = ResolveVisualRotation(snapshot.SurfaceNormal);
-
         float intensity01 = Mathf.Clamp01(snapshot.Intensity);
         float scale = Mathf.Lerp(flameScaleRange.x, flameScaleRange.y, intensity01);
-        transform.localScale = Vector3.one * scale;
+        float finalScale = scale * nodeScaleMultiplier;
+
+        Vector3 resolvedOffset = scaleVisualOffsetWithEffectScale
+            ? visualOffset * finalScale
+            : visualOffset;
+        lastNodePosition = snapshot.Position;
+        lastResolvedOffset = resolvedOffset;
+        lastFinalScale = finalScale;
+        transform.position = snapshot.Position + resolvedOffset;
+        transform.rotation = ResolveVisualRotation(snapshot.SurfaceNormal);
+        transform.localScale = Vector3.one * finalScale;
 
         if (visualRoot != null)
         {
@@ -94,6 +124,105 @@ public sealed class FireNodeEffectView : MonoBehaviour
 
         ApplyFallbackVisual(intensity01, visible);
         SetParticlesActive(visible);
+    }
+
+    public void BeginRetire()
+    {
+        if (retiring)
+        {
+            return;
+        }
+
+        retiring = true;
+        retireElapsed = 0f;
+        retireStartScale = Mathf.Max(0.0001f, lastFinalScale);
+        boundNodeIndex = -1;
+
+        if (nodeLight != null)
+        {
+            nodeLight.enabled = false;
+        }
+
+        ApplyFallbackVisual(0f, false);
+
+        if (stopParticlesWhenRetiring)
+        {
+            SetParticlesActive(false);
+        }
+    }
+
+    public bool TickRetire(float deltaTime)
+    {
+        if (!retiring)
+        {
+            return true;
+        }
+
+        float duration = Mathf.Max(0.0001f, retireShrinkDuration);
+        retireElapsed += Mathf.Max(0f, deltaTime);
+        float t01 = Mathf.Clamp01(retireElapsed / duration);
+        float eased = 1f - (1f - t01) * (1f - t01);
+        float targetScale = retireStartScale * Mathf.Max(0f, retireEndScaleMultiplier);
+        float currentScale = Mathf.Lerp(retireStartScale, targetScale, eased);
+        Vector3 currentOffset = scaleVisualOffsetWithEffectScale
+            ? lastResolvedOffset * (currentScale / retireStartScale)
+            : lastResolvedOffset;
+
+        transform.position = lastNodePosition + currentOffset;
+        transform.localScale = Vector3.one * currentScale;
+
+        return t01 >= 1f;
+    }
+
+    private void OnValidate()
+    {
+        flameScaleRange.x = Mathf.Max(0.01f, flameScaleRange.x);
+        flameScaleRange.y = Mathf.Max(0.01f, flameScaleRange.y);
+        if (flameScaleRange.y < flameScaleRange.x)
+        {
+            flameScaleRange.y = flameScaleRange.x;
+        }
+
+        randomScaleMultiplierRange.x = Mathf.Max(0.01f, randomScaleMultiplierRange.x);
+        randomScaleMultiplierRange.y = Mathf.Max(0.01f, randomScaleMultiplierRange.y);
+        if (randomScaleMultiplierRange.y < randomScaleMultiplierRange.x)
+        {
+            randomScaleMultiplierRange.y = randomScaleMultiplierRange.x;
+        }
+
+        retireShrinkDuration = Mathf.Max(0f, retireShrinkDuration);
+        retireEndScaleMultiplier = Mathf.Max(0f, retireEndScaleMultiplier);
+    }
+
+    private float ResolveScaleMultiplier(int nodeIndex)
+    {
+        if (!randomizeScalePerNode)
+        {
+            return 1f;
+        }
+
+        float min = Mathf.Min(randomScaleMultiplierRange.x, randomScaleMultiplierRange.y);
+        float max = Mathf.Max(randomScaleMultiplierRange.x, randomScaleMultiplierRange.y);
+        if (Mathf.Approximately(min, max))
+        {
+            return min;
+        }
+
+        return Mathf.Lerp(min, max, GetStableUnitValue(nodeIndex));
+    }
+
+    private float GetStableUnitValue(int nodeIndex)
+    {
+        unchecked
+        {
+            uint hash = (uint)randomScaleSeed;
+            hash ^= (uint)(nodeIndex + 0x9E3779B9);
+            hash *= 0x85EBCA6B;
+            hash ^= hash >> 13;
+            hash *= 0xC2B2AE35;
+            hash ^= hash >> 16;
+            return (hash & 0x00FFFFFF) / 16777215f;
+        }
     }
 
     private static Quaternion ResolveVisualRotation(Vector3 surfaceNormal)
@@ -265,4 +394,3 @@ public sealed class FireNodeEffectView : MonoBehaviour
         return renderer;
     }
 }
-

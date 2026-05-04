@@ -24,7 +24,7 @@ public partial class BotCommandAgent
             return false;
         }
 
-        if (TryEnsureExtinguisherEquipped(plannedTool, false))
+        if (TryEnsureExtinguisherEquipped(plannedTool, false, false))
         {
             return true;
         }
@@ -46,10 +46,19 @@ public partial class BotCommandAgent
             return false;
         }
 
-        return TryStartPlanMovePickupTarget(pickupable);
+        if (!TryStartPlanMovePickupTarget(pickupable, false))
+        {
+            return false;
+        }
+
+        SetExtinguishSubtask(BotExtinguishSubtask.MoveToTool, $"Moving to tool '{GetToolName(desiredTool)}'.");
+        UpdateExtinguishDebugStage(
+            ExtinguishDebugStage.MovingToExtinguisher,
+            $"Moving to tool '{GetToolName(desiredTool)}' at {pickupable.Rigidbody.transform.position}.");
+        return true;
     }
 
-    private bool TryEnsureExtinguisherEquipped(IBotExtinguisherItem desiredTool, bool allowMoveToToolRoute = true)
+    private bool TryEnsureExtinguisherEquipped(IBotExtinguisherItem desiredTool, bool allowMoveToToolRoute = true, bool reportStatus = true)
     {
         BotToolAcquisitionOptions<IBotExtinguisherItem> options = new BotToolAcquisitionOptions<IBotExtinguisherItem>
         {
@@ -61,21 +70,21 @@ public partial class BotCommandAgent
             SetActiveTool = tool => activeExtinguisher = tool,
             OnUnavailable = () => ReleaseCommittedToolIfMatches(desiredTool),
             OnBeforeAcquire = StopExtinguisher,
-            ReportSearching = toolName =>
+            ReportSearching = reportStatus ? toolName =>
             {
                 SetExtinguishSubtask(BotExtinguishSubtask.AcquireTool, $"Acquiring tool '{toolName}'.");
                 UpdateExtinguishDebugStage(ExtinguishDebugStage.SearchingExtinguisher, $"Acquiring tool '{toolName}'.");
-            },
-            ReportPickingUp = toolName =>
+            } : null,
+            ReportPickingUp = reportStatus ? toolName =>
             {
                 SetExtinguishSubtask(BotExtinguishSubtask.AcquireTool, $"Picking up extinguisher '{toolName}'.");
                 UpdateExtinguishDebugStage(ExtinguishDebugStage.PickingUpExtinguisher, $"Picking up extinguisher '{toolName}'.");
-            },
-            ReportMovingToTool = (toolName, toolPosition) =>
+            } : null,
+            ReportMovingToTool = reportStatus ? (toolName, toolPosition) =>
             {
                 SetExtinguishSubtask(BotExtinguishSubtask.MoveToTool, $"Moving to tool '{toolName}'.");
                 UpdateExtinguishDebugStage(ExtinguishDebugStage.MovingToExtinguisher, $"Moving to tool '{toolName}' at {toolPosition}.");
-            },
+            } : null,
             OnBeforePickup = TryDropActiveBulkySuppressionToolForReplacement,
             SetPickupWindow = SetPickupWindow,
             MoveToTool = toolPosition => MoveTo(toolPosition),
@@ -105,6 +114,23 @@ public partial class BotCommandAgent
         }
 
         return null;
+    }
+
+    private bool TryRestoreHeldSuppressionTool(BotExtinguishCommandMode orderMode, IFireTarget fireTarget, out IBotExtinguisherItem heldTool)
+    {
+        heldTool = ResolveHeldSuppressionTool();
+        if (heldTool == null ||
+            !heldTool.HasUsableCharge ||
+            !heldTool.IsAvailableTo(gameObject) ||
+            !DoesToolMatchExtinguishMode(heldTool, orderMode) ||
+            IsUnsafeSuppressionToolForFire(heldTool, fireTarget))
+        {
+            return false;
+        }
+
+        activeExtinguisher = heldTool;
+        committedExtinguishTool = heldTool;
+        return true;
     }
 
     private IBotExtinguisherItem SelectPreferredExtinguishTool(Vector3 orderPoint, Vector3 firePosition, IFireGroupTarget fireGroup, IFireTarget fireTarget, BotExtinguishCommandMode orderMode)
@@ -229,6 +255,18 @@ public partial class BotCommandAgent
         {
             committedExtinguishTool = activeExtinguisher;
             return activeExtinguisher;
+        }
+
+        IBotExtinguisherItem heldTool = ResolveHeldSuppressionTool();
+        if (heldTool != null &&
+            heldTool.HasUsableCharge &&
+            heldTool.IsAvailableTo(gameObject) &&
+            DoesToolMatchExtinguishMode(heldTool, orderMode) &&
+            !IsUnsafeSuppressionToolForFire(heldTool, fireTarget))
+        {
+            committedExtinguishTool = heldTool;
+            activeExtinguisher = heldTool;
+            return heldTool;
         }
 
         if (IsToolStillUsable(committedExtinguishTool, orderMode, orderPoint, firePosition, fireGroup, fireTarget))

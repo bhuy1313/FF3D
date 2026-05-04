@@ -341,6 +341,12 @@ public partial class BotCommandAgent
 
     private string GetRuntimeInterruptDebugLine()
     {
+        string safeMovementDebugLine = GetSafeMovementDebugLine();
+        if (!string.IsNullOrWhiteSpace(safeMovementDebugLine))
+        {
+            return safeMovementDebugLine;
+        }
+
         if (IsRouteFireClearingActive())
         {
             string fireName = currentRouteBlockingFire != null
@@ -393,6 +399,8 @@ public partial class BotCommandAgent
 
     private void OnDrawGizmosSelected()
     {
+        DrawSafeMovementGizmo();
+
         if (drawDestinationGizmo && hasIssuedDestination)
         {
             Gizmos.color = Color.cyan;

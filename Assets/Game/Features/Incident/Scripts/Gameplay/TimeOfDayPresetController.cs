@@ -12,7 +12,8 @@ public class TimeOfDayPresetController : MonoBehaviour
         Noon = 1,
         Evening = 2,
         Night = 3,
-        EmergencyNight = 4
+        EmergencyNight = 4,
+        CinematicBlueHour = 5
     }
 
     private struct PresetValues
@@ -109,7 +110,7 @@ public class TimeOfDayPresetController : MonoBehaviour
 
     public void ApplyPresetFromIndex(int presetIndex)
     {
-        presetIndex = Mathf.Clamp(presetIndex, 0, 3);
+        presetIndex = Mathf.Clamp(presetIndex, 0, System.Enum.GetValues(typeof(TimeOfDayPreset)).Length - 1);
         SetPreset((TimeOfDayPreset)presetIndex);
     }
 
@@ -299,7 +300,7 @@ public class TimeOfDayPresetController : MonoBehaviour
 
                     ambientSkyColor = new Color(0.18f, 0.22f, 0.32f),
                     ambientEquatorColor = new Color(0.14f, 0.17f, 0.22f),
-ambientGroundColor = new Color(0.06f, 0.07f, 0.09f),
+                    ambientGroundColor = new Color(0.06f, 0.07f, 0.09f),
 
                     ambientIntensity = 0.75f, // 🔥 tăng sáng global
 
@@ -309,6 +310,22 @@ ambientGroundColor = new Color(0.06f, 0.07f, 0.09f),
                     sunIntensity = 0.45f, // 🔥 tăng fill light
 
                     sunEulerAngles = new Vector3(20f, -20f, 0f)
+                };
+
+            case TimeOfDayPreset.CinematicBlueHour:
+                return new PresetValues
+                {
+                    skybox = eveningSkybox != null ? eveningSkybox : nightSkybox,
+                    fogColor = new Color(0.12f, 0.22f, 0.34f),
+                    fogStart = 0f,
+                    ambientSkyColor = new Color(0.12f, 0.24f, 0.38f),
+                    ambientEquatorColor = new Color(0.18f, 0.20f, 0.28f),
+                    ambientGroundColor = new Color(0.045f, 0.055f, 0.075f),
+                    ambientIntensity = 0.86f,
+                    reflectionIntensity = 0.22f,
+                    sunColor = new Color(1f, 0.67f, 0.50f),
+                    sunIntensity = 0.62f,
+                    sunEulerAngles = new Vector3(8f, -42f, 0f)
                 };
 
             default:

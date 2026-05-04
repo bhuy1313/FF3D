@@ -226,6 +226,12 @@ public sealed partial class FireSimulationManager
         node.PendingHeatDelta = 0f;
         node.SuppressionRecoveryTimer = 0f;
         node.HasEverBurned = false;
+
+        FireSurfaceNodeAuthoring authoring = node.Authoring;
+        if (authoring != null && runtimeIncidentNodes.Remove(authoring))
+        {
+            Destroy(authoring.gameObject);
+        }
     }
 
     private int FindClosestNodeIndex(Vector3 worldPosition)

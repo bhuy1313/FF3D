@@ -17,6 +17,7 @@ namespace TrueJourney.BotBehavior
 
         [Header("Movement")]
         [SerializeField] private float fallbackMovementThreshold = 0.1f;
+        [SerializeField] private bool suppressMovePoseUntilSettledAfterEquip = true;
 
         [Header("Carry Pose")]
         [SerializeField] private bool enableCarryPose = true;
@@ -37,8 +38,10 @@ namespace TrueJourney.BotBehavior
         [SerializeField] private bool isMoving;
         [SerializeField] private bool isCarryingVictim;
         [SerializeField] private BotEquippedItemPoseKey resolvedPoseKey;
+        [SerializeField] private bool suppressingMovePoseAfterEquip;
 
         private bool carryPoseWeightsCached;
+        private int observedEquippedPoseRevision = -1;
         private float carrySpineConfiguredWeight;
         private float carrySpine1ConfiguredWeight;
         private float carrySpine2ConfiguredWeight;
@@ -111,6 +114,7 @@ namespace TrueJourney.BotBehavior
             isUsingTool = commandAgent != null && commandAgent.IsUsingEquippedItemPose;
             isAimingTool = commandAgent != null && commandAgent.IsAimingEquippedItemPose;
             isCrouching = behaviorContext != null && behaviorContext.IsCrouchAnimationActive;
+            UpdateMovePoseSuppressionState();
             isMoving = ShouldUseMovePose();
             float extinguishStance = behaviorContext != null ? behaviorContext.ExtinguishStance : -1f;
 
@@ -124,6 +128,46 @@ namespace TrueJourney.BotBehavior
         }
 
         private bool ShouldUseMovePose()
+        {
+            if (navMeshAgent == null)
+            {
+                return false;
+            }
+
+            bool movementPoseActive = IsMovePoseActive();
+            if (suppressingMovePoseAfterEquip)
+            {
+                if (!movementPoseActive)
+                {
+                    suppressingMovePoseAfterEquip = false;
+                }
+
+                return false;
+            }
+
+            return movementPoseActive;
+        }
+
+        private void UpdateMovePoseSuppressionState()
+        {
+            if (inventorySystem == null)
+            {
+                observedEquippedPoseRevision = -1;
+                suppressingMovePoseAfterEquip = false;
+                return;
+            }
+
+            int currentRevision = inventorySystem.EquippedPoseRevision;
+            if (observedEquippedPoseRevision == currentRevision)
+            {
+                return;
+            }
+
+            observedEquippedPoseRevision = currentRevision;
+            suppressingMovePoseAfterEquip = suppressMovePoseUntilSettledAfterEquip && inventorySystem.HasItem;
+        }
+
+        private bool IsMovePoseActive()
         {
             if (navMeshAgent == null)
             {

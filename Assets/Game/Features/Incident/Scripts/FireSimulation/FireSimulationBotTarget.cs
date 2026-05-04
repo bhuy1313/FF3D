@@ -3,12 +3,13 @@ using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(SphereCollider))]
-public sealed class FireSimulationBotTarget : MonoBehaviour, IFireTarget, IThermalSignatureSource
+public sealed class FireSimulationBotTarget : MonoBehaviour, IFireTarget, IThermalSignatureSource, IFireNavigationObstacleTarget
 {
     [SerializeField] [Min(0.05f)] private float baseWorldRadius = 0.45f;
 
     private FireSimulationManager manager;
     private SphereCollider sphereCollider;
+    private FireNavigationObstacleController navigationObstacleController;
     private int nodeIndex = -1;
 
     public bool IsBurning
@@ -36,6 +37,7 @@ public sealed class FireSimulationBotTarget : MonoBehaviour, IFireTarget, ITherm
     {
         sphereCollider = GetComponent<SphereCollider>();
         sphereCollider.isTrigger = true;
+        EnsureNavigationObstacleController();
     }
 
     private void OnEnable()
@@ -55,6 +57,8 @@ public sealed class FireSimulationBotTarget : MonoBehaviour, IFireTarget, ITherm
         manager = owner;
         nodeIndex = runtimeNodeIndex;
         name = $"BotFireTarget_Node{runtimeNodeIndex + 1}";
+        EnsureNavigationObstacleController();
+        navigationObstacleController.Configure(this);
         Refresh();
     }
 
@@ -77,6 +81,13 @@ public sealed class FireSimulationBotTarget : MonoBehaviour, IFireTarget, ITherm
 
         sphereCollider.radius = radius;
         sphereCollider.enabled = manager != null && manager.IsNodeVisualActive(nodeIndex);
+        navigationObstacleController?.Configure(this);
+    }
+
+    public bool ActivateNavigationObstacle()
+    {
+        EnsureNavigationObstacleController();
+        return navigationObstacleController != null && navigationObstacleController.ActivateIfBurning();
     }
 
     public void ApplyWater(float amount)
@@ -143,6 +154,18 @@ public sealed class FireSimulationBotTarget : MonoBehaviour, IFireTarget, ITherm
     {
         FireRuntimeGraph graph = manager != null ? manager.RuntimeGraph : null;
         return graph != null ? graph.GetNode(nodeIndex) : null;
+    }
+
+    private void EnsureNavigationObstacleController()
+    {
+        if (navigationObstacleController == null)
+        {
+            navigationObstacleController = GetComponent<FireNavigationObstacleController>();
+            if (navigationObstacleController == null)
+            {
+                navigationObstacleController = gameObject.AddComponent<FireNavigationObstacleController>();
+            }
+        }
     }
 
     private float GetRuntimeRadius(FireRuntimeNode node)

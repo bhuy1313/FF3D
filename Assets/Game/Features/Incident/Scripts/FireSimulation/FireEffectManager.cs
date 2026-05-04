@@ -21,7 +21,9 @@ public sealed class FireEffectManager : MonoBehaviour
         new Dictionary<FireHazardType, Stack<FireNodeEffectView>>();
     private readonly Dictionary<int, FireNodeEffectView> activeByNode =
         new Dictionary<int, FireNodeEffectView>();
+    private readonly List<FireNodeEffectView> retiringViews = new List<FireNodeEffectView>();
     private readonly List<int> releaseScratch = new List<int>();
+    private readonly List<int> retireScratch = new List<int>();
     private readonly List<int> sortedIndices = new List<int>();
     private readonly List<float> sortedDistancesSqr = new List<float>();
     private readonly HashSet<int> wantedNodeScratch = new HashSet<int>();
@@ -49,10 +51,12 @@ public sealed class FireEffectManager : MonoBehaviour
 
     public void SyncNodes(IReadOnlyList<FireNodeSnapshot> snapshots)
     {
+        TickRetiringViews();
+
         int snapshotCount = snapshots != null ? snapshots.Count : 0;
         if (snapshotCount <= 0)
         {
-            DisableAll();
+            RetireAllActive();
             return;
         }
 
@@ -93,7 +97,7 @@ public sealed class FireEffectManager : MonoBehaviour
             {
                 if (existing.BoundHazardType != snapshot.HazardType)
                 {
-                    ReleaseToPool(existing);
+                    BeginRetire(existing);
                     activeByNode.Remove(snapshot.NodeIndex);
                     existing = null;
                 }
@@ -114,21 +118,22 @@ public sealed class FireEffectManager : MonoBehaviour
             existing.ApplySnapshot(snapshot);
         }
 
-        // Release any active view not in wanted.
+        // Retire any active view not in wanted.
+        retireScratch.Clear();
         foreach (KeyValuePair<int, FireNodeEffectView> pair in activeByNode)
         {
             if (!wantedNodes.Contains(pair.Key))
             {
-                releaseScratch.Add(pair.Key);
+                retireScratch.Add(pair.Key);
             }
         }
 
-        for (int i = 0; i < releaseScratch.Count; i++)
+        for (int i = 0; i < retireScratch.Count; i++)
         {
-            int nodeIndex = releaseScratch[i];
+            int nodeIndex = retireScratch[i];
             if (activeByNode.TryGetValue(nodeIndex, out FireNodeEffectView view))
             {
-                ReleaseToPool(view);
+                BeginRetire(view);
                 activeByNode.Remove(nodeIndex);
             }
         }
@@ -142,6 +147,56 @@ public sealed class FireEffectManager : MonoBehaviour
         }
 
         activeByNode.Clear();
+
+        for (int i = 0; i < retiringViews.Count; i++)
+        {
+            ReleaseToPool(retiringViews[i]);
+        }
+
+        retiringViews.Clear();
+    }
+
+    private void RetireAllActive()
+    {
+        releaseScratch.Clear();
+        foreach (KeyValuePair<int, FireNodeEffectView> pair in activeByNode)
+        {
+            releaseScratch.Add(pair.Key);
+        }
+
+        for (int i = 0; i < releaseScratch.Count; i++)
+        {
+            int nodeIndex = releaseScratch[i];
+            if (activeByNode.TryGetValue(nodeIndex, out FireNodeEffectView view))
+            {
+                BeginRetire(view);
+                activeByNode.Remove(nodeIndex);
+            }
+        }
+    }
+
+    private void TickRetiringViews()
+    {
+        for (int i = retiringViews.Count - 1; i >= 0; i--)
+        {
+            FireNodeEffectView view = retiringViews[i];
+            if (view == null || view.TickRetire(Time.deltaTime))
+            {
+                retiringViews.RemoveAt(i);
+                ReleaseToPool(view);
+            }
+        }
+    }
+
+    private void BeginRetire(FireNodeEffectView view)
+    {
+        if (view == null)
+        {
+            return;
+        }
+
+        view.BeginRetire();
+        retiringViews.Add(view);
     }
 
     private void InsertSorted(int snapshotIndex, float distanceSqr)

@@ -4994,8 +4994,15 @@ MonoBehaviour:
   particleSystems:
   - {fileID: 5092742110392880589}
   maxLightIntensity: 2
-  flameScaleRange: {x: 0.7, y: 1.35}
+  flameScaleRange: {x: 0.4, y: 1}
   visualOffset: {x: 0, y: 0.5, z: 0}
+  scaleVisualOffsetWithEffectScale: 1
+  randomizeScalePerNode: 1
+  randomScaleMultiplierRange: {x: 0.2, y: 1}
+  randomScaleSeed: 9173
+  retireShrinkDuration: 0.45
+  retireEndScaleMultiplier: 0.05
+  stopParticlesWhenRetiring: 1
   createFallbackVisualWhenNoParticles: 1
   fallbackCoreColor: {r: 1, g: 0.45, b: 0.1, a: 0.95}
   fallbackGlowColor: {r: 1, g: 0.2, b: 0.02, a: 0.55}

@@ -290,12 +290,16 @@ public partial class BotCommandAgent
                 $"move-destination:{BotCommandAgent.FormatFlowVectorKey(destination)}",
                 $"Received Move order to {destination}.");
 
+            bool activatedSafeMovementObstacle = owner.TryRefreshSafeMovementObstacles(destination, false);
+
             if (allowBlockedPathInterrupt && owner.TryHandleBlockedPath(destination))
             {
                 return true;
             }
 
-            if (allowRouteFireInterrupt && owner.TryHandleRouteBlockingFire(destination))
+            if (!activatedSafeMovementObstacle &&
+                allowRouteFireInterrupt &&
+                owner.TryHandleRouteBlockingFire(destination))
             {
                 return true;
             }
@@ -327,6 +331,7 @@ public partial class BotCommandAgent
                 destination = navMeshHit.position;
             }
 
+            owner.TryRefreshSafeMovementObstacles(destination, false);
             return owner.navMeshAgent.SetDestination(destination);
         }
 
@@ -358,8 +363,9 @@ public partial class BotCommandAgent
             }
 
             bool shouldRefreshForBreakables = owner.enablePathClearing;
-            bool shouldRefreshForRouteFire = owner.enableRouteFireClearing;
-            if (!shouldRefreshForBreakables && !shouldRefreshForRouteFire)
+            bool shouldRefreshForRouteFire = owner.enableRouteFireClearing && !owner.enableSafeMovement;
+            bool shouldRefreshForSafeMovement = owner.enableSafeMovement;
+            if (!shouldRefreshForBreakables && !shouldRefreshForRouteFire && !shouldRefreshForSafeMovement)
             {
                 return false;
             }

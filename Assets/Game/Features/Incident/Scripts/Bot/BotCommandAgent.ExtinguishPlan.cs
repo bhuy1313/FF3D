@@ -89,6 +89,7 @@ public partial class BotCommandAgent
     private sealed class AcquireSuppressionToolTask : IBotPlanTask
     {
         private readonly SuppressionToolAcquisitionKind kind;
+        private bool movingToPickup;
 
         public AcquireSuppressionToolTask(SuppressionToolAcquisitionKind kind)
         {
@@ -101,7 +102,22 @@ public partial class BotCommandAgent
         {
             if (kind == SuppressionToolAcquisitionKind.RouteFireInterrupt)
             {
+                IFireTarget blockingFire = agent.ResolveCurrentRouteBlockingFireTarget();
+                if (blockingFire != null &&
+                    agent.TryRestoreHeldSuppressionTool(BotExtinguishCommandMode.PointFire, blockingFire, out IBotExtinguisherItem heldTool) &&
+                    !BotCommandAgent.UsesPreciseAim(heldTool))
+                {
+                    agent.SetRouteFirePhase(RouteFirePhase.ReturnToFire);
+                    return;
+                }
+
                 agent.SetRouteFirePhase(RouteFirePhase.AcquireTool);
+                return;
+            }
+
+            BotExtinguishPlanState state = agent.extinguishPlanState;
+            if (agent.TryRestoreHeldSuppressionTool(state.Mode, state.FireTarget, out _))
+            {
                 return;
             }
 
@@ -110,13 +126,32 @@ public partial class BotCommandAgent
 
         public BotPlanTaskStatus OnUpdate(BotCommandAgent agent)
         {
-            return kind == SuppressionToolAcquisitionKind.RouteFireInterrupt
-                ? agent.TryUpdateRouteFireSuppressionToolAcquisition()
-                : agent.TryUpdateExtinguishSuppressionToolAcquisition();
+            if (movingToPickup)
+            {
+                if (!agent.HasMovePickupTarget)
+                {
+                    movingToPickup = false;
+                }
+                else if (agent.TryCompleteMovePickupTarget())
+                {
+                    movingToPickup = false;
+                    return BotPlanTaskStatus.Success;
+                }
+                else
+                {
+                    return BotPlanTaskStatus.Running;
+                }
+            }
+
+            BotPlanTaskStatus status = kind == SuppressionToolAcquisitionKind.RouteFireInterrupt
+                ? agent.TryUpdateRouteFireSuppressionToolAcquisition(out movingToPickup)
+                : agent.TryUpdateExtinguishSuppressionToolAcquisition(out movingToPickup);
+            return movingToPickup ? BotPlanTaskStatus.Running : status;
         }
 
         public void OnEnd(BotCommandAgent agent, bool interrupted)
         {
+            movingToPickup = false;
         }
     }
 
@@ -146,13 +181,19 @@ public partial class BotCommandAgent
                 return BotPlanTaskStatus.Failure;
             }
 
-            if (agent.activeExtinguisher == null)
+            BotExtinguishPlanState state = agent.extinguishPlanState;
+            if (agent.activeExtinguisher == null &&
+                !agent.TryRestoreHeldSuppressionTool(state.Mode, state.FireTarget, out _))
             {
-                agent.FailActiveExtinguishOrder("No active suppression tool equipped.", BotTaskStatus.Blocked);
-                return BotPlanTaskStatus.Failure;
+                agent.planProcessor?.InjectFront(
+                    agent,
+                    new AcquireSuppressionToolTask(SuppressionToolAcquisitionKind.ExtinguishPlan),
+                    new MovePickupTask(),
+                    new MoveToExtinguishPositionTask(),
+                    new SuppressFireTask());
+                return BotPlanTaskStatus.Success;
             }
 
-            BotExtinguishPlanState state = agent.extinguishPlanState;
             if (!agent.activeExtinguisher.HasUsableCharge)
             {
                 agent.HandleExtinguishChargeDepleted(state);
@@ -174,9 +215,7 @@ public partial class BotCommandAgent
                 IFireGroupTarget fireGroup = state.FireGroup != null && state.FireGroup.HasActiveFires
                     ? state.FireGroup
                     : agent.ResolveIssuedFireGroupTarget(state.TargetSearchPoint);
-                IFireTarget fireTarget = state.FireTarget != null && state.FireTarget.IsBurning
-                    ? state.FireTarget
-                    : agent.ResolveRepresentativeFireTarget(fireGroup, agent.transform.position);
+                IFireTarget fireTarget = agent.ResolveStickyFireGroupRepresentative(state.FireTarget, fireGroup, agent.transform.position);
                 if ((fireGroup == null || !fireGroup.HasActiveFires) && (fireTarget == null || !fireTarget.IsBurning))
                 {
                     agent.CompleteExtinguishOrder("FireGroup extinguished.");
@@ -250,7 +289,6 @@ public partial class BotCommandAgent
         return new BotPlan("Extinguish")
             .Add(new AcquireExtinguishTargetTask())
             .Add(new AcquireSuppressionToolTask(SuppressionToolAcquisitionKind.ExtinguishPlan))
-            .Add(new MovePickupTask())
             .Add(new MoveToExtinguishPositionTask())
             .Add(new SuppressFireTask());
     }
@@ -320,7 +358,6 @@ public partial class BotCommandAgent
         planProcessor.InjectFront(
             this,
             new AcquireSuppressionToolTask(SuppressionToolAcquisitionKind.ExtinguishPlan),
-            new MovePickupTask(),
             new MoveToExtinguishPositionTask(),
             new SuppressFireTask());
         SetExtinguishSubtask(BotExtinguishSubtask.Recover, "Suppression tool depleted. Acquiring replacement tool.");
@@ -364,14 +401,14 @@ public partial class BotCommandAgent
         planProcessor.InjectFront(
             this,
             new AcquireSuppressionToolTask(SuppressionToolAcquisitionKind.ExtinguishPlan),
-            new MovePickupTask(),
             new MoveToExtinguishPositionTask(),
             new SuppressFireTask());
         SetExtinguishSubtask(BotExtinguishSubtask.Recover, "Current suppression tool is unsafe. Acquiring a safer replacement.");
     }
 
-    private BotPlanTaskStatus TryUpdateExtinguishSuppressionToolAcquisition()
+    private BotPlanTaskStatus TryUpdateExtinguishSuppressionToolAcquisition(out bool movingToPickup)
     {
+        movingToPickup = false;
         if (!TrySyncExtinguishPlanOrder())
         {
             return BotPlanTaskStatus.Failure;
@@ -411,7 +448,8 @@ public partial class BotCommandAgent
         {
             if (TryPrepareSuppressionToolMovePickup(state.PlannedTool))
             {
-                return BotPlanTaskStatus.Success;
+                movingToPickup = true;
+                return BotPlanTaskStatus.Running;
             }
 
             return BotPlanTaskStatus.Running;
@@ -473,12 +511,18 @@ public partial class BotCommandAgent
 
     private MoveTaskDirective UpdateExtinguishPositionMove()
     {
-        if (!TrySyncExtinguishPlanOrder() || activeExtinguisher == null)
+        if (!TrySyncExtinguishPlanOrder())
         {
             return MoveTaskDirective.Failure();
         }
 
         BotExtinguishPlanState state = extinguishPlanState;
+        if (activeExtinguisher == null &&
+            !TryRestoreHeldSuppressionTool(state.Mode, state.FireTarget, out _))
+        {
+            return MoveTaskDirective.Failure();
+        }
+
         Vector3 botPosition = transform.position;
 
         if (!state.UsesPreciseAim)

@@ -74,6 +74,12 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
     [SerializeField] private float climbTraverseDuration = 0.55f;
     [SerializeField] private float climbTraverseArcHeight = 0.35f;
     [SerializeField] private float climbTraverseTiltAngle = 8f;
+    [SerializeField, Range(0f, 1f)] private float climbTraverseTiltScale = 0.65f;
+    [SerializeField] private float climbTraverseMidPauseDuration = 0.16f;
+    [SerializeField, Range(0.2f, 0.8f)] private float climbTraverseMidPauseNormalizedTime = 0.5f;
+    [SerializeField] private float climbTraverseMidPauseCompression = 0.035f;
+    [SerializeField] private float climbTraverseMidPauseExtraTiltAngle = 2.5f;
+    [SerializeField, Range(0f, 1f)] private float climbTraverseMidPauseExtraTiltScale = 0.55f;
     [SerializeField] private bool drawClimbDebug;
 
     [Header("Runtime")]
@@ -120,6 +126,11 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
         climbApproachArcHeight = Mathf.Max(0f, climbApproachArcHeight);
         climbTraverseDuration = Mathf.Max(0.01f, climbTraverseDuration);
         climbTraverseArcHeight = Mathf.Max(0f, climbTraverseArcHeight);
+        climbTraverseTiltScale = Mathf.Clamp01(climbTraverseTiltScale);
+        climbTraverseMidPauseDuration = Mathf.Max(0f, climbTraverseMidPauseDuration);
+        climbTraverseMidPauseNormalizedTime = Mathf.Clamp(climbTraverseMidPauseNormalizedTime, 0.2f, 0.8f);
+        climbTraverseMidPauseCompression = Mathf.Max(0f, climbTraverseMidPauseCompression);
+        climbTraverseMidPauseExtraTiltScale = Mathf.Clamp01(climbTraverseMidPauseExtraTiltScale);
         EnsureShatterTargetComponents(singleSashShatterTargets);
         EnsureShatterTargetComponents(leftSashShatterTargets);
         EnsureShatterTargetComponents(rightSashShatterTargets);
@@ -486,7 +497,11 @@ if (lockedShakeTimer > 0f)
                 endRotation,
                 Mathf.Max(0.01f, climbTraverseDuration),
                 Mathf.Max(0f, climbTraverseArcHeight),
-                climbTraverseTiltAngle);
+                climbTraverseTiltAngle * Mathf.Clamp01(climbTraverseTiltScale),
+                Mathf.Max(0f, climbTraverseMidPauseDuration),
+                Mathf.Clamp(climbTraverseMidPauseNormalizedTime, 0.2f, 0.8f),
+                Mathf.Max(0f, climbTraverseMidPauseCompression),
+                climbTraverseMidPauseExtraTiltAngle * Mathf.Clamp01(climbTraverseMidPauseExtraTiltScale));
         }
         finally
         {
@@ -507,7 +522,11 @@ if (lockedShakeTimer > 0f)
         Quaternion destinationRotation,
         float duration,
         float arcHeight,
-        float tiltAngle)
+        float tiltAngle,
+        float midPauseDuration = 0f,
+        float midPauseNormalizedTime = 0.5f,
+        float midPauseCompression = 0f,
+        float midPauseExtraTiltAngle = 0f)
     {
         if (target == null)
             yield break;
@@ -521,30 +540,103 @@ if (lockedShakeTimer > 0f)
         Vector3 startPosition = target.position;
         Quaternion startRotation = target.rotation;
         float elapsed = 0f;
+        bool pausedAtMidpoint = false;
+        float pauseT = Mathf.Clamp01(midPauseNormalizedTime);
 
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
             float t = Mathf.Clamp01(elapsed / duration);
-            float easedT = Mathf.SmoothStep(0f, 1f, t);
-            Vector3 position = Vector3.Lerp(startPosition, destinationPosition, easedT);
 
-            if (arcHeight > 0f)
-                position += Vector3.up * (Mathf.Sin(easedT * Mathf.PI) * arcHeight);
-
-            Quaternion baseRotation = Quaternion.Slerp(startRotation, destinationRotation, easedT);
-            Quaternion rotation = baseRotation;
-            if (Mathf.Abs(tiltAngle) > 0.001f)
+            if (!pausedAtMidpoint && midPauseDuration > 0f && t >= pauseT)
             {
-                float currentTilt = Mathf.Sin(easedT * Mathf.PI) * tiltAngle;
-                rotation = baseRotation * Quaternion.Euler(0f, 0f, currentTilt);
+                ApplyClimbPose(
+                    target,
+                    startPosition,
+                    startRotation,
+                    destinationPosition,
+                    destinationRotation,
+                    pauseT,
+                    arcHeight,
+                    tiltAngle);
+
+                pausedAtMidpoint = true;
+                float pauseElapsed = 0f;
+                while (pauseElapsed < midPauseDuration)
+                {
+                    float pauseTNormalized = Mathf.Clamp01(pauseElapsed / midPauseDuration);
+                    float compressionWeight = Mathf.Sin(pauseTNormalized * Mathf.PI);
+                    float tinyForwardShift = Mathf.Sin(pauseTNormalized * Mathf.PI * 2f) * 0.015f;
+
+                    ApplyClimbPose(
+                        target,
+                        startPosition,
+                        startRotation,
+                        destinationPosition,
+                        destinationRotation,
+                        Mathf.Clamp01(pauseT + tinyForwardShift),
+                        arcHeight,
+                        tiltAngle,
+                        midPauseCompression * compressionWeight,
+                        midPauseExtraTiltAngle * compressionWeight);
+
+                    pauseElapsed += Time.deltaTime;
+                    yield return new WaitForEndOfFrame();
+                }
+
+                continue;
             }
 
-            target.SetPositionAndRotation(position, rotation);
+            ApplyClimbPose(
+                target,
+                startPosition,
+                startRotation,
+                destinationPosition,
+                destinationRotation,
+                t,
+                arcHeight,
+                tiltAngle);
+
             yield return new WaitForEndOfFrame();
         }
 
         target.SetPositionAndRotation(destinationPosition, destinationRotation);
+    }
+
+    private static void ApplyClimbPose(
+        Transform target,
+        Vector3 startPosition,
+        Quaternion startRotation,
+        Vector3 destinationPosition,
+        Quaternion destinationRotation,
+        float normalizedTime,
+        float arcHeight,
+        float tiltAngle,
+        float extraDownOffset = 0f,
+        float extraTiltAngle = 0f)
+    {
+        if (target == null)
+            return;
+
+        float t = Mathf.Clamp01(normalizedTime);
+        float easedT = Mathf.SmoothStep(0f, 1f, t);
+        Vector3 position = Vector3.Lerp(startPosition, destinationPosition, easedT);
+
+        if (arcHeight > 0f)
+            position += Vector3.up * (Mathf.Sin(easedT * Mathf.PI) * arcHeight);
+
+        if (extraDownOffset > 0f)
+            position += Vector3.down * extraDownOffset;
+
+        Quaternion baseRotation = Quaternion.Slerp(startRotation, destinationRotation, easedT);
+        Quaternion rotation = baseRotation;
+        if (Mathf.Abs(tiltAngle) > 0.001f || Mathf.Abs(extraTiltAngle) > 0.001f)
+        {
+            float currentTilt = Mathf.Sin(easedT * Mathf.PI) * tiltAngle + extraTiltAngle;
+            rotation = baseRotation * Quaternion.Euler(0f, 0f, currentTilt);
+        }
+
+        target.SetPositionAndRotation(position, rotation);
     }
 
     private Vector3 ResolveClimbAnchorPosition(bool sideA)

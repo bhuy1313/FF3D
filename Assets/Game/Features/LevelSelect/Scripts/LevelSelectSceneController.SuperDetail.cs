@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using DG.Tweening;
 
@@ -21,12 +22,18 @@ public partial class LevelSelectSceneController
     [SerializeField] private TMP_Text levelSuperDetailTipsText;
 
     private bool superDetailButtonsBound = false;
+    private Button superDetailBtnStart;
     private Button superDetailBtnScenario;
+    private Button superDetailBtnBack;
+    private Button superDetailBtnClose;
+    private CanvasGroup superDetailScenarioButtonCanvasGroup;
     private RectTransform superDetailScenarioDropdownRoot;
     private CanvasGroup superDetailScenarioDropdownCanvasGroup;
     private RectTransform superDetailScenarioDropdownContentRoot;
     private Button superDetailScenarioDropdownTemplateButton;
     private Button superDetailScenarioToggleProxyButton;
+    private bool superDetailLayoutConfigured;
+    private Tween superDetailScenarioButtonPulseTween;
 
     private void EnsureSuperDetailButtons()
     {
@@ -37,28 +44,172 @@ public partial class LevelSelectSceneController
         {
             if (b.name == "btnStart")
             {
+                superDetailBtnStart = b;
                 b.onClick.RemoveAllListeners();
                 b.onClick.AddListener(PlaySelectedLevel);
+                ConfigureSuperDetailButtonVisual(b, SuperDetailButtonRole.Start);
             }
             else if (b.name == "btnScenario")
             {
                 superDetailBtnScenario = b;
+                superDetailScenarioButtonCanvasGroup = GetOrAddComponent<CanvasGroup>(b.gameObject);
                 b.onClick.RemoveAllListeners();
                 b.onClick.AddListener(ToggleSuperDetailScenarioDropdown);
+                ConfigureSuperDetailButtonVisual(b, SuperDetailButtonRole.Scenario);
             }
             else if (b.name == "btnBack")
             {
+                superDetailBtnBack = b;
                 b.onClick.RemoveAllListeners();
                 b.onClick.AddListener(BackFromSuperDetail);
+                ConfigureSuperDetailButtonVisual(b, SuperDetailButtonRole.Back);
             }
             else if (b.name == "btnClose")
             {
+                superDetailBtnClose = b;
                 b.onClick.RemoveAllListeners();
                 b.onClick.AddListener(() => CloseLevelInfo());
+                ConfigureSuperDetailButtonVisual(b, SuperDetailButtonRole.Close);
             }
         }
         
         superDetailButtonsBound = true;
+    }
+
+    private enum SuperDetailButtonRole
+    {
+        Start,
+        Scenario,
+        Back,
+        Close
+    }
+
+    private static void ConfigureSuperDetailButtonVisual(Button button, SuperDetailButtonRole role)
+    {
+        if (button == null)
+        {
+            return;
+        }
+
+        Image image = button.targetGraphic as Image;
+        if (image == null)
+        {
+            image = button.GetComponent<Image>();
+            button.targetGraphic = image;
+        }
+
+        Color normal;
+        Color highlighted;
+        Color pressed;
+        Color disabled;
+        Color label;
+
+        switch (role)
+        {
+            case SuperDetailButtonRole.Start:
+                normal = new Color32(0x18, 0x9A, 0x58, 0xFF);
+                highlighted = new Color32(0x20, 0xBF, 0x6B, 0xFF);
+                pressed = new Color32(0x0E, 0x6F, 0x40, 0xFF);
+                disabled = new Color32(0x35, 0x45, 0x3D, 0xA8);
+                label = Color.white;
+                break;
+            case SuperDetailButtonRole.Scenario:
+                normal = new Color32(0x1F, 0x6F, 0xB8, 0xFF);
+                highlighted = new Color32(0x2E, 0x9A, 0xFF, 0xFF);
+                pressed = new Color32(0x14, 0x4D, 0x86, 0xFF);
+                disabled = new Color32(0x2D, 0x3B, 0x49, 0xA0);
+                label = Color.white;
+                break;
+            case SuperDetailButtonRole.Close:
+                normal = new Color32(0x8E, 0x35, 0x35, 0xFF);
+                highlighted = new Color32(0xC7, 0x45, 0x45, 0xFF);
+                pressed = new Color32(0x62, 0x23, 0x23, 0xFF);
+                disabled = new Color32(0x44, 0x32, 0x32, 0xA0);
+                label = Color.white;
+                break;
+            default:
+                normal = new Color32(0x3B, 0x46, 0x56, 0xFF);
+                highlighted = new Color32(0x55, 0x66, 0x7A, 0xFF);
+                pressed = new Color32(0x27, 0x30, 0x3C, 0xFF);
+                disabled = new Color32(0x34, 0x38, 0x40, 0xA0);
+                label = new Color32(0xE8, 0xF0, 0xF8, 0xFF);
+                break;
+        }
+
+        if (image != null)
+        {
+            image.color = normal;
+        }
+
+        ColorBlock colors = button.colors;
+        colors.normalColor = normal;
+        colors.highlightedColor = highlighted;
+        colors.selectedColor = highlighted;
+        colors.pressedColor = pressed;
+        colors.disabledColor = disabled;
+        colors.colorMultiplier = 1f;
+        colors.fadeDuration = 0.11f;
+        button.colors = colors;
+        button.transition = Selectable.Transition.ColorTint;
+
+        TMP_Text text = button.GetComponentInChildren<TMP_Text>(true);
+        if (text != null)
+        {
+            text.color = label;
+            text.fontStyle |= FontStyles.Bold;
+        }
+
+        RectTransform rect = button.transform as RectTransform;
+        if (rect != null)
+        {
+            rect.DOKill();
+            rect.localScale = Vector3.one;
+        }
+
+        ConfigureSuperDetailButtonMotion(button, role);
+    }
+
+    private static void ConfigureSuperDetailButtonMotion(Button button, SuperDetailButtonRole role)
+    {
+        EventTrigger trigger = GetOrAddComponent<EventTrigger>(button.gameObject);
+        trigger.triggers.Clear();
+
+        AddSuperDetailButtonTrigger(trigger, EventTriggerType.PointerEnter, _ =>
+        {
+            if (!button.interactable) return;
+            button.transform.DOKill();
+            button.transform.DOScale(role == SuperDetailButtonRole.Scenario ? 1.075f : 1.045f, 0.12f).SetEase(Ease.OutCubic);
+        });
+
+        AddSuperDetailButtonTrigger(trigger, EventTriggerType.PointerExit, _ =>
+        {
+            button.transform.DOKill();
+            button.transform.DOScale(1f, 0.14f).SetEase(Ease.OutCubic);
+        });
+
+        AddSuperDetailButtonTrigger(trigger, EventTriggerType.PointerDown, _ =>
+        {
+            if (!button.interactable) return;
+            button.transform.DOKill();
+            button.transform.DOScale(0.965f, 0.08f).SetEase(Ease.OutCubic);
+        });
+
+        AddSuperDetailButtonTrigger(trigger, EventTriggerType.PointerUp, _ =>
+        {
+            if (!button.interactable) return;
+            button.transform.DOKill();
+            button.transform.DOScale(1.045f, 0.1f).SetEase(Ease.OutBack);
+        });
+    }
+
+    private static void AddSuperDetailButtonTrigger(EventTrigger trigger, EventTriggerType eventType, UnityEngine.Events.UnityAction<BaseEventData> callback)
+    {
+        EventTrigger.Entry entry = new EventTrigger.Entry
+        {
+            eventID = eventType
+        };
+        entry.callback.AddListener(callback);
+        trigger.triggers.Add(entry);
     }
 
     private void BackFromSuperDetail()
@@ -82,6 +233,7 @@ public partial class LevelSelectSceneController
         }
 
         EnsureSuperDetailButtons();
+        RefreshSuperDetailScenarioButtonVisibility();
 
         ScenarioDefinition scenario = GetDisplayedScenario(selectedLevelDefinition);
         string title = ResolveDisplayedLevelName(selectedLevelDefinition, scenario, selectedLevelSourceButton);
@@ -113,6 +265,42 @@ public partial class LevelSelectSceneController
         AnimateSuperDetailShow();
     }
 
+    private void RefreshSuperDetailScenarioButtonVisibility()
+    {
+        if (superDetailBtnScenario == null)
+        {
+            return;
+        }
+
+        bool shouldShow = HasMultipleConfiguredScenarios(selectedLevelDefinition);
+        if (!shouldShow)
+        {
+            SetSuperDetailScenarioDropdownVisible(false);
+        }
+
+        if (superDetailScenarioButtonCanvasGroup == null)
+        {
+            superDetailScenarioButtonCanvasGroup = GetOrAddComponent<CanvasGroup>(superDetailBtnScenario.gameObject);
+        }
+
+        superDetailScenarioButtonCanvasGroup.DOKill();
+        superDetailScenarioButtonCanvasGroup.alpha = shouldShow ? 1f : 0f;
+        superDetailScenarioButtonCanvasGroup.interactable = shouldShow;
+        superDetailScenarioButtonCanvasGroup.blocksRaycasts = shouldShow;
+        superDetailBtnScenario.interactable = shouldShow;
+
+        LayoutElement layoutElement = superDetailBtnScenario.GetComponent<LayoutElement>();
+        if (layoutElement != null)
+        {
+            layoutElement.ignoreLayout = !shouldShow;
+        }
+
+        if (!shouldShow)
+        {
+            UpdateSuperDetailScenarioButtonState(false);
+        }
+    }
+
     private void AnimateSuperDetailShow()
     {
         // Chỉ chạy hiệu ứng trượt nội dung (Slide) khi refresh data, 
@@ -128,6 +316,8 @@ public partial class LevelSelectSceneController
 
     private void HideLevelSuperDetailImmediate()
     {
+        UpdateSuperDetailScenarioButtonState(false);
+
         if (levelSuperDetailContentRoot != null) 
         {
             levelSuperDetailContentRoot.DOKill();
@@ -151,7 +341,9 @@ public partial class LevelSelectSceneController
             return;
         }
 
-        Sprite sprite = card != null ? card.mapSprite : null;
+        Sprite sprite = selectedLevelDefinition != null && selectedLevelDefinition.mapSprite != null
+            ? selectedLevelDefinition.mapSprite
+            : card != null ? card.mapSprite : null;
         levelSuperDetailMapImage.sprite = sprite;
         levelSuperDetailMapImage.preserveAspect = true;
         levelSuperDetailMapImage.color = sprite != null
@@ -371,7 +563,140 @@ public partial class LevelSelectSceneController
             return;
         }
 
+        ConfigureSuperDetailLayout();
+        RefreshSuperDetailTextLayout(levelSuperDetailTitleText);
+        RefreshSuperDetailTextLayout(levelSuperDetailMetaText);
+        RefreshSuperDetailTextLayout(levelSuperDetailBriefingText);
+        RefreshSuperDetailTextLayout(levelSuperDetailScenarioText);
+        RefreshSuperDetailTextLayout(levelSuperDetailRecordsText);
+        RefreshSuperDetailTextLayout(levelSuperDetailTipsText);
+
+        Canvas.ForceUpdateCanvases();
+        ForceRebuildChain(levelSuperDetailBriefingText != null ? levelSuperDetailBriefingText.rectTransform : null, levelSuperDetailContentRoot);
+        ForceRebuildChain(levelSuperDetailScenarioText != null ? levelSuperDetailScenarioText.rectTransform : null, levelSuperDetailContentRoot);
+        ForceRebuildChain(levelSuperDetailRecordsText != null ? levelSuperDetailRecordsText.rectTransform : null, levelSuperDetailContentRoot);
+        ForceRebuildChain(levelSuperDetailTipsText != null ? levelSuperDetailTipsText.rectTransform : null, levelSuperDetailContentRoot);
         LayoutRebuilder.ForceRebuildLayoutImmediate(levelSuperDetailContentRoot);
+        Canvas.ForceUpdateCanvases();
+    }
+
+    private void ConfigureSuperDetailLayout()
+    {
+        if (superDetailLayoutConfigured || levelSuperDetailContentRoot == null)
+        {
+            return;
+        }
+
+        ScrollRect scrollRect = levelSuperDetailContentRoot.GetComponentInChildren<ScrollRect>(true);
+        if (scrollRect != null)
+        {
+            ConfigureSuperDetailScrollRect(scrollRect);
+            ConfigureSuperDetailVerticalLayout(scrollRect.content);
+        }
+
+        ConfigureSuperDetailSection(levelSuperDetailBriefingText);
+        ConfigureSuperDetailSection(levelSuperDetailScenarioText);
+        ConfigureSuperDetailSection(levelSuperDetailRecordsText);
+        ConfigureSuperDetailSection(levelSuperDetailTipsText);
+        superDetailLayoutConfigured = true;
+    }
+
+    private static void ConfigureSuperDetailScrollRect(ScrollRect scrollRect)
+    {
+        RectTransform scrollTransform = scrollRect.transform as RectTransform;
+        if (scrollTransform != null)
+        {
+            scrollTransform.anchorMin = Vector2.zero;
+            scrollTransform.anchorMax = Vector2.one;
+            scrollTransform.offsetMin = Vector2.zero;
+            scrollTransform.offsetMax = Vector2.zero;
+        }
+
+        if (scrollRect.viewport != null)
+        {
+            scrollRect.viewport.anchorMin = Vector2.zero;
+            scrollRect.viewport.anchorMax = Vector2.one;
+            scrollRect.viewport.offsetMin = Vector2.zero;
+            scrollRect.viewport.offsetMax = Vector2.zero;
+        }
+
+        if (scrollRect.content != null)
+        {
+            scrollRect.content.anchorMin = new Vector2(0f, 1f);
+            scrollRect.content.anchorMax = new Vector2(1f, 1f);
+            scrollRect.content.pivot = new Vector2(0f, 1f);
+            scrollRect.content.anchoredPosition = Vector2.zero;
+            scrollRect.content.sizeDelta = new Vector2(0f, scrollRect.content.sizeDelta.y);
+        }
+    }
+
+    private static void ConfigureSuperDetailSection(TMP_Text bodyText)
+    {
+        if (bodyText == null)
+        {
+            return;
+        }
+
+        RectTransform bodyRect = bodyText.rectTransform;
+        ConfigureSuperDetailBodyText(bodyText);
+        ConfigureSuperDetailVerticalLayout(bodyRect.parent as RectTransform);
+    }
+
+    private static void ConfigureSuperDetailBodyText(TMP_Text bodyText)
+    {
+        RectTransform bodyRect = bodyText.rectTransform;
+        bodyRect.anchorMin = new Vector2(0f, 1f);
+        bodyRect.anchorMax = new Vector2(1f, 1f);
+        bodyRect.pivot = new Vector2(0f, 1f);
+        bodyRect.anchoredPosition = Vector2.zero;
+        bodyRect.sizeDelta = new Vector2(0f, bodyRect.sizeDelta.y);
+
+        ContentSizeFitter fitter = GetOrAddComponent<ContentSizeFitter>(bodyText.gameObject);
+        fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        LayoutElement layoutElement = GetOrAddComponent<LayoutElement>(bodyText.gameObject);
+        layoutElement.ignoreLayout = false;
+        layoutElement.flexibleWidth = 1f;
+        layoutElement.flexibleHeight = 0f;
+    }
+
+    private static void ConfigureSuperDetailVerticalLayout(RectTransform root)
+    {
+        if (root == null)
+        {
+            return;
+        }
+
+        VerticalLayoutGroup layout = root.GetComponent<VerticalLayoutGroup>();
+        if (layout == null)
+        {
+            return;
+        }
+
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+        layout.childScaleWidth = false;
+        layout.childScaleHeight = false;
+    }
+
+    private static void RefreshSuperDetailTextLayout(TMP_Text text)
+    {
+        if (text == null)
+        {
+            return;
+        }
+
+        text.ForceMeshUpdate();
+        LayoutElement layoutElement = text.GetComponent<LayoutElement>();
+        if (layoutElement != null)
+        {
+            layoutElement.preferredHeight = text.preferredHeight;
+        }
+
+        LayoutRebuilder.MarkLayoutForRebuild(text.rectTransform);
     }
 
     private void EnsureSuperDetailScenarioDropdown()
@@ -455,6 +780,53 @@ public partial class LevelSelectSceneController
                 superDetailScenarioDropdownRoot.SetAsLastSibling();
             }
             superDetailScenarioToggleProxyButton.gameObject.SetActive(visible);
+        }
+
+        UpdateSuperDetailScenarioButtonState(visible);
+    }
+
+    private void UpdateSuperDetailScenarioButtonState(bool dropdownVisible)
+    {
+        if (superDetailBtnScenario == null)
+        {
+            return;
+        }
+
+        RectTransform rect = superDetailBtnScenario.transform as RectTransform;
+        Image image = superDetailBtnScenario.targetGraphic as Image;
+
+        superDetailScenarioButtonPulseTween?.Kill();
+        superDetailScenarioButtonPulseTween = null;
+
+        if (dropdownVisible)
+        {
+            if (image != null)
+            {
+                image.DOColor(new Color32(0x37, 0xB4, 0xFF, 0xFF), 0.12f);
+            }
+
+            if (rect != null)
+            {
+                rect.DOKill();
+                rect.localScale = Vector3.one;
+                superDetailScenarioButtonPulseTween = rect
+                    .DOScale(1.055f, 0.55f)
+                    .SetEase(Ease.InOutSine)
+                    .SetLoops(-1, LoopType.Yoyo);
+            }
+        }
+        else
+        {
+            if (image != null)
+            {
+                image.DOColor(new Color32(0x1F, 0x6F, 0xB8, 0xFF), 0.14f);
+            }
+
+            if (rect != null)
+            {
+                rect.DOKill();
+                rect.DOScale(1f, 0.12f).SetEase(Ease.OutCubic);
+            }
         }
     }
 

@@ -5,6 +5,7 @@ using UnityEngine;
 public class EntranceCameraStartupTask : SceneStartupTask
 {
     [SerializeField] private EntranceCameraIntro entranceCameraIntro;
+    [SerializeField] private StartupOverlayRevealTask startupOverlayRevealTask;
 
     protected override IEnumerator Execute(SceneStartupFlow startupFlow)
     {
@@ -18,13 +19,30 @@ public class EntranceCameraStartupTask : SceneStartupTask
             entranceCameraIntro = startupFlow.FindSceneObject<EntranceCameraIntro>();
         }
 
+        if (startupOverlayRevealTask == null)
+        {
+            startupOverlayRevealTask = GetComponent<StartupOverlayRevealTask>();
+        }
+
+        if (startupOverlayRevealTask == null && startupFlow != null)
+        {
+            startupOverlayRevealTask = startupFlow.FindSceneObject<StartupOverlayRevealTask>();
+        }
+
         if (entranceCameraIntro == null)
         {
             yield break;
         }
 
+        if (startupOverlayRevealTask != null)
+        {
+            startupOverlayRevealTask.Play();
+        }
+
         entranceCameraIntro.Play();
-        while (entranceCameraIntro != null && entranceCameraIntro.IsPlaying)
+        while (
+            (entranceCameraIntro != null && entranceCameraIntro.IsPlaying)
+            || (startupOverlayRevealTask != null && startupOverlayRevealTask.IsPlaying))
         {
             yield return null;
         }

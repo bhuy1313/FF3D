@@ -119,7 +119,6 @@ public partial class BotCommandAgent
         {
             case RouteFirePhase.AcquireTool:
                 plan.Add(new AcquireSuppressionToolTask(SuppressionToolAcquisitionKind.RouteFireInterrupt))
-                    .Add(new MovePickupTask())
                     .Add(new MoveToRouteFireTask())
                     .Add(new SuppressRouteFireTask());
                 break;
@@ -140,7 +139,6 @@ public partial class BotCommandAgent
         planProcessor?.InjectFront(
             this,
             new AcquireSuppressionToolTask(SuppressionToolAcquisitionKind.RouteFireInterrupt),
-            new MovePickupTask(),
             new MoveToRouteFireTask(),
             new SuppressRouteFireTask());
     }
@@ -377,8 +375,9 @@ public partial class BotCommandAgent
         return bestTarget;
     }
 
-    private BotPlanTaskStatus TryUpdateRouteFireSuppressionToolAcquisition()
+    private BotPlanTaskStatus TryUpdateRouteFireSuppressionToolAcquisition(out bool movingToPickup)
     {
+        movingToPickup = false;
         IFireTarget blockingFire = ResolveCurrentRouteBlockingFireTarget();
         if (blockingFire == null || !blockingFire.IsBurning)
         {
@@ -420,7 +419,8 @@ public partial class BotCommandAgent
         {
             if (TryPrepareSuppressionToolMovePickup(routeTool))
             {
-                return BotPlanTaskStatus.Success;
+                movingToPickup = true;
+                return BotPlanTaskStatus.Running;
             }
 
             return BotPlanTaskStatus.Running;

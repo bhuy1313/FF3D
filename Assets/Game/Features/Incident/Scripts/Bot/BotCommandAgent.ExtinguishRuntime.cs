@@ -85,24 +85,9 @@ public partial class BotCommandAgent
         return HasLineOfSightToFireTarget(aimOrigin, firePosition, null);
     }
 
-    private void TryApplyWaterToFireTarget(IBotExtinguisherItem tool, IFireTarget fireTarget, Vector3 firePosition)
+    private void ApplyWaterToFireTarget(IBotExtinguisherItem tool, IFireTarget fireTarget)
     {
-        TryApplyWaterToFireTarget(tool, fireTarget, firePosition, GetAllowedExtinguisherEdgeRange(tool));
-    }
-
-    private void TryApplyWaterToFireTarget(IBotExtinguisherItem tool, IFireTarget fireTarget, Vector3 firePosition, float allowedRange)
-    {
-        if (tool == null || fireTarget == null || !fireTarget.IsBurning)
-        {
-            return;
-        }
-
-        if (GetDistanceToFireEdge(transform.position, firePosition, fireTarget) > Mathf.Max(0f, allowedRange))
-        {
-            return;
-        }
-
-        if (!HasLineOfSightToFireTarget(transform.position, firePosition, fireTarget))
+        if (tool == null || fireTarget == null)
         {
             return;
         }
@@ -813,7 +798,10 @@ public partial class BotCommandAgent
         {
             float keepTargetRange = GetExtinguisherOrderAreaRadius();
             float currentTargetDistance = GetHorizontalDistance(transform.position, currentFireTarget.GetWorldPosition());
-            if (sprayReadyTime >= 0f || currentTargetDistance <= keepTargetRange)
+            if (sprayReadyTime >= 0f ||
+                currentExtinguishSubtask == BotExtinguishSubtask.AimAtFire ||
+                currentExtinguishSubtask == BotExtinguishSubtask.Spray ||
+                currentTargetDistance <= keepTargetRange + ExtinguisherTargetStickinessRadiusSlack)
             {
                 return currentFireTarget;
             }
@@ -875,6 +863,23 @@ public partial class BotCommandAgent
         }
 
         return FindClosestFallbackFireTarget(orderPoint, fromPosition, searchRadius, preferWithinRadius: true);
+    }
+
+    private IFireTarget ResolveStickyFireGroupRepresentative(IFireTarget currentTarget, IFireGroupTarget fireGroup, Vector3 fromPosition)
+    {
+        if (currentTarget != null &&
+            currentTarget.IsBurning &&
+            fireGroup != null &&
+            fireGroup.HasActiveFires &&
+            IsFireWithinRouteDetectionRadius(
+                currentTarget,
+                fromPosition,
+                Mathf.Max(routeFireDetectionRadius, GetExtinguisherOrderAreaRadius()) + ExtinguisherTargetStickinessRadiusSlack))
+        {
+            return currentTarget;
+        }
+
+        return ResolveRepresentativeFireTarget(fireGroup, fromPosition);
     }
 
     private IFireTarget FindClosestRepresentativeFireFromGroups(Vector3 orderPoint, Vector3 fromPosition, float searchRadius)

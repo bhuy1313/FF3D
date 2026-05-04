@@ -257,8 +257,8 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 0.6, y: 0.6, z: 0.6}
+  m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 5535899514192315233}
   - {fileID: 3470527566910404176}
@@ -288,11 +288,47 @@ MonoBehaviour:
   startsBroken: 0
   allowToggle: 1
   breakOnInteract: 0
+  isLocked: 0
   smokeVentilationReliefWhenOpen: 0.28
   smokeVentilationReliefWhenBroken: 0.48
   fireDraftRiskWhenOpen: 0.08
   fireDraftRiskWhenBroken: 0.2
   breakDamageThreshold: 0.1
+  singleSashShatterTargets: []
+  leftSashShatterTargets: []
+  rightSashShatterTargets: []
+  fragmentLifeTime: 5
+  fragmentFadeTime: 1.5
+  fragmentFadeType: 3
+  enableClimbOver: 0
+  climbSideAAnchor: {fileID: 0}
+  climbSideBAnchor: {fileID: 0}
+  climbAnchorForwardOffset: 0.9
+  climbProbeOriginHeight: 1.1
+  climbProbeDownwardOffset: 1.8
+  climbProbeMaxSlopeAngle: 45
+  climbGroundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  climbApproachDuration: 0.12
+  climbApproachArcHeight: 0.04
+  climbTraverseDuration: 0.55
+  climbTraverseArcHeight: 0.35
+  climbTraverseTiltAngle: 8
+  climbTraverseTiltScale: 0.65
+  climbTraverseMidPauseDuration: 0.16
+  climbTraverseMidPauseNormalizedTime: 0.5
+  climbTraverseMidPauseCompression: 0.035
+  climbTraverseMidPauseExtraTiltAngle: 2.5
+  climbTraverseMidPauseExtraTiltScale: 0.55
+  drawClimbDebug: 0
+  isOpen: 0
+  isBroken: 0
+  openSashCount: 0
+  brokenSashCount: 0
+  lockedShakeDuration: 0.3
+  lockedShakeIntensity: 4.5
+  lockedShakeSpeed: 60
 --- !u!1 &7934885851618100047
 GameObject:
   m_ObjectHideFlags: 0

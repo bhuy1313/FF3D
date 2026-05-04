@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using StarterAssets;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -20,6 +21,7 @@ public static class BalanceTelemetry
     public const string DefaultEventMissionFail = "mission_fail";
     public const string DefaultEventVictimState = "victim_state";
     public const string DefaultEventFireStateChanged = "fire_state_changed";
+    public const string DefaultEventPlayerVitals = "player_vitals";
     public const string DefaultEventSnapshot = "snapshot";
     public const string DefaultEventCustom = "custom";
 
@@ -67,12 +69,13 @@ public sealed class BalanceTelemetryRecorder : MonoBehaviour
     private const float SnapshotIntervalSeconds = 5f;
     private const float DiscoveryIntervalSeconds = 1.5f;
     private const string CsvHeader =
-        "timestamp_iso,scene,mission_time,mission_state,event,subject,hazard_linked,hazard_burning,fire_total,fire_extinguished,victims_alive,victims_urgent,victims_critical,victims_deceased,score,score_max,detail";
+        "timestamp_iso,scene,mission_time,mission_state,event,subject,hazard_linked,hazard_burning,fire_total,fire_extinguished,victims_alive,victims_urgent,victims_critical,victims_deceased,score,score_max,player_health_pct,player_stamina_pct,player_oxygen_pct,player_smoke_pct,player_fire_glare_pct,player_visible_fire_count,player_burden_kg,detail";
 
     private static bool createdForThisProcess;
 
     private readonly List<FireSimulationManager> trackedFireManagers = new List<FireSimulationManager>();
     private readonly List<VictimCondition> trackedVictims = new List<VictimCondition>();
+    private readonly List<PlayerVitals> trackedPlayers = new List<PlayerVitals>();
     private readonly StringBuilder rowBuilder = new StringBuilder(256);
 
     private StreamWriter writer;
@@ -83,6 +86,10 @@ public sealed class BalanceTelemetryRecorder : MonoBehaviour
     private IncidentMissionSystem.MissionState lastMissionState = IncidentMissionSystem.MissionState.Idle;
     private int lastHazardLinked;
     private int lastHazardBurning;
+    private float lastPlayerHealthPercent = -1f;
+    private float lastPlayerStaminaPercent = -1f;
+    private float lastPlayerOxygenPercent = -1f;
+    private bool wasPlayerInSmoke;
     private float startupRealtime;
 
     public bool IsWriterReady => writer != null;
@@ -159,6 +166,10 @@ public sealed class BalanceTelemetryRecorder : MonoBehaviour
             lastMissionState = IncidentMissionSystem.MissionState.Idle;
             lastHazardLinked = 0;
             lastHazardBurning = 0;
+            lastPlayerHealthPercent = -1f;
+            lastPlayerStaminaPercent = -1f;
+            lastPlayerOxygenPercent = -1f;
+            wasPlayerInSmoke = false;
             nextSnapshotTime = 0f;
             nextDiscoveryTime = 0f;
 
@@ -205,6 +216,7 @@ public sealed class BalanceTelemetryRecorder : MonoBehaviour
 
         PollMissionState();
         PollFireDeltas();
+        PollPlayerVitalsDeltas();
 
         if (now >= nextSnapshotTime)
         {
@@ -245,6 +257,18 @@ public sealed class BalanceTelemetryRecorder : MonoBehaviour
             victim.OnTriageStateChanged += state => HandleVictimTriageChanged(victim, state);
             trackedVictims.Add(victim);
         }
+
+        PlayerVitals[] foundPlayers = FindObjectsByType<PlayerVitals>(FindObjectsInactive.Include);
+        for (int i = 0; i < foundPlayers.Length; i++)
+        {
+            PlayerVitals candidate = foundPlayers[i];
+            if (candidate == null || trackedPlayers.Contains(candidate))
+            {
+                continue;
+            }
+
+            trackedPlayers.Add(candidate);
+        }
     }
 
     private void UnsubscribeAll()
@@ -264,6 +288,7 @@ public sealed class BalanceTelemetryRecorder : MonoBehaviour
         // because the recorder is destroyed only on app quit, and victims being
         // destroyed clears their event invocation list automatically.
         trackedVictims.Clear();
+        trackedPlayers.Clear();
         missionSystem = null;
     }
 
@@ -334,6 +359,49 @@ public sealed class BalanceTelemetryRecorder : MonoBehaviour
         }
     }
 
+    private void PollPlayerVitalsDeltas()
+    {
+        if (!TryResolvePrimaryPlayer(out PlayerVitals playerVitals))
+        {
+            return;
+        }
+
+        float health = playerVitals.HealthPercent;
+        float stamina = playerVitals.StaminaPercent;
+        float oxygen = playerVitals.DisplayedOxygenPercent;
+        PlayerHazardExposure exposure = playerVitals.GetComponent<PlayerHazardExposure>();
+        bool isInSmoke = exposure != null && exposure.IsInSmoke;
+
+        bool vitalsChanged =
+            HasPercentChanged(health, lastPlayerHealthPercent, 0.05f) ||
+            HasPercentChanged(stamina, lastPlayerStaminaPercent, 0.20f) ||
+            HasPercentChanged(oxygen, lastPlayerOxygenPercent, 0.10f) ||
+            isInSmoke != wasPlayerInSmoke;
+
+        if (!vitalsChanged)
+        {
+            return;
+        }
+
+        string detail = string.Format(
+            CultureInfo.InvariantCulture,
+            "health:{0:0}->{1:0};stamina:{2:0}->{3:0};oxygen:{4:0}->{5:0};smoke:{6}->{7}",
+            Mathf.Clamp01(lastPlayerHealthPercent) * 100f,
+            health * 100f,
+            Mathf.Clamp01(lastPlayerStaminaPercent) * 100f,
+            stamina * 100f,
+            Mathf.Clamp01(lastPlayerOxygenPercent) * 100f,
+            oxygen * 100f,
+            wasPlayerInSmoke,
+            isInSmoke);
+
+        lastPlayerHealthPercent = health;
+        lastPlayerStaminaPercent = stamina;
+        lastPlayerOxygenPercent = oxygen;
+        wasPlayerInSmoke = isInSmoke;
+        WriteRow(BalanceTelemetry.DefaultEventPlayerVitals, playerVitals.name, detail);
+    }
+
     private void HandleFireStateChanged()
     {
         // Defer counting to PollFireDeltas next frame to coalesce bursty events.
@@ -388,6 +456,14 @@ public sealed class BalanceTelemetryRecorder : MonoBehaviour
             int scoreMax = missionSystem != null ? missionSystem.DisplayedMaximumScore : 0;
             string state = missionSystem != null ? missionSystem.State.ToString() : "NoSystem";
             float missionTime = Mathf.Max(0f, Time.realtimeSinceStartup - startupRealtime);
+            ResolvePlayerMetrics(
+                out float playerHealth,
+                out float playerStamina,
+                out float playerOxygen,
+                out float playerSmoke,
+                out float playerFireGlare,
+                out int playerVisibleFireCount,
+                out float playerBurdenKg);
 
             rowBuilder.Length = 0;
             AppendCsv(rowBuilder, DateTime.Now.ToString("o", CultureInfo.InvariantCulture));
@@ -422,6 +498,26 @@ public sealed class BalanceTelemetryRecorder : MonoBehaviour
             rowBuilder.Append(',');
             rowBuilder.Append(scoreMax);
             rowBuilder.Append(',');
+            AppendOptionalPercent(rowBuilder, playerHealth);
+            rowBuilder.Append(',');
+            AppendOptionalPercent(rowBuilder, playerStamina);
+            rowBuilder.Append(',');
+            AppendOptionalPercent(rowBuilder, playerOxygen);
+            rowBuilder.Append(',');
+            AppendOptionalPercent(rowBuilder, playerSmoke);
+            rowBuilder.Append(',');
+            AppendOptionalPercent(rowBuilder, playerFireGlare);
+            rowBuilder.Append(',');
+            if (playerVisibleFireCount >= 0)
+            {
+                rowBuilder.Append(playerVisibleFireCount);
+            }
+            rowBuilder.Append(',');
+            if (playerBurdenKg >= 0f)
+            {
+                rowBuilder.Append(playerBurdenKg.ToString("0.000", CultureInfo.InvariantCulture));
+            }
+            rowBuilder.Append(',');
             AppendCsv(rowBuilder, detail);
 
             writer.WriteLine(rowBuilder.ToString());
@@ -450,6 +546,97 @@ public sealed class BalanceTelemetryRecorder : MonoBehaviour
         builder.Append('"');
         builder.Append(value.Replace("\"", "\"\""));
         builder.Append('"');
+    }
+
+    private void ResolvePlayerMetrics(
+        out float health,
+        out float stamina,
+        out float oxygen,
+        out float smoke,
+        out float fireGlare,
+        out int visibleFireCount,
+        out float burdenKg)
+    {
+        health = -1f;
+        stamina = -1f;
+        oxygen = -1f;
+        smoke = -1f;
+        fireGlare = -1f;
+        visibleFireCount = -1;
+        burdenKg = -1f;
+
+        if (!TryResolvePrimaryPlayer(out PlayerVitals playerVitals))
+        {
+            return;
+        }
+
+        health = playerVitals.HealthPercent;
+        stamina = playerVitals.StaminaPercent;
+        oxygen = playerVitals.DisplayedOxygenPercent;
+
+        PlayerHazardExposure exposure = playerVitals.GetComponent<PlayerHazardExposure>();
+        if (exposure != null)
+        {
+            smoke = exposure.SmokeDensity01;
+            fireGlare = exposure.FireGlare01;
+            visibleFireCount = exposure.InSightFireCount;
+        }
+
+        FirstPersonController controller = playerVitals.GetComponent<FirstPersonController>();
+        if (controller != null)
+        {
+            burdenKg = controller.CurrentMovementBurdenKg;
+        }
+    }
+
+    private bool TryResolvePrimaryPlayer(out PlayerVitals playerVitals)
+    {
+        playerVitals = null;
+        for (int i = trackedPlayers.Count - 1; i >= 0; i--)
+        {
+            PlayerVitals candidate = trackedPlayers[i];
+            if (candidate == null)
+            {
+                trackedPlayers.RemoveAt(i);
+                continue;
+            }
+
+            if (!candidate.gameObject.activeInHierarchy)
+            {
+                continue;
+            }
+
+            playerVitals = candidate;
+            return true;
+        }
+
+        playerVitals = FindAnyObjectByType<PlayerVitals>(FindObjectsInactive.Exclude);
+        if (playerVitals != null && !trackedPlayers.Contains(playerVitals))
+        {
+            trackedPlayers.Add(playerVitals);
+        }
+
+        return playerVitals != null;
+    }
+
+    private static void AppendOptionalPercent(StringBuilder builder, float value)
+    {
+        if (value < 0f)
+        {
+            return;
+        }
+
+        builder.Append((Mathf.Clamp01(value) * 100f).ToString("0.000", CultureInfo.InvariantCulture));
+    }
+
+    private static bool HasPercentChanged(float current, float previous, float threshold)
+    {
+        if (previous < 0f)
+        {
+            return true;
+        }
+
+        return Mathf.Abs(current - previous) >= Mathf.Max(0f, threshold);
     }
 
     private static string SanitizeFileName(string raw)

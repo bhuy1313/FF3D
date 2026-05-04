@@ -44,6 +44,7 @@ public partial class LevelSelectSceneController : MonoBehaviour
         public string levelId;
         public string levelName;
         public string levelNameLocalizationKey;
+        public Sprite mapSprite;
         [TextArea(2, 4)] public string description;
         public string descriptionLocalizationKey;
         [TextArea(2, 4)] public string objective;

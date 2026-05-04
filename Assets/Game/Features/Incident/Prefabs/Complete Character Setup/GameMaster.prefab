@@ -51,6 +51,83 @@ MonoBehaviour:
   logResolvedPayload: 1
   explicitMapSetupRoot: {fileID: 6795961276938328196}
   explicitAnchors: []
+--- !u!1 &936584210503712682
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 936584210503712683}
+  - component: {fileID: 936584210503712684}
+  m_Layer: 0
+  m_Name: StartupOverlayRevealTask
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &936584210503712683
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 936584210503712682}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4490921490145338205}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &936584210503712684
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 936584210503712682}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c3d4f27d7a24d0f9f1c50f63d9779ec, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StartupOverlayRevealTask
+  blackHoldDuration: 0.1
+  revealDuration: 1.15
+  useUnscaledTime: 1
+  revealCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  overlayImage: {fileID: 0}
+  overlayColor: {r: 0, g: 0, b: 0, a: 1}
+  edgeSoftness: 0.18
+  textureSize: 256
+  sortingOrder: 32760
+  destroyRuntimeOverlayWhenDone: 1
 --- !u!1 &1056660501349176053
 GameObject:
   m_ObjectHideFlags: 0
@@ -319,7 +396,7 @@ MonoBehaviour:
   clearInputsWhileLocked: 1
   explicitTasks:
   - {fileID: 8257045420443869963}
-  - {fileID: 0}
+  - {fileID: 642135791357913581}
   - {fileID: 2207755680025630218}
   - {fileID: 5724600685280160435}
   - {fileID: 7199952912551866077}
@@ -458,7 +535,7 @@ GameObject:
   - component: {fileID: 4687050247040898487}
   - component: {fileID: 8257045420443869963}
   m_Layer: 0
-  m_Name: Startup - Entrance Camera
+  m_Name: Entrance Camera
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -476,7 +553,8 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 936584210503712683}
   m_Father: {fileID: 5835050266681781383}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &4687050247040898487
@@ -497,7 +575,7 @@ MonoBehaviour:
   resolveTargetTimeout: 2
   startDelay: 0.15
   duration: 2.6
-  blendInTime: 0.35
+  blendInTime: 0
   blendOutTime: 0.45
   motionCurve:
     serializedVersion: 2
@@ -548,6 +626,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EntranceCameraStartupTask
   entranceCameraIntro: {fileID: 4687050247040898487}
+  startupOverlayRevealTask: {fileID: 936584210503712684}
 --- !u!1 &7133681939997042460
 GameObject:
   m_ObjectHideFlags: 0

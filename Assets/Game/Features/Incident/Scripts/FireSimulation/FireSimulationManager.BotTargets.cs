@@ -20,10 +20,18 @@ public sealed partial class FireSimulationManager
         EnsureBotFireTargetCapacity(runtimeGraph.Count);
         for (int i = 0; i < runtimeGraph.Count; i++)
         {
+            FireRuntimeNode node = runtimeGraph.GetNode(i);
+            if (node == null || node.IsRemoved)
+            {
+                DestroyBotFireTargetAtIndex(i);
+                continue;
+            }
+
             FireSimulationBotTarget target = botFireTargets[i];
             if (target == null)
             {
-                continue;
+                target = CreateBotFireTarget(i);
+                botFireTargets[i] = target;
             }
 
             if (!target.gameObject.activeSelf)
@@ -84,12 +92,33 @@ public sealed partial class FireSimulationManager
     {
         while (botFireTargets.Count < count)
         {
-            Transform parent = EnsureRuntimeBotFireTargetRoot();
-            GameObject targetObject = new GameObject($"BotFireTarget_{botFireTargets.Count + 1}");
-            targetObject.transform.SetParent(parent, false);
-            FireSimulationBotTarget target = targetObject.AddComponent<FireSimulationBotTarget>();
-            botFireTargets.Add(target);
+            botFireTargets.Add(null);
         }
+    }
+
+    private FireSimulationBotTarget CreateBotFireTarget(int nodeIndex)
+    {
+        Transform parent = EnsureRuntimeBotFireTargetRoot();
+        GameObject targetObject = new GameObject($"BotFireTarget_Node{nodeIndex + 1}");
+        targetObject.transform.SetParent(parent, false);
+        return targetObject.AddComponent<FireSimulationBotTarget>();
+    }
+
+    private void DestroyBotFireTargetAtIndex(int nodeIndex)
+    {
+        if (nodeIndex < 0 || nodeIndex >= botFireTargets.Count)
+        {
+            return;
+        }
+
+        FireSimulationBotTarget target = botFireTargets[nodeIndex];
+        if (target == null)
+        {
+            return;
+        }
+
+        botFireTargets[nodeIndex] = null;
+        Destroy(target.gameObject);
     }
 
     private void EnsureBotFireGroupCapacity(IReadOnlyList<IncidentOriginArea> areas)

@@ -11,6 +11,7 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
 {
     private const float MinExtinguisherStandOffDistance = 0.25f;
     private const float ExtinguisherRangeSlack = 0.1f;
+    private const float ExtinguisherTargetStickinessRadiusSlack = 1.25f;
 
     private enum ExtinguishDebugStage
     {
@@ -267,6 +268,7 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
         IsRouteFireClearingActive();
 
     public bool HasMovePickupTarget => movePickupController != null && movePickupController.HasTarget;
+    private IPickupable CurrentMovePickupTarget => movePickupController != null ? movePickupController.CurrentTarget : null;
     public bool IsAimingEquippedItemPose => IsExtinguisherAimPoseActive() || IsBreakToolAimPoseActive();
     public bool IsUsingEquippedItemPose => IsExtinguisherUsePoseActive();
     public float CurrentCarryWeightKg => ResolveCurrentCarryWeightKg();
@@ -726,10 +728,10 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
         return movePickupController != null && movePickupController.TryCompleteMovePickupTarget(CreateMovePickupOptions());
     }
 
-    internal bool TryStartPlanMovePickupTarget(IPickupable pickupTarget)
+    internal bool TryStartPlanMovePickupTarget(IPickupable pickupTarget, bool allowBehaviorMoveOrders = true)
     {
         return movePickupController != null &&
-               movePickupController.TryIssueMoveToPickup(pickupTarget, CreateMovePickupOptions(false, false), out _);
+               movePickupController.TryIssueMoveToPickup(pickupTarget, CreateMovePickupOptions(false, allowBehaviorMoveOrders), out _);
     }
 
     private BotMovePickupOptions CreateMovePickupOptions(bool prepareIssuedCommand = true, bool allowBehaviorMoveOrders = true)

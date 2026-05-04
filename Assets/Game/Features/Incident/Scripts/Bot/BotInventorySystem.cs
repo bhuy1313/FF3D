@@ -14,6 +14,8 @@ namespace TrueJourney.BotBehavior
         [SerializeField] private Transform equippedRoot;
         [SerializeField] private BotCommandAgent commandAgent;
         [SerializeField] private BotEquippedItemPoseKey equippedPoseKey = BotEquippedItemPoseKey.Default;
+        [SerializeField] private float equippedPoseSettledUntilTime = -1f;
+        [SerializeField] private int equippedPoseRevision;
         [SerializeField] private Vector3 equippedLocalPosition = new Vector3(0f, 1.1f, 0.45f);
         [SerializeField] private Vector3 equippedLocalEulerAngles;
 
@@ -67,6 +69,8 @@ namespace TrueJourney.BotBehavior
         public Transform InventoryRoot => inventoryRoot;
         public Transform EquippedRoot => equippedRoot;
         public BotEquippedItemPoseKey EquippedPoseKey => equippedPoseKey;
+        public float EquippedPoseSettledUntilTime => equippedPoseSettledUntilTime;
+        public int EquippedPoseRevision => equippedPoseRevision;
         public IPickupable ActiveItem => HasItem ? slots[activeIndex].Item : null;
 
         private int activeIndex = -1;
@@ -421,6 +425,7 @@ namespace TrueJourney.BotBehavior
         {
             if (equippedPoseKey == key)
             {
+                RefreshEquippedItemPose();
                 return;
             }
 
@@ -693,6 +698,8 @@ namespace TrueJourney.BotBehavior
         {
             Transform itemTransform = slot.Item.Rigidbody.transform;
             itemTransform.SetParent(equippedRoot != null ? equippedRoot : transform, false);
+            equippedPoseSettledUntilTime = Time.time;
+            equippedPoseRevision++;
             ApplyEquippedPose(slot, itemTransform);
             itemTransform.gameObject.SetActive(slot.WasActive);
         }

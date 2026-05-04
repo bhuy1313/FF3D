@@ -1,4 +1,5 @@
 using UnityEngine;
+using TrueJourney.BotBehavior;
 
 public partial class BotCommandAgent
 {
@@ -115,6 +116,10 @@ public partial class BotCommandAgent
 
         public void OnStart(BotCommandAgent agent)
         {
+            if (agent.CurrentMovePickupTarget is IBotExtinguisherItem extinguisherItem)
+            {
+                agent.SetExtinguishSubtask(BotExtinguishSubtask.MoveToTool, $"Moving to tool '{GetToolName(extinguisherItem)}'.");
+            }
         }
 
         public BotPlanTaskStatus OnUpdate(BotCommandAgent agent)
@@ -151,7 +156,10 @@ public partial class BotCommandAgent
             return;
         }
 
-        if (forceCommandPlanRebuild || !planProcessor.HasActivePlan || activeCommandPlanKey != planKey)
+        bool shouldStartPlan = !planProcessor.HasActivePlan ||
+                               string.IsNullOrWhiteSpace(activeCommandPlanKey) ||
+                               activeCommandPlanKey != planKey && IsActivePlanComplete();
+        if (forceCommandPlanRebuild || shouldStartPlan)
         {
             forceCommandPlanRebuild = false;
             activeCommandPlanKey = planKey;
@@ -159,6 +167,11 @@ public partial class BotCommandAgent
         }
 
         planProcessor.Tick(this);
+    }
+
+    private bool IsActivePlanComplete()
+    {
+        return planProcessor == null || !planProcessor.HasActivePlan;
     }
 
     private bool TryResolveActivePlan(out BotPlan plan, out string planKey)

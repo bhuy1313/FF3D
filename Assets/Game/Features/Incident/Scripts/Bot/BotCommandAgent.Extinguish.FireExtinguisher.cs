@@ -82,7 +82,7 @@ public partial class BotCommandAgent
 
         LockExtinguisherTarget(fireTarget);
         activeExtinguisher.SetExternalSprayState(true, gameObject);
-        TryApplyWaterToFireTarget(activeExtinguisher, fireTarget, firePosition, detectionRadius);
+        ApplyWaterToFireTarget(activeExtinguisher, fireTarget);
 
         if (emitVerboseLogs)
         {
@@ -148,6 +148,7 @@ public partial class BotCommandAgent
         {
             StopExtinguisher();
             sprayReadyTime = -1f;
+            ClearExtinguisherTargetLock();
             SetCurrentFireTarget(ResolveExtinguisherRouteTarget(targetSearchPoint));
             LogVerboseExtinguish(
                 VerboseExtinguishLogCategory.Targeting,
@@ -164,24 +165,31 @@ public partial class BotCommandAgent
     {
         routeFireTarget = null;
         float detectionRadius = Mathf.Max(0.05f, routeFireDetectionRadius);
+        float stickyDetectionRadius = detectionRadius + ExtinguisherTargetStickinessRadiusSlack;
 
-        if (preferredFireTarget != null &&
-            preferredFireTarget.IsBurning &&
-            IsFireWithinRouteDetectionRadius(preferredFireTarget, transform.position, detectionRadius))
+        IFireTarget lockedTarget = GetLockedExtinguisherFireTarget();
+        if (lockedTarget != null &&
+            IsFireWithinRouteDetectionRadius(lockedTarget, transform.position, stickyDetectionRadius))
+        {
+            routeFireTarget = lockedTarget;
+        }
+        else if (preferredFireTarget != null &&
+                 preferredFireTarget.IsBurning &&
+                 IsFireWithinRouteDetectionRadius(preferredFireTarget, transform.position, stickyDetectionRadius))
         {
             routeFireTarget = preferredFireTarget;
         }
-        else if (TryResolveBurningFireWithinRadius(transform.position, detectionRadius, out IFireTarget detectedFire))
+        else if (currentFireTarget != null &&
+                 currentFireTarget.IsBurning &&
+                 IsFireWithinRouteDetectionRadius(currentFireTarget, transform.position, stickyDetectionRadius))
         {
-            routeFireTarget = detectedFire;
+            routeFireTarget = currentFireTarget;
         }
         else
         {
-            IFireTarget lockedTarget = GetLockedExtinguisherFireTarget();
-            if (lockedTarget != null &&
-                IsFireWithinRouteDetectionRadius(lockedTarget, transform.position, detectionRadius))
+            if (TryResolveBurningFireWithinRadius(transform.position, detectionRadius, out IFireTarget detectedFire))
             {
-                routeFireTarget = lockedTarget;
+                routeFireTarget = detectedFire;
             }
         }
 

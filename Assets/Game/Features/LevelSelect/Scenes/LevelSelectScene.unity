@@ -530,7 +530,6 @@ MonoBehaviour:
   go1: {fileID: 2014745275}
   go2: {fileID: 39531976}
   duration: 0.5
-  moveEase: 15
   fadeEase: 4
   ignoreTimeScale: 1
 --- !u!225 &39531976
@@ -1224,7 +1223,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 1400645570}
   m_Direction: 2
   m_Value: 1
-  m_Size: 0.61093086
+  m_Size: 0.6109309
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -1768,13 +1767,13 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 177771561}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 334731898}
-  m_Father: {fileID: 1022717465}
+  m_Father: {fileID: 1397007926}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
@@ -3778,8 +3777,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1387515875}
   m_HandleRect: {fileID: 1387515874}
   m_Direction: 2
-  m_Value: 1
-  m_Size: 0.9733236
+  m_Value: 1.0000013
+  m_Size: 0.9535447
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -4069,7 +4068,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 490, y: -859.09}
+  m_AnchoredPosition: {x: 490, y: -869.09}
   m_SizeDelta: {x: 980, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &381509356
@@ -4102,7 +4101,7 @@ MonoBehaviour:
     m_Left: 20
     m_Right: 20
     m_Top: 20
-    m_Bottom: 20
+    m_Bottom: 40
   m_ChildAlignment: 0
   m_Spacing: 14
   m_ChildForceExpandWidth: 1
@@ -6309,13 +6308,13 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 612983812}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1263914296}
-  m_Father: {fileID: 1022717465}
+  m_Father: {fileID: 1397007926}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
@@ -7246,18 +7245,18 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 807130745}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1599938771}
-  m_Father: {fileID: 1022717465}
+  m_Father: {fileID: 1028538393}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_SizeDelta: {x: 344, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &807130747
 MonoBehaviour:
@@ -8683,6 +8682,7 @@ GameObject:
   - component: {fileID: 973373140}
   - component: {fileID: 973373139}
   - component: {fileID: 973373138}
+  - component: {fileID: 973373141}
   m_Layer: 5
   m_Name: btnScenario
   m_TagString: Untagged
@@ -8697,18 +8697,18 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 973373136}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 524784003}
-  m_Father: {fileID: 1022717465}
+  m_Father: {fileID: 1028538393}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_SizeDelta: {x: 344, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &973373138
 MonoBehaviour:
@@ -8792,6 +8792,18 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 973373136}
   m_CullTransparentMesh: 1
+--- !u!225 &973373141
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 973373136}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &996350255
 GameObject:
   m_ObjectHideFlags: 0
@@ -9112,10 +9124,8 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 177771562}
-  - {fileID: 807130746}
-  - {fileID: 973373137}
-  - {fileID: 612983813}
+  - {fileID: 1028538393}
+  - {fileID: 1397007926}
   m_Father: {fileID: 200354374}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -9142,11 +9152,11 @@ MonoBehaviour:
     m_Bottom: 24
   m_ChildAlignment: 0
   m_Spacing: 18
-  m_ChildForceExpandWidth: 1
+  m_ChildForceExpandWidth: 0
   m_ChildForceExpandHeight: 1
-  m_ChildControlWidth: 1
+  m_ChildControlWidth: 0
   m_ChildControlHeight: 1
-  m_ChildScaleWidth: 0
+  m_ChildScaleWidth: 1
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
 --- !u!114 &1022717467
@@ -9313,6 +9323,70 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1026416940}
   m_CullTransparentMesh: 1
+--- !u!1 &1028538392
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1028538393}
+  - component: {fileID: 1028538394}
+  m_Layer: 5
+  m_Name: Con1
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1028538393
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1028538392}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 807130746}
+  - {fileID: 973373137}
+  m_Father: {fileID: 1022717465}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 706, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1028538394
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1028538392}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 30649d3a9faa99c48a7b1166b86bf2a0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.HorizontalLayoutGroup
+  m_Padding:
+    m_Left: 0
+    m_Right: 0
+    m_Top: 0
+    m_Bottom: 0
+  m_ChildAlignment: 3
+  m_Spacing: 18
+  m_ChildForceExpandWidth: 0
+  m_ChildForceExpandHeight: 1
+  m_ChildControlWidth: 0
+  m_ChildControlHeight: 1
+  m_ChildScaleWidth: 1
+  m_ChildScaleHeight: 0
+  m_ReverseArrangement: 0
 --- !u!1 &1029421738
 GameObject:
   m_ObjectHideFlags: 0
@@ -12705,6 +12779,70 @@ MonoBehaviour:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ContentSizeFitter
   m_HorizontalFit: 0
   m_VerticalFit: 2
+--- !u!1 &1397007925
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1397007926}
+  - component: {fileID: 1397007927}
+  m_Layer: 5
+  m_Name: Con2
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1397007926
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1397007925}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 177771562}
+  - {fileID: 612983813}
+  m_Father: {fileID: 1022717465}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 706, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1397007927
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1397007925}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 30649d3a9faa99c48a7b1166b86bf2a0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.HorizontalLayoutGroup
+  m_Padding:
+    m_Left: 0
+    m_Right: 0
+    m_Top: 0
+    m_Bottom: 0
+  m_ChildAlignment: 0
+  m_Spacing: 18
+  m_ChildForceExpandWidth: 1
+  m_ChildForceExpandHeight: 1
+  m_ChildControlWidth: 1
+  m_ChildControlHeight: 1
+  m_ChildScaleWidth: 0
+  m_ChildScaleHeight: 0
+  m_ReverseArrangement: 0
 --- !u!1 &1400645569
 GameObject:
   m_ObjectHideFlags: 0
@@ -16654,7 +16792,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 83456019}
   m_HandleRect: {fileID: 83456018}
   m_Direction: 0
-  m_Value: 0
+  m_Value: 1
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -17841,7 +17979,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 445467102}
   m_HandleRect: {fileID: 445467101}
   m_Direction: 0
-  m_Value: 0
+  m_Value: 1
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -18002,6 +18140,7 @@ MonoBehaviour:
       levelId: training_map
       levelName: Training Map
       levelNameLocalizationKey: 
+      mapSprite: {fileID: 0}
       description: A guided training map used for onboarding and control familiarization.
       descriptionLocalizationKey: 
       objective: Deploy into the training map and complete the tutorial scenario.
@@ -18023,6 +18162,7 @@ MonoBehaviour:
       levelId: suburban_map_01
       levelName: Map 1
       levelNameLocalizationKey: 
+      mapSprite: {fileID: 21300000, guid: e22c75c1c30e4204b917ebed2b457926, type: 3}
       description: A suburban residential map with multiple possible incidents. The
         exact scenario will only be revealed after deployment.
       descriptionLocalizationKey: 
@@ -18061,6 +18201,7 @@ MonoBehaviour:
       levelId: city_map_01
       levelName: Map 3
       levelNameLocalizationKey: 
+      mapSprite: {fileID: 21300000, guid: 8a6d7a55c218fce489a99e6ad50736e7, type: 3}
       description: This city map is reserved for future scenario setup.
       descriptionLocalizationKey: 
       objective: Assign scenarios to enable this map.
