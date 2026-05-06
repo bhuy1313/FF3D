@@ -10,6 +10,13 @@ public static class LoadingFlowState
     private const string PendingOnsiteSceneKey = "flow.pending_onsite_scene";
     private const string CurrentLevelIdKey = "flow.current_level_id";
     private const string PlayerNameKey = "profile.player_name";
+    private static string lastLoadingFlowActivatedScene;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetRuntimeFlowMarkers()
+    {
+        lastLoadingFlowActivatedScene = string.Empty;
+    }
 
     public static void SetPendingTargetScene(string sceneName)
     {
@@ -37,6 +44,19 @@ public static class LoadingFlowState
 
         PlayerPrefs.DeleteKey(PendingTargetSceneKey);
         PlayerPrefs.Save();
+    }
+
+    public static void MarkSceneActivatedFromLoadingFlow(string sceneName)
+    {
+        lastLoadingFlowActivatedScene = string.IsNullOrWhiteSpace(sceneName)
+            ? string.Empty
+            : sceneName.Trim();
+    }
+
+    public static bool WasSceneActivatedFromLoadingFlow(string sceneName)
+    {
+        return !string.IsNullOrWhiteSpace(sceneName) &&
+               string.Equals(lastLoadingFlowActivatedScene, sceneName.Trim(), System.StringComparison.Ordinal);
     }
 
     public static void SetPendingScenarioResourcePath(string resourcePath)

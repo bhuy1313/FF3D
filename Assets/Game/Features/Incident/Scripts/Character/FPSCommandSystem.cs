@@ -50,7 +50,8 @@ namespace StarterAssets
         [SerializeField] private KeyCode cancelCommandKey = KeyCode.Escape;
         [SerializeField] private KeyCode cancelAllFollowKey = KeyCode.X;
         [SerializeField] private KeyCode toggleBotOutlineKey = KeyCode.Z;
-        [SerializeField] private KeyCode cycleCommandPageKey = KeyCode.Tab;
+        [SerializeField] private KeyCode cycleCommandPageKey = KeyCode.PageDown;
+        [SerializeField] private KeyCode cycleCommandPagePreviousKey = KeyCode.PageUp;
         [SerializeField] private float destinationRayDistance = 200f;
         [SerializeField] private LayerMask destinationMask = ~0;
 
@@ -410,17 +411,38 @@ namespace StarterAssets
                 return;
             }
 
-            bool cycleForward = Input.GetKeyDown(cycleCommandPageKey);
-            float scroll = Input.mouseScrollDelta.y;
-            if (!cycleForward && Mathf.Abs(scroll) < 0.01f)
+            bool cycleForward = WasCommandActionPressedThisFrame("CommandCyclePage", cycleCommandPageKey);
+            bool cycleBackward = WasCommandActionPressedThisFrame("CommandCyclePagePrevious", cycleCommandPagePreviousKey);
+            float scroll = ReadCommandPageScroll();
+            if (!cycleForward && !cycleBackward && Mathf.Abs(scroll) < 0.01f)
             {
                 return;
             }
 
             int direction = cycleForward
                 ? 1
-                : (scroll > 0f ? 1 : -1);
+                : (cycleBackward ? -1 : (scroll > 0f ? 1 : -1));
             CycleCommandPage(direction);
+        }
+
+        private float ReadCommandPageScroll()
+        {
+#if ENABLE_INPUT_SYSTEM
+            if (TryGetPlayerAction("CommandPageScroll", out InputAction action))
+            {
+                float value = action.ReadValue<float>();
+                if (Mathf.Abs(value) > Mathf.Epsilon)
+                {
+                    return value;
+                }
+            }
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+            return Input.mouseScrollDelta.y;
+#else
+            return 0f;
+#endif
         }
 
         private void CycleCommandPage(int direction)

@@ -19,6 +19,11 @@ public class VictimPlacementStartupTask : SceneStartupTask
     [SerializeField] private bool deterministicPlacement = true;
     [SerializeField] private bool clearExistingVictimsBeforeSpawn;
 
+    [Header("Fire Clearance")]
+    [SerializeField] private bool removeFireNodesNearSpawnedVictims = true;
+    [SerializeField] [Min(0f)] private float spawnedVictimFireClearRadius = 1.5f;
+    [SerializeField] private bool avoidHazardLinkedFireNodesWhenSelectingSpawnPoints = true;
+
     [Header("Mission Sync")]
     [SerializeField] private IncidentMissionSystem incidentMissionSystem;
     [SerializeField] private bool refreshMissionObjectivesAfterSpawn = true;
@@ -26,7 +31,9 @@ public class VictimPlacementStartupTask : SceneStartupTask
 
     protected override IEnumerator Execute(SceneStartupFlow startupFlow)
     {
-        if (!LoadingFlowState.TryGetPendingIncidentPayload(out IncidentWorldSetupPayload payload) || payload == null)
+        IncidentMapSetupRoot setupRoot = ResolveMapSetupRoot(startupFlow);
+        IncidentWorldSetupPayload payload = ResolvePayload(setupRoot);
+        if (payload == null)
         {
             yield break;
         }
@@ -37,10 +44,15 @@ public class VictimPlacementStartupTask : SceneStartupTask
             yield break;
         }
 
-        List<VictimSpawnPoint> spawnPoints = CollectSpawnPoints();
+        IncidentOriginArea resolvedOriginArea = setupRoot != null ? setupRoot.LastResolvedOriginArea : null;
+        List<VictimSpawnPoint> spawnPoints = CollectSpawnPoints(resolvedOriginArea);
         if (spawnPoints.Count == 0)
         {
-            Debug.LogWarning($"{nameof(VictimPlacementStartupTask)}: No victim spawn points found.", this);
+            Debug.LogWarning(
+                resolvedOriginArea != null
+                    ? $"{nameof(VictimPlacementStartupTask)}: No victim spawn points found for origin area '{resolvedOriginArea.EffectiveAreaKey}'."
+                    : $"{nameof(VictimPlacementStartupTask)}: No victim spawn points found.",
+                resolvedOriginArea != null ? resolvedOriginArea : this);
             yield break;
         }
 
@@ -55,12 +67,13 @@ public class VictimPlacementStartupTask : SceneStartupTask
             yield break;
         }
 
-        if (clearExistingVictimsBeforeSpawn)
+        if (clearExistingVictimsBeforeSpawn && ClearExistingVictims() > 0)
         {
-            ClearExistingVictims();
+            yield return null;
         }
 
-        List<VictimSpawnPoint> selectedPoints = SelectSpawnPoints(payload, spawnPoints, spawnCount);
+        FireSimulationManager fireSimulationManager = ResolveFireSimulationManager(setupRoot);
+        List<VictimSpawnPoint> selectedPoints = SelectSpawnPoints(payload, spawnPoints, spawnCount, fireSimulationManager);
         int spawnedCount = 0;
         for (int i = 0; i < selectedPoints.Count; i++)
         {
@@ -77,6 +90,7 @@ public class VictimPlacementStartupTask : SceneStartupTask
             }
 
             ConfigureVictim(victimInstance, spawnPoint, payload);
+            RemoveFireNodesNearVictim(setupRoot, victimInstance);
             spawnedCount++;
         }
 
@@ -89,15 +103,31 @@ public class VictimPlacementStartupTask : SceneStartupTask
         {
             Debug.Log(
                 $"{nameof(VictimPlacementStartupTask)} spawned {spawnedCount} victim(s) for logicalLocation='{payload.logicalFireLocation}', " +
+                $"originArea='{(resolvedOriginArea != null ? resolvedOriginArea.EffectiveAreaKey : "none")}', " +
                 $"estimatedKnown={payload.estimatedTrappedCountKnown}.",
                 this);
         }
     }
 
-    private List<VictimSpawnPoint> CollectSpawnPoints()
+    private List<VictimSpawnPoint> CollectSpawnPoints(IncidentOriginArea resolvedOriginArea)
     {
         HashSet<VictimSpawnPoint> seen = new HashSet<VictimSpawnPoint>();
         List<VictimSpawnPoint> results = new List<VictimSpawnPoint>();
+
+        if (resolvedOriginArea != null)
+        {
+            VictimSpawnPoint[] areaPoints = resolvedOriginArea.CollectVictimSpawnPoints(includeInactiveSpawnPoints);
+            for (int i = 0; i < areaPoints.Length; i++)
+            {
+                VictimSpawnPoint point = areaPoints[i];
+                if (point != null && seen.Add(point))
+                {
+                    results.Add(point);
+                }
+            }
+
+            return results;
+        }
 
         if (explicitSpawnPoints != null)
         {
@@ -156,7 +186,8 @@ public class VictimPlacementStartupTask : SceneStartupTask
     private List<VictimSpawnPoint> SelectSpawnPoints(
         IncidentWorldSetupPayload payload,
         List<VictimSpawnPoint> allPoints,
-        int targetCount)
+        int targetCount,
+        FireSimulationManager fireSimulationManager)
     {
         List<VictimSpawnPoint> exactMatches = new List<VictimSpawnPoint>();
         List<VictimSpawnPoint> originMatches = new List<VictimSpawnPoint>();
@@ -194,6 +225,16 @@ public class VictimPlacementStartupTask : SceneStartupTask
             SortDeterministically(originMatches, payload, "victim-origin");
             SortDeterministically(fallbackMatches, payload, "victim-fallback");
         }
+        else
+        {
+            ShuffleRandomly(exactMatches);
+            ShuffleRandomly(originMatches);
+            ShuffleRandomly(fallbackMatches);
+        }
+
+        PreferSpawnPointsAwayFromHazardFire(exactMatches, fireSimulationManager);
+        PreferSpawnPointsAwayFromHazardFire(originMatches, fireSimulationManager);
+        PreferSpawnPointsAwayFromHazardFire(fallbackMatches, fireSimulationManager);
 
         List<VictimSpawnPoint> results = new List<VictimSpawnPoint>(targetCount);
         AppendUntil(results, exactMatches, targetCount);
@@ -250,11 +291,84 @@ public class VictimPlacementStartupTask : SceneStartupTask
         });
     }
 
+    private static void ShuffleRandomly(List<VictimSpawnPoint> points)
+    {
+        if (points == null || points.Count <= 1)
+        {
+            return;
+        }
+
+        for (int i = points.Count - 1; i > 0; i--)
+        {
+            int swapIndex = UnityEngine.Random.Range(0, i + 1);
+            (points[i], points[swapIndex]) = (points[swapIndex], points[i]);
+        }
+    }
+
+    private void PreferSpawnPointsAwayFromHazardFire(List<VictimSpawnPoint> points, FireSimulationManager fireSimulationManager)
+    {
+        if (!avoidHazardLinkedFireNodesWhenSelectingSpawnPoints ||
+            fireSimulationManager == null ||
+            spawnedVictimFireClearRadius <= 0f ||
+            points == null ||
+            points.Count <= 1)
+        {
+            return;
+        }
+
+        points.Sort((left, right) =>
+        {
+            bool leftNearFire = IsSpawnPointNearHazardFire(left, fireSimulationManager);
+            bool rightNearFire = IsSpawnPointNearHazardFire(right, fireSimulationManager);
+            if (leftNearFire == rightNearFire)
+            {
+                return 0;
+            }
+
+            return leftNearFire ? 1 : -1;
+        });
+    }
+
+    private bool IsSpawnPointNearHazardFire(VictimSpawnPoint spawnPoint, FireSimulationManager fireSimulationManager)
+    {
+        if (spawnPoint == null || fireSimulationManager == null)
+        {
+            return false;
+        }
+
+        Pose pose = spawnPoint.ResolveSpawnPose();
+        return fireSimulationManager.IsNearHazardLinkedFireNode(pose.position, spawnedVictimFireClearRadius);
+    }
+
     private GameObject SpawnVictim(VictimSpawnPoint spawnPoint)
     {
         Pose pose = spawnPoint.ResolveSpawnPose();
         Transform parent = runtimeParent != null ? runtimeParent : null;
         return Instantiate(victimPrefab, pose.position, pose.rotation, parent);
+    }
+
+    private void RemoveFireNodesNearVictim(IncidentMapSetupRoot setupRoot, GameObject victimInstance)
+    {
+        if (!removeFireNodesNearSpawnedVictims ||
+            spawnedVictimFireClearRadius <= 0f ||
+            victimInstance == null)
+        {
+            return;
+        }
+
+        FireSimulationManager fireSimulationManager = setupRoot != null
+            ? setupRoot.FireSimulationManager
+            : FindAnyObjectByType<FireSimulationManager>(FindObjectsInactive.Include);
+        fireSimulationManager?.RemoveIncidentNodesInRadius(
+            victimInstance.transform.position,
+            spawnedVictimFireClearRadius);
+    }
+
+    private static FireSimulationManager ResolveFireSimulationManager(IncidentMapSetupRoot setupRoot)
+    {
+        return setupRoot != null
+            ? setupRoot.FireSimulationManager
+            : FindAnyObjectByType<FireSimulationManager>(FindObjectsInactive.Include);
     }
 
     private static void ConfigureVictim(GameObject victimInstance, VictimSpawnPoint spawnPoint, IncidentWorldSetupPayload payload)
@@ -304,8 +418,11 @@ public class VictimPlacementStartupTask : SceneStartupTask
         return 85f;
     }
 
-    private void ClearExistingVictims()
+    private int ClearExistingVictims()
     {
+        int clearedCount = 0;
+        HashSet<GameObject> destroyedObjects = new HashSet<GameObject>();
+
         Rescuable[] rescuables = FindObjectsByType<Rescuable>(FindObjectsInactive.Include);
         for (int i = 0; i < rescuables.Length; i++)
         {
@@ -315,13 +432,30 @@ public class VictimPlacementStartupTask : SceneStartupTask
                 continue;
             }
 
-            if (runtimeParent != null && rescuable.transform.parent != runtimeParent)
+            if (destroyedObjects.Add(rescuable.gameObject))
+            {
+                Destroy(rescuable.gameObject);
+                clearedCount++;
+            }
+        }
+
+        VictimCondition[] victimConditions = FindObjectsByType<VictimCondition>(FindObjectsInactive.Include);
+        for (int i = 0; i < victimConditions.Length; i++)
+        {
+            VictimCondition victimCondition = victimConditions[i];
+            if (victimCondition == null)
             {
                 continue;
             }
 
-            Destroy(rescuable.gameObject);
+            if (destroyedObjects.Add(victimCondition.gameObject))
+            {
+                Destroy(victimCondition.gameObject);
+                clearedCount++;
+            }
         }
+
+        return clearedCount;
     }
 
     private void RefreshMissionObjectives(SceneStartupFlow startupFlow)
@@ -338,6 +472,34 @@ public class VictimPlacementStartupTask : SceneStartupTask
         }
 
         mission?.RefreshObjectives();
+    }
+
+    private static IncidentWorldSetupPayload ResolvePayload(IncidentMapSetupRoot setupRoot)
+    {
+        if (setupRoot != null && setupRoot.LastAppliedPayload != null)
+        {
+            return setupRoot.LastAppliedPayload;
+        }
+
+        return LoadingFlowState.TryGetPendingIncidentPayload(out IncidentWorldSetupPayload payload)
+            ? payload
+            : null;
+    }
+
+    private IncidentMapSetupRoot ResolveMapSetupRoot(SceneStartupFlow startupFlow)
+    {
+        IncidentMapSetupRoot setupRoot = null;
+        if (startupFlow != null)
+        {
+            setupRoot = startupFlow.FindSceneObject<IncidentMapSetupRoot>();
+        }
+
+        if (setupRoot == null)
+        {
+            setupRoot = FindAnyObjectByType<IncidentMapSetupRoot>(FindObjectsInactive.Include);
+        }
+
+        return setupRoot;
     }
 
     private static string GetHierarchyPath(Transform target)

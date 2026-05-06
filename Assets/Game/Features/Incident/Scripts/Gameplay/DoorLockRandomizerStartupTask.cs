@@ -8,6 +8,8 @@ public class DoorLockRandomizerStartupTask : SceneStartupTask
 {
     [Header("Door Lock Randomization")]
     [SerializeField] [Range(0f, 100f)] private float lockedPercentage = 35f;
+    [SerializeField] [Range(0f, 100f)] private float openPercentage;
+    [SerializeField] private bool forceUnlockDoorsWhenOpening = true;
     [SerializeField] private bool includeInactiveDoors = true;
     [SerializeField] private bool useDeterministicSeed;
     [SerializeField] private int seedOffset;
@@ -26,6 +28,7 @@ public class DoorLockRandomizerStartupTask : SceneStartupTask
         int baseSeed = ResolveBaseSeed();
         int affectedCount = 0;
         int lockedCount = 0;
+        int openedCount = 0;
 
         for (int i = 0; i < doors.Length; i++)
         {
@@ -35,7 +38,15 @@ public class DoorLockRandomizerStartupTask : SceneStartupTask
                 continue;
             }
 
-            // Optional: You could check if door is already open, etc.
+            bool shouldOpen = ResolveOpenState(door, baseSeed);
+            if (shouldOpen)
+            {
+                door.SetOpenState(true, forceUnlockDoorsWhenOpening);
+                openedCount++;
+                affectedCount++;
+                continue;
+            }
+
             bool shouldLock = ResolveLockedState(door, baseSeed);
             
             if (shouldLock)
@@ -51,7 +62,8 @@ public class DoorLockRandomizerStartupTask : SceneStartupTask
         {
             Debug.Log(
                 $"{nameof(DoorLockRandomizerStartupTask)} applied lockedPercentage={lockedPercentage:0.0}% " +
-                $"to {affectedCount} doors. Locked={lockedCount}.",
+                $"openPercentage={openPercentage:0.0}% to {affectedCount} doors. " +
+                $"Locked={lockedCount}, Opened={openedCount}.",
                 this);
         }
     }
@@ -62,6 +74,15 @@ public class DoorLockRandomizerStartupTask : SceneStartupTask
         int doorSeed = IncidentSeedUtility.CombineHash(baseSeed, IncidentSeedUtility.StableHash(key));
         System.Random random = new System.Random(doorSeed);
         double normalizedPercentage = Mathf.Clamp(lockedPercentage, 0f, 100f) / 100f;
+        return random.NextDouble() < normalizedPercentage;
+    }
+
+    private bool ResolveOpenState(Door door, int baseSeed)
+    {
+        string key = GetHierarchyPath(door.transform);
+        int doorSeed = IncidentSeedUtility.CombineHash(baseSeed, IncidentSeedUtility.StableHash(key + "/open"));
+        System.Random random = new System.Random(doorSeed);
+        double normalizedPercentage = Mathf.Clamp(openPercentage, 0f, 100f) / 100f;
         return random.NextDouble() < normalizedPercentage;
     }
 

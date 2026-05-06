@@ -7,6 +7,9 @@ public class FireHoseDeployed : MonoBehaviour
 
     public float sampleSpacing = 0.5f;
     public float segmentMaxLength = 10f;
+    public float radius = 0.12f;
+    public int radialSegments = 12;
+    public float surfaceOffset = 0.12f;
 
     public Material hoseMaterial;
 
@@ -93,15 +96,33 @@ public class FireHoseDeployed : MonoBehaviour
             return;
         }
 
-        List<Vector3> resampled = FireHosePathSampler.Resample(segment.Knots, sampleSpacing);
+        List<Knot> liftedKnots = GetSurfaceLiftedKnots(segment.Knots);
+        List<Vector3> resampled = FireHosePathSampler.Resample(liftedKnots, sampleSpacing);
         List<Vector3> spline = FireHosePathSampler.CatmullRom(resampled);
 
         segment.Mesh = FireHoseMeshBuilder.Build(
             spline,
             segment.Mesh,
             segment.LastUp,
-            out Vector3 lastUp);
+            out Vector3 lastUp,
+            Mathf.Max(0.001f, radius),
+            Mathf.Max(3, radialSegments));
         segment.MeshFilter.sharedMesh = segment.Mesh;
         segment.LastUp = lastUp;
+    }
+
+    List<Knot> GetSurfaceLiftedKnots(List<Knot> sourceKnots)
+    {
+        List<Knot> liftedKnots = new List<Knot>(sourceKnots.Count);
+        float offset = Mathf.Max(0f, surfaceOffset);
+
+        for (int i = 0; i < sourceKnots.Count; i++)
+        {
+            Knot knot = sourceKnots[i];
+            Vector3 normal = knot.Normal.sqrMagnitude > 0.0001f ? knot.Normal.normalized : Vector3.up;
+            liftedKnots.Add(new Knot(knot.Position + normal * offset, normal));
+        }
+
+        return liftedKnots;
     }
 }

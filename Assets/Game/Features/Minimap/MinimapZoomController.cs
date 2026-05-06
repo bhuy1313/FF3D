@@ -1,4 +1,8 @@
 using UnityEngine;
+using StarterAssets;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 [DisallowMultipleComponent]
 public class MinimapZoomController : MonoBehaviour
@@ -6,6 +10,10 @@ public class MinimapZoomController : MonoBehaviour
     [Header("References")]
     [SerializeField] private Camera minimapCamera;
     [SerializeField] private FullscreenMinimapController fullscreenMinimapController;
+    [SerializeField] private StarterAssetsInputs starterAssetsInputs;
+#if ENABLE_INPUT_SYSTEM
+    [SerializeField] private PlayerInput playerInput;
+#endif
 
     [Header("Auto Resolve")]
     [SerializeField] private string minimapCameraObjectName = "MinimapCamera";
@@ -37,8 +45,8 @@ public class MinimapZoomController : MonoBehaviour
             return;
         }
 
-        bool zoomInPressed = Input.GetKeyDown(zoomInKey);
-        bool zoomOutPressed = Input.GetKeyDown(zoomOutKey);
+        bool zoomInPressed = WasZoomInPressed();
+        bool zoomOutPressed = WasZoomOutPressed();
         if (!zoomInPressed && !zoomOutPressed)
         {
             return;
@@ -66,6 +74,23 @@ public class MinimapZoomController : MonoBehaviour
             fullscreenMinimapController = GetComponent<FullscreenMinimapController>();
         }
 
+        if (starterAssetsInputs == null)
+        {
+            starterAssetsInputs = FindAnyObjectByType<StarterAssetsInputs>();
+        }
+
+#if ENABLE_INPUT_SYSTEM
+        if (playerInput == null && starterAssetsInputs != null)
+        {
+            playerInput = starterAssetsInputs.GetComponent<PlayerInput>();
+        }
+
+        if (playerInput == null)
+        {
+            playerInput = FindAnyObjectByType<PlayerInput>();
+        }
+#endif
+
         if (minimapCamera == null)
         {
             GameObject minimapCameraObject = GameObject.Find(minimapCameraObjectName);
@@ -75,4 +100,62 @@ public class MinimapZoomController : MonoBehaviour
             }
         }
     }
+
+    private bool WasZoomInPressed()
+    {
+        if (starterAssetsInputs != null && starterAssetsInputs.minimapZoomIn)
+        {
+            starterAssetsInputs.minimapZoomIn = false;
+            return true;
+        }
+
+#if ENABLE_INPUT_SYSTEM
+        if (TryGetPlayerAction("MinimapZoomIn", out InputAction action) && action.WasPressedThisFrame())
+        {
+            return true;
+        }
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+        return Input.GetKeyDown(zoomInKey);
+#else
+        return false;
+#endif
+    }
+
+    private bool WasZoomOutPressed()
+    {
+        if (starterAssetsInputs != null && starterAssetsInputs.minimapZoomOut)
+        {
+            starterAssetsInputs.minimapZoomOut = false;
+            return true;
+        }
+
+#if ENABLE_INPUT_SYSTEM
+        if (TryGetPlayerAction("MinimapZoomOut", out InputAction action) && action.WasPressedThisFrame())
+        {
+            return true;
+        }
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+        return Input.GetKeyDown(zoomOutKey);
+#else
+        return false;
+#endif
+    }
+
+#if ENABLE_INPUT_SYSTEM
+    private bool TryGetPlayerAction(string actionName, out InputAction action)
+    {
+        action = null;
+        if (playerInput == null || playerInput.actions == null)
+        {
+            return false;
+        }
+
+        action = playerInput.actions.FindAction(actionName, throwIfNotFound: false);
+        return action != null;
+    }
+#endif
 }

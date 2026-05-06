@@ -4158,7 +4158,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RawImage
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 0.69738597, b: 0.19999999, a: 1}
+  m_Color: {r: 1, g: 0.5490196, b: 0, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 0
@@ -5857,7 +5857,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RawImage
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 0.69738597, b: 0.19999999, a: 1}
+  m_Color: {r: 0.2, g: 0.3137255, b: 1, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 0
@@ -8806,7 +8806,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -0.00023949757}
+  m_AnchoredPosition: {x: 0, y: -0.00089051755}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &4548221971237201209
@@ -10143,6 +10143,87 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!1 &6032637204760954284
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2833335419146053510}
+  - component: {fileID: 4741563362965307185}
+  - component: {fileID: 7328061805042136712}
+  m_Layer: 5
+  m_Name: PlayerStatus
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &2833335419146053510
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6032637204760954284}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2918495202259904444}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 0}
+  m_AnchoredPosition: {x: 0, y: 50}
+  m_SizeDelta: {x: 0, y: 80}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &4741563362965307185
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6032637204760954284}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 30649d3a9faa99c48a7b1166b86bf2a0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.HorizontalLayoutGroup
+  m_Padding:
+    m_Left: 0
+    m_Right: 0
+    m_Top: 0
+    m_Bottom: 0
+  m_ChildAlignment: 4
+  m_Spacing: 5
+  m_ChildForceExpandWidth: 0
+  m_ChildForceExpandHeight: 1
+  m_ChildControlWidth: 0
+  m_ChildControlHeight: 1
+  m_ChildScaleWidth: 1
+  m_ChildScaleHeight: 0
+  m_ReverseArrangement: 0
+--- !u!114 &7328061805042136712
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6032637204760954284}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db0d201ac42a4f13986108d241bba1e5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  interactionSystem: {fileID: 0}
+  firstPersonController: {fileID: 0}
+  statusRoot: {fileID: 2833335419146053510}
+  onCarryPrefab: {fileID: 8961259647121168602, guid: 19de70a1521dfe0499bb3814d059b73a, type: 3}
+  limitedMovementPrefab: {fileID: 6283815976357149741, guid: c6e40396640862a488c851d1fe058414, type: 3}
+  heavyPrefab: {fileID: 2006829398411191415, guid: 79347a382a4810847ad4170be246385b, type: 3}
 --- !u!1 &6091264052462163544
 GameObject:
   m_ObjectHideFlags: 0
@@ -12206,7 +12287,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RawImage
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 0.69738597, b: 0.19999999, a: 1}
+  m_Color: {r: 0.2, g: 0.3137255, b: 1, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 0
@@ -12809,6 +12890,7 @@ MonoBehaviour:
   starterAssetsInputs: {fileID: 0}
   commandSystem: {fileID: 0}
   playerActionLock: {fileID: 0}
+  playerInput: {fileID: 0}
   fullscreenRootName: FullscreenMinimap
   mapFrameName: MapFrame
   minimapSquareObjectName: MinimapSquare
@@ -12872,6 +12954,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MinimapZoomController
   minimapCamera: {fileID: 0}
   fullscreenMinimapController: {fileID: 4654438547176604043}
+  starterAssetsInputs: {fileID: 0}
+  playerInput: {fileID: 0}
   minimapCameraObjectName: MinimapCamera
   zoomInKey: 105
   zoomOutKey: 111
@@ -13169,6 +13253,7 @@ RectTransform:
   - {fileID: 2105580014266336770}
   - {fileID: 8640123462834880752}
   - {fileID: 4855618926893588715}
+  - {fileID: 2833335419146053510}
   m_Father: {fileID: 8904142663818265639}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -14812,7 +14897,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 4283031072982219428}
   m_HandleRect: {fileID: 7281226164895934428}
   m_Direction: 0
-  m_Value: 0
+  m_Value: 1
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -15274,6 +15359,7 @@ MonoBehaviour:
   hideHintsOutsideRunningMission: 1
   fallbackToAllActionsWhenNoContextMatch: 1
   useBuiltInTutorialProfiles: 1
+  contextualCheckInterval: 0.1
   defaultContextActionNames: []
   contextualHintProfiles: []
 --- !u!114 &8632203513955217844
@@ -16038,7 +16124,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RawImage
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 0.69738597, b: 0.19999999, a: 1}
+  m_Color: {r: 0.2, g: 0.3137255, b: 1, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 0
@@ -16632,7 +16718,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &4010264307689004772
 RectTransform:
   m_ObjectHideFlags: 0

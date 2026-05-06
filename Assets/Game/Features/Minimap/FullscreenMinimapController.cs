@@ -3,6 +3,9 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using StarterAssets;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 [DisallowMultipleComponent]
 public class FullscreenMinimapController : MonoBehaviour
@@ -40,6 +43,9 @@ public class FullscreenMinimapController : MonoBehaviour
     [SerializeField] private StarterAssetsInputs starterAssetsInputs;
     [SerializeField] private FPSCommandSystem commandSystem;
     [SerializeField] private PlayerActionLock playerActionLock;
+#if ENABLE_INPUT_SYSTEM
+    [SerializeField] private PlayerInput playerInput;
+#endif
 
     [Header("Auto Resolve")]
     [SerializeField] private string fullscreenRootName = "FullscreenMinimap";
@@ -127,7 +133,8 @@ public class FullscreenMinimapController : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(toggleKey))
+        ResolveReferences();
+        if (WasToggleFullscreenPressed())
         {
             ToggleFullscreen();
         }
@@ -137,7 +144,7 @@ public class FullscreenMinimapController : MonoBehaviour
             return;
         }
 
-        if (Input.GetKeyDown(closeKey))
+        if (WasCloseFullscreenPressed())
         {
             CloseFullscreen();
             return;
@@ -268,6 +275,23 @@ public class FullscreenMinimapController : MonoBehaviour
         {
             starterAssetsInputs = FindAnyObjectByType<StarterAssetsInputs>();
         }
+
+#if ENABLE_INPUT_SYSTEM
+        if (playerInput == null && playerRoot != null)
+        {
+            playerInput = playerRoot.GetComponent<PlayerInput>();
+        }
+
+        if (playerInput == null && starterAssetsInputs != null)
+        {
+            playerInput = starterAssetsInputs.GetComponent<PlayerInput>();
+        }
+
+        if (playerInput == null)
+        {
+            playerInput = FindAnyObjectByType<PlayerInput>();
+        }
+#endif
 
         if (commandSystem == null && playerRoot != null)
         {
@@ -697,7 +721,7 @@ public class FullscreenMinimapController : MonoBehaviour
             return;
         }
 
-        float scrollDelta = Input.mouseScrollDelta.y;
+        float scrollDelta = ReadScrollZoomDelta();
         if (Mathf.Abs(scrollDelta) <= Mathf.Epsilon)
         {
             return;
@@ -706,6 +730,84 @@ public class FullscreenMinimapController : MonoBehaviour
         float nextSize = minimapCamera.orthographicSize - (scrollDelta * scrollZoomSpeed);
         minimapCamera.orthographicSize = Mathf.Clamp(nextSize, minOrthographicSize, maxOrthographicSize);
     }
+
+    private bool WasToggleFullscreenPressed()
+    {
+        if (starterAssetsInputs != null && starterAssetsInputs.toggleFullscreenMinimap)
+        {
+            starterAssetsInputs.toggleFullscreenMinimap = false;
+            return true;
+        }
+
+#if ENABLE_INPUT_SYSTEM
+        if (TryGetPlayerAction("ToggleFullscreenMinimap", out InputAction action) && action.WasPressedThisFrame())
+        {
+            return true;
+        }
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+        return Input.GetKeyDown(toggleKey);
+#else
+        return false;
+#endif
+    }
+
+    private bool WasCloseFullscreenPressed()
+    {
+        if (starterAssetsInputs != null && starterAssetsInputs.closeFullscreenMinimap)
+        {
+            starterAssetsInputs.closeFullscreenMinimap = false;
+            return true;
+        }
+
+#if ENABLE_INPUT_SYSTEM
+        if (TryGetPlayerAction("CloseFullscreenMinimap", out InputAction action) && action.WasPressedThisFrame())
+        {
+            return true;
+        }
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+        return Input.GetKeyDown(closeKey);
+#else
+        return false;
+#endif
+    }
+
+    private float ReadScrollZoomDelta()
+    {
+#if ENABLE_INPUT_SYSTEM
+        if (TryGetPlayerAction("MinimapScrollZoom", out InputAction action))
+        {
+            float value = action.ReadValue<float>();
+            if (Mathf.Abs(value) > Mathf.Epsilon)
+            {
+                return value;
+            }
+        }
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+        return Input.mouseScrollDelta.y;
+#else
+        return 0f;
+#endif
+    }
+
+#if ENABLE_INPUT_SYSTEM
+    private bool TryGetPlayerAction(string actionName, out InputAction action)
+    {
+        action = null;
+        if (playerInput == null || playerInput.actions == null)
+        {
+            return false;
+        }
+
+        action = playerInput.actions.FindAction(actionName, throwIfNotFound: false);
+        return action != null;
+    }
+#endif
 
     private void EnsureLegendUi()
     {

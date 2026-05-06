@@ -4,6 +4,7 @@ using System;
 public class FireHoseDeployable : MonoBehaviour
 {
     public Transform head;
+    public bool useInputMovement = true;
 
     public float moveSpeed = 4f;
     public float groundFollowSpeed = 10f;
@@ -31,19 +32,37 @@ public class FireHoseDeployable : MonoBehaviour
     private Vector3 lastKnotPos;
     private Vector3 lastNormal;
     private Vector3 lastSamplePoint;
+    private Vector3 lastObservedHeadPosition;
     private float distanceSinceLastKnot;
     private bool hasFirstKnot = false;
+    private bool hasObservedHeadPosition = false;
+
+    void Start()
+    {
+        if (head != null)
+        {
+            lastObservedHeadPosition = head.position;
+            hasObservedHeadPosition = true;
+        }
+    }
 
     void Update()
     {
+        UpdateHeadForwardFromObservedMotion();
         HandleMovement();
         HandleGroundFollow();
         HandleKnotPlacement();
         DrawDebugVisualization();
+        CacheObservedHeadPosition();
     }
 
     void HandleMovement()
     {
+        if (!useInputMovement || head == null)
+        {
+            return;
+        }
+
         float h = Input.GetAxis("Horizontal");
         float v = Input.GetAxis("Vertical");
 
@@ -54,6 +73,41 @@ public class FireHoseDeployable : MonoBehaviour
             head.position += moveDir * moveSpeed * Time.deltaTime;
             head.forward = moveDir;
         }
+    }
+
+    void UpdateHeadForwardFromObservedMotion()
+    {
+        if (head == null)
+        {
+            return;
+        }
+
+        if (!hasObservedHeadPosition)
+        {
+            lastObservedHeadPosition = head.position;
+            hasObservedHeadPosition = true;
+            return;
+        }
+
+        Vector3 planarDelta = head.position - lastObservedHeadPosition;
+        planarDelta.y = 0f;
+
+        if (planarDelta.sqrMagnitude > 0.0001f)
+        {
+            head.forward = planarDelta.normalized;
+        }
+    }
+
+    void CacheObservedHeadPosition()
+    {
+        if (head == null)
+        {
+            hasObservedHeadPosition = false;
+            return;
+        }
+
+        lastObservedHeadPosition = head.position;
+        hasObservedHeadPosition = true;
     }
 
     void HandleGroundFollow()

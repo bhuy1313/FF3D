@@ -683,6 +683,7 @@ public class KeyHintPanelController_All : MonoBehaviour
         FireHoseConnectionPoint targetHoseConnection = targetAnalysis.HoseConnection;
         Breakable targetBreakable = targetAnalysis.Breakable;
         Explosive targetExplosive = targetAnalysis.Explosive;
+        Window targetWindow = KeyHintGameplayUtility.FindComponentInTargetHierarchy<Window>(currentTarget);
         IInteractable targetInteractable = targetAnalysis.Interactable;
         ICommandable targetCommandable = targetAnalysis.Commandable;
 
@@ -767,6 +768,11 @@ public class KeyHintPanelController_All : MonoBehaviour
         if (targetIsPickupable && canPickupMoreItems && !heldItemBlocksStow)
         {
             AddUniqueHint(hints, "Pickup", ResolvePickupDisplayName(currentTarget));
+        }
+
+        if (targetWindow != null && targetWindow.CanClimbOver(interactionSystem.gameObject))
+        {
+            AddUniqueHint(hints, "ClimbOver", "Climb Over");
         }
 
         if (targetIsGrabbable && occupyingObject == null && !isCarryingRescuable)
@@ -1068,13 +1074,13 @@ public class KeyHintPanelController_All : MonoBehaviour
             "Use" => "Use",
             "Drop" => "Drop",
             "Grab" => "Grab",
+            "ClimbOver" => "Climb Over",
             "Slot1" => "Slot 1",
             "Slot2" => "Slot 2",
             "Slot3" => "Slot 3",
             "Slot4" => "Slot 4",
             "Slot5" => "Slot 5",
             "Slot6" => "Slot 6",
-            "ToolWheel" => "Tool Wheel",
             "CommandMove" => "Command Bot",
             "CommandCancel" => "Cancel Command",
             "CommandCancelAllFollow" => "Cancel All Follow",

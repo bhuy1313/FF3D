@@ -30,6 +30,10 @@ public class IncidentOriginArea : MonoBehaviour
     [SerializeField] private NormalRoomFirePrimarySurfaceMode normalRoomFirePrimarySurfaceMode =
         NormalRoomFirePrimarySurfaceMode.FloorOrWall;
 
+    [Header("Victim Spawn Points")]
+    [SerializeField] private VictimSpawnPoint[] explicitVictimSpawnPoints = Array.Empty<VictimSpawnPoint>();
+    [SerializeField] private bool collectVictimSpawnPointsFromChildren = true;
+
     [Header("Compatibility")]
     [SerializeField] private IncidentPayloadAnchor legacyAnchor;
 
@@ -186,6 +190,43 @@ public class IncidentOriginArea : MonoBehaviour
                 }
 
                 results.Add(cause);
+            }
+        }
+
+        return results.ToArray();
+    }
+
+    public VictimSpawnPoint[] CollectVictimSpawnPoints(bool includeInactive)
+    {
+        List<VictimSpawnPoint> results = new List<VictimSpawnPoint>();
+        HashSet<VictimSpawnPoint> seen = new HashSet<VictimSpawnPoint>();
+
+        if (explicitVictimSpawnPoints != null)
+        {
+            for (int i = 0; i < explicitVictimSpawnPoints.Length; i++)
+            {
+                VictimSpawnPoint point = explicitVictimSpawnPoints[i];
+                if (point == null || !seen.Add(point))
+                {
+                    continue;
+                }
+
+                results.Add(point);
+            }
+        }
+
+        if (collectVictimSpawnPointsFromChildren)
+        {
+            VictimSpawnPoint[] childPoints = GetComponentsInChildren<VictimSpawnPoint>(includeInactive);
+            for (int i = 0; i < childPoints.Length; i++)
+            {
+                VictimSpawnPoint point = childPoints[i];
+                if (point == null || !seen.Add(point))
+                {
+                    continue;
+                }
+
+                results.Add(point);
             }
         }
 

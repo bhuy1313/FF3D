@@ -1,4 +1,7 @@
 using UnityEngine;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 public class HudTabToggle : MonoBehaviour
 {
@@ -25,6 +28,9 @@ public class HudTabToggle : MonoBehaviour
     [Header("Runtime State")]
     [Tooltip("Trạng thái hiện tại của DetailGroup (Chỉ nên xem, không nên sửa tay)")]
     [SerializeField] private bool isVisible;
+#if ENABLE_INPUT_SYSTEM
+    [SerializeField] private PlayerInput playerInput;
+#endif
 
     /// <summary>
     /// Cho biết DetailGroup hiện đang được bật hay tắt.
@@ -51,7 +57,7 @@ public class HudTabToggle : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(toggleKey))
+        if (WasTogglePressed())
         {
             if (panelAnimator == null)
             {
@@ -77,5 +83,30 @@ public class HudTabToggle : MonoBehaviour
                 panelAnimator.SetTrigger(closeTrigger);
             }
         }
+    }
+
+    private bool WasTogglePressed()
+    {
+#if ENABLE_INPUT_SYSTEM
+        if (playerInput == null)
+        {
+            playerInput = FindAnyObjectByType<PlayerInput>();
+        }
+
+        if (playerInput != null && playerInput.actions != null)
+        {
+            InputAction action = playerInput.actions.FindAction("ToggleMissionHud", throwIfNotFound: false);
+            if (action != null && action.WasPressedThisFrame())
+            {
+                return true;
+            }
+        }
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+        return Input.GetKeyDown(toggleKey);
+#else
+        return false;
+#endif
     }
 }

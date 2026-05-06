@@ -108,6 +108,7 @@ public class SmokeHazard : MonoBehaviour
     public float CurrentSmokeDensity => currentSmokeDensity;
     public float CurrentVisibilityPenalty => currentSmokeDensity * maxVisibilityPenalty;
     public Collider TriggerZone => triggerZone;
+    public IReadOnlyList<MonoBehaviour> LinkedVentPoints => linkedVentPoints;
 
     public void SetStartSmokeDensity(float density01, bool applyImmediately)
     {
@@ -133,6 +134,13 @@ public class SmokeHazard : MonoBehaviour
     public void SetFireSimulationManager(FireSimulationManager manager)
     {
         fireSimulationManager = manager;
+    }
+
+    public void RefreshLinkedVentPoints()
+    {
+        ResolveSupportComponents();
+        ResolveTriggerZone();
+        ResolveLinkedObjects(forceRefresh: true);
     }
 
     private void Awake()

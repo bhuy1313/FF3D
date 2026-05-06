@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
 
 [DefaultExecutionOrder(-300)]
@@ -76,8 +77,16 @@ public class DebugIncidentPayloadSpawner : MonoBehaviour
 
         if (LoadingFlowState.TryGetPendingIncidentPayload(out _))
         {
-            Debug.Log("[DebugIncidentPayloadSpawner] Found pending payload from normal flow. Debug injection skipped.");
-            return;
+            string activeSceneName = SceneManager.GetActiveScene().name;
+            if (LoadingFlowState.WasSceneActivatedFromLoadingFlow(activeSceneName))
+            {
+                Debug.Log("[DebugIncidentPayloadSpawner] Found pending payload from normal flow. Debug injection skipped.");
+                return;
+            }
+
+            LoadingFlowState.ClearPendingIncidentPayload();
+            Debug.Log(
+                $"[DebugIncidentPayloadSpawner] Cleared stale pending payload before direct scene debug play in '{activeSceneName}'.");
         }
 
         string resolvedCaseId = ResolveText(caseId, "debug_case");

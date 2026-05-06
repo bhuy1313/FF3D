@@ -53,6 +53,7 @@ namespace TrueJourney.BotBehavior
         private Quaternion defaultCarryLeftHandIkTargetLocalRotation = Quaternion.identity;
         private bool hasDefaultCarryRightHandIkTargetPose;
         private bool hasDefaultCarryLeftHandIkTargetPose;
+       
 
         private void Awake()
         {
@@ -61,7 +62,10 @@ namespace TrueJourney.BotBehavior
             CacheCarryPoseTargetDefaults(true);
             UpdateCarryPoseWeights(false, true);
             ResetCarryPoseTargets();
+            
         }
+
+   
 
         private void OnDisable()
         {

@@ -181,6 +181,82 @@ public sealed partial class FireSimulationManager
         return ShouldRenderNodeEffect(runtimeGraph.GetNode(nodeIndex));
     }
 
+    public bool IsNearHazardLinkedFireNode(Vector3 center, float radius)
+    {
+        if (!initialized || runtimeGraph == null || radius <= 0f)
+        {
+            return false;
+        }
+
+        float radiusSqr = radius * radius;
+        for (int i = 0; i < runtimeGraph.Count; i++)
+        {
+            FireRuntimeNode node = runtimeGraph.GetNode(i);
+            if (node == null ||
+                node.IsRemoved ||
+                !node.IsTrackedByIncident ||
+                node.IncidentNodeKind == FireIncidentNodeKind.Late)
+            {
+                continue;
+            }
+
+            if ((node.Position - center).sqrMagnitude <= radiusSqr)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public int RemoveIncidentNodesInRadius(Vector3 center, float radius)
+    {
+        if (!initialized || runtimeGraph == null || radius <= 0f)
+        {
+            return 0;
+        }
+
+        float radiusSqr = radius * radius;
+        int burningTrackedCount = GetBurningTrackedNodeCount();
+        int removedCount = 0;
+        for (int i = 0; i < runtimeGraph.Count; i++)
+        {
+            FireRuntimeNode node = runtimeGraph.GetNode(i);
+            if (node == null || node.IsRemoved || !node.IsTrackedByIncident)
+            {
+                continue;
+            }
+
+            if ((node.Position - center).sqrMagnitude > radiusSqr)
+            {
+                continue;
+            }
+
+            if (node.IncidentNodeKind == FireIncidentNodeKind.Primary)
+            {
+                continue;
+            }
+
+            if (node.IsBurning && burningTrackedCount - removedCount <= 1)
+            {
+                continue;
+            }
+
+            RemoveRuntimeNode(node);
+            removedCount++;
+        }
+
+        if (removedCount > 0)
+        {
+            surfaceGraph?.SetRuntimeNodeOverrides(runtimeIncidentNodes);
+            BuildNodeSnapshots();
+            SyncEffects();
+            NotifyStateChanged();
+        }
+
+        return removedCount;
+    }
+
     private float GetNodeVisualIntensity01(FireRuntimeNode node)
     {
         if (node == null || node.IsRemoved)

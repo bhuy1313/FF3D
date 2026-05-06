@@ -140,6 +140,7 @@ public partial class LevelSelectSceneController : MonoBehaviour
     [SerializeField] private Image dividerImage;
     [SerializeField] private RegionCard suburbanCard;
     [SerializeField] private RegionCard cityCard;
+    [SerializeField] private LevelScenarioCatalog scenarioCatalog;
     [SerializeField] private LevelInfoPopupReferences levelInfoPopup;
     [SerializeField] private SubMenuPanelController subMenuPanelController;
 
@@ -1032,6 +1033,7 @@ public partial class LevelSelectSceneController : MonoBehaviour
         card.levelButtons.Clear();
         card.levelButtonNormalizedPositions.Clear();
         EnsureDefaultLevelDefinitions(card);
+        ApplyScenarioCatalog(card);
 
         if (card.levelButtonsRoot == null)
         {
@@ -1066,6 +1068,63 @@ public partial class LevelSelectSceneController : MonoBehaviour
             card.levelButtonNormalizedPositions.Add(CaptureNormalizedButtonPosition(levelButton.transform as RectTransform, card.levelButtonsRoot));
             definitionIndex++;
         }
+    }
+
+    private void ApplyScenarioCatalog(RegionCard card)
+    {
+        if (scenarioCatalog == null || card == null || card.levelDefinitions == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < card.levelDefinitions.Length; i++)
+        {
+            LevelDefinition definition = card.levelDefinitions[i];
+            if (definition == null || string.IsNullOrWhiteSpace(definition.levelId))
+            {
+                continue;
+            }
+
+            string onsiteSceneName = definition.onsiteSceneName;
+            LevelScenarioDefinition[] catalogScenarios = Array.Empty<LevelScenarioDefinition>();
+            if (!scenarioCatalog.TryApplyTo(definition.levelId, ref onsiteSceneName, ref catalogScenarios))
+            {
+                continue;
+            }
+
+            definition.onsiteSceneName = onsiteSceneName;
+            definition.scenarioDefinitions = ConvertScenarioDefinitions(catalogScenarios);
+        }
+    }
+
+    private static ScenarioDefinition[] ConvertScenarioDefinitions(LevelScenarioDefinition[] source)
+    {
+        if (source == null || source.Length == 0)
+        {
+            return Array.Empty<ScenarioDefinition>();
+        }
+
+        List<ScenarioDefinition> scenarios = new List<ScenarioDefinition>(source.Length);
+        for (int i = 0; i < source.Length; i++)
+        {
+            LevelScenarioDefinition scenario = source[i];
+            if (scenario == null)
+            {
+                continue;
+            }
+
+            scenarios.Add(new ScenarioDefinition
+            {
+                scenarioId = scenario.scenarioId,
+                displayName = scenario.displayName,
+                caseId = scenario.caseId,
+                targetSceneName = scenario.targetSceneName,
+                onsiteSceneName = scenario.onsiteSceneName,
+                scenarioResourcePath = scenario.scenarioResourcePath
+            });
+        }
+
+        return scenarios.Count > 0 ? scenarios.ToArray() : Array.Empty<ScenarioDefinition>();
     }
 
     private void EnsureDefaultLevelDefinitions(RegionCard card)

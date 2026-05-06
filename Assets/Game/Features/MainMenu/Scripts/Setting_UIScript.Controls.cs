@@ -108,21 +108,33 @@ public partial class Setting_UIScript
             new ControlBindingDefinition("Pickup", "Nhặt vật", "Pickup"),
             new ControlBindingDefinition("Use", "Sử dụng vật", "Use Item"),
             new ControlBindingDefinition("Drop", "Thả vật", "Drop Item"),
-            new ControlBindingDefinition("Grab", "Giữ kéo vật", "Grab Object")),
+            new ControlBindingDefinition("Grab", "Giữ kéo vật", "Grab Object"),
+            new ControlBindingDefinition("ClimbOver", "Trèo qua cửa sổ", "Climb Over Window")),
         new ControlBindingSection(
             "Chỉ huy",
             "Command",
-            new ControlBindingDefinition("ToolWheel", "Vòng công cụ", "Tool Wheel"),
             new ControlBindingDefinition("CommandMove", "Lệnh di chuyển", "Move Command"),
             new ControlBindingDefinition("CommandCancel", "Hủy lệnh", "Cancel Command"),
             new ControlBindingDefinition("CommandCancelAllFollow", "Dừng tất cả follow", "Cancel All Follow"),
-            new ControlBindingDefinition("ToggleBotOutline", "Bật tắt viền bot", "Toggle Bot Outline")),
+            new ControlBindingDefinition("ToggleBotOutline", "Bật tắt viền bot", "Toggle Bot Outline"),
+            new ControlBindingDefinition("CommandConfirm", "Xác nhận lệnh", "Confirm Command"),
+            new ControlBindingDefinition("CommandCyclePage", "Trang lệnh kế tiếp", "Next Command Page"),
+            new ControlBindingDefinition("CommandCyclePagePrevious", "Trang lệnh trước", "Previous Command Page")),
         new ControlBindingSection(
             "Thiết bị",
             "Equipment",
             new ControlBindingDefinition("ToggleSprayPattern", "Đổi kiểu phun", "Toggle Spray Pattern"),
             new ControlBindingDefinition("IncreasePressure", "Tăng áp lực", "Increase Pressure"),
-            new ControlBindingDefinition("DecreasePressure", "Giảm áp lực", "Decrease Pressure"))
+            new ControlBindingDefinition("DecreasePressure", "Giảm áp lực", "Decrease Pressure")),
+        new ControlBindingSection(
+            "Giao diện",
+            "Interface",
+            new ControlBindingDefinition("ToggleDispatchNotes", "Bật tắt ghi chú", "Toggle Dispatch Notes"),
+            new ControlBindingDefinition("ToggleMissionHud", "Bật tắt HUD nhiệm vụ", "Toggle Mission HUD"),
+            new ControlBindingDefinition("ToggleFullscreenMinimap", "Bật tắt bản đồ lớn", "Toggle Fullscreen Map"),
+            new ControlBindingDefinition("CloseFullscreenMinimap", "Đóng bản đồ lớn", "Close Fullscreen Map"),
+            new ControlBindingDefinition("MinimapZoomIn", "Phóng to minimap", "Minimap Zoom In"),
+            new ControlBindingDefinition("MinimapZoomOut", "Thu nhỏ minimap", "Minimap Zoom Out"))
     };
 
     private void InitializeControlsSettings()

@@ -11,7 +11,11 @@ public static class FireHoseMeshBuilder
         float radius = 0.12f,
         int radialSegments = 12)
     {
-        mesh ??= new Mesh();
+        if (!mesh)
+        {
+            mesh = new Mesh();
+        }
+
         mesh.Clear();
 
         int ringCount = points.Count;

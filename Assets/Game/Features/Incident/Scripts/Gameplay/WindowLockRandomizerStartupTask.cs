@@ -8,6 +8,7 @@ public class WindowLockRandomizerStartupTask : SceneStartupTask
 {
     [Header("Window Lock Randomization")]
     [SerializeField] [Range(0f, 100f)] private float lockedPercentage = 35f;
+    [SerializeField] [Range(0f, 100f)] private float openPercentage;
     [SerializeField] private bool includeInactiveWindows = true;
     [SerializeField] private bool useDeterministicSeed;
     [SerializeField] private int seedOffset;
@@ -26,12 +27,23 @@ public class WindowLockRandomizerStartupTask : SceneStartupTask
         int baseSeed = ResolveBaseSeed();
         int affectedCount = 0;
         int lockedCount = 0;
+        int openedCount = 0;
 
         for (int i = 0; i < windows.Length; i++)
         {
             Window window = windows[i];
             if (window == null)
             {
+                continue;
+            }
+
+            bool shouldOpen = !window.IsBroken && ResolveOpenState(window, baseSeed);
+            if (shouldOpen)
+            {
+                window.SetLockedState(false);
+                window.SetOpenState(true);
+                openedCount++;
+                affectedCount++;
                 continue;
             }
 
@@ -49,7 +61,8 @@ public class WindowLockRandomizerStartupTask : SceneStartupTask
         {
             Debug.Log(
                 $"{nameof(WindowLockRandomizerStartupTask)} applied lockedPercentage={lockedPercentage:0.0}% " +
-                $"to {affectedCount} windows. Locked={lockedCount}.",
+                $"openPercentage={openPercentage:0.0}% to {affectedCount} windows. " +
+                $"Locked={lockedCount}, Opened={openedCount}.",
                 this);
         }
     }
@@ -60,6 +73,15 @@ public class WindowLockRandomizerStartupTask : SceneStartupTask
         int windowSeed = IncidentSeedUtility.CombineHash(baseSeed, IncidentSeedUtility.StableHash(key));
         System.Random random = new System.Random(windowSeed);
         double normalizedPercentage = Mathf.Clamp(lockedPercentage, 0f, 100f) / 100f;
+        return random.NextDouble() < normalizedPercentage;
+    }
+
+    private bool ResolveOpenState(Window window, int baseSeed)
+    {
+        string key = GetHierarchyPath(window.transform);
+        int windowSeed = IncidentSeedUtility.CombineHash(baseSeed, IncidentSeedUtility.StableHash(key + "/open"));
+        System.Random random = new System.Random(windowSeed);
+        double normalizedPercentage = Mathf.Clamp(openPercentage, 0f, 100f) / 100f;
         return random.NextDouble() < normalizedPercentage;
     }
 

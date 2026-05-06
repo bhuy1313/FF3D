@@ -106,6 +106,12 @@ public sealed class KeyHintInteractionSource : KeyHintSourceBase
             string label = KeyHintGameplayUtility.ResolvePickupLabelFallback(currentTarget);
             results.Add(CreateHint("Pickup", KeyHintGameplayUtility.GetContextLabelLocalizationKey(label), label, priorityOffset: 50, sortOrder: 40, groupId: "interaction"));
         }
+
+        if (targetWindow != null && targetWindow.CanClimbOver(context.InteractionSystem.gameObject))
+        {
+            results.Add(CreateHint("ClimbOver", KeyHintGameplayUtility.GetContextLabelLocalizationKey("Climb Over"), "Climb Over", priorityOffset: 48, sortOrder: 45, groupId: "interaction"));
+        }
+
         if (targetIsGrabbable && occupyingObject == null && !context.IsCarryingRescuable)
         {
             results.Add(CreateHint("Grab", KeyHintGameplayUtility.GetContextLabelLocalizationKey("Grab Object"), "Grab Object", priorityOffset: 45, sortOrder: 50, groupId: "interaction"));

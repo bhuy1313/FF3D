@@ -97,6 +97,15 @@
                     "initialStateCheck": false
                 },
                 {
+                    "name": "ClimbOver",
+                    "type": "Button",
+                    "id": "b4e61b87-19d7-48f6-9b6f-e71bb2a26e31",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "Slot1",
                     "type": "Button",
                     "id": "4d9d4021-9f7b-4f78-9ed0-1f2d8f3b0f0a",
@@ -145,15 +154,6 @@
                     "name": "Slot6",
                     "type": "Button",
                     "id": "e2d1c7a9-2f6a-4a5e-9a8b-1c2d3f4e5a6b",
-                    "expectedControlType": "",
-                    "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": false
-                },
-                {
-                    "name": "ToolWheel",
-                    "type": "Button",
-                    "id": "cc49f364-ea50-4866-b7ad-7ccf550a324b",
                     "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
@@ -239,6 +239,87 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "ToggleMissionHud",
+                    "type": "Button",
+                    "id": "a3db5ed5-40ec-47b7-a4ac-cf733d7e17c2",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "ToggleFullscreenMinimap",
+                    "type": "Button",
+                    "id": "e0bf53ab-21e2-4a12-b0d6-0dbb87f6731a",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "CloseFullscreenMinimap",
+                    "type": "Button",
+                    "id": "af115e53-3e8a-48e1-a314-c317b34adf32",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "MinimapZoomIn",
+                    "type": "Button",
+                    "id": "e4e5580f-26af-43f7-9b36-28236249cc62",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "MinimapZoomOut",
+                    "type": "Button",
+                    "id": "f65d62da-c0ea-4061-9b60-8bb2b7c3d43f",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "MinimapScrollZoom",
+                    "type": "Value",
+                    "id": "2c289dd9-518c-4bc6-a824-f06622c1bc8e",
+                    "expectedControlType": "Axis",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": true
+                },
+                {
+                    "name": "CommandCyclePage",
+                    "type": "Button",
+                    "id": "5d975c37-c0f5-407f-b30f-997d6cb716bd",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "CommandCyclePagePrevious",
+                    "type": "Button",
+                    "id": "a10ec694-4768-4aa5-b100-df974aefc3f2",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "CommandPageScroll",
+                    "type": "Value",
+                    "id": "dc6a873d-a0a5-40fc-a048-274d7db94834",
+                    "expectedControlType": "Axis",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": true
                 }
             ],
             "bindings": [
@@ -508,6 +589,17 @@
                 },
                 {
                     "name": "",
+                    "id": "8e8b5340-9202-4c2e-bd73-d8cfac45de63",
+                    "path": "<Keyboard>/v",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "KeyboardMouse",
+                    "action": "ClimbOver",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
                     "id": "11111111-1111-4111-8111-111111111111",
                     "path": "<Keyboard>/1",
                     "interactions": "",
@@ -569,17 +661,6 @@
                     "processors": "",
                     "groups": "KeyboardMouse",
                     "action": "Slot6",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
-                    "id": "a2197811-792d-4176-bd01-cfe0d67b4a3b",
-                    "path": "<Keyboard>/tab",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "KeyboardMouse",
-                    "action": "ToolWheel",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -701,6 +782,105 @@
                     "processors": "",
                     "groups": "KeyboardMouse",
                     "action": "ToggleDispatchNotes",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "9ae68c8f-61a0-4398-ab12-b60722e8efa6",
+                    "path": "<Keyboard>/tab",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "KeyboardMouse",
+                    "action": "ToggleMissionHud",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "660c9d27-6a81-4c41-8c0d-dd385e50479b",
+                    "path": "<Keyboard>/m",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "KeyboardMouse",
+                    "action": "ToggleFullscreenMinimap",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "1a731b39-f55e-4873-b780-8e215bb95233",
+                    "path": "<Keyboard>/escape",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "KeyboardMouse",
+                    "action": "CloseFullscreenMinimap",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "3f7187a8-013b-4208-b77c-709f6c7cd320",
+                    "path": "<Keyboard>/i",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "KeyboardMouse",
+                    "action": "MinimapZoomIn",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "8283af44-8760-4e99-ae88-4dfe0a03339d",
+                    "path": "<Keyboard>/o",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "KeyboardMouse",
+                    "action": "MinimapZoomOut",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "431895a4-707d-4fcb-a6ef-645069579b94",
+                    "path": "<Mouse>/scroll/y",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "KeyboardMouse",
+                    "action": "MinimapScrollZoom",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "ef37d977-11b2-4a6d-95b4-36853e7b8fb5",
+                    "path": "<Keyboard>/pageDown",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "KeyboardMouse",
+                    "action": "CommandCyclePage",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "a1483358-a5df-469b-97ea-f5ccb5d22835",
+                    "path": "<Keyboard>/pageUp",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "KeyboardMouse",
+                    "action": "CommandCyclePagePrevious",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "87927da0-0249-465a-88c5-c5a3c8f8def2",
+                    "path": "<Mouse>/scroll/y",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "KeyboardMouse",
+                    "action": "CommandPageScroll",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

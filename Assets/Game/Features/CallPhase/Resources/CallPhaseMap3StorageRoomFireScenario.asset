@@ -1,0 +1,439 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f14c3d1b58a44b9a8d668ed8888e3fb4, type: 3}
+  m_Name: CallPhaseMap3StorageRoomFireScenario
+  m_EditorClassIdentifier: 
+  scenarioId: storage_room_fire
+  displayName: Storage Room Fire
+  displayNameLocalizationKey: 
+  caseId: CT-ST-01
+  category: City Building Fire
+  categoryLocalizationKey: 
+  description: A research center storage room fire with dense smoke and combustible lab support contents creating spread risk.
+  descriptionLocalizationKey: 
+  initialTranscriptLines:
+  - lineId: intro_operator_open
+    speaker: 0
+    text: 911, where is your emergency?
+    isExtractable: 0
+    startsAsActiveChunk: 0
+    isConfirmationLine: 0
+    extractableSpans: []
+  - lineId: intro_caller_open
+    speaker: 1
+    text: There's a fire in the research center storage room and thick smoke is coming out!
+    isExtractable: 0
+    startsAsActiveChunk: 0
+    isConfirmationLine: 0
+    extractableSpans: []
+  - lineId: intro_operator_fire_location
+    speaker: 0
+    text: Where exactly is the fire located?
+    isExtractable: 0
+    startsAsActiveChunk: 0
+    isConfirmationLine: 0
+    extractableSpans: []
+  - lineId: intro_caller_fire_location
+    speaker: 1
+    text: It's inside the storage room near the back of the research wing!
+    isExtractable: 1
+    startsAsActiveChunk: 1
+    isConfirmationLine: 0
+    extractableSpans:
+    - displayText: storage room near the back of the research wing
+      normalizedValue: Storage Room
+      targetFieldId: fire_location
+      infoType: FireLocation
+      exactSelection: 1
+      hasExtraContext: 0
+  followUpSteps:
+  - stepId: collect_address
+    stepType: 0
+    triggerFieldId: fire_location
+    triggerValue: Storage Room
+    confirmationFieldId: 
+    expectedConfirmedValue: 
+    operatorLine:
+      lineId: ask_address
+      speaker: 0
+      text: What is your exact address?
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 0
+      extractableSpans: []
+    callerLine:
+      lineId: reply_address
+      speaker: 1
+      text: It's Westbridge Research Center, 100 Main Street!
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 0
+      extractableSpans:
+      - displayText: Westbridge Research Center, 100 Main Street
+        normalizedValue: Westbridge Research Center, 100 Main Street
+        targetFieldId: Address
+        infoType: Address
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: collect_hazard
+    stepType: 0
+    triggerFieldId: Address
+    triggerValue: Westbridge Research Center, 100 Main Street
+    confirmationFieldId: 
+    expectedConfirmedValue: 
+    operatorLine:
+      lineId: ask_hazard
+      speaker: 0
+      text: What is stored in that room? Any special hazards?
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 0
+      extractableSpans: []
+    callerLine:
+      lineId: reply_hazard
+      speaker: 1
+      text: There are cardboard boxes, cleaning supplies, and plastic lab supply bins in there!
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 0
+      extractableSpans:
+      - displayText: cardboard boxes, cleaning supplies, and plastic lab supply bins
+        normalizedValue: Combustible lab storage contents
+        targetFieldId: hazard
+        infoType: Hazard
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: collect_spread_status
+    stepType: 0
+    triggerFieldId: hazard
+    triggerValue: Combustible lab storage contents
+    confirmationFieldId: 
+    expectedConfirmedValue: 
+    operatorLine:
+      lineId: ask_spread_status
+      speaker: 0
+      text: Is the fire or smoke spreading out of the storage room?
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 0
+      extractableSpans: []
+    callerLine:
+      lineId: reply_spread_status
+      speaker: 1
+      text: Smoke is rolling into the research corridor and the door frame is starting to burn!
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 0
+      extractableSpans:
+      - displayText: Smoke is rolling into the research corridor
+        normalizedValue: Smoke spreading into research corridor
+        targetFieldId: SpreadStatus
+        infoType: SpreadStatus
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: collect_occupant_risk
+    stepType: 0
+    triggerFieldId: SpreadStatus
+    triggerValue: Smoke spreading into research corridor
+    confirmationFieldId: 
+    expectedConfirmedValue: 
+    operatorLine:
+      lineId: ask_occupant_risk
+      speaker: 0
+      text: Is anyone still inside or near that storage area?
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 0
+      extractableSpans: []
+    callerLine:
+      lineId: reply_occupant_risk
+      speaker: 1
+      text: One lab technician may still be inside that side room!
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 0
+      extractableSpans:
+      - displayText: One lab technician may still be inside
+        normalizedValue: Possible lab technician inside
+        targetFieldId: OccupantRisk
+        infoType: OccupantRisk
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: collect_caller_safety
+    stepType: 0
+    triggerFieldId: OccupantRisk
+    triggerValue: Possible lab technician inside
+    confirmationFieldId: 
+    expectedConfirmedValue: 
+    operatorLine:
+      lineId: ask_caller_safety
+      speaker: 0
+      text: Are you in a safe location right now?
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 0
+      extractableSpans: []
+    callerLine:
+      lineId: reply_caller_safety
+      speaker: 1
+      text: I'm outside the room now, but the research corridor is filling with smoke!
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 0
+      extractableSpans:
+      - displayText: outside the room now
+        normalizedValue: Outside storage room
+        targetFieldId: CallerSafety
+        infoType: CallerSafety
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: confirm_hazard
+    stepType: 1
+    triggerFieldId: CallerSafety
+    triggerValue: Outside storage room
+    confirmationFieldId: hazard
+    expectedConfirmedValue: Combustible lab storage contents
+    operatorLine:
+      lineId: confirm_hazard_operator
+      speaker: 0
+      text: Let me confirm, the storage room contains cardboard, cleaning supplies, and plastic lab supply bins?
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 1
+      extractableSpans: []
+    callerLine:
+      lineId: confirm_hazard_caller
+      speaker: 1
+      text: Yes, all of that is in the research center storage room!
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 1
+      extractableSpans:
+      - displayText: Yes
+        normalizedValue: Combustible lab storage contents
+        targetFieldId: hazard
+        infoType: Hazard
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: confirm_occupant_risk
+    stepType: 1
+    triggerFieldId: hazard
+    triggerValue: Combustible lab storage contents
+    confirmationFieldId: OccupantRisk
+    expectedConfirmedValue: Possible lab technician inside
+    operatorLine:
+      lineId: confirm_occupant_operator
+      speaker: 0
+      text: And there may be a lab technician still inside that area?
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 1
+      extractableSpans: []
+    callerLine:
+      lineId: confirm_occupant_caller
+      speaker: 1
+      text: Yes, I haven't seen him come out!
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 1
+      extractableSpans:
+      - displayText: Yes, I haven't seen him come out!
+        normalizedValue: Possible lab technician inside
+        targetFieldId: OccupantRisk
+        infoType: OccupantRisk
+        exactSelection: 1
+        hasExtraContext: 0
+  followUpQuestionPool:
+  - questionId: storage_q_address_exact
+    questionText: What is your exact address?
+    quality: 0
+    relatedFieldId: Address
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_address
+    isDistractorQuestion: 0
+    authorNote: Primary location-identification question.
+  - questionId: storage_q_anyone_inside
+    questionText: Is anyone still inside or near that storage area?
+    quality: 0
+    relatedFieldId: OccupantRisk
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_occupant_risk
+    isDistractorQuestion: 0
+    authorNote: Critical life-safety follow-up.
+  - questionId: storage_q_hazard_contents
+    questionText: What is stored in that room? Any special hazards?
+    quality: 0
+    relatedFieldId: hazard
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_hazard
+    isDistractorQuestion: 0
+    authorNote: Important for research storage-room fuel load and material hazard.
+  - questionId: storage_q_fire_spread
+    questionText: Is the fire or smoke spreading out of the storage room?
+    quality: 0
+    relatedFieldId: SpreadStatus
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_spread_status
+    isDistractorQuestion: 0
+    authorNote: Critical for research corridor smoke spread risk.
+  - questionId: storage_q_caller_safe
+    questionText: Are you in a safe location right now?
+    quality: 0
+    relatedFieldId: CallerSafety
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_caller_safety
+    isDistractorQuestion: 0
+    authorNote: Standard life-safety check.
+  - questionId: storage_q_distractor_1
+    questionText: Do you know who owns the items in storage?
+    quality: 2
+    relatedFieldId: 
+    suggestedWhenFieldMissing: 0
+    hideIfFieldAlreadyKnown: 0
+    linkedStepId: 
+    distractorCallerReplyText: I don't know, the research storage room is full of smoke!
+    isDistractorQuestion: 1
+    authorNote: Lower-priority ownership question.
+  incidentSeed:
+    fireOrigin: StorageRoom
+    hazardType: OrdinaryCombustibles
+    requiresIsolation: 0
+    initialFireIntensity: 0.85
+    initialFireCount: 2
+    fireSpreadPreset: Aggressive
+    startSmokeDensity: 0.50
+    smokeAccumulationMultiplier: 1.50
+    ventilationPreset: Confined
+  actualVictimCount: 3
+  dispatchEstimatedVictimCountKnown: 1
+  dispatchEstimatedVictimCountMin: 2
+  dispatchEstimatedVictimCountMax: 4
+  expectedReport:
+    address: Westbridge Research Center, 100 Main Street
+    fireLocation: Storage Room
+    occupantRisk: Possible lab technician inside
+    hazard: Combustible lab storage contents
+    spreadStatus: Smoke spreading into research corridor
+    callerSafety: Outside storage room
+    severity: High
+  assessRisk:
+    requiredForAssessRisk:
+    - Address
+    - fire_location
+    recommendedForAssessRisk:
+    - OccupantRisk
+    - hazard
+    - SpreadStatus
+    - CallerSafety
+    minimumRecommendedCount: 2
+    expectedSeverity: High
+  resultReview:
+    criticalFieldIds:
+    - Address
+    - fire_location
+    - OccupantRisk
+    - hazard
+    expectedConfirmedFields:
+    - fieldId: hazard
+      displayName: Hazard
+      scoreWeight: 8
+      issueText: 
+    - fieldId: OccupantRisk
+      displayName: Occupant Risk
+      scoreWeight: 8
+      issueText: 
+    correctnessFields:
+    - fieldId: Address
+      displayName: Address
+      scoreWeight: 8
+      issueText: Address was incorrect or missing.
+    - fieldId: fire_location
+      displayName: Fire Location
+      scoreWeight: 6
+      issueText: Fire location was incorrect or missing.
+    - fieldId: OccupantRisk
+      displayName: Occupant Risk
+      scoreWeight: 8
+      issueText: Occupant risk was incomplete.
+    - fieldId: hazard
+      displayName: Hazard
+      scoreWeight: 8
+      issueText: Hazard information was incorrect or missing.
+    - fieldId: SpreadStatus
+      displayName: Spread Status
+      scoreWeight: 6
+      issueText: Spread status was incomplete.
+    - fieldId: CallerSafety
+      displayName: Caller Safety
+      scoreWeight: 6
+      issueText: Caller safety information was incomplete.
+    readinessFields:
+    - fieldId: Address
+      displayName: Address
+      scoreWeight: 4
+      issueText: 
+    - fieldId: fire_location
+      displayName: Fire Location
+      scoreWeight: 3
+      issueText: 
+    - fieldId: OccupantRisk
+      displayName: Occupant Risk
+      scoreWeight: 3
+      issueText: 
+    - fieldId: hazard
+      displayName: Hazard
+      scoreWeight: 3
+      issueText: 
+    - fieldId: SpreadStatus
+      displayName: Spread Status
+      scoreWeight: 3
+      issueText: 
+    - fieldId: CallerSafety
+      displayName: Caller Safety
+      scoreWeight: 3
+      issueText: 
+    - fieldId: Severity
+      displayName: Severity
+      scoreWeight: 2
+      issueText: 
+    severityCorrectScore: 20
+    severityPartialScore: 10
+    severityPartialValue: Medium
+    followUpOptimalScore: 2
+    followUpAcceptableScore: 1
+    followUpPoorPenalty: 1
+    followUpMaxScore: 8
+    followUpGoodThreshold: 4
+    followUpMixedThreshold: 1
+    targetCallTimeSeconds: 90
+    acceptableCallTimeSeconds: 150
+    callTimeMaxScore: 4
+    strongCorrectnessThreshold: 36
+    readySubmissionThreshold: 20
+    feedback:
+      positiveSeverity: Good risk assessment.
+      missingSeverity: Severity assessment was missing.
+      incorrectSeverity: Severity was lower than expected for a research storage-room fire with corridor smoke spread.
+      strongFollowUp: You correctly prioritized stored lab materials, smoke spread, and possible occupant risk.
+      mixedFollowUp: Some follow-up questions were useful, but prioritization was uneven.
+      poorFollowUp: Critical questions about stored lab materials or possible trapped occupants were missed.
+      allConfirmed: Hazard and occupant risk were confirmed.
+      noneConfirmed: No critical facts were confirmed.
+      partialConfirmed: More read-back confirmation was needed for critical facts.
+      strongCorrectness: Key incident details matched the scenario well.
+      readyToSubmit: Report was ready to submit.
+      incompleteSubmission: Some report details were missing at submission.

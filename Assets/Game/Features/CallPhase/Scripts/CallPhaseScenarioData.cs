@@ -15,6 +15,7 @@ public class CallPhaseScenarioData : ScriptableObject
     public string scenarioId = "scenario_id";
     public string displayName = "Call Phase Scenario";
     public string displayNameLocalizationKey;
+    public string caseId;
     public string category = "Prototype";
     public string categoryLocalizationKey;
     [TextArea(2, 5)] public string description;

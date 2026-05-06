@@ -219,6 +219,7 @@ public class LoadingSceneController : MonoBehaviour
         }
 
         UpdateProgress(1f, sceneReady: true, canActivateScene: true);
+        LoadingFlowState.MarkSceneActivatedFromLoadingFlow(targetSceneName);
         LoadingFlowState.ClearPendingTargetScene();
         loadOperation.allowSceneActivation = true;
     }

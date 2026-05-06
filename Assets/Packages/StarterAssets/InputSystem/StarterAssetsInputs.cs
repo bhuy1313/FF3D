@@ -18,7 +18,12 @@ namespace StarterAssets
 		public bool use;
 		public bool drop;
 		public bool grab;
+		public bool climbOver;
 		public bool dispatchNotes;
+		public bool toggleFullscreenMinimap;
+		public bool closeFullscreenMinimap;
+		public bool minimapZoomIn;
+		public bool minimapZoomOut;
 		public int slot = -1;
 
 		[Header("Movement Settings")]
@@ -87,6 +92,11 @@ namespace StarterAssets
 			GrabInput(value.isPressed);
 		}
 
+		public void OnClimbOver(InputValue value)
+		{
+			ClimbOverInput(value.isPressed);
+		}
+
 		public void OnToggleDispatchNotes(InputValue value)
 		{
 			if (!value.isPressed)
@@ -95,6 +105,26 @@ namespace StarterAssets
 			}
 
 			ToggleDispatchNotesInput();
+		}
+
+		public void OnToggleFullscreenMinimap(InputValue value)
+		{
+			ToggleFullscreenMinimapInput(value.isPressed);
+		}
+
+		public void OnCloseFullscreenMinimap(InputValue value)
+		{
+			CloseFullscreenMinimapInput(value.isPressed);
+		}
+
+		public void OnMinimapZoomIn(InputValue value)
+		{
+			MinimapZoomInInput(value.isPressed);
+		}
+
+		public void OnMinimapZoomOut(InputValue value)
+		{
+			MinimapZoomOutInput(value.isPressed);
 		}
 
 		public void OnSlot1(InputValue value) { SlotInput(0, value.isPressed); }
@@ -166,9 +196,34 @@ namespace StarterAssets
 			grab = newGrabState;
 		}
 
+		public void ClimbOverInput(bool newClimbOverState)
+		{
+			climbOver = newClimbOverState;
+		}
+
 		public void DispatchNotesInput(bool newDispatchNotesState)
 		{
 			dispatchNotes = newDispatchNotesState;
+		}
+
+		public void ToggleFullscreenMinimapInput(bool newToggleFullscreenMinimapState)
+		{
+			toggleFullscreenMinimap = newToggleFullscreenMinimapState;
+		}
+
+		public void CloseFullscreenMinimapInput(bool newCloseFullscreenMinimapState)
+		{
+			closeFullscreenMinimap = newCloseFullscreenMinimapState;
+		}
+
+		public void MinimapZoomInInput(bool newMinimapZoomInState)
+		{
+			minimapZoomIn = newMinimapZoomInState;
+		}
+
+		public void MinimapZoomOutInput(bool newMinimapZoomOutState)
+		{
+			minimapZoomOut = newMinimapZoomOutState;
 		}
 
 		public void ClearGameplayActionInputs()
@@ -180,6 +235,11 @@ namespace StarterAssets
 			pickup = false;
 			use = false;
 			drop = false;
+			climbOver = false;
+			toggleFullscreenMinimap = false;
+			closeFullscreenMinimap = false;
+			minimapZoomIn = false;
+			minimapZoomOut = false;
 			slot = -1;
 		}
 
@@ -201,6 +261,11 @@ namespace StarterAssets
 			use = false;
 			drop = false;
 			grab = false;
+			climbOver = false;
+			toggleFullscreenMinimap = false;
+			closeFullscreenMinimap = false;
+			minimapZoomIn = false;
+			minimapZoomOut = false;
 			slot = -1;
 		}
 		

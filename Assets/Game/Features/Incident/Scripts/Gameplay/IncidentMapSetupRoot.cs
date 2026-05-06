@@ -20,7 +20,9 @@ public class IncidentMapSetupRoot : MonoBehaviour
     private int completedTaskCount;
     private readonly List<string> lastWarnings = new List<string>();
 
+    public IncidentWorldSetupPayload LastAppliedPayload { get; private set; }
     public IncidentPayloadAnchor LastResolvedAnchor { get; private set; }
+    public IncidentOriginArea LastResolvedOriginArea { get; private set; }
     public IReadOnlyList<string> LastWarnings => lastWarnings;
     public IncidentFireSpawnProfile FireSpawnProfile => fireSpawnProfile;
     public FireSimulationManager FireSimulationManager => fireSimulationManager;
@@ -46,7 +48,9 @@ public class IncidentMapSetupRoot : MonoBehaviour
         IncidentWorldSetupPayload payload,
         IncidentFirePrefabLibrary firePrefabLibrary)
     {
+        LastAppliedPayload = payload;
         LastResolvedAnchor = null;
+        LastResolvedOriginArea = null;
         lastWarnings.Clear();
 
         if (payload == null)
@@ -92,6 +96,7 @@ public class IncidentMapSetupRoot : MonoBehaviour
         }
 
         LastResolvedAnchor = context.ResolvedAnchor;
+        LastResolvedOriginArea = context.ResolvedOriginArea;
         activeTask = null;
     }
 

@@ -45,6 +45,7 @@ public class VictimCondition : MonoBehaviour
     [SerializeField] private string deceasedAnimatorParameter = "IsDeceased";
     [SerializeField] private string carriedAnimatorParameter = "IsCarried";
     [SerializeField] private string rescuedAnimatorParameter = "IsRescued";
+    [SerializeField] private string LayingPoseTypeParameter = "LayingPoseType";
 
     [Header("Events")]
     [SerializeField] private UnityEvent onConditionChanged;
@@ -75,6 +76,7 @@ public class VictimCondition : MonoBehaviour
     public event Action OnVictimExtracted;
 
     private Rescuable rescuable;
+    private int layingPoseType;
 
     private void Awake()
     {
@@ -83,6 +85,7 @@ public class VictimCondition : MonoBehaviour
         currentCondition = Mathf.Clamp(currentCondition, 0f, maxCondition);
         RefreshTriageState(raiseEvents: false);
         SyncRuntimeFlags();
+        RandomizeLayingPoseType();
         SyncTriageAnimation();
     }
 
@@ -407,6 +410,7 @@ public class VictimCondition : MonoBehaviour
         SetAnimatorBoolParameter(urgentAnimatorParameter, triageState == TriageState.Urgent);
         SetAnimatorBoolParameter(criticalAnimatorParameter, triageState == TriageState.Critical);
         SetAnimatorBoolParameter(deceasedAnimatorParameter, triageState == TriageState.Deceased);
+        SetAnimatorIntParameter(LayingPoseTypeParameter, layingPoseType);
     }
 
     private void SetAnimatorBoolParameter(string parameterName, bool value)
@@ -415,6 +419,19 @@ public class VictimCondition : MonoBehaviour
             return;
 
         victimAnimator.SetBool(parameterName, value);
+    }
+
+    private void SetAnimatorIntParameter(string parameterName, int value)
+    {
+        if (string.IsNullOrWhiteSpace(parameterName) || !CanDriveVictimAnimator() || !HasAnimatorIntParameter(parameterName))
+            return;
+
+        victimAnimator.SetInteger(parameterName, value);
+    }
+
+    private void RandomizeLayingPoseType()
+    {
+        layingPoseType = UnityEngine.Random.Range(0, 2);
     }
 
     private bool CanDriveVictimAnimator()
@@ -433,6 +450,22 @@ public class VictimCondition : MonoBehaviour
         {
             AnimatorControllerParameter parameter = parameters[i];
             if (parameter.type == AnimatorControllerParameterType.Bool &&
+                string.Equals(parameter.name, parameterName, System.StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool HasAnimatorIntParameter(string parameterName)
+    {
+        AnimatorControllerParameter[] parameters = victimAnimator.parameters;
+        for (int i = 0; i < parameters.Length; i++)
+        {
+            AnimatorControllerParameter parameter = parameters[i];
+            if (parameter.type == AnimatorControllerParameterType.Int &&
                 string.Equals(parameter.name, parameterName, System.StringComparison.Ordinal))
             {
                 return true;

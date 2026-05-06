@@ -68,6 +68,7 @@ namespace StarterAssets
         private bool previousUse;
         private bool previousDrop;
         private bool previousGrab;
+        private bool previousClimbOver;
         private GameObject outlinedTargetRoot;
         private Renderer[] outlinedRenderers;
         private bool[] outlinedRendererHadBit;
@@ -138,6 +139,7 @@ namespace StarterAssets
                 bool interactPressedWhileGrabbed = WasPressed(input != null && input.interact, ref previousInteract);
                 WasPressed(input != null && input.pickup, ref previousPickup);
                 WasPressed(input != null && input.drop, ref previousDrop);
+                WasPressed(input != null && input.climbOver, ref previousClimbOver);
 
                 ApplyHeldBurnDamage();
                 UpdateGrabPlacementPreview();
@@ -157,7 +159,7 @@ namespace StarterAssets
                 return;
             }
 
-            if (Input.GetKeyDown(KeyCode.V))
+            if (WasClimbOverPressed())
             {
                 if (TryStartWindowClimbAtCurrentTarget())
                 {
@@ -952,6 +954,62 @@ namespace StarterAssets
 
             return targetWindow.TryStartClimbOver(gameObject);
         }
+
+        private bool WasClimbOverPressed()
+        {
+            if (WasPressed(input != null && input.climbOver, ref previousClimbOver))
+            {
+                return true;
+            }
+
+#if ENABLE_INPUT_SYSTEM
+            if (WasInputActionPressedThisFrame("ClimbOver"))
+            {
+                return true;
+            }
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+            if (Input.GetKeyDown(KeyCode.V))
+            {
+                return true;
+            }
+#endif
+
+            return false;
+        }
+
+#if ENABLE_INPUT_SYSTEM
+        private bool WasInputActionPressedThisFrame(string actionName)
+        {
+            if (string.IsNullOrWhiteSpace(actionName) || !TryGetPlayerAction(actionName, out InputAction action))
+            {
+                return false;
+            }
+
+            return action.WasPressedThisFrame();
+        }
+
+        private bool TryGetPlayerAction(string actionName, out InputAction action)
+        {
+            action = null;
+            if (string.IsNullOrWhiteSpace(actionName))
+            {
+                return false;
+            }
+
+            PlayerInput playerInput = GetComponent<PlayerInput>();
+            InputActionAsset actions = playerInput != null ? playerInput.actions : null;
+            InputActionMap actionMap = actions != null
+                ? actions.FindActionMap("Player", throwIfNotFound: false)
+                : null;
+            action = actionMap != null
+                ? actionMap.FindAction(actionName, throwIfNotFound: false)
+                : null;
+
+            return action != null;
+        }
+#endif
 
         private static Window FindWindow(Transform origin)
         {
