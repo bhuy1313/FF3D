@@ -1,0 +1,149 @@
+{\rtf1\ansi\deff0
+{\fonttbl{\f0 Times New Roman;}}
+\fs24
+\pard\qc\b\f0\fs32 CHAPTER 2. BUSINESS ANALYSIS AND CONCEPT OF OPERATIONS (CONOPS)\par
+\pard\sa120\sb120\b0\fs24
+
+\b 2.1. Business Analysis Overview\par
+\b0
+This chapter presents the business context and concept of operations of the current FF3D game build from the perspective of the implemented product. The analysis focuses on the actual software flow, actual runtime boundaries, and the current educational purpose of the game.\par
+
+\b 2.1.1. Problem Statement\par
+\b0
+Fire prevention and firefighting training often relies on theory, static material, and limited practical drills. These methods are valuable, but they do not always provide a repeatable environment for tactical decision-making under pressure. Full live drills are expensive and difficult to repeat. Purely passive digital tools do not fully train judgment. Many action-focused simulations also skip the information-gathering stage that occurs before entering an incident scene.\par
+
+The current FF3D build addresses this gap by combining a Call Phase with an on-site mission phase inside one connected software loop. The player is trained not only to perform actions in the field, but also to gather and interpret information before deployment.\par
+
+[Insert Figure 2.1. Training problem context and motivation]\par
+
+\b 2.1.2. Business Objectives\par
+\b0
+The business objectives of the current game build are:\par
+BO-01 - Provide a repeatable training environment.\par
+BO-02 - Cover the complete gameplay training loop from scenario preparation to mission result review.\par
+BO-03 - Preserve cause-and-effect between the Call Phase and the on-site mission.\par
+BO-04 - Produce measurable player feedback through objectives, fail conditions, score, and review.\par
+BO-05 - Support future scenario extension on top of a shared architecture.\par
+
+\b 2.1.3. Stakeholder Analysis\par
+\b0
+Stakeholder analysis must distinguish between those involved in the project and those who directly use the software at runtime. The current build has a simple runtime model, but a broader academic and instructional stakeholder context.\par
+
+Table 2.1. Stakeholder analysis and interests\par
+Stakeholder | Role in project | Main interest | Relation to current build\par
+Development team | Design, implementation, testing, documentation | Deliver a stable and academically valid capstone product | Direct owner of code and deliverables\par
+Project mentor / reviewers | Supervision and evaluation | Engineering quality, traceability, educational value | External evaluator, not a runtime role\par
+Player / trainee | Direct user of the software | Practice decision-making and mission execution | Primary runtime user\par
+Instructor / facilitator | Uses the product as a teaching support artifact | Demonstration and guided training support | Stakeholder only, not implemented as an in-game role\par
+
+\b 2.1.4. Current State vs. Proposed State\par
+\b0
+In conventional instruction, information gathering, hazard recognition, and field execution are often taught separately. In FF3D, these elements are integrated into a single loop. The player selects a scenario, completes a Call Phase, enters a payload-driven mission scene, and then reviews the outcome. This structure supports replay, controlled variation, and clearer learning feedback.\par
+
+Table 2.2. Current state vs. proposed state\par
+Aspect | Current training state | Proposed state in FF3D\par
+Repetition | Limited by logistics and drill cost | Repeatable through software sessions\par
+Pre-deployment judgment | Often indirect or separate | Integrated through the Call Phase\par
+On-site execution practice | Depends on live drill opportunity | Available through first-person mission scenes\par
+Outcome review | Often instructor-dependent | Supported by result and score presentation\par
+Scenario variation | Hard to organize repeatedly | Driven by scenario data and payload-based setup\par
+
+\b 2.2. Concept of Operations (ConOps)\par
+\b0
+\b 2.2.1. System Overview\par
+\b0
+The current FF3D game is a standalone single-player PC application developed in Unity 6000.x. Its main runtime flow is:\par
+
+Main Menu -> Loading Scene -> Level Select -> Call Phase -> On-site Mission Scene -> Mission Result / End Review.\par
+
+The player begins by creating or selecting a local profile, then chooses a level and scenario. The chosen scenario opens the Call Phase, where incident details are gathered, recorded, and assessed. The system then generates an IncidentWorldSetupPayload and other pending flow data. After the loading transition, the player enters the configured mission scene and performs first-person on-site response. Mission progress is evaluated through objectives, fail conditions, and score. When the mission ends, the player reviews the result interface.\par
+
+It is important to distinguish between visible user phases and internal system mechanisms. Payload generation and deterministic data handling are important system services, but they are not independent player-facing scenes.\par
+
+[Insert Figure 2.2. High-level operational flow of the current system]\par
+
+\b 2.2.2. User Roles and Permissions\par
+\b0
+The current runtime system has one direct user role only: the player. Other parties such as instructors, evaluators, or developers are relevant stakeholders, but they are not implemented as separate runtime permission roles.\par
+
+Table 2.3. Runtime role model and stakeholder boundary\par
+Category | Name | Implemented in runtime | Notes\par
+Runtime role | Player | Yes | The only direct software user during normal gameplay\par
+Stakeholder | Instructor / evaluator | No | Relevant to training context, not a runtime role\par
+Stakeholder | Developer / QA reviewer | No | Relevant to engineering workflow only\par
+System role | Administrator / dispatcher / remote reviewer | No | Not implemented in the current build\par
+
+\b 2.2.3. Operational Environment\par
+\b0
+The current game operates as an offline desktop application intended for PC use. It depends on local Unity assets, local scene transitions, and local persistence. Keyboard-and-mouse interaction is assumed for normal runtime use. The current build uses scenes such as Boot Intro, Main Menu, Loading Scene, Level Select, Tutorial, Call Phase, Map1, and Map3. Experimental or work-in-progress content should not automatically be treated as core production flow.\par
+
+Table 2.4. Operational environment of the current build\par
+Dimension | Current state\par
+Platform | Desktop PC\par
+Runtime mode | Offline, single-player\par
+Engine | Unity 6000.x\par
+Primary input | Keyboard and mouse\par
+Persistence | Local profile and session data\par
+Core scenes in flow | Boot Intro, Main Menu, Loading Scene, Level Select, Tutorial, Call Phase, Map1, Map3\par
+External dependency | None required for standard runtime play\par
+
+\b 2.2.4. Operational Scenarios\par
+\b0
+The operational scenarios below are written to match the implemented game build.\par
+
+\b Scenario 1: Standard End-to-End Training Session\par
+\b0
+The player launches the application, selects or continues a local profile, enters Level Select, chooses a scenario, completes the Call Phase, transitions into the mission scene, performs the mission, and reviews the result.\par
+
+\b Scenario 2: Coordinated Response with AI Bot Support\par
+\b0
+The player enters an on-site mission, evaluates the situation, and issues commands to AI bot teammates for movement, suppression, rescue, or related tasks when bots are present.\par
+
+\b Scenario 3: Hazard Recognition and Environmental Adaptation\par
+\b0
+The player enters a mission configured by transferred data and must react to smoke, fire spread, hazards, access obstacles, and survival-related scene conditions.\par
+
+\b Scenario 4: Victim Rescue and Safe-Zone Delivery\par
+\b0
+The player locates victims, performs rescue-related interactions, and delivers the rescue target to a recognized safe zone when mission configuration requires it.\par
+
+\b Scenario 5: Result Review and Progress Continuation\par
+\b0
+After mission completion or failure, the player reviews score and outcome information, then continues the progression loop by returning to the menu flow or selecting another run.\par
+
+[Insert Figure 2.3. Operational scenario summary]\par
+
+\b 2.2.5. System Interfaces\par
+\b0
+The current build is defined mainly by internal runtime interfaces rather than external service integrations.\par
+
+Table 2.5. Implemented system interfaces\par
+Interface | Purpose | Implemented through\par
+Menu and profile interface | Create or continue local progress | MainMenuScript, PlayerProgressProfileStore\par
+Scenario selection interface | Choose level and scenario | LevelSelectSceneController, LevelScenarioCatalog\par
+Call Phase interface | Gather and report incident information | Transcript UI, IncidentReportController, AssessRisk flow\par
+Cross-scene flow interface | Transfer pending scene and mission data | LoadingFlowState\par
+On-site gameplay interface | Execute mission actions and interactions | FPSInteractionSystem, FPSInventorySystem, IncidentMissionSystem\par
+Bot command interface | Command AI teammates | FPSCommandSystem, BotCommandAgent\par
+Review interface | Display mission result and completion data | MissionEndOverlayController and related UI\par
+
+\b 2.2.6. Constraints and Assumptions\par
+\b0
+The concept of operations of the current build is shaped by several practical constraints and assumptions.\par
+
+Table 2.6. Constraints and assumptions\par
+Type | ID | Statement\par
+Constraint | C-01 | The product is scoped as a single-player desktop game\par
+Constraint | C-02 | The software operates offline and uses local persistence only\par
+Constraint | C-03 | Scenario quantity and mission complexity are limited by capstone scope\par
+Constraint | C-04 | Runtime behavior depends on local Unity scene wiring and asset configuration\par
+Constraint | C-05 | Some repository content remains experimental or work in progress\par
+Assumption | A-01 | Players have basic keyboard-and-mouse literacy\par
+Assumption | A-02 | The game supports training and instruction, not formal certification\par
+Assumption | A-03 | Mission evaluation is based on software-defined objectives and score logic\par
+Assumption | A-04 | Scenario execution depends on local configuration, not external live systems\par
+Assumption | A-05 | The simulation abstracts reality in favor of repeatable learning flow\par
+
+\b End of Chapter 2\par
+\b0
+}

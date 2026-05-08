@@ -69,6 +69,8 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
     public FireHazardType HazardType => ResolveFireHazardType();
     public int LinkedFireNodeCount => linkedFireNodeCount;
     public int LinkedBurningFireNodeCount => linkedBurningFireNodeCount;
+    public string EffectiveIsolatedSignalKey => ResolveSignalKey(isolatedSignalKey, true);
+    public string EffectiveReactivatedSignalKey => ResolveSignalKey(reactivatedSignalKey, false);
 
     private Coroutine transitionRoutine;
     private PlayerActionLock activePlayerLock;
@@ -242,13 +244,13 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
 
         if (isIsolated)
         {
-            RaiseMissionSignal(isolatedSignalKey);
+            RaiseMissionSignal(ResolveSignalKey(isolatedSignalKey, true));
             PlayStateAudio(isolatedAudioClip);
             onHazardIsolated?.Invoke();
         }
         else
         {
-            RaiseMissionSignal(reactivatedSignalKey);
+            RaiseMissionSignal(ResolveSignalKey(reactivatedSignalKey, false));
             PlayStateAudio(reactivatedAudioClip);
             onHazardReactivated?.Invoke();
         }
@@ -522,6 +524,16 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
 
         ResolveMissionSystem();
         missionSystem?.NotifySignal(signalKey);
+    }
+
+    private string ResolveSignalKey(string explicitSignalKey, bool isolated)
+    {
+        if (!string.IsNullOrWhiteSpace(explicitSignalKey))
+        {
+            return explicitSignalKey.Trim();
+        }
+
+        return isolated ? "hazard-isolated" : "hazard-reactivated";
     }
 
     private void ResolveMissionSystem()

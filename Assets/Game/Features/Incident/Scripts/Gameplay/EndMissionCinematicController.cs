@@ -68,6 +68,8 @@ public class EndMissionCinematicController : MonoBehaviour
     private bool blendOverridden;
     private bool lockAcquired;
     private bool useBuiltPathWaypointRotations;
+    private float[] segmentDurations = Array.Empty<float>();
+    private float totalPathDuration;
 
     public bool IsPlaying => playRoutine != null;
     public bool CanPlayBeforeResultOverlay => playBeforeResultOverlay && isActiveAndEnabled;
@@ -94,6 +96,11 @@ public class EndMissionCinematicController : MonoBehaviour
             return false;
         }
 
+        return TryPlay(onCompleted);
+    }
+
+    private bool TryPlay(Action onCompleted)
+    {
         pendingCompletion += onCompleted;
         if (playRoutine != null)
         {
@@ -149,6 +156,8 @@ public class EndMissionCinematicController : MonoBehaviour
                 yield break;
             }
 
+            RebuildSegmentDurations();
+
             usingDirectMainCameraFallback = brain == null && directCamera != null;
             directCameraTransform = usingDirectMainCameraFallback ? directCamera.transform : null;
 
@@ -192,17 +201,18 @@ public class EndMissionCinematicController : MonoBehaviour
 
             yield return null;
 
-            float shotDuration = ResolveDuration();
+            float shotDuration = Mathf.Max(0.01f, totalPathDuration);
             float elapsed = 0f;
             while (elapsed < shotDuration)
             {
                 elapsed += Time.unscaledDeltaTime;
                 float normalizedTime = Mathf.Clamp01(elapsed / shotDuration);
-                ApplyCameraPose(EvaluateMotion(normalizedTime), lookPosition);
+                float curvedElapsed = EvaluateMotion(normalizedTime) * shotDuration;
+                ApplyCameraPose(curvedElapsed, lookPosition);
                 yield return null;
             }
 
-            ApplyCameraPose(1f, lookPosition);
+            ApplyCameraPose(shotDuration, lookPosition);
 
             float holdDuration = ResolveHoldDuration();
             if (holdDuration > 0f)
@@ -512,7 +522,7 @@ public class EndMissionCinematicController : MonoBehaviour
         activeBrain = null;
     }
 
-    private void ApplyCameraPose(float normalizedTime, Vector3 lookPosition)
+    private void ApplyCameraPose(float elapsedTime, Vector3 lookPosition)
     {
         Transform cameraTransform = runtimeCamera != null
             ? runtimeCamera.transform
@@ -522,21 +532,12 @@ public class EndMissionCinematicController : MonoBehaviour
             return;
         }
 
-        int lastIndex = pathPositions.Count - 1;
-        if (lastIndex <= 0)
-        {
-            cameraTransform.SetPositionAndRotation(
-                pathPositions[0],
-                pathRotations.Count > 0 ? pathRotations[0] : LookAt(pathPositions[0], lookPosition));
-            return;
-        }
-
         Vector3 position = useSmoothPathInterpolation
-            ? EvaluateSmoothPathPosition(normalizedTime)
-            : EvaluateLinearPathPosition(normalizedTime);
+            ? EvaluateSmoothPathPosition(elapsedTime)
+            : EvaluateLinearPathPosition(elapsedTime);
         Quaternion rotation = useBuiltPathWaypointRotations
-            ? EvaluatePathRotation(normalizedTime, lookPosition)
-            : BuildNaturalLookRotation(normalizedTime, position, lookPosition);
+            ? EvaluatePathRotation(elapsedTime, lookPosition)
+            : BuildNaturalLookRotation(elapsedTime, position, lookPosition);
 
         cameraTransform.SetPositionAndRotation(position, rotation);
     }
@@ -559,22 +560,24 @@ public class EndMissionCinematicController : MonoBehaviour
         cameraTransform.SetPositionAndRotation(position, rotation);
     }
 
-    private Vector3 EvaluateLinearPathPosition(float normalizedTime)
+    private Vector3 EvaluateLinearPathPosition(float elapsedTime)
     {
-        int lastIndex = pathPositions.Count - 1;
-        float scaledTime = Mathf.Clamp01(normalizedTime) * lastIndex;
-        int segmentIndex = Mathf.Min(Mathf.FloorToInt(scaledTime), lastIndex - 1);
-        float segmentTime = Mathf.SmoothStep(0f, 1f, scaledTime - segmentIndex);
+        if (!TryResolveSegmentSample(elapsedTime, out int segmentIndex, out float segmentTime))
+        {
+            return pathPositions.Count > 0 ? pathPositions[pathPositions.Count - 1] : transform.position;
+        }
 
         return Vector3.Lerp(pathPositions[segmentIndex], pathPositions[segmentIndex + 1], segmentTime);
     }
 
-    private Vector3 EvaluateSmoothPathPosition(float normalizedTime)
+    private Vector3 EvaluateSmoothPathPosition(float elapsedTime)
     {
+        if (!TryResolveSegmentSample(elapsedTime, out int segmentIndex, out float segmentTime))
+        {
+            return pathPositions.Count > 0 ? pathPositions[pathPositions.Count - 1] : transform.position;
+        }
+
         int lastIndex = pathPositions.Count - 1;
-        float scaledTime = Mathf.Clamp01(normalizedTime) * lastIndex;
-        int segmentIndex = Mathf.Min(Mathf.FloorToInt(scaledTime), lastIndex - 1);
-        float segmentTime = scaledTime - segmentIndex;
 
         Vector3 p0 = pathPositions[Mathf.Max(segmentIndex - 1, 0)];
         Vector3 p1 = pathPositions[segmentIndex];
@@ -602,17 +605,17 @@ public class EndMissionCinematicController : MonoBehaviour
         return CatmullRom(p0, p1, p2, p3, segmentTime);
     }
 
-    private Quaternion EvaluatePathRotation(float normalizedTime, Vector3 lookPosition)
+    private Quaternion EvaluatePathRotation(float elapsedTime, Vector3 lookPosition)
     {
-        int lastIndex = pathRotations.Count - 1;
-        if (lastIndex <= 0)
+        if (pathRotations.Count <= 0)
         {
             return pathRotations.Count > 0 ? pathRotations[0] : LookAt(transform.position, lookPosition);
         }
 
-        float scaledTime = Mathf.Clamp01(normalizedTime) * lastIndex;
-        int segmentIndex = Mathf.Min(Mathf.FloorToInt(scaledTime), lastIndex - 1);
-        float segmentTime = Mathf.SmoothStep(0f, 1f, scaledTime - segmentIndex);
+        if (!TryResolveSegmentSample(elapsedTime, out int segmentIndex, out float segmentTime))
+        {
+            return pathRotations[pathRotations.Count - 1];
+        }
 
         return Quaternion.Slerp(pathRotations[segmentIndex], pathRotations[segmentIndex + 1], segmentTime);
     }
@@ -633,7 +636,7 @@ public class EndMissionCinematicController : MonoBehaviour
         return Quaternion.Slerp(pathRotations[segmentIndex], pathRotations[nextIndex], segmentTime);
     }
 
-    private Quaternion BuildNaturalLookRotation(float normalizedTime, Vector3 position, Vector3 lookPosition)
+    private Quaternion BuildNaturalLookRotation(float elapsedTime, Vector3 position, Vector3 lookPosition)
     {
         Quaternion rotation = LookAt(position, lookPosition);
         if (pathBankAngle <= 0f || pathPositions.Count < 2)
@@ -641,13 +644,13 @@ public class EndMissionCinematicController : MonoBehaviour
             return rotation;
         }
 
-        const float sampleOffset = 0.025f;
+        const float sampleOffset = 0.08f;
         Vector3 previous = useSmoothPathInterpolation
-            ? EvaluateSmoothPathPosition(Mathf.Clamp01(normalizedTime - sampleOffset))
-            : EvaluateLinearPathPosition(Mathf.Clamp01(normalizedTime - sampleOffset));
+            ? EvaluateSmoothPathPosition(Mathf.Max(0f, elapsedTime - sampleOffset))
+            : EvaluateLinearPathPosition(Mathf.Max(0f, elapsedTime - sampleOffset));
         Vector3 next = useSmoothPathInterpolation
-            ? EvaluateSmoothPathPosition(Mathf.Clamp01(normalizedTime + sampleOffset))
-            : EvaluateLinearPathPosition(Mathf.Clamp01(normalizedTime + sampleOffset));
+            ? EvaluateSmoothPathPosition(Mathf.Min(totalPathDuration, elapsedTime + sampleOffset))
+            : EvaluateLinearPathPosition(Mathf.Min(totalPathDuration, elapsedTime + sampleOffset));
         Vector3 movement = next - previous;
         if (movement.sqrMagnitude < 0.0001f)
         {
@@ -699,12 +702,26 @@ public class EndMissionCinematicController : MonoBehaviour
         return (index % count + count) % count;
     }
 
-    private float ResolveDuration()
+    private void RebuildSegmentDurations()
     {
-        EndCinematicCameraPath resolvedPath = ResolveCameraPath();
-        return resolvedPath != null && resolvedPath.ValidWaypointCount > 0
-            ? resolvedPath.Duration
-            : Mathf.Max(0.01f, fallbackDuration);
+        int segmentCount = Mathf.Max(0, pathPositions.Count - 1);
+        if (segmentCount <= 0)
+        {
+            segmentDurations = Array.Empty<float>();
+            totalPathDuration = 0f;
+            return;
+        }
+
+        segmentDurations = new float[segmentCount];
+        totalPathDuration = 0f;
+        float speed = ResolveSpeed();
+        for (int i = 0; i < segmentCount; i++)
+        {
+            float distance = Vector3.Distance(pathPositions[i], pathPositions[i + 1]);
+            float duration = distance / Mathf.Max(0.01f, speed);
+            segmentDurations[i] = Mathf.Max(0.01f, duration);
+            totalPathDuration += segmentDurations[i];
+        }
     }
 
     private float ResolveHoldDuration()
@@ -721,6 +738,14 @@ public class EndMissionCinematicController : MonoBehaviour
         return resolvedPath != null && resolvedPath.ValidWaypointCount > 0
             ? resolvedPath.FieldOfView
             : Mathf.Clamp(fallbackFieldOfView, 20f, 90f);
+    }
+
+    private float ResolveSpeed()
+    {
+        EndCinematicCameraPath resolvedPath = ResolveCameraPath();
+        return resolvedPath != null && resolvedPath.ValidWaypointCount > 0
+            ? resolvedPath.Speed
+            : Mathf.Max(0.01f, fallbackPullbackDistance / Mathf.Max(0.01f, fallbackDuration));
     }
 
     private float EvaluateMotion(float normalizedTime)
@@ -904,5 +929,35 @@ public class EndMissionCinematicController : MonoBehaviour
         Action callback = pendingCompletion;
         pendingCompletion = null;
         callback?.Invoke();
+    }
+
+    private bool TryResolveSegmentSample(float elapsedTime, out int segmentIndex, out float segmentTime)
+    {
+        segmentIndex = 0;
+        segmentTime = 0f;
+
+        int segmentCount = segmentDurations != null ? segmentDurations.Length : 0;
+        if (segmentCount <= 0 || pathPositions.Count < 2)
+        {
+            return false;
+        }
+
+        float remainingTime = Mathf.Clamp(elapsedTime, 0f, totalPathDuration);
+        for (int i = 0; i < segmentCount; i++)
+        {
+            float duration = Mathf.Max(0.01f, segmentDurations[i]);
+            if (remainingTime <= duration || i == segmentCount - 1)
+            {
+                segmentIndex = i;
+                segmentTime = Mathf.Clamp01(remainingTime / duration);
+                return true;
+            }
+
+            remainingTime -= duration;
+        }
+
+        segmentIndex = segmentCount - 1;
+        segmentTime = 1f;
+        return true;
     }
 }

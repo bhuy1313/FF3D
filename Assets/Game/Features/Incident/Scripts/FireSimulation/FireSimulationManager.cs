@@ -42,6 +42,7 @@ public sealed partial class FireSimulationManager : MonoBehaviour
     private Transform runtimeIncidentNodeRoot;
     private Transform runtimeBotFireTargetRoot;
     private Transform runtimeFireEffectRoot;
+    private bool nodeSnapshotsDirty = true;
 
     public IReadOnlyList<FireNodeSnapshot> NodeSnapshots => nodeSnapshots;
     public FireRuntimeGraph RuntimeGraph => runtimeGraph;
@@ -83,6 +84,7 @@ public sealed partial class FireSimulationManager : MonoBehaviour
             simulationTickAccumulator -= simulationTickInterval;
             if (TickSimulation(simulationTickInterval))
             {
+                MarkVisualStateDirty();
                 NotifyStateChanged();
             }
         }
@@ -101,8 +103,7 @@ public sealed partial class FireSimulationManager : MonoBehaviour
             return;
         }
 
-        BuildNodeSnapshots();
-        SyncEffects();
+        RefreshVisualStateIfDirty();
     }
 
     public void InitializeRuntimeGraph()
@@ -125,6 +126,7 @@ public sealed partial class FireSimulationManager : MonoBehaviour
             DisableEffects();
             SyncBotFireTargets();
             SyncBotFireGroups();
+            nodeSnapshotsDirty = false;
             return;
         }
 
@@ -138,8 +140,8 @@ public sealed partial class FireSimulationManager : MonoBehaviour
             LogRuntimeGraphTopology();
         }
 
-        BuildNodeSnapshots();
-        SyncEffects();
+        MarkVisualStateDirty();
+        RefreshVisualStateIfDirty();
         SyncBotFireTargets();
         SyncBotFireGroups();
         NotifyStateChanged();
@@ -198,5 +200,22 @@ public sealed partial class FireSimulationManager : MonoBehaviour
         SyncBotFireTargets();
         SyncBotFireGroups();
         StateChanged?.Invoke();
+    }
+
+    private void RefreshVisualStateIfDirty()
+    {
+        if (!nodeSnapshotsDirty)
+        {
+            return;
+        }
+
+        BuildNodeSnapshots();
+        SyncEffects();
+        nodeSnapshotsDirty = false;
+    }
+
+    private void MarkVisualStateDirty()
+    {
+        nodeSnapshotsDirty = true;
     }
 }

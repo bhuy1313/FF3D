@@ -1,0 +1,359 @@
+TỔNG QUAN DỰ ÁN FF3D
+
+Ghi chú: Nội dung này được tổng hợp sau khi rà lại cấu trúc Assets/Game, scene, prefab/data asset, script C#, Build Settings và các module chính. Trạng thái cập nhật: thư mục Assets/Game/Features/Player đã được xóa, API mission stage không còn dùng đã được loại bỏ khỏi code, Map2 được ghi nhận là work in progress.
+
+1. Tổng Quan Dự Án
+
+FF3D là một game mô phỏng huấn luyện xử lý sự cố cháy trong môi trường 3D, xây dựng bằng Unity 6000.4.4f1 theo ProjectSettings/ProjectVersion.txt. Dự án mô phỏng một quy trình phản ứng sự cố gồm hai giai đoạn chính: tiếp nhận cuộc gọi khẩn cấp và xử lý hiện trường.
+
+Ở giai đoạn tiếp nhận cuộc gọi, người chơi đóng vai nhân sự trực tổng đài, khai thác transcript, đặt câu hỏi bổ sung, trích xuất thông tin quan trọng và lập báo cáo đánh giá rủi ro. Ở giai đoạn hiện trường, người chơi điều khiển nhân vật góc nhìn thứ nhất để dập lửa, cứu nạn nhân, sử dụng thiết bị chuyên dụng, phối hợp bot hỗ trợ và hoàn thành các mục tiêu nhiệm vụ.
+
+Luồng scene chính trong Build Settings:
+
+1. BootIntroScene
+2. MainMenu
+3. LoadingScene
+4. LevelSelectScene
+5. Tutorial
+6. CallPhaseScene
+7. OnsitePhase_Suburban
+8. Map1
+9. Map3
+
+Các scene khác:
+
+- Map2.unity: work in progress, đã tồn tại trong dự án nhưng chưa nằm trong Build Settings.
+- TestHose.unity: scene thử nghiệm hệ thống vòi chữa cháy, không nằm trong Build Settings.
+
+2. Quy Mô Và Cấu Trúc Mã Nguồn
+
+Dự án có khoảng 469 file C# trong Assets/Game, trong đó có 31 file test EditMode.
+
+Các feature chính trong Assets/Game/Features:
+
+- CallPhase: 39 script, 122 asset, phụ trách giai đoạn tiếp nhận cuộc gọi và lập báo cáo.
+- Incident: 271 script, 2913 asset, phụ trách gameplay hiện trường, lửa, khói, bot, thiết bị, nhiệm vụ.
+- LevelSelect: 6 script, 28 asset, phụ trách chọn khu vực, màn chơi và kịch bản.
+- MainMenu: 26 script, 98 asset, phụ trách menu, hồ sơ người chơi, cài đặt, localization và loading.
+- Minimap: 10 script, 33 asset, phụ trách minimap thường và fullscreen.
+
+Các thư mục cấp cao trong Assets/Game:
+
+- Bootstrap: scene mở đầu/boot intro.
+- Features: các module gameplay và UI theo tính năng.
+- Scenes: các scene chơi chính như Tutorial, Map1, Map2, Map3, OnsitePhase_Suburban.
+- Settings: cấu hình URP, renderer, volume profile và vision preset.
+- Shared: hệ thống dùng chung như audio, loading state, profile, settings runtime.
+- UI: prefab, animation, font và controller UI dùng trong gameplay.
+- Editor: công cụ hỗ trợ thiết kế mission, scene setup, font, balance và minimap.
+- Tests: test EditMode cho các hệ thống quan trọng.
+
+3. Luồng Trải Nghiệm Người Chơi
+
+Luồng chơi tổng quát:
+
+1. Người chơi vào BootIntroScene rồi đến MainMenu.
+2. Người chơi tạo hồ sơ mới hoặc tiếp tục hồ sơ đã lưu.
+3. Game chuyển qua LoadingScene rồi vào LevelSelectScene.
+4. Người chơi chọn level/scenario.
+5. Scenario đưa người chơi vào CallPhaseScene để tiếp nhận cuộc gọi.
+6. Người chơi khai thác thông tin, xác nhận chi tiết, đánh giá rủi ro và nộp báo cáo.
+7. Báo cáo được chuyển thành IncidentWorldSetupPayload để cấu hình hiện trường.
+8. Người chơi vào scene hiện trường tương ứng để xử lý đám cháy, cứu nạn nhân và hoàn thành nhiệm vụ.
+9. Mission system tổng kết kết quả, điểm số và trạng thái hoàn thành.
+
+4. Module MainMenu
+
+Module MainMenu quản lý màn hình chính, hồ sơ người chơi, cài đặt và luồng chuyển scene.
+
+Chức năng chính:
+
+- Tạo hồ sơ người chơi bằng tên nhân vật.
+- Tiếp tục hồ sơ đã lưu.
+- Xóa hồ sơ thông qua popup xác nhận.
+- Lưu và đọc tiến trình bằng PlayerProgressProfileStore.
+- Điều hướng sang LevelSelectScene thông qua LoadingScene.
+- Quản lý ngôn ngữ tiếng Việt/tiếng Anh.
+- Quản lý cài đặt đồ họa, âm thanh, điều khiển, FOV, độ nhạy chuột, render distance, minimap.
+- Hiển thị FPS overlay và áp dụng các cài đặt display/runtime.
+
+Các hệ thống liên quan:
+
+- MainMenuScript
+- Setting_UIScript
+- DisplaySettingsService
+- LanguageManager
+- LocalizationTable
+- LocalizedText
+- ToastContainerController
+- PlayerProgressProfileStore
+
+5. Module LevelSelect
+
+Module LevelSelect quản lý màn chọn khu vực, level và scenario. Dữ liệu kịch bản được liên kết thông qua LevelScenarioCatalog.
+
+Vai trò chính:
+
+- Hiển thị khu vực/chủ đề level.
+- Cho phép chọn level và scenario cụ thể.
+- Gắn CallPhaseScenarioData với scene hiện trường tương ứng.
+- Chuẩn bị caseId, scenarioId, targetSceneName, onsiteSceneName.
+- Hiển thị popup thông tin level.
+- Hiển thị record, tiến độ hoàn thành và trạng thái khóa/mở.
+
+LevelSelect đóng vai trò cầu nối giữa tiến trình người chơi, dữ liệu scenario và luồng Call Phase/Onsite Phase.
+
+6. Module CallPhase
+
+CallPhase mô phỏng giai đoạn trực tổng đài trong quy trình phản ứng sự cố cháy.
+
+Chức năng chính:
+
+- Hiển thị transcript cuộc gọi giữa người gọi và tổng đài viên.
+- Cho phép người chơi trích xuất thông tin quan trọng từ transcript.
+- Quản lý các trường báo cáo như địa chỉ, vị trí cháy, nguy cơ người mắc kẹt, loại nguy hiểm, tình trạng lan rộng, an toàn người gọi và mức độ nghiêm trọng.
+- Cung cấp follow-up questions để người chơi hỏi thêm thông tin.
+- Phân loại chất lượng câu hỏi theo Optimal, Acceptable, Poor.
+- Hỗ trợ xác nhận lại thông tin quan trọng.
+- Đánh giá rủi ro trước khi chuyển sang hiện trường.
+- Chấm điểm báo cáo dựa trên độ chính xác, mức độ đầy đủ, chất lượng câu hỏi và thời gian xử lý.
+
+Các dữ liệu CallPhase quan trọng:
+
+- CallPhaseScenarioData: ScriptableObject chứa transcript, câu hỏi, seed hiện trường, số nạn nhân, expected report và cấu hình chấm điểm.
+- CallPhaseFollowUpScoringConfig: cấu hình điểm cho follow-up questions.
+- TranscriptLogEntry, TranscriptLogsController, TranscriptExtractionController: hệ thống transcript và trích xuất thông tin.
+- IncidentReportController: quản lý báo cáo sự cố.
+- AssessRiskPopupEntryController: đánh giá rủi ro và kết quả.
+
+Các scenario hiện có gồm kitchen fire, garage fire, laundry fire và các scenario Map3 như storage room, hallway, equipment room.
+
+7. Payload Nối CallPhase Và Hiện Trường
+
+Kết quả CallPhase được chuyển thành IncidentWorldSetupPayload để cấu hình hiện trường.
+
+Payload bao gồm:
+
+- caseId và scenarioId.
+- Nguồn cháy, vị trí logic của đám cháy.
+- Loại nguy cơ và loại cô lập cần thực hiện.
+- Cường độ cháy ban đầu.
+- Số điểm cháy ban đầu.
+- Preset lan cháy.
+- Mật độ khói ban đầu.
+- Hệ số tích tụ khói.
+- Preset thông gió.
+- Dải mức độ nghiêm trọng.
+- Số nạn nhân ước lượng.
+- Snapshot báo cáo của người chơi.
+- Confidence score.
+- Seed sinh vị trí cháy/nạn nhân.
+
+Payload này giúp phần hiện trường phản ánh kết quả khai thác thông tin ở CallPhase, thay vì tách rời hai giai đoạn.
+
+8. Module Incident / Onsite Gameplay
+
+Incident là module lớn nhất của dự án và phụ trách gameplay hiện trường.
+
+Nhóm chức năng chính:
+
+- Điều khiển nhân vật góc nhìn thứ nhất.
+- Tương tác vật thể trong môi trường.
+- Inventory và trang bị cầm tay.
+- Thiết bị chữa cháy và cứu hộ.
+- Mô phỏng lửa, khói, thông gió và cô lập nguy cơ.
+- Bot hỗ trợ và hệ thống ra lệnh.
+- Mission objective, fail condition, scoring và kết quả.
+- HUD, minimap, key hints và overlay trạng thái.
+
+Các thành phần người chơi:
+
+- FirstPersonController: điều khiển di chuyển.
+- FPSInteractionSystem: tương tác với vật thể.
+- FPSInventorySystem: nhặt, cất, đổi và dùng thiết bị.
+- FPSCommandSystem: ra lệnh cho bot.
+- PlayerVitals và PlayerHazardExposure: trạng thái sinh tồn và tác động môi trường.
+- ThermalVisionController / VisionModeController: hỗ trợ chế độ nhìn đặc biệt.
+
+Các thiết bị hiện trường:
+
+- Bình chữa cháy.
+- Vòi chữa cháy.
+- Thang.
+- Mặt nạ oxy.
+- Camera nhiệt.
+- Đèn làm việc.
+- Bộ ổn định nạn nhân.
+- Dụng cụ phá vật cản như rìu, búa, cưa.
+
+9. Mô Phỏng Lửa Và Khói
+
+Hệ thống lửa nằm trong Incident/Scripts/FireSimulation, trung tâm là FireSimulationManager.
+
+Chức năng chính:
+
+- Xây runtime graph từ FireSurfaceGraph.
+- Quản lý các node cháy trong scene.
+- Tick mô phỏng theo FireSimulationProfile.
+- Đồng bộ hiệu ứng VFX theo loại cháy: thường, điện, chất lỏng dễ cháy, gas.
+- Hỗ trợ profile suppression riêng cho bình chữa cháy/vòi chữa cháy.
+- Tự động gắn với smoke hazard, thiết bị cô lập nguy cơ, bình chữa cháy và vòi chữa cháy.
+- Tạo target cho bot dập lửa.
+- Cung cấp snapshot trạng thái cháy cho mission và UI.
+
+Hệ thống khói:
+
+- SmokeHazard mô phỏng vùng khói ảnh hưởng tới người chơi và nạn nhân.
+- SmokeVentVfxController điều khiển hiệu ứng khói thoát qua lỗ thông gió/cửa.
+- LargeSmokeColumnVfx tạo cột khói lớn ngoài hiện trường.
+- Khói có thể làm giảm oxy, giảm tầm nhìn và làm nạn nhân suy giảm condition.
+
+10. Mission System
+
+Mission system được định nghĩa bằng MissionDefinition và chạy bằng IncidentMissionSystem. Hệ thống hiện vận hành theo mô hình objective liên tục, không còn dùng mission stage.
+
+Các loại objective:
+
+- ExtinguishFiresObjectiveDefinition: dập lửa.
+- RescueTargetsObjectiveDefinition: cứu nạn nhân.
+- InteractTargetObjectiveDefinition: tương tác mục tiêu.
+- BreakTargetObjectiveDefinition: phá vật cản/mục tiêu.
+- DeliverTargetToZoneObjectiveDefinition: đưa đối tượng tới vùng an toàn.
+- ReachAreaObjectiveDefinition: đi tới vùng chỉ định.
+- VictimOutcomeObjectiveDefinition: đánh giá tình trạng nạn nhân.
+
+Các loại fail condition:
+
+- TimeLimitFailConditionDefinition: thất bại khi hết thời gian.
+- AnyVictimDeathFailConditionDefinition: thất bại khi có nạn nhân tử vong.
+- MaxVictimDeathsFailConditionDefinition: thất bại khi vượt số nạn nhân tử vong cho phép.
+- SignalTriggeredFailConditionDefinition: thất bại khi nhận tín hiệu mission cụ thể.
+
+Mission system theo dõi:
+
+- Số đám cháy đã dập.
+- Số nạn nhân đã cứu.
+- Tình trạng nạn nhân: stable, urgent, critical, deceased.
+- Thời gian thực hiện.
+- Điểm hiện tại và điểm tối đa.
+- Rank kết quả.
+- Trạng thái mission: Idle, Running, Completed, Failed.
+
+11. Bot / AI Hỗ Trợ
+
+Bot là hệ thống hỗ trợ người chơi tại hiện trường. Người chơi ra lệnh thông qua command wheel và FPSCommandSystem.
+
+Các lệnh chính:
+
+- Move: di chuyển tới vị trí.
+- Extinguish: dập lửa.
+- Follow: đi theo người chơi.
+- Rescue: cứu nạn nhân.
+- Hold: giữ vị trí.
+- Breach: phá vật cản/mở đường.
+- Isolate: cô lập nguy cơ.
+- Regroup: tập hợp lại.
+
+Các thành phần bot:
+
+- BotCommandAgent: agent nhận và thực thi lệnh.
+- BotPlan, BotPlanProcessor, BotTask: lập và xử lý kế hoạch.
+- BotReservationSystem: tránh nhiều bot tranh cùng mục tiêu.
+- BotPerceptionMemory: ghi nhớ mục tiêu đã nhận biết.
+- BotInventorySystem: quản lý thiết bị của bot.
+- BotRuntimeRegistry: theo dõi bot đang hoạt động.
+- BotSharedIncidentBlackboard: chia sẻ thông tin hiện trường.
+
+12. Nạn Nhân Và Cứu Hộ
+
+Nạn nhân được quản lý qua VictimCondition và Rescuable.
+
+Chức năng chính:
+
+- Theo dõi condition của nạn nhân.
+- Phân loại triage: stable, urgent, critical, deceased.
+- Suy giảm condition theo thời gian hoặc do khói.
+- Ổn định nạn nhân bằng dụng cụ.
+- Bế/carry nạn nhân.
+- Đưa nạn nhân tới safe zone.
+- Cập nhật animation theo trạng thái.
+- Spawn nạn nhân theo scenario/payload qua VictimPlacementStartupTask.
+
+13. Minimap Và HUD
+
+Minimap hỗ trợ cả chế độ thường và fullscreen.
+
+Chức năng minimap:
+
+- Camera minimap follow người chơi.
+- Compass.
+- Icon/proxy cho các mục tiêu.
+- Fullscreen minimap mở bằng phím M.
+- Legend.
+- Zoom bằng cuộn chuột.
+- Tùy chọn kiểu minimap trong settings.
+
+HUD và UI gameplay:
+
+- Mission HUD/objective list.
+- Player vitals UI.
+- Hazard overlay.
+- Equipped item UI.
+- Tool wheel UI.
+- Key hint system theo ngữ cảnh.
+- Dispatch notes.
+- Mission result popup.
+- Mission end overlay.
+
+14. Hệ Thống Cài Đặt, Âm Thanh Và Localization
+
+Shared scripts cung cấp các hệ thống dùng chung:
+
+- LoadingFlowState: truyền trạng thái giữa scene.
+- PlayerProgressProfileStore: lưu hồ sơ và tiến trình.
+- PlayerCompletionRecordStore: lưu record hoàn thành.
+- InputBindingOverridesStore: lưu override phím.
+- AudioManager, AudioService, AudioCatalog, AudioVolumeSettings: quản lý âm thanh theo bus.
+- GameplayFovSettings: FOV gameplay.
+- GameplayMouseSensitivitySettings: độ nhạy chuột.
+- GameplayRenderDistanceSettings: khoảng cách render.
+- SubMenuPanelController: menu phụ trong scene.
+- ToastConfirmService: popup xác nhận.
+- IncidentSeedUtility: seed ổn định cho incident.
+
+Dự án hỗ trợ localization bằng LanguageManager, LocalizationTable và LocalizedText. Nội dung UI có fallback tiếng Việt/tiếng Anh.
+
+15. Công Cụ Editor Và Test
+
+Dự án có nhiều công cụ Editor hỗ trợ phát triển và authoring:
+
+- MissionAuthoringWindow.
+- MissionAssetValidation.
+- IncidentSceneSetupWindow.
+- CoreSceneSetupWindow.
+- BalanceAuditWindow.
+- TMPFontBatchAssignWindow.
+- MinimapIconManagerEditor.
+- Editor cho mission, fire hose và power line.
+
+Test EditMode hiện tập trung vào:
+
+- Bot command/state/path clearing/extinguish.
+- Fire hose, fire group, door, breakable.
+- Player action lock và movement weight.
+- Settings.
+- Victim condition.
+- Thermal/isolation feature.
+- Ladder, rope ladder và placeable tools.
+
+16. Trạng Thái Các Phần Đang Phát Triển
+
+- Map2.unity: work in progress, đã có scene trong Assets/Game/Scenes nhưng chưa được bật trong Build Settings.
+- TestHose.unity: scene thử nghiệm riêng cho hệ thống vòi chữa cháy.
+- Một số debug overlay/log vẫn còn phục vụ phát triển, ví dụ command debug, fire debug hoặc seed debug.
+- Một số comment tiếng Việt trong vài file có dấu hiệu lỗi encoding, nhưng phần logic code vẫn hoạt động rõ ràng.
+- ProjectVersion.txt ghi Unity 6000.4.4f1, trong khi hướng dẫn repo cũ ghi 6000.4.0f1.
+
+17. Mô Tả Ngắn Gọn Dùng Cho Khóa Luận
+
+FF3D là một hệ thống mô phỏng huấn luyện phản ứng sự cố cháy trong môi trường 3D, kết hợp hai giai đoạn: tiếp nhận cuộc gọi khẩn cấp và xử lý hiện trường. Ở giai đoạn tiếp nhận, người chơi khai thác transcript, đặt câu hỏi bổ sung, trích xuất thông tin quan trọng và lập báo cáo đánh giá rủi ro. Kết quả này được chuyển thành dữ liệu cấu hình hiện trường, ảnh hưởng tới nguồn cháy, loại nguy cơ, mật độ khói, số nạn nhân và độ nghiêm trọng. Ở giai đoạn hiện trường, người chơi điều khiển nhân vật góc nhìn thứ nhất để sử dụng thiết bị chữa cháy, cứu nạn nhân, phối hợp bot hỗ trợ, theo dõi bản đồ và hoàn thành các objective nhiệm vụ. Hệ thống có mô phỏng lửa/khói theo graph, mission scoring, fail condition, localization, hồ sơ người chơi, cài đặt đồ họa/âm thanh/điều khiển và các công cụ editor hỗ trợ thiết kế kịch bản.

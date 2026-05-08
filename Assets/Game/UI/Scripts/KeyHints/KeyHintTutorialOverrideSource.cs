@@ -9,7 +9,6 @@ public sealed class KeyHintTutorialOverrideSource : KeyHintSourceBase
     private sealed class OverrideEntry
     {
         public string missionId;
-        public string stageId;
         public string actionName;
         public string labelLocalizationKey;
         public string labelFallback;
@@ -18,13 +17,11 @@ public sealed class KeyHintTutorialOverrideSource : KeyHintSourceBase
         public string groupId = "tutorial";
         public string deduplicationKey;
 
-        public bool Matches(string currentMissionId, string currentStageId)
+        public bool Matches(string currentMissionId)
         {
             bool missionMatches = string.IsNullOrWhiteSpace(missionId) ||
                                   string.Equals(missionId.Trim(), currentMissionId, StringComparison.OrdinalIgnoreCase);
-            bool stageMatches = string.IsNullOrWhiteSpace(stageId) ||
-                                string.Equals(stageId.Trim(), currentStageId, StringComparison.OrdinalIgnoreCase);
-            return missionMatches && stageMatches;
+            return missionMatches;
         }
     }
 
@@ -47,7 +44,7 @@ public sealed class KeyHintTutorialOverrideSource : KeyHintSourceBase
         for (int index = 0; index < overrides.Count; index++)
         {
             OverrideEntry entry = overrides[index];
-            if (entry == null || !entry.Matches(context.MissionId, context.StageId) || string.IsNullOrWhiteSpace(entry.actionName))
+            if (entry == null || !entry.Matches(context.MissionId) || string.IsNullOrWhiteSpace(entry.actionName))
             {
                 continue;
             }

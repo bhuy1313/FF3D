@@ -65,6 +65,29 @@ public sealed partial class FireSimulationManager
         return CountNodes(node => node != null && node.IsTrackedByIncident && node.IsBurning && bounds.Contains(node.Position));
     }
 
+    public void GetBurningTrackedStats(Bounds bounds, out int burningCount, out float intensitySum)
+    {
+        burningCount = 0;
+        intensitySum = 0f;
+
+        if (!initialized || runtimeGraph == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < runtimeGraph.Count; i++)
+        {
+            FireRuntimeNode node = runtimeGraph.GetNode(i);
+            if (node == null || !node.IsTrackedByIncident || !node.IsBurning || !bounds.Contains(node.Position))
+            {
+                continue;
+            }
+
+            burningCount++;
+            intensitySum += Mathf.Clamp01(node.Heat / Mathf.Max(0.01f, node.IgnitionThreshold));
+        }
+    }
+
     public bool HasActiveFire(Bounds bounds)
     {
         return GetBurningTrackedNodeCount(bounds) > 0;
@@ -97,35 +120,19 @@ public sealed partial class FireSimulationManager
 
     public float GetBurningTrackedIntensitySum(Bounds bounds)
     {
-        if (!initialized || runtimeGraph == null)
-        {
-            return 0f;
-        }
-
-        float intensitySum = 0f;
-        for (int i = 0; i < runtimeGraph.Count; i++)
-        {
-            FireRuntimeNode node = runtimeGraph.GetNode(i);
-            if (node == null || !node.IsTrackedByIncident || !node.IsBurning || !bounds.Contains(node.Position))
-            {
-                continue;
-            }
-
-            intensitySum += Mathf.Clamp01(node.Heat / Mathf.Max(0.01f, node.IgnitionThreshold));
-        }
-
+        GetBurningTrackedStats(bounds, out _, out float intensitySum);
         return intensitySum;
     }
 
     public float GetAreaIntensity01(Bounds bounds)
     {
-        int burningCount = GetBurningTrackedNodeCount(bounds);
+        GetBurningTrackedStats(bounds, out int burningCount, out float intensitySum);
         if (burningCount <= 0)
         {
             return 0f;
         }
 
-        return Mathf.Clamp01(GetBurningTrackedIntensitySum(bounds) / burningCount);
+        return Mathf.Clamp01(intensitySum / burningCount);
     }
 
     public Vector3 GetClosestBurningNodePosition(Bounds bounds, Vector3 fromPosition, Vector3 fallbackPosition)
@@ -249,8 +256,7 @@ public sealed partial class FireSimulationManager
         if (removedCount > 0)
         {
             surfaceGraph?.SetRuntimeNodeOverrides(runtimeIncidentNodes);
-            BuildNodeSnapshots();
-            SyncEffects();
+            MarkVisualStateDirty();
             NotifyStateChanged();
         }
 

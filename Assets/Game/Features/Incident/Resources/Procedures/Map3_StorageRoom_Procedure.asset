@@ -1,0 +1,97 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54f027457bc046f1b30dd21d2c896616, type: 3}
+  m_Name: Map3_StorageRoom_Procedure
+  m_EditorClassIdentifier: Assembly-CSharp::IncidentProcedureDefinition
+  procedureId: map3_storage_room_procedure
+  scenarioId: storage_room_fire
+  title: Storage Room Fire Procedure
+  titleLocalizationKey: 
+  summary: Control combustible spread, protect adjacent rooms, and avoid letting smoke overwhelm the research wing.
+  summaryLocalizationKey: 
+  hazardType: 
+  fireLocation: 
+  severityBand: 
+  requiresKnownVictimRisk: 0
+  primaryPriority: 1
+  secondaryPriority: 2
+  tertiaryPriority: 0
+  checklistItems:
+  - itemId: contain_storage_room_fire
+    title: Contain the storage room fire before spread
+    titleLocalizationKey: 
+    description: Stop extension from the storage room into nearby circulation and work spaces.
+    descriptionLocalizationKey: 
+    itemType: 0
+    priority: 3
+    validationMode: 0
+    completionSignalKey: 
+    invalidationSignalKey: 
+    completionStateKey: all-fires-extinguished
+    invalidationStateKey: 
+    defaultChecked: 0
+    hiddenUntilRelevant: 0
+    relevanceConditionSummary: 
+    scoringAxis: 1
+    scoreDelta: 10
+    failureFeedback: Fire containment remains unverified by the current procedure layer.
+    failureFeedbackLocalizationKey: 
+  - itemId: verify_secondary_victims
+    title: Verify no one is cut off by smoke spread
+    titleLocalizationKey: 
+    description: Check adjacent occupancy risk while the fire is being contained.
+    descriptionLocalizationKey: 
+    itemType: 2
+    priority: 2
+    validationMode: 1
+    completionSignalKey: deliver-target
+    invalidationSignalKey: 
+    completionStateKey: any-rescue-delivered
+    invalidationStateKey: 
+    defaultChecked: 0
+    hiddenUntilRelevant: 1
+    relevanceConditionSummary: Becomes critical if a trapped victim is encountered during suppression.
+    scoringAxis: 0
+    scoreDelta: 6
+    failureFeedback: No rescue delivery was verified for the storage wing procedure.
+    failureFeedbackLocalizationKey: 
+  exceptionRules:
+  - ruleId: rescue_from_spread_zone
+    title: Commit through smoke for immediate rescue
+    titleLocalizationKey: 
+    triggerSummary: If a victim is encountered near the spread path, rescue may override ideal compartment-control sequencing.
+    triggerSummaryLocalizationKey: 
+    rationale: The storage room tactic is normally containment-first, but immediate rescue may justify temporary exposure to spread risk.
+    rationaleLocalizationKey: 
+    primaryBenefitAxis: 0
+    primaryRiskAxis: 1
+    recommendedSignalKey: deliver-target
+    penaltySignalKey: 
+    recommendedScoreDelta: 8
+    penaltyScoreDelta: -8
+  successDebriefLines:
+  - lineId: storage_success
+    text: The storage-room procedure emphasized spread control, and the run maintained that containment-first posture.
+    textLocalizationKey: 
+    scoringAxis: 1
+    severity: 1
+  failureDebriefLines:
+  - lineId: storage_failure
+    text: The storage-room run left its core containment step unverified, so spread-control performance is unclear.
+    textLocalizationKey: 
+    scoringAxis: 1
+    severity: 2
+  lifeSafetyWeight: 20
+  fireControlWeight: 40
+  crewSafetyWeight: 20
+  procedureComplianceWeight: 15
+  timeEfficiencyWeight: 5

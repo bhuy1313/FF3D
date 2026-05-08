@@ -55,8 +55,7 @@ public sealed partial class FireSimulationManager
         ResetRuntimeStateToBaseline(useAuthoringIgnition: false);
         activeIncidentHazardType = hazardType;
         activeHazardSourceIsolated = hazardSourceIsolated;
-        BuildNodeSnapshots();
-        SyncEffects();
+        MarkVisualStateDirty();
         NotifyStateChanged();
     }
 
@@ -131,8 +130,7 @@ public sealed partial class FireSimulationManager
             node.HasEverBurned = true;
         }
 
-        BuildNodeSnapshots();
-        SyncEffects();
+        MarkVisualStateDirty();
         NotifyStateChanged();
         return nodeIndex;
     }

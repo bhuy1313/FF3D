@@ -81,7 +81,6 @@ public class KeyHintService : MonoBehaviour
             missionSystem,
             missionSystem != null ? missionSystem.State : IncidentMissionSystem.MissionState.Idle,
             missionSystem != null ? missionSystem.MissionId : string.Empty,
-            missionSystem != null ? missionSystem.CurrentStageId : string.Empty,
             interactionSystem,
             inventorySystem,
             commandSystem,

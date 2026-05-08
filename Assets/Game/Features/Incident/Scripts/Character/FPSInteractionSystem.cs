@@ -15,6 +15,18 @@ namespace StarterAssets
 #endif
     public class FPSInteractionSystem : MonoBehaviour
     {
+        public enum InteractionFocusKind
+        {
+            None,
+            Locked,
+            Rescuable,
+            IsolationDevice,
+            Interact,
+            Grab,
+            Pickup,
+            Climb
+        }
+
         [Header("Raycast")]
         [SerializeField] private Camera viewCamera;
         [SerializeField] private float interactDistance = 3f;
@@ -43,8 +55,10 @@ namespace StarterAssets
 
         private IInteractable currentInteractable;
         [SerializeField] private GameObject currentTarget;
+        private InteractionFocusKind currentFocusKind;
 
         public GameObject CurrentTarget => currentTarget;
+        public InteractionFocusKind CurrentFocusKind => currentFocusKind;
         public float InteractDistance => interactDistance;
         public bool IsGrabActive => grabbedBody != null;
         public GameObject GrabbedObject => grabbedBody != null ? grabbedBody.gameObject : null;
@@ -247,10 +261,9 @@ namespace StarterAssets
                         continue;
                     }
 
-                    IInteractable interactable = FindInteractable(hit.collider);
-                    if (interactable != null)
+                    if (TryResolveFocus(hit.collider, out InteractionFocusKind focusKind, out IInteractable interactable))
                     {
-                        SetFocus(hit.collider.gameObject, interactable);
+                        SetFocus(hit.collider.gameObject, interactable, focusKind);
                         if (drawDebugRay)
                         {
                             Debug.DrawRay(ray.origin, ray.direction * interactDistance, Color.green);
@@ -292,6 +305,85 @@ namespace StarterAssets
             }
 
             return null;
+        }
+
+        private bool TryResolveFocus(Collider collider, out InteractionFocusKind focusKind, out IInteractable interactable)
+        {
+            focusKind = InteractionFocusKind.None;
+            interactable = null;
+            if (collider == null)
+            {
+                return false;
+            }
+
+            GameObject target = collider.gameObject;
+            if (target != null)
+            {
+                Door door = FindDoor(target.transform);
+                if (door != null && door.IsLocked && !door.IsOpen)
+                {
+                    focusKind = InteractionFocusKind.Locked;
+                    interactable = door;
+                    return true;
+                }
+
+                Window window = FindWindow(target.transform);
+                if (window != null)
+                {
+                    if (window.IsLocked && !window.IsOpen && !window.IsBroken)
+                    {
+                        focusKind = InteractionFocusKind.Locked;
+                        interactable = window;
+                        return true;
+                    }
+
+                    if (!AreHandsOccupied && window.CanClimbOver(gameObject))
+                    {
+                        focusKind = InteractionFocusKind.Climb;
+                        interactable = window;
+                        return true;
+                    }
+                }
+
+                Rescuable rescuable = FindRescuable(target.transform);
+                if (rescuable != null)
+                {
+                    focusKind = InteractionFocusKind.Rescuable;
+                    interactable = rescuable;
+                    return true;
+                }
+
+                HazardIsolationDevice isolationDevice = FindHazardIsolationDevice(target.transform);
+                if (isolationDevice != null)
+                {
+                    focusKind = InteractionFocusKind.IsolationDevice;
+                    interactable = isolationDevice;
+                    return true;
+                }
+            }
+
+            if (inventory != null && !inventory.HasItem && FindPickupable(collider) != null)
+            {
+                focusKind = InteractionFocusKind.Pickup;
+                interactable = FindInteractable(collider);
+                return true;
+            }
+
+            if (!AreHandsOccupied && !isCarryingVictim && FindGrabbable(collider) != null)
+            {
+                focusKind = InteractionFocusKind.Grab;
+                interactable = FindInteractable(collider);
+                return true;
+            }
+
+            interactable = FindInteractable(collider);
+            if (interactable != null)
+            {
+                focusKind = InteractionFocusKind.Interact;
+                return true;
+            }
+
+            return false;
         }
 
         private bool TryCompleteCarriedRescueAtCurrentTarget()
@@ -371,27 +463,56 @@ namespace StarterAssets
             return null;
         }
 
-        private void SetFocus(GameObject target, IInteractable interactable)
+        private static IPickupable FindPickupable(Collider collider)
         {
-            if (currentTarget == target && currentInteractable == interactable)
+            if (collider.TryGetComponent(out IPickupable direct))
+            {
+                return direct;
+            }
+
+            if (collider.attachedRigidbody != null &&
+                collider.attachedRigidbody.TryGetComponent(out IPickupable rigidbodyOwner))
+            {
+                return rigidbodyOwner;
+            }
+
+            Transform parent = collider.transform.parent;
+            while (parent != null)
+            {
+                if (parent.TryGetComponent(out IPickupable parentPickupable))
+                {
+                    return parentPickupable;
+                }
+
+                parent = parent.parent;
+            }
+
+            return null;
+        }
+
+        private void SetFocus(GameObject target, IInteractable interactable, InteractionFocusKind focusKind)
+        {
+            if (currentTarget == target && currentInteractable == interactable && currentFocusKind == focusKind)
             {
                 return;
             }
 
             currentTarget = target;
             currentInteractable = interactable;
+            currentFocusKind = focusKind;
             UpdateOutlineHighlight(target, interactable);
         }
 
         private void ClearFocus()
         {
-            if (currentTarget == null && currentInteractable == null)
+            if (currentTarget == null && currentInteractable == null && currentFocusKind == InteractionFocusKind.None)
             {
                 return;
             }
 
             currentTarget = null;
             currentInteractable = null;
+            currentFocusKind = InteractionFocusKind.None;
             ClearOutlineHighlight();
         }
 
@@ -1019,6 +1140,54 @@ namespace StarterAssets
                 if (current.TryGetComponent(out Window window))
                 {
                     return window;
+                }
+
+                current = current.parent;
+            }
+
+            return null;
+        }
+
+        private static Door FindDoor(Transform origin)
+        {
+            Transform current = origin;
+            while (current != null)
+            {
+                if (current.TryGetComponent(out Door door))
+                {
+                    return door;
+                }
+
+                current = current.parent;
+            }
+
+            return null;
+        }
+
+        private static Rescuable FindRescuable(Transform origin)
+        {
+            Transform current = origin;
+            while (current != null)
+            {
+                if (current.TryGetComponent(out Rescuable rescuable))
+                {
+                    return rescuable;
+                }
+
+                current = current.parent;
+            }
+
+            return null;
+        }
+
+        private static HazardIsolationDevice FindHazardIsolationDevice(Transform origin)
+        {
+            Transform current = origin;
+            while (current != null)
+            {
+                if (current.TryGetComponent(out HazardIsolationDevice device))
+                {
+                    return device;
                 }
 
                 current = current.parent;

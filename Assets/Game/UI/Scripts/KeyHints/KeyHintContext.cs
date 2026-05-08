@@ -12,7 +12,6 @@ public sealed class KeyHintContext
         IncidentMissionSystem missionSystem,
         IncidentMissionSystem.MissionState missionState,
         string missionId,
-        string stageId,
         StarterAssets.FPSInteractionSystem interactionSystem,
         FPSInventorySystem inventorySystem,
         StarterAssets.FPSCommandSystem commandSystem,
@@ -34,7 +33,6 @@ public sealed class KeyHintContext
         MissionSystem = missionSystem;
         MissionState = missionState;
         MissionId = missionId ?? string.Empty;
-        StageId = stageId ?? string.Empty;
         InteractionSystem = interactionSystem;
         InventorySystem = inventorySystem;
         CommandSystem = commandSystem;
@@ -57,7 +55,6 @@ public sealed class KeyHintContext
     public IncidentMissionSystem MissionSystem { get; }
     public IncidentMissionSystem.MissionState MissionState { get; }
     public string MissionId { get; }
-    public string StageId { get; }
     public StarterAssets.FPSInteractionSystem InteractionSystem { get; }
     public FPSInventorySystem InventorySystem { get; }
     public StarterAssets.FPSCommandSystem CommandSystem { get; }

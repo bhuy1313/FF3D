@@ -1,0 +1,209 @@
+{\rtf1\ansi\deff0
+{\fonttbl{\f0 Times New Roman;}{\f1 Arial;}}
+\fs24
+\pard\qc\b\f0\fs32 CHAPTER 3. REQUIREMENTS ENGINEERING AND SOFTWARE REQUIREMENTS SPECIFICATION (SRS)\par
+\pard\sa120\sb120\b0\fs24
+
+\b 3.1. Requirements Overview\par
+\b0
+This chapter defines the software requirements of the current FF3D game build from the perspective of the implemented system. The purpose of the chapter is to translate the business and operational context established in Chapter 2 into a structured set of system requirements that can be mapped to existing modules, runtime flows, and testable behaviors.\par
+
+The current game is a simulation-oriented single-player PC application in which the player moves through a connected training loop: profile selection, level and scenario selection, Call Phase interaction, payload-driven transition, on-site mission execution, and mission-end review. Because the product is a game rather than a conventional transactional information system, the requirements must be expressed not only in terms of data handling, but also in terms of scene flow, user interaction, mission state, equipment behavior, and runtime feedback.\par
+
+For the current build, the requirement scope is limited to the implemented MVP baseline. The active software scope includes Main Menu, local player profile flow, Loading Scene, Level Select, Call Phase, on-site mission scenes, objective and fail-condition tracking, local result persistence, minimap, equipment use, bot commands, and mission-end summary. Multiplayer, online infrastructure, cloud synchronization, VR deployment, and institutional training management features remain outside the current scope.\par
+
+[Insert Figure 3.1. High-level requirement context of the current game]\par
+
+\b 3.2. User Classes and Actors\par
+\b0
+The current build has one primary runtime actor: the player. The player is the direct software user who launches the game, selects or continues a local profile, chooses a scenario, completes the Call Phase, performs the on-site mission, and reviews the mission result.\par
+
+In addition to the player, there are non-runtime stakeholder classes relevant to the engineering and evaluation context of the project. These include instructors, academic reviewers, project supervisors, and the development team. However, these roles are not implemented as separate in-game permission classes. The game does not provide authenticated access roles, remote administration, or instructor-side runtime interfaces.\par
+
+Therefore, this chapter uses the following distinction:\par
+
+Player: the primary runtime actor.\par
+Instructor / Evaluator: external stakeholder class for academic or training usage.\par
+Developer / QA Reviewer: engineering support stakeholder class, not a normal gameplay actor.\par
+
+[Insert Table 3.1. User classes and actors]\par
+
+\b 3.3. Business Rules and Constraints\par
+\b0
+The current game build is governed by a small number of important business rules and platform constraints.\par
+
+First, the core training loop must preserve continuity between the Call Phase and the on-site mission. Information selected or inferred during the Call Phase must contribute to the incident payload transferred to the next gameplay scene. This is a central rule of the current product because it distinguishes the game from a purely action-driven firefighting simulator.\par
+
+Second, the on-site mission must remain governed by objective-based progression and fail-condition evaluation. The mission system is responsible for determining whether the player is still running the mission, has completed it, or has failed due to time or other mission-specific conditions.\par
+
+Third, the current product must remain usable in offline local execution. The game cannot depend on an external backend, remote dispatch system, or online storage service in order to complete its normal flow.\par
+
+Fourth, player progress and session continuity are local concerns. Profile continuation, pending scene data, pending scenario data, and result-related data must be managed through local persistence mechanisms that fit the current Unity-based implementation.\par
+
+Key constraints include:\par
+BR-01: The product is scoped as a single-player desktop application.\par
+BR-02: Mission state depends on local scene content and local ScriptableObject configuration.\par
+BR-03: Cross-scene flow must remain deterministic enough for repeatable testing and debugging.\par
+BR-04: The project scope is limited by capstone time, scene authoring effort, and available gameplay content.\par
+
+[Insert Table 3.2. Business rules and constraints]\par
+
+\b 3.4. Core Gameplay Loop\par
+\b0
+The core gameplay loop of the current FF3D build is the main structure through which the software delivers its training purpose. The loop begins before the player reaches the incident scene and continues until the mission result is displayed.\par
+
+\b 3.4.1. Loop Architecture\par
+\b0
+The implemented loop can be described as follows:\par
+
+1. Main Menu and local profile selection.\par
+2. Loading Scene transition.\par
+3. Level and scenario selection.\par
+4. Call Phase interaction and report completion.\par
+5. Incident payload generation and transfer.\par
+6. On-site mission execution.\par
+7. Mission result and progression review.\par
+
+This architecture is important because it shows that the current game is not a single-scene action simulation. The software includes both pre-deployment and on-site decision stages, connected through shared data transfer.\par
+
+\b 3.4.2. Loop Invariants\par
+\b0
+Across scenarios, several loop invariants should remain true in the current build:\par
+
+The player must always pass through a scene-selection or scenario-selection step before entering a mission.\par
+The Call Phase must generate data that can be persisted into the next phase of the flow.\par
+The on-site mission must always be evaluated through objective and fail-condition logic.\par
+The end of the mission must always result in a visible completion or failure state that can be reviewed by the player.\par
+
+\b 3.4.3. Sub-workflows\par
+\b0
+Within the main gameplay loop, several supporting workflows operate in parallel or as embedded subsystems.\par
+
+The first is the cross-scene flow workflow, in which selected scenario information, pending target scene, incident payload, and call-phase result data are stored and restored through the loading-flow subsystem.\par
+
+The second is the equipment and interaction workflow, in which the player uses first-person interaction, inventory selection, tool usage, and environmental interaction to progress through the mission.\par
+
+The third is the AI support workflow, in which the player can command bot teammates using the bot command system to help with movement, suppression, rescue, breach, isolation, and regroup behaviors.\par
+
+The fourth is the mission evaluation workflow, in which runtime progress is continuously assessed through objective definitions, fail conditions, score updates, and final mission-end presentation.\par
+
+[Insert Figure 3.2. Core gameplay loop and supporting workflows]\par
+
+\b 3.5. Module Functions\par
+\b0
+The current build is organized into feature-based modules, each responsible for a specific part of the player flow.\par
+
+Main Menu module: handles profile creation, profile continuation, and transition into the main game flow.\par
+Loading module: performs controlled scene transition and reads the pending target scene from loading-flow state.\par
+Level Select module: allows the player to choose levels and scenarios, and prepares pending scenario and scene data.\par
+Call Phase module: presents transcript interaction, follow-up questions, extraction, report completion, and risk assessment.\par
+Shared data-flow module: stores and restores local flow data such as pending target scene, player name, pending incident payload, and call-phase result snapshot.\par
+On-site gameplay module: handles first-person movement, interaction, equipment use, hazards, victims, and mission logic.\par
+Bot command module: enables commandable AI teammates.\par
+UI and review module: displays HUD, minimap, dispatch notes, and mission-end result information.\par
+
+[Insert Table 3.3. Module functions overview]\par
+
+\b 3.6. Use Case Overview\par
+\b0
+The use case model of the current game should be kept focused on real runtime interactions rather than hypothetical training-management features. The main actor is the player, and the core use cases are centered on selecting a scenario, interacting with the Call Phase, entering the mission, using gameplay systems, and reviewing results.\par
+
+\b 3.6.1. Actors\par
+\b0
+The main actor of the current system is the player. Supporting stakeholder classes such as developer or evaluator may observe outputs such as progress records or result data, but they do not participate as alternate runtime actors in the normal gameplay loop.\par
+
+[Insert Table 3.4. Actors in the use case model]\par
+
+\b 3.6.2. System Use Case Diagram\par
+\b0
+The current use case structure may be grouped into three major areas:\par
+
+Menu and preparation.\par
+Mission execution.\par
+Post-mission review and continuation.\par
+
+This grouping is closer to the implemented product than a more elaborate enterprise-style actor model.\par
+
+[Insert Figure 3.3. System use case diagram]\par
+
+\b 3.6.3. Use Case Group 1 - Menu and Preparation\par
+\b0
+Representative use cases in this group include:\par
+
+UC-01: Start a new local profile.\par
+UC-02: Continue an existing profile.\par
+UC-03: Select a level and scenario.\par
+UC-04: Enter the Call Phase.\par
+UC-05: Collect and confirm incident information.\par
+UC-06: Submit the Call Phase result and proceed to mission loading.\par
+
+[Insert Figure 3.4. Use cases for menu and preparation]\par
+
+\b 3.6.4. Use Case Group 2 - On-site Execution\par
+\b0
+Representative use cases in this group include:\par
+
+UC-07: Enter the mission scene.\par
+UC-08: Move and interact with the environment.\par
+UC-09: Use equipment and inventory items.\par
+UC-10: Issue commands to AI bots.\par
+UC-11: Rescue victims and complete mission objectives.\par
+
+[Insert Figure 3.5. Use cases for on-site execution]\par
+
+\b 3.6.5. Use Case Group 3 - Post-mission Control and Review\par
+\b0
+Representative use cases in this group include:\par
+
+UC-12: View mission result.\par
+UC-13: Persist completion or progress data locally.\par
+UC-14: Return to the broader menu flow or continue with another run.\par
+
+[Insert Figure 3.6. Use cases for post-mission review]\par
+
+\b 3.7. Functional Requirements\par
+\b0
+The functional requirements of the current build should be stated in terms of implemented software capability.\par
+
+FR-01: The system shall allow the player to create a new local profile.\par
+FR-02: The system shall allow the player to continue an existing local profile.\par
+FR-03: The system shall allow the player to select a level and a scenario from the level selection flow.\par
+FR-04: The system shall open the corresponding Call Phase scenario based on the selected scenario definition.\par
+FR-05: The Call Phase shall allow the player to review transcript content and collect incident information.\par
+FR-06: The Call Phase shall allow the player to complete incident report fields and risk assessment.\par
+FR-07: The system shall convert the Call Phase result into cross-scene data, including an IncidentWorldSetupPayload and a call-phase result snapshot.\par
+FR-08: The loading-flow subsystem shall store and restore pending scene and scenario state between scene transitions.\par
+FR-09: The system shall load the configured on-site mission scene after the Call Phase flow is completed.\par
+FR-10: The on-site gameplay scene shall support first-person movement and player interaction.\par
+FR-11: The player shall be able to use an inventory-based equipment system during the mission.\par
+FR-12: The player shall be able to interact with mission-relevant world objects such as doors, windows, hazards, and rescue targets when scene content supports those interactions.\par
+FR-13: The mission system shall evaluate runtime objectives and fail conditions.\par
+FR-14: The system shall support rescue-related gameplay through victims, rescue targets, and safe-zone delivery logic where configured.\par
+FR-15: The system shall support issuing commands to AI bot teammates when commandable bots are present in the mission.\par
+FR-16: The game shall display player-facing mission information through HUD and related UI systems.\par
+FR-17: The game shall support a minimap or fullscreen map presentation where configured.\par
+FR-18: The mission-end flow shall present a visible result state to the player after mission completion or failure.\par
+FR-19: The system shall persist local progression and completion-related data where applicable.\par
+FR-20: The current build shall remain executable without dependence on internet connectivity or external backend services.\par
+
+[Insert Table 3.5. Functional requirements]\par
+
+\b 3.8. Non-Functional Requirements\par
+\b0
+In addition to functional correctness, the current game must satisfy several quality-related requirements relevant to a real-time simulation-based Unity application.\par
+
+NFR-01 Performance: The system should maintain responsive first-person interaction and scene transitions appropriate for a desktop training game.\par
+NFR-02 Usability: The player should be able to understand the progression flow from menu, to Call Phase, to mission, to result without requiring external system administration.\par
+NFR-03 Reliability: Scene transitions and local flow-state restoration should not break the mission loop under normal use.\par
+NFR-04 Maintainability: The software should remain organized around feature-based modules and ScriptableObject-driven configuration where appropriate.\par
+NFR-05 Extensibility: New scenarios and mission data should be addable through the existing scenario and mission architecture without requiring full redesign of the system.\par
+NFR-06 Offline Operability: The main training loop should remain available without network connectivity.\par
+NFR-07 Testability: Core systems should remain verifiable through existing EditMode tests and focused runtime validation.\par
+
+These non-functional requirements reflect the current game more accurately than enterprise-oriented concerns such as server scalability, tenant isolation, or cross-platform cloud deployment.\par
+
+[Insert Table 3.6. Non-functional requirements]\par
+
+\b End of Chapter 3\par
+\b0
+}

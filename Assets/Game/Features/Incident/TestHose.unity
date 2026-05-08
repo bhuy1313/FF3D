@@ -911,6 +911,7 @@ GameObject:
   - component: {fileID: 1629459852}
   - component: {fileID: 1629459851}
   - component: {fileID: 1629459850}
+  - component: {fileID: 1629459854}
   m_Layer: 0
   m_Name: Plane
   m_TagString: Untagged
@@ -1012,6 +1013,27 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!65 &1629459854
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1629459849}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 10, y: 2.220446e-16, z: 10}
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &1632848510
 GameObject:
   m_ObjectHideFlags: 0
@@ -1055,7 +1077,7 @@ MonoBehaviour:
   raycastHeight: 2
   groundMask:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 16379
   useCustomProbeDistances: 0
   lookAheadDistance: 0.75
   farLookAheadDistance: 1.5
@@ -1110,61 +1132,22 @@ MonoBehaviour:
   startPoint: {fileID: 1922264750}
   endPoint: {fileID: 2041096065}
   hoseMaterial: {fileID: 2100000, guid: bd28bc93a4cec434e95bac76e08d91c3, type: 2}
-  sampleSpacing: 0.15
+  sampleSpacing: 0.08
   radius: 0.12
   radialSegments: 12
-  particleCount: 7
-  constraintIterations: 28
-  slackLength: 0.25
-  gravity: 10
-  damping: 0.18
+  particleCount: 18
+  constraintIterations: 56
+  slackLength: 0.1
+  gravity: 240
+  damping: 0.3
   maxTimestep: 0.033
---- !u!1 &1675756153
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1675756155}
-  - component: {fileID: 1675756154}
-  m_Layer: 0
-  m_Name: BurstCollisionWorld
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1675756154
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1675756153}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f1a161c4294214a4fbcb7e9e94800494, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Obi::Obi.BurstColliderWorld
-  cellSpans:
-    m_AlignBytes: 16
---- !u!4 &1675756155
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1675756153}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  endpointStabilizationStrength: 0.25
+  endpointStabilizationSegments: 2
+  collisionMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  collisionIterations: 4
+  collisionSkin: 0.02
 --- !u!1 &1922264746
 GameObject:
   m_ObjectHideFlags: 0
@@ -1190,7 +1173,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1922264746}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -1504,7 +1487,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2041096056}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -1742,4 +1725,3 @@ SceneRoots:
   - {fileID: 926610329}
   - {fileID: 499233080}
   - {fileID: 1922264750}
-  - {fileID: 1675756155}

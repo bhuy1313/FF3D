@@ -25,6 +25,10 @@ public class SceneStartupFlow : MonoBehaviour
     [SerializeField]
     private bool clearInputsWhileLocked = true;
 
+    [Header("UI")]
+    [SerializeField]
+    private GameObject gameplayCanvas;
+
     [Header("Tasks")]
     [SerializeField]
     private List<SceneStartupTask> explicitTasks = new List<SceneStartupTask>();
@@ -69,6 +73,7 @@ public class SceneStartupFlow : MonoBehaviour
     private bool runtimeLockAcquired;
     private int totalTaskCount;
     private int completedTaskCount;
+    private int pendingNonBlockingTaskCount;
 
     public StartupState State => state;
     public bool IsRunning => state == StartupState.Running;
@@ -87,6 +92,7 @@ public class SceneStartupFlow : MonoBehaviour
             return;
         }
 
+        SetGameplayCanvasVisible(false);
         StartStartup();
     }
 
@@ -107,6 +113,7 @@ public class SceneStartupFlow : MonoBehaviour
         List<SceneStartupTask> tasks = BuildTaskList();
         totalTaskCount = tasks.Count;
         completedTaskCount = 0;
+        pendingNonBlockingTaskCount = 0;
 
         runtimeActionLock = ResolvePlayerActionLock(lockPlayerUntilReady);
         runtimeInputs = ResolvePlayerInputs();
@@ -128,7 +135,7 @@ public class SceneStartupFlow : MonoBehaviour
             for (int i = 0; i < tasks.Count; i++)
             {
                 SceneStartupTask task = tasks[i];
-                if (task == null)
+                if (task == null || task.TaskPhase != SceneStartupTask.StartupTaskPhase.Normal)
                 {
                     continue;
                 }
@@ -139,7 +146,35 @@ public class SceneStartupFlow : MonoBehaviour
                     ClearPlayerInputs(runtimeInputs);
                 }
 
-                yield return task.Run(this);
+                yield return RunTask(task);
+                completedTaskCount++;
+            }
+
+            while (pendingNonBlockingTaskCount > 0)
+            {
+                yield return null;
+            }
+
+            for (int i = 0; i < tasks.Count; i++)
+            {
+                SceneStartupTask task = tasks[i];
+                if (task == null)
+                {
+                    continue;
+                }
+
+                if (task.TaskPhase != SceneStartupTask.StartupTaskPhase.Final)
+                {
+                    continue;
+                }
+
+                activeTask = task;
+                if (clearInputsWhileLocked)
+                {
+                    ClearPlayerInputs(runtimeInputs);
+                }
+
+                yield return RunTask(task);
                 completedTaskCount++;
             }
 
@@ -153,6 +188,7 @@ public class SceneStartupFlow : MonoBehaviour
                 entranceAnimator.SetTrigger(entranceTriggerName);
             }
 
+            SetGameplayCanvasVisible(true);
             state = StartupState.Completed;
             completed = true;
         }
@@ -201,6 +237,7 @@ public class SceneStartupFlow : MonoBehaviour
         startupRoutine = null;
         totalTaskCount = 0;
         completedTaskCount = 0;
+        pendingNonBlockingTaskCount = 0;
 
         if (state == StartupState.Running)
         {
@@ -225,6 +262,38 @@ public class SceneStartupFlow : MonoBehaviour
         }
 
         return results;
+    }
+
+    private IEnumerator RunTask(SceneStartupTask task)
+    {
+        if (task == null)
+        {
+            yield break;
+        }
+
+        if (task.BlocksStartupSequence)
+        {
+            yield return task.Run(this);
+            yield break;
+        }
+
+        pendingNonBlockingTaskCount++;
+        StartCoroutine(RunNonBlockingTask(task));
+    }
+
+    private IEnumerator RunNonBlockingTask(SceneStartupTask task)
+    {
+        try
+        {
+            if (task != null)
+            {
+                yield return task.Run(this);
+            }
+        }
+        finally
+        {
+            pendingNonBlockingTaskCount = Mathf.Max(0, pendingNonBlockingTaskCount - 1);
+        }
     }
 
     public PlayerActionLock ResolvePlayerActionLock(bool createIfMissing = true)
@@ -282,6 +351,14 @@ public class SceneStartupFlow : MonoBehaviour
         where T : UnityEngine.Object
     {
         return FindAnyObjectByType<T>();
+    }
+
+    private void SetGameplayCanvasVisible(bool visible)
+    {
+        if (gameplayCanvas != null)
+        {
+            gameplayCanvas.SetActive(visible);
+        }
     }
 
     public void ClearResolvedPlayerInputs()

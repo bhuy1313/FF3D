@@ -119,12 +119,15 @@ public partial class IncidentMissionSystem : MonoBehaviour
     [SerializeField] private int finalDeceasedVictimCount;
     [SerializeField] private bool progressDirty = true;
     [SerializeField] private List<string> activatedSignalKeys = new List<string>();
+    [SerializeField] private IncidentProcedureDefinition activeProcedureDefinition;
 
     private readonly List<MissionObjectiveDefinition> activePersistentObjectiveDefinitions = new List<MissionObjectiveDefinition>();
     private readonly List<MissionFailConditionDefinition> activeFailConditionDefinitions = new List<MissionFailConditionDefinition>();
     private readonly HashSet<MissionObjectiveDefinition> objectiveScratchSet = new HashSet<MissionObjectiveDefinition>();
     private readonly List<MissionObjectiveDefinition> resultObjectiveScratch = new List<MissionObjectiveDefinition>();
     private readonly List<MissionFailConditionDefinition> resultFailConditionScratch = new List<MissionFailConditionDefinition>();
+    private readonly List<MissionObjectiveStatusSnapshot> resultStatusScratch = new List<MissionObjectiveStatusSnapshot>();
+    private IncidentProcedureRuntime procedureRuntime;
 
     public string MissionId => ResolveMissionId();
     public string MissionOperationTitle => ResolveMissionOperationTitle();
@@ -146,13 +149,6 @@ public partial class IncidentMissionSystem : MonoBehaviour
     public int StabilizedVictimCount => stabilizedVictimCount;
     public int ExtractedVictimCount => extractedVictimCount;
     public int DeceasedVictimCount => deceasedVictimCount;
-    public bool HasActiveStage => false;
-    public int CurrentStageIndex => -1;
-    public int TotalStageCount => 0;
-    public string CurrentStageTitle => string.Empty;
-    public string CurrentStageDescription => string.Empty;
-    public bool IsStageTransitionPending => false;
-    public float RemainingStageTransitionDelaySeconds => 0f;
     public int ObjectiveStatusCount => objectiveStatuses != null ? objectiveStatuses.Count : 0;
     public int ResultObjectiveStatusCount => GetResultObjectiveStatusCount();
     public int CurrentScore => currentScore;
@@ -175,8 +171,9 @@ public partial class IncidentMissionSystem : MonoBehaviour
     public int DisplayedExtractedVictimCount => missionState == MissionState.Completed || missionState == MissionState.Failed ? finalExtractedVictimCount : extractedVictimCount;
     public int DisplayedDeceasedVictimCount => missionState == MissionState.Completed || missionState == MissionState.Failed ? finalDeceasedVictimCount : deceasedVictimCount;
     public float RemainingTimeSeconds => Mathf.Max(0f, ResolveTimeLimitSeconds() - elapsedTime);
-    public string CurrentStageId => string.Empty;
     public bool FailsOnAnyVictimDeath => ResolveFailsOnAnyVictimDeath();
+    public IncidentProcedureDefinition ActiveProcedureDefinition => activeProcedureDefinition;
+    public bool HasActiveProcedure => procedureRuntime != null && procedureRuntime.HasDefinition;
 
     private GUIStyle overlayGuiStyle;
 
@@ -247,6 +244,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
         ResetScoreRuntime();
         ResetFinalPerformanceSnapshot();
         ResetSignalEmitters();
+        ResolveProcedureRuntime();
         peakHazardLinkedFireCount = 0;
         RefreshObjectives();
         elapsedTime = 0f;
@@ -317,7 +315,26 @@ public partial class IncidentMissionSystem : MonoBehaviour
 
     public bool TryGetResultObjectiveStatus(int index, out MissionObjectiveStatusSnapshot status)
     {
-        return TryGetObjectiveStatus(index, out status);
+        status = default;
+        if (index < 0)
+        {
+            return false;
+        }
+
+        if (index < ObjectiveStatusCount)
+        {
+            return TryGetObjectiveStatus(index, out status);
+        }
+
+        BuildResultObjectiveStatusScratch();
+        int extraIndex = index - ObjectiveStatusCount;
+        if (extraIndex < 0 || extraIndex >= resultStatusScratch.Count)
+        {
+            return false;
+        }
+
+        status = resultStatusScratch[extraIndex];
+        return true;
     }
 
     public bool TryGetObjectivePresentationKind(int index, out ObjectivePresentationKind kind)
@@ -434,6 +451,7 @@ public partial class IncidentMissionSystem : MonoBehaviour
         }
 
         activatedSignalKeys.Add(normalizedKey);
+        procedureRuntime?.ConsumeSignal(normalizedKey);
         MarkProgressDirty();
         return true;
     }
@@ -459,6 +477,16 @@ public partial class IncidentMissionSystem : MonoBehaviour
         return false;
     }
 
+    public string GetProcedureOverlaySummary()
+    {
+        return procedureRuntime != null ? procedureRuntime.BuildOverlaySummary() : string.Empty;
+    }
+
+    public void GetProcedureChecklistStatuses(List<IncidentProcedureChecklistStatusSnapshot> results)
+    {
+        procedureRuntime?.BuildChecklistStatuses(results);
+    }
+
     private void OnGUI()
     {
         if (!showMissionOverlay)
@@ -473,8 +501,8 @@ public partial class IncidentMissionSystem : MonoBehaviour
         string overlayText =
             $"{MissionTitle}\n" +
             $"{MissionLocalization.Format("mission.hud.state", "State: {0}", LocalizeMissionState(missionState))}\n" +
-            BuildStageOverlayLine() +
             BuildObjectiveOverlayLines() +
+            BuildProcedureOverlayLine() +
             BuildScoreOverlayLine() +
             $"{MissionLocalization.Format("mission.overlay.time", "Time: {0}", timerText)}";
 
@@ -931,7 +959,8 @@ public partial class IncidentMissionSystem : MonoBehaviour
 
     private int GetResultObjectiveStatusCount()
     {
-        return ObjectiveStatusCount;
+        BuildResultObjectiveStatusScratch();
+        return ObjectiveStatusCount + resultStatusScratch.Count;
     }
 
     private void BuildLegacyObjectiveStatuses(MissionProgressSnapshot snapshot)
@@ -1072,8 +1101,21 @@ public partial class IncidentMissionSystem : MonoBehaviour
             rankSuffix) + "\n";
     }
 
-    private string BuildStageOverlayLine()
-        => string.Empty;
+    private string BuildProcedureOverlayLine()
+    {
+        if (procedureRuntime == null || !procedureRuntime.HasDefinition)
+        {
+            return string.Empty;
+        }
+
+        string summary = procedureRuntime.BuildOverlaySummary();
+        if (string.IsNullOrWhiteSpace(summary))
+        {
+            return string.Empty;
+        }
+
+        return summary + "\n";
+    }
 
     private static string LocalizeMissionState(MissionState state)
     {
@@ -1192,5 +1234,30 @@ public partial class IncidentMissionSystem : MonoBehaviour
     private void HandleLanguageChanged(AppLanguage _)
     {
         RefreshObjectives();
+    }
+
+    private void ResolveProcedureRuntime()
+    {
+        activeProcedureDefinition = null;
+        procedureRuntime = null;
+
+        if (!LoadingFlowState.TryGetPendingIncidentPayload(out IncidentWorldSetupPayload payload) || payload == null)
+        {
+            return;
+        }
+
+        activeProcedureDefinition = IncidentProcedureResolver.Resolve(payload);
+        if (activeProcedureDefinition == null)
+        {
+            return;
+        }
+
+        procedureRuntime = new IncidentProcedureRuntime(activeProcedureDefinition);
+    }
+
+    private void BuildResultObjectiveStatusScratch()
+    {
+        resultStatusScratch.Clear();
+        procedureRuntime?.BuildResultStatuses(resultStatusScratch);
     }
 }

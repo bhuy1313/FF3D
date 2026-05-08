@@ -10,7 +10,7 @@ public class EndCinematicCameraPath : MonoBehaviour
     [SerializeField] private bool useWaypointRotations;
 
     [Header("Timing")]
-    [SerializeField] private float duration = 7.5f;
+    [SerializeField] private float speed = 8f;
     [SerializeField] private float holdDuration = 1.6f;
 
     [Header("Lens")]
@@ -18,7 +18,7 @@ public class EndCinematicCameraPath : MonoBehaviour
 
     public Transform LookAtTarget => lookAtTarget;
     public bool UseWaypointRotations => useWaypointRotations;
-    public float Duration => Mathf.Max(0.01f, duration);
+    public float Speed => Mathf.Max(0.01f, speed);
     public float HoldDuration => Mathf.Max(0f, holdDuration);
     public float FieldOfView => Mathf.Clamp(fieldOfView, 20f, 90f);
 

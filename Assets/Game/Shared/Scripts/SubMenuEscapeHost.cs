@@ -6,6 +6,7 @@ using UnityEngine.SceneManagement;
 public class SubMenuEscapeHost : MonoBehaviour
 {
     private static int suppressEscapeFrame = -1;
+    private const int MissionOverlayResolveRetryFrames = 30;
 
     [SerializeField] private SubMenuPanelController subMenuPanelController;
     [SerializeField] private WheelSelector wheelSelector;
@@ -21,6 +22,7 @@ public class SubMenuEscapeHost : MonoBehaviour
     private Setting_UIScript settingsUI;
     private Button settingsBackButton;
     private ToastContainerController runtimeToastContainer;
+    private int nextMissionOverlayResolveFrame;
 
     public bool IsSettingsVisible => settingsCanvasGroup != null && settingsCanvasGroup.alpha > 0.001f;
 
@@ -33,6 +35,12 @@ public class SubMenuEscapeHost : MonoBehaviour
         {
             subMenuPanelController.Close();
         }
+    }
+
+    private void OnEnable()
+    {
+        nextMissionOverlayResolveFrame = 0;
+        ResolveMissionEndOverlayController();
     }
 
     private void Update()
@@ -358,6 +366,12 @@ public class SubMenuEscapeHost : MonoBehaviour
             return;
         }
 
+        if (Time.frameCount < nextMissionOverlayResolveFrame)
+        {
+            return;
+        }
+
+        nextMissionOverlayResolveFrame = Time.frameCount + MissionOverlayResolveRetryFrames;
         missionEndOverlayController = null;
         MissionEndOverlayController[] controllers = FindObjectsByType<MissionEndOverlayController>(FindObjectsInactive.Include);
         Scene currentScene = gameObject.scene;
@@ -370,6 +384,7 @@ public class SubMenuEscapeHost : MonoBehaviour
             }
 
             missionEndOverlayController = candidate;
+            nextMissionOverlayResolveFrame = 0;
             break;
         }
     }

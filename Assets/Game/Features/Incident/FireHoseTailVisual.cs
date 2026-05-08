@@ -16,16 +16,23 @@ public class FireHoseTailVisual : MonoBehaviour
     [SerializeField] private float gravity = 14f;
     [SerializeField, Range(0f, 1f)] private float damping = 0.08f;
     [SerializeField] private float maxTimestep = 0.033f;
+    [SerializeField] private LayerMask collisionMask = ~0;
+    [SerializeField] private int collisionIterations = 2;
+    [SerializeField] private float collisionSkin = 0.01f;
 
     private GameObject tailObject;
     private MeshFilter meshFilter;
     private MeshRenderer meshRenderer;
+    private Transform startCap;
+    private Transform endCap;
     private Mesh mesh;
     private Vector3 lastUp = Vector3.up;
     private readonly List<Vector3> particles = new List<Vector3>();
     private readonly List<Vector3> previousParticles = new List<Vector3>();
     private readonly List<Knot> controlPoints = new List<Knot>();
+    private SphereCollider collisionProbe;
     private bool hasSimulation;
+    private static readonly Collider[] collisionHits = new Collider[32];
 
     void LateUpdate()
     {
@@ -35,6 +42,7 @@ public class FireHoseTailVisual : MonoBehaviour
         {
             ResetSimulation();
             ClearMesh();
+            SetEndCapsActive(false);
             return;
         }
 
@@ -47,6 +55,7 @@ public class FireHoseTailVisual : MonoBehaviour
         {
             ResetSimulation();
             ClearMesh();
+            SetEndCapsActive(false);
             return;
         }
 
@@ -73,6 +82,7 @@ public class FireHoseTailVisual : MonoBehaviour
 
         lastUp = newLastUp;
         meshFilter.sharedMesh = mesh;
+        UpdateEndCaps(startWorld, endWorld);
     }
 
     void OnDestroy()
@@ -101,6 +111,32 @@ public class FireHoseTailVisual : MonoBehaviour
         meshFilter = tailObject.AddComponent<MeshFilter>();
         meshRenderer = tailObject.AddComponent<MeshRenderer>();
         meshRenderer.sharedMaterial = hoseMaterial;
+        collisionProbe = tailObject.AddComponent<SphereCollider>();
+        collisionProbe.isTrigger = true;
+        collisionProbe.enabled = false;
+        startCap = CreateEndCap("FireHoseTailStartCap");
+        endCap = CreateEndCap("FireHoseTailEndCap");
+    }
+
+    Transform CreateEndCap(string objectName)
+    {
+        GameObject cap = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        cap.name = objectName;
+        cap.transform.SetParent(tailObject.transform, false);
+
+        Collider collider = cap.GetComponent<Collider>();
+        if (collider != null)
+        {
+            Destroy(collider);
+        }
+
+        MeshRenderer capRenderer = cap.GetComponent<MeshRenderer>();
+        if (capRenderer != null)
+        {
+            capRenderer.sharedMaterial = hoseMaterial;
+        }
+
+        return cap.transform;
     }
 
     void Simulate(Vector3 startWorld, Vector3 endWorld, float distance)
@@ -113,7 +149,6 @@ public class FireHoseTailVisual : MonoBehaviour
         }
 
         float dt = Mathf.Clamp(Time.deltaTime, 0.0001f, Mathf.Max(0.0001f, maxTimestep));
-        Vector3 acceleration = Vector3.down * Mathf.Max(0f, gravity);
         float velocityRetention = 1f - Mathf.Clamp01(damping);
 
         particles[0] = startWorld;
@@ -123,9 +158,11 @@ public class FireHoseTailVisual : MonoBehaviour
         {
             Vector3 current = particles[i];
             Vector3 velocity = (current - previousParticles[i]) * velocityRetention;
+            Vector3 acceleration = Vector3.down * Mathf.Max(0f, gravity);
+            Vector3 next = current + velocity + acceleration * (dt * dt);
 
             previousParticles[i] = current;
-            particles[i] = current + velocity + acceleration * (dt * dt);
+            particles[i] = ResolveParticleSweep(current, next);
         }
 
         float totalLength = distance + Mathf.Max(0f, slackLength);
@@ -141,12 +178,105 @@ public class FireHoseTailVisual : MonoBehaviour
             {
                 SatisfyDistance(i, i + 1, restLength);
             }
+
+            ResolveParticleCollisions(count);
         }
 
         particles[0] = startWorld;
         particles[count - 1] = endWorld;
         previousParticles[0] = startWorld;
         previousParticles[count - 1] = endWorld;
+    }
+
+    void ResolveParticleCollisions(int count)
+    {
+        if (collisionProbe == null)
+        {
+            return;
+        }
+
+        collisionProbe.radius = 0.5f;
+        collisionProbe.center = Vector3.zero;
+
+        int iterations = Mathf.Max(1, collisionIterations);
+        float probeRadius = Mathf.Max(0.001f, radius);
+        float skin = Mathf.Max(0f, collisionSkin);
+
+        for (int iteration = 0; iteration < iterations; iteration++)
+        {
+            for (int i = 1; i < count - 1; i++)
+            {
+                Vector3 position = particles[i];
+                int hitCount = Physics.OverlapSphereNonAlloc(
+                    position,
+                    probeRadius,
+                    collisionHits,
+                    collisionMask,
+                    QueryTriggerInteraction.Ignore);
+
+                bool collided = false;
+                Vector3 resolvedPosition = position;
+
+                for (int hitIndex = 0; hitIndex < hitCount; hitIndex++)
+                {
+                    Collider hit = collisionHits[hitIndex];
+                    if (hit == null || hit == collisionProbe)
+                    {
+                        continue;
+                    }
+
+                    if (!Physics.ComputePenetration(
+                        collisionProbe,
+                        resolvedPosition,
+                        Quaternion.identity,
+                        hit,
+                        hit.transform.position,
+                        hit.transform.rotation,
+                        out Vector3 direction,
+                        out float distance))
+                    {
+                        continue;
+                    }
+
+                    resolvedPosition += direction * (distance + skin);
+                    collided = true;
+                }
+
+                if (collided)
+                {
+                    particles[i] = resolvedPosition;
+                }
+            }
+        }
+    }
+
+    Vector3 ResolveParticleSweep(Vector3 from, Vector3 to)
+    {
+        Vector3 delta = to - from;
+        float distance = delta.magnitude;
+        if (distance <= 0.0001f)
+        {
+            return to;
+        }
+
+        float probeRadius = Mathf.Max(0.001f, radius);
+        float skin = Mathf.Max(0f, collisionSkin);
+        Vector3 direction = delta / distance;
+
+        if (Physics.SphereCast(
+            from,
+            probeRadius,
+            direction,
+            out RaycastHit hit,
+            distance + skin,
+            collisionMask,
+            QueryTriggerInteraction.Ignore))
+        {
+            float safeDistance = Mathf.Max(0f, hit.distance - skin);
+            return from + direction * safeDistance;
+        }
+
+        return to;
     }
 
     void InitializeSimulation(Vector3 startWorld, Vector3 endWorld, int count)
@@ -211,6 +341,38 @@ public class FireHoseTailVisual : MonoBehaviour
         if (mesh != null)
         {
             mesh.Clear();
+        }
+    }
+
+    void UpdateEndCaps(Vector3 startWorld, Vector3 endWorld)
+    {
+        if (startCap == null || endCap == null)
+        {
+            return;
+        }
+
+        float diameter = Mathf.Max(0.001f, radius) * 2f;
+        Vector3 scale = Vector3.one * diameter;
+
+        startCap.position = startWorld;
+        startCap.localScale = scale;
+
+        endCap.position = endWorld;
+        endCap.localScale = scale;
+
+        SetEndCapsActive(true);
+    }
+
+    void SetEndCapsActive(bool isActive)
+    {
+        if (startCap != null)
+        {
+            startCap.gameObject.SetActive(isActive);
+        }
+
+        if (endCap != null)
+        {
+            endCap.gameObject.SetActive(isActive);
         }
     }
 }

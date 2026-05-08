@@ -1,0 +1,97 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54f027457bc046f1b30dd21d2c896616, type: 3}
+  m_Name: Map3_EquipmentRoom_Procedure
+  m_EditorClassIdentifier: Assembly-CSharp::IncidentProcedureDefinition
+  procedureId: map3_equipment_room_procedure
+  scenarioId: equipment_room_fire
+  title: Equipment Room Fire Procedure
+  titleLocalizationKey: 
+  summary: Isolate the electrical hazard first, maintain a protected approach, and only commit to suppression once the panel area is safer.
+  summaryLocalizationKey: 
+  hazardType: Electrical
+  fireLocation: 
+  severityBand: 
+  requiresKnownVictimRisk: 0
+  primaryPriority: 2
+  secondaryPriority: 0
+  tertiaryPriority: 1
+  checklistItems:
+  - itemId: isolate_power
+    title: Isolate the electrical source before direct suppression
+    titleLocalizationKey: 
+    description: Shut down the energized source before committing close suppression around the panel fire.
+    descriptionLocalizationKey: 
+    itemType: 0
+    priority: 3
+    validationMode: 1
+    completionSignalKey: hazard-isolated
+    invalidationSignalKey: hazard-reactivated
+    completionStateKey: 
+    invalidationStateKey: 
+    defaultChecked: 0
+    hiddenUntilRelevant: 0
+    relevanceConditionSummary: 
+    scoringAxis: 2
+    scoreDelta: 12
+    failureFeedback: Electrical fire control remained unverified because the hazard was not isolated.
+    failureFeedbackLocalizationKey: 
+  - itemId: control_fire_after_isolation
+    title: Finish extinguishment after isolation
+    titleLocalizationKey: 
+    description: Once the electrical source is safer, complete suppression and hold the compartment.
+    descriptionLocalizationKey: 
+    itemType: 1
+    priority: 2
+    validationMode: 0
+    completionSignalKey: 
+    invalidationSignalKey: 
+    completionStateKey: all-fires-extinguished
+    invalidationStateKey: 
+    defaultChecked: 0
+    hiddenUntilRelevant: 0
+    relevanceConditionSummary: 
+    scoringAxis: 1
+    scoreDelta: 5
+    failureFeedback: Fire suppression completion is not yet verified by the procedure layer.
+    failureFeedbackLocalizationKey: 
+  exceptionRules:
+  - ruleId: emergency_entry_for_visible_victim
+    title: Immediate life rescue exception
+    titleLocalizationKey: 
+    triggerSummary: If a victim is visible and delay is likely fatal, rapid entry before full isolation may be justified.
+    triggerSummaryLocalizationKey: 
+    rationale: Saving life may justify controlled exposure to an energized-fire risk, but crew safety and re-flash risk increase sharply.
+    rationaleLocalizationKey: 
+    primaryBenefitAxis: 0
+    primaryRiskAxis: 2
+    recommendedSignalKey: deliver-target
+    penaltySignalKey: 
+    recommendedScoreDelta: 10
+    penaltyScoreDelta: -10
+  successDebriefLines:
+  - lineId: equipment_room_success
+    text: Electrical isolation was verified before or during control, which matches the recommended equipment room procedure.
+    textLocalizationKey: 
+    scoringAxis: 2
+    severity: 1
+  failureDebriefLines:
+  - lineId: equipment_room_failure
+    text: The run left the electrical control step unverified; this is a major procedural risk for panel-room incidents.
+    textLocalizationKey: 
+    scoringAxis: 2
+    severity: 3
+  lifeSafetyWeight: 30
+  fireControlWeight: 20
+  crewSafetyWeight: 35
+  procedureComplianceWeight: 10
+  timeEfficiencyWeight: 5

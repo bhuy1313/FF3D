@@ -7,6 +7,8 @@ public class EntranceCameraStartupTask : SceneStartupTask
     [SerializeField] private EntranceCameraIntro entranceCameraIntro;
     [SerializeField] private StartupOverlayRevealTask startupOverlayRevealTask;
 
+    public override StartupTaskPhase TaskPhase => StartupTaskPhase.Final;
+
     protected override IEnumerator Execute(SceneStartupFlow startupFlow)
     {
         if (entranceCameraIntro == null)

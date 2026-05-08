@@ -89,7 +89,6 @@ public class VictimPlacementStartupTask : SceneStartupTask
                 continue;
             }
 
-            ConfigureVictim(victimInstance, spawnPoint, payload);
             RemoveFireNodesNearVictim(setupRoot, victimInstance);
             spawnedCount++;
         }
@@ -369,53 +368,6 @@ public class VictimPlacementStartupTask : SceneStartupTask
         return setupRoot != null
             ? setupRoot.FireSimulationManager
             : FindAnyObjectByType<FireSimulationManager>(FindObjectsInactive.Include);
-    }
-
-    private static void ConfigureVictim(GameObject victimInstance, VictimSpawnPoint spawnPoint, IncidentWorldSetupPayload payload)
-    {
-        if (victimInstance == null)
-        {
-            return;
-        }
-
-        victimInstance.name = string.IsNullOrWhiteSpace(spawnPoint.name)
-            ? victimInstance.name
-            : $"{victimInstance.name}_{spawnPoint.name}";
-
-        VictimCondition victimCondition = victimInstance.GetComponent<VictimCondition>();
-        if (victimCondition == null)
-        {
-            return;
-        }
-
-        float targetCondition = ResolveInitialCondition(spawnPoint, payload);
-        victimCondition.RestoreCondition(99999f);
-        victimCondition.ApplyConditionDamage(Mathf.Max(0f, victimCondition.MaxCondition - targetCondition));
-    }
-
-    private static float ResolveInitialCondition(VictimSpawnPoint spawnPoint, IncidentWorldSetupPayload payload)
-    {
-        if (spawnPoint != null && spawnPoint.PreferCriticalVictims)
-        {
-            return 20f;
-        }
-
-        if (spawnPoint != null && spawnPoint.PreferUrgentVictims)
-        {
-            return 50f;
-        }
-
-        if (payload != null && string.Equals(payload.severityBand, "High", StringComparison.OrdinalIgnoreCase))
-        {
-            return 25f;
-        }
-
-        if (payload != null && string.Equals(payload.severityBand, "Medium", StringComparison.OrdinalIgnoreCase))
-        {
-            return 55f;
-        }
-
-        return 85f;
     }
 
     private int ClearExistingVictims()

@@ -2,68 +2,54 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.Serialization;
 
 [DefaultExecutionOrder(-300)]
 [DisallowMultipleComponent]
 public class DebugIncidentPayloadSpawner : MonoBehaviour
 {
+    private enum DebugIncidentPreset
+    {
+        Map3EquipmentRoom = 0,
+        Map3Hallway = 1,
+        Map3StorageRoom = 2,
+        Custom = 3
+    }
+
     [Header("Debug Settings")]
     [SerializeField] private bool enableDebugSpawning = true;
+    [SerializeField] private DebugIncidentPreset preset = DebugIncidentPreset.Map3EquipmentRoom;
 
-    [Header("Payload")]
-    [SerializeField] private string caseId = "debug_case";
-    [SerializeField] private string scenarioId = "debug_scenario";
-    [FormerlySerializedAs("customFireOrigin")]
-    [SerializeField] private string fireOrigin = "Laundry_WasherOutlet";
-    [FormerlySerializedAs("customLogicalFireLocation")]
-    [SerializeField] private string logicalFireLocation = "Laundry";
+    [Header("Core Payload")]
+    [SerializeField] private string caseId = "CT-EQ-01";
+    [SerializeField] private string scenarioId = "equipment_room_fire";
+    [SerializeField] private string fireOrigin = "EquipmentRoom_Panel";
+    [SerializeField] private string logicalFireLocation = "Equipment Room";
     [SerializeField] private string hazardType = "Electrical";
     [SerializeField] private string isolationType = "Electrical";
     [SerializeField] private bool requiresIsolation = true;
-    [FormerlySerializedAs("customInitialFireIntensity")]
+    [SerializeField] private string severityBand = "Medium";
+
+    [Header("Scene Setup")]
     [SerializeField, Range(0.1f, 1f)] private float initialFireIntensity = 0.65f;
-    [FormerlySerializedAs("customInitialFireCount")]
     [SerializeField, Min(1)] private int initialFireCount = 3;
     [SerializeField] private string fireSpreadPreset = "Moderate";
-    [SerializeField, Min(0f)] private float startSmokeDensity = 0.2f;
+    [SerializeField, Min(0f)] private float startSmokeDensity = 0.25f;
     [SerializeField, Min(0f)] private float smokeAccumulationMultiplier = 1f;
     [SerializeField] private string ventilationPreset = "Neutral";
     [SerializeField] private string occupantRiskPreset = "Manageable";
-    [SerializeField] private string severityBand = "Medium";
+
+    [Header("Victim Estimate")]
     [SerializeField] private bool estimatedTrappedCountKnown;
     [SerializeField, Min(0)] private int estimatedTrappedCountMin;
     [SerializeField, Min(0)] private int estimatedTrappedCountMax;
-    [SerializeField, Range(0f, 1f)] private float confidenceScore = 1f;
-    [SerializeField] private int placementRandomSeed;
 
     [Header("Report Snapshot")]
-    [SerializeField] private string reportAddress = "123 Debug St";
-    [SerializeField] private string reportFireLocation = "Laundry room";
+    [SerializeField] private string reportAddress = "Westbridge Research Center, 100 Main Street";
+    [SerializeField] private string reportFireLocation = "Equipment Room";
     [SerializeField] private string reportOccupantRisk = "Unknown";
-    [SerializeField] private string reportHazard = "Electrical appliance";
+    [SerializeField] private string reportHazard = "Electrical panel";
     [SerializeField] private string reportSpreadStatus = "Contained";
     [SerializeField] private string reportCallerSafety = "Caller outside";
-    [SerializeField] private string reportSeverity = "Medium";
-
-    [Header("Applied Signals")]
-    [SerializeField] private string[] appliedSignals =
-    {
-        "Debug payload injected manually."
-    };
-
-    [FormerlySerializedAs("debugFireOrigin")]
-    [SerializeField, HideInInspector] private string legacyDebugFireOrigin = "Laundry_WasherOutlet";
-    [FormerlySerializedAs("debugLogicalFireLocation")]
-    [SerializeField, HideInInspector] private string legacyDebugLogicalFireLocation = "Laundry";
-    [FormerlySerializedAs("debugHazardType")]
-    [SerializeField, HideInInspector] private string legacyDebugHazardType = "Electrical";
-    [FormerlySerializedAs("debugInitialFireIntensity")]
-    [SerializeField, HideInInspector] private float legacyDebugInitialFireIntensity = 0.65f;
-    [FormerlySerializedAs("debugInitialFireCount")]
-    [SerializeField, HideInInspector] private int legacyDebugInitialFireCount = 3;
-    [FormerlySerializedAs("debugSeverityBand")]
-    [SerializeField, HideInInspector] private string legacyDebugSeverityBand = "Medium";
 
     private IncidentWorldSetupPayload pendingDebugPayload;
     private bool shouldDirectApplyPayload;
@@ -75,6 +61,8 @@ public class DebugIncidentPayloadSpawner : MonoBehaviour
             return;
         }
 
+        ApplyPresetIfNeeded();
+
         if (LoadingFlowState.TryGetPendingIncidentPayload(out _))
         {
             string activeSceneName = SceneManager.GetActiveScene().name;
@@ -85,46 +73,32 @@ public class DebugIncidentPayloadSpawner : MonoBehaviour
             }
 
             LoadingFlowState.ClearPendingIncidentPayload();
-            Debug.Log(
-                $"[DebugIncidentPayloadSpawner] Cleared stale pending payload before direct scene debug play in '{activeSceneName}'.");
+            Debug.Log($"[DebugIncidentPayloadSpawner] Cleared stale pending payload before direct scene debug play in '{activeSceneName}'.");
         }
-
-        string resolvedCaseId = ResolveText(caseId, "debug_case");
-        string resolvedScenarioId = ResolveText(scenarioId, "debug_scenario");
-        string resolvedFireOrigin = ResolveText(fireOrigin, ResolveText(legacyDebugFireOrigin, "Laundry_WasherOutlet"));
-        string resolvedLogicalLocation = ResolveText(logicalFireLocation, ResolveText(legacyDebugLogicalFireLocation, "Laundry"));
-        string resolvedHazardType = ResolveText(hazardType, ResolveText(legacyDebugHazardType, "Electrical"));
-        float resolvedInitialFireIntensity = initialFireIntensity > 0f ? initialFireIntensity : legacyDebugInitialFireIntensity;
-        int resolvedInitialFireCount = initialFireCount > 0 ? initialFireCount : legacyDebugInitialFireCount;
-        IncidentWorldSetupReportSnapshot resolvedReportSnapshot = BuildReportSnapshot();
-        List<string> resolvedAppliedSignals = BuildAppliedSignals();
 
         pendingDebugPayload = new IncidentWorldSetupPayload
         {
-            caseId = resolvedCaseId,
-            scenarioId = resolvedScenarioId,
-            fireOrigin = resolvedFireOrigin,
-            logicalFireLocation = resolvedLogicalLocation,
-            hazardType = resolvedHazardType,
+            caseId = ResolveText(caseId, "debug_case"),
+            scenarioId = ResolveText(scenarioId, "debug_scenario"),
+            fireOrigin = ResolveText(fireOrigin, "Debug_FireOrigin"),
+            logicalFireLocation = ResolveText(logicalFireLocation, "Debug Location"),
+            hazardType = ResolveText(hazardType, "OrdinaryCombustibles"),
             isolationType = ResolveText(isolationType, "None"),
             requiresIsolation = requiresIsolation,
-            initialFireIntensity = Mathf.Clamp(resolvedInitialFireIntensity, 0.1f, 1f),
-            initialFireCount = Mathf.Max(1, resolvedInitialFireCount),
+            initialFireIntensity = Mathf.Clamp(initialFireIntensity, 0.1f, 1f),
+            initialFireCount = Mathf.Max(1, initialFireCount),
             fireSpreadPreset = ResolveText(fireSpreadPreset, "Moderate"),
             startSmokeDensity = Mathf.Max(0f, startSmokeDensity),
             smokeAccumulationMultiplier = Mathf.Max(0f, smokeAccumulationMultiplier),
             ventilationPreset = ResolveText(ventilationPreset, "Neutral"),
             occupantRiskPreset = ResolveText(occupantRiskPreset, "Manageable"),
-            severityBand = ResolveText(severityBand, ResolveText(legacyDebugSeverityBand, "Medium")),
+            severityBand = ResolveText(severityBand, "Medium"),
             estimatedTrappedCountKnown = estimatedTrappedCountKnown,
             estimatedTrappedCountMin = estimatedTrappedCountKnown ? Mathf.Max(0, estimatedTrappedCountMin) : 0,
-            estimatedTrappedCountMax = estimatedTrappedCountKnown
-                ? Mathf.Max(Mathf.Max(0, estimatedTrappedCountMin), estimatedTrappedCountMax)
-                : 0,
-            confidenceScore = Mathf.Clamp01(confidenceScore),
-            placementRandomSeed = placementRandomSeed,
-            reportSnapshot = resolvedReportSnapshot,
-            appliedSignals = resolvedAppliedSignals,
+            estimatedTrappedCountMax = estimatedTrappedCountKnown ? Mathf.Max(estimatedTrappedCountMin, estimatedTrappedCountMax) : 0,
+            confidenceScore = 1f,
+            reportSnapshot = BuildReportSnapshot(),
+            appliedSignals = BuildAppliedSignals()
         };
 
         LoadingFlowState.SetPendingIncidentPayload(pendingDebugPayload);
@@ -133,8 +107,9 @@ public class DebugIncidentPayloadSpawner : MonoBehaviour
             FindAnyObjectByType<IncidentPayloadStartupTask>(FindObjectsInactive.Include) == null;
 
         Debug.Log(
-            $"[DebugIncidentPayloadSpawner] Injected debug payload for origin '{resolvedFireOrigin}'. " +
-            $"DirectApply={shouldDirectApplyPayload}.");
+            $"[DebugIncidentPayloadSpawner] Injected preset '{preset}' for scenario '{pendingDebugPayload.scenarioId}'. " +
+            $"DirectApply={shouldDirectApplyPayload}.",
+            this);
     }
 
     private void Start()
@@ -176,51 +151,6 @@ public class DebugIncidentPayloadSpawner : MonoBehaviour
         }
     }
 
-    private static string ResolveText(string value, string fallback)
-    {
-        return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
-    }
-
-    private IncidentWorldSetupReportSnapshot BuildReportSnapshot()
-    {
-        return new IncidentWorldSetupReportSnapshot
-        {
-            address = ResolveText(reportAddress, "123 Debug St"),
-            fireLocation = ResolveText(reportFireLocation, logicalFireLocation),
-            occupantRisk = ResolveText(reportOccupantRisk, occupantRiskPreset),
-            hazard = ResolveText(reportHazard, hazardType),
-            spreadStatus = ResolveText(reportSpreadStatus, fireSpreadPreset),
-            callerSafety = ResolveText(reportCallerSafety, "Unknown"),
-            severity = ResolveText(reportSeverity, severityBand)
-        };
-    }
-
-    private List<string> BuildAppliedSignals()
-    {
-        List<string> results = new List<string>();
-        if (appliedSignals == null || appliedSignals.Length == 0)
-        {
-            results.Add("Debug payload injected manually.");
-            return results;
-        }
-
-        for (int i = 0; i < appliedSignals.Length; i++)
-        {
-            string value = appliedSignals[i];
-            if (!string.IsNullOrWhiteSpace(value))
-            {
-                results.Add(value.Trim());
-            }
-        }
-
-        if (results.Count == 0)
-        {
-            results.Add("Debug payload injected manually.");
-        }
-
-        return results;
-    }
-
     private void OnValidate()
     {
         initialFireIntensity = Mathf.Clamp(initialFireIntensity, 0.1f, 1f);
@@ -229,96 +159,150 @@ public class DebugIncidentPayloadSpawner : MonoBehaviour
         estimatedTrappedCountMax = Mathf.Max(estimatedTrappedCountMin, estimatedTrappedCountMax);
         startSmokeDensity = Mathf.Max(0f, startSmokeDensity);
         smokeAccumulationMultiplier = Mathf.Max(0f, smokeAccumulationMultiplier);
-        confidenceScore = Mathf.Clamp01(confidenceScore);
 
-        if (string.IsNullOrWhiteSpace(caseId))
+        ApplyPresetIfNeeded();
+        NormalizeEmptyFields();
+    }
+
+    private void ApplyPresetIfNeeded()
+    {
+        if (preset == DebugIncidentPreset.Custom)
         {
-            caseId = "debug_case";
+            return;
         }
 
-        if (string.IsNullOrWhiteSpace(scenarioId))
+        switch (preset)
         {
-            scenarioId = "debug_scenario";
-        }
+            case DebugIncidentPreset.Map3EquipmentRoom:
+                caseId = "CT-EQ-01";
+                scenarioId = "equipment_room_fire";
+                fireOrigin = "EquipmentRoom_Panel";
+                logicalFireLocation = "Equipment Room";
+                hazardType = "Electrical";
+                isolationType = "Electrical";
+                requiresIsolation = true;
+                severityBand = "Medium";
+                initialFireIntensity = 0.65f;
+                initialFireCount = 3;
+                fireSpreadPreset = "Moderate";
+                startSmokeDensity = 0.2f;
+                smokeAccumulationMultiplier = 1f;
+                ventilationPreset = "Neutral";
+                occupantRiskPreset = "Manageable";
+                estimatedTrappedCountKnown = false;
+                estimatedTrappedCountMin = 0;
+                estimatedTrappedCountMax = 0;
+                reportAddress = "Westbridge Research Center, 100 Main Street";
+                reportFireLocation = "Equipment Room";
+                reportOccupantRisk = "Unknown";
+                reportHazard = "High-voltage electrical panel";
+                reportSpreadStatus = "Contained";
+                reportCallerSafety = "Caller outside";
+                break;
 
-        if (string.IsNullOrWhiteSpace(fireOrigin))
-        {
-            fireOrigin = ResolveText(legacyDebugFireOrigin, "Laundry_WasherOutlet");
-        }
+            case DebugIncidentPreset.Map3Hallway:
+                caseId = "CT-HW-01";
+                scenarioId = "hallway_fire";
+                fireOrigin = "Hallway_MainCorridor";
+                logicalFireLocation = "Hallway";
+                hazardType = "OrdinaryCombustibles";
+                isolationType = "None";
+                requiresIsolation = false;
+                severityBand = "High";
+                initialFireIntensity = 0.75f;
+                initialFireCount = 4;
+                fireSpreadPreset = "Fast";
+                startSmokeDensity = 0.45f;
+                smokeAccumulationMultiplier = 1.35f;
+                ventilationPreset = "Neutral";
+                occupantRiskPreset = "High";
+                estimatedTrappedCountKnown = true;
+                estimatedTrappedCountMin = 1;
+                estimatedTrappedCountMax = 3;
+                reportAddress = "Westbridge Research Center, 100 Main Street";
+                reportFireLocation = "Hallway";
+                reportOccupantRisk = "Researchers behind lab doors";
+                reportHazard = "Heavy smoke in corridor";
+                reportSpreadStatus = "Spreading";
+                reportCallerSafety = "Caller outside";
+                break;
 
-        if (string.IsNullOrWhiteSpace(logicalFireLocation))
-        {
-            logicalFireLocation = ResolveText(legacyDebugLogicalFireLocation, "Laundry");
+            case DebugIncidentPreset.Map3StorageRoom:
+                caseId = "CT-ST-01";
+                scenarioId = "storage_room_fire";
+                fireOrigin = "StorageRoom_BackWing";
+                logicalFireLocation = "Storage Room";
+                hazardType = "OrdinaryCombustibles";
+                isolationType = "None";
+                requiresIsolation = false;
+                severityBand = "Medium";
+                initialFireIntensity = 0.7f;
+                initialFireCount = 4;
+                fireSpreadPreset = "Fast";
+                startSmokeDensity = 0.35f;
+                smokeAccumulationMultiplier = 1.2f;
+                ventilationPreset = "Neutral";
+                occupantRiskPreset = "Manageable";
+                estimatedTrappedCountKnown = false;
+                estimatedTrappedCountMin = 0;
+                estimatedTrappedCountMax = 0;
+                reportAddress = "Westbridge Research Center, 100 Main Street";
+                reportFireLocation = "Storage Room";
+                reportOccupantRisk = "Unknown";
+                reportHazard = "Combustible lab storage contents";
+                reportSpreadStatus = "Spreading";
+                reportCallerSafety = "Caller outside";
+                break;
         }
+    }
 
-        if (string.IsNullOrWhiteSpace(hazardType))
-        {
-            hazardType = ResolveText(legacyDebugHazardType, "Electrical");
-        }
+    private void NormalizeEmptyFields()
+    {
+        caseId = ResolveText(caseId, "debug_case");
+        scenarioId = ResolveText(scenarioId, "debug_scenario");
+        fireOrigin = ResolveText(fireOrigin, "Debug_FireOrigin");
+        logicalFireLocation = ResolveText(logicalFireLocation, "Debug Location");
+        hazardType = ResolveText(hazardType, "OrdinaryCombustibles");
+        isolationType = ResolveText(isolationType, "None");
+        severityBand = ResolveText(severityBand, "Medium");
+        fireSpreadPreset = ResolveText(fireSpreadPreset, "Moderate");
+        ventilationPreset = ResolveText(ventilationPreset, "Neutral");
+        occupantRiskPreset = ResolveText(occupantRiskPreset, "Manageable");
+        reportAddress = ResolveText(reportAddress, "Westbridge Research Center, 100 Main Street");
+        reportFireLocation = ResolveText(reportFireLocation, logicalFireLocation);
+        reportOccupantRisk = ResolveText(reportOccupantRisk, occupantRiskPreset);
+        reportHazard = ResolveText(reportHazard, hazardType);
+        reportSpreadStatus = ResolveText(reportSpreadStatus, fireSpreadPreset);
+        reportCallerSafety = ResolveText(reportCallerSafety, "Unknown");
+    }
 
-        if (string.IsNullOrWhiteSpace(isolationType))
+    private IncidentWorldSetupReportSnapshot BuildReportSnapshot()
+    {
+        return new IncidentWorldSetupReportSnapshot
         {
-            isolationType = "None";
-        }
+            address = ResolveText(reportAddress, "Westbridge Research Center, 100 Main Street"),
+            fireLocation = ResolveText(reportFireLocation, logicalFireLocation),
+            occupantRisk = ResolveText(reportOccupantRisk, occupantRiskPreset),
+            hazard = ResolveText(reportHazard, hazardType),
+            spreadStatus = ResolveText(reportSpreadStatus, fireSpreadPreset),
+            callerSafety = ResolveText(reportCallerSafety, "Unknown"),
+            severity = ResolveText(severityBand, "Medium")
+        };
+    }
 
-        if (string.IsNullOrWhiteSpace(fireSpreadPreset))
+    private List<string> BuildAppliedSignals()
+    {
+        return new List<string>
         {
-            fireSpreadPreset = "Moderate";
-        }
+            $"Debug preset injected: {preset}",
+            $"Scenario: {scenarioId}",
+            $"Location: {logicalFireLocation}",
+            $"Hazard: {hazardType}"
+        };
+    }
 
-        if (string.IsNullOrWhiteSpace(ventilationPreset))
-        {
-            ventilationPreset = "Neutral";
-        }
-
-        if (string.IsNullOrWhiteSpace(occupantRiskPreset))
-        {
-            occupantRiskPreset = "Manageable";
-        }
-
-        if (string.IsNullOrWhiteSpace(severityBand))
-        {
-            severityBand = ResolveText(legacyDebugSeverityBand, "Medium");
-        }
-
-        if (string.IsNullOrWhiteSpace(reportAddress))
-        {
-            reportAddress = "123 Debug St";
-        }
-
-        if (string.IsNullOrWhiteSpace(reportFireLocation))
-        {
-            reportFireLocation = logicalFireLocation;
-        }
-
-        if (string.IsNullOrWhiteSpace(reportOccupantRisk))
-        {
-            reportOccupantRisk = occupantRiskPreset;
-        }
-
-        if (string.IsNullOrWhiteSpace(reportHazard))
-        {
-            reportHazard = hazardType;
-        }
-
-        if (string.IsNullOrWhiteSpace(reportSpreadStatus))
-        {
-            reportSpreadStatus = fireSpreadPreset;
-        }
-
-        if (string.IsNullOrWhiteSpace(reportCallerSafety))
-        {
-            reportCallerSafety = "Unknown";
-        }
-
-        if (string.IsNullOrWhiteSpace(reportSeverity))
-        {
-            reportSeverity = severityBand;
-        }
-
-        if (appliedSignals == null || appliedSignals.Length == 0)
-        {
-            appliedSignals = new[] { "Debug payload injected manually." };
-        }
+    private static string ResolveText(string value, string fallback)
+    {
+        return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
     }
 }

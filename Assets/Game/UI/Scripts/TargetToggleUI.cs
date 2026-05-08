@@ -3,26 +3,175 @@ using UnityEngine;
 
 public class TargetToggleUI : MonoBehaviour
 {
+    private enum CrosshairState
+    {
+        Default,
+        Locked,
+        Rescuable,
+        IsolationDevice,
+        Interact,
+        Grab,
+        Pickup,
+        Climb
+    }
+
     [Header("Target Source")]
     [SerializeField] private FPSInteractionSystem interactionSystem;
-    [SerializeField] private GameObject targetOverride; // nếu muốn gán trực tiếp
+    [SerializeField] private GameObject targetOverride;
 
-    [Header("UI Objects")]
-    [SerializeField] private GameObject uiOnTarget;
-    [SerializeField] private GameObject uiOnNoTarget;
+    [Header("Crosshair Icons")]
+    [SerializeField] private GameObject defaultIcon;
+    [SerializeField] private GameObject lockedIcon;
+    [SerializeField] private GameObject rescuableIcon;
+    [SerializeField] private GameObject isolationDeviceIcon;
+    [SerializeField] private GameObject interactIcon;
+    [SerializeField] private GameObject grabIcon;
+    [SerializeField] private GameObject pickupIcon;
+    [SerializeField] private GameObject climbIcon;
+
+    [Header("Border")]
+    [SerializeField] private RectTransform borderFrame;
+    [SerializeField] private Vector2 defaultBorderSize = new Vector2(24f, 24f);
+    [SerializeField] private Vector2 interactionBorderSize = new Vector2(80f, 80f);
+
+    private CrosshairState currentState = (CrosshairState)(-1);
+
+    private void Awake()
+    {
+        ResolveInteractionSystem();
+        ResolveBorderFrame();
+    }
 
     private void Update()
     {
-        GameObject currentTarget = targetOverride;
+        ResolveInteractionSystem();
+        ResolveBorderFrame();
+        SetState(ResolveState());
+    }
 
-        if (interactionSystem != null)
+    private void ResolveInteractionSystem()
+    {
+        if (interactionSystem == null)
         {
-            currentTarget = interactionSystem.CurrentTarget;
+            interactionSystem = FindAnyObjectByType<FPSInteractionSystem>();
+        }
+    }
+
+    private void ResolveBorderFrame()
+    {
+        if (borderFrame != null)
+        {
+            return;
         }
 
-        bool hasTarget = currentTarget != null;
+        borderFrame = ResolveCommonParentRect(
+            defaultIcon,
+            lockedIcon,
+            rescuableIcon,
+            isolationDeviceIcon,
+            interactIcon,
+            grabIcon,
+            pickupIcon,
+            climbIcon);
+    }
 
-        if (uiOnTarget != null) uiOnTarget.SetActive(hasTarget);
-        if (uiOnNoTarget != null) uiOnNoTarget.SetActive(!hasTarget);
+    private CrosshairState ResolveState()
+    {
+        if (interactionSystem != null)
+        {
+            return interactionSystem.CurrentFocusKind switch
+            {
+                FPSInteractionSystem.InteractionFocusKind.Locked => CrosshairState.Locked,
+                FPSInteractionSystem.InteractionFocusKind.Rescuable => CrosshairState.Rescuable,
+                FPSInteractionSystem.InteractionFocusKind.IsolationDevice => CrosshairState.IsolationDevice,
+                FPSInteractionSystem.InteractionFocusKind.Interact => CrosshairState.Interact,
+                FPSInteractionSystem.InteractionFocusKind.Grab => CrosshairState.Grab,
+                FPSInteractionSystem.InteractionFocusKind.Pickup => CrosshairState.Pickup,
+                FPSInteractionSystem.InteractionFocusKind.Climb => CrosshairState.Climb,
+                _ => CrosshairState.Default
+            };
+        }
+
+        return targetOverride != null ? CrosshairState.Interact : CrosshairState.Default;
+    }
+
+    private void SetState(CrosshairState nextState)
+    {
+        if (currentState == nextState)
+        {
+            return;
+        }
+
+        currentState = nextState;
+        ApplyBorderSize(nextState);
+        SetVisible(defaultIcon, nextState == CrosshairState.Default);
+        SetVisible(lockedIcon, nextState == CrosshairState.Locked);
+        SetVisible(rescuableIcon, nextState == CrosshairState.Rescuable);
+        SetVisible(isolationDeviceIcon, nextState == CrosshairState.IsolationDevice);
+        SetVisible(climbIcon, nextState == CrosshairState.Climb);
+
+        bool useSharedHandIcon =
+            interactIcon != null &&
+            (ReferenceEquals(interactIcon, grabIcon) ||
+             ReferenceEquals(interactIcon, pickupIcon) ||
+             ReferenceEquals(grabIcon, pickupIcon));
+
+        if (useSharedHandIcon)
+        {
+            SetVisible(
+                interactIcon,
+                nextState == CrosshairState.Interact ||
+                nextState == CrosshairState.Grab ||
+                nextState == CrosshairState.Pickup);
+            return;
+        }
+
+        SetVisible(interactIcon, nextState == CrosshairState.Interact);
+        SetVisible(grabIcon, nextState == CrosshairState.Grab);
+        SetVisible(pickupIcon, nextState == CrosshairState.Pickup);
+    }
+
+    private static void SetVisible(GameObject target, bool visible)
+    {
+        if (target != null && target.activeSelf != visible)
+        {
+            target.SetActive(visible);
+        }
+    }
+
+    private void ApplyBorderSize(CrosshairState state)
+    {
+        if (borderFrame == null)
+        {
+            return;
+        }
+
+        Vector2 targetSize = state == CrosshairState.Default
+            ? defaultBorderSize
+            : interactionBorderSize;
+
+        if (borderFrame.sizeDelta != targetSize)
+        {
+            borderFrame.sizeDelta = targetSize;
+        }
+    }
+
+    private static RectTransform ResolveCommonParentRect(params GameObject[] icons)
+    {
+        for (int i = 0; i < icons.Length; i++)
+        {
+            GameObject icon = icons[i];
+            if (icon == null)
+            {
+                continue;
+            }
+
+            if (icon.transform.parent is RectTransform parentRect)
+            {
+                return parentRect;
+            }
+        }
+
+        return null;
     }
 }

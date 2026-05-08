@@ -412,8 +412,11 @@ public partial class IncidentMissionSystem
 
         public void RefreshScoreState()
         {
+            owner.procedureRuntime?.RefreshFromMission(owner);
             int objectiveScore = owner.SumObjectiveStatusScore();
             int objectiveMaxScore = owner.CalculateMissionObjectiveMaximumScore();
+            int procedureScore = owner.procedureRuntime != null ? owner.procedureRuntime.EvaluateScore() : 0;
+            int procedureMaxScore = owner.procedureRuntime != null ? owner.procedureRuntime.EvaluateMaximumScore() : 0;
             MissionScoreConfig scoreConfig = owner.missionDefinition != null ? owner.missionDefinition.ScoreConfig : null;
 
             int bonusScore = 0;
@@ -449,8 +452,8 @@ public partial class IncidentMissionSystem
                 }
             }
 
-            owner.maximumScore = Mathf.Max(0, objectiveMaxScore + bonusMaxScore);
-            owner.currentScore = Mathf.Clamp(objectiveScore + bonusScore, 0, owner.maximumScore);
+            owner.maximumScore = Mathf.Max(0, objectiveMaxScore + procedureMaxScore + bonusMaxScore);
+            owner.currentScore = Mathf.Clamp(objectiveScore + procedureScore + bonusScore, 0, owner.maximumScore);
             owner.currentScoreRank = scoreConfig != null && scoreConfig.EnableScoring
                 ? scoreConfig.EvaluateRank(owner.currentScore, owner.maximumScore)
                 : string.Empty;

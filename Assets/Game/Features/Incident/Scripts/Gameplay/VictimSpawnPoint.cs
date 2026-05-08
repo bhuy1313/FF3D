@@ -12,6 +12,8 @@ public class VictimSpawnPoint : MonoBehaviour
     [SerializeField] private bool alignToSurfaceNormal;
     [SerializeField] private Vector3 positionOffset = Vector3.zero;
     [SerializeField] private Vector3 rotationOffsetEuler = Vector3.zero;
+    [SerializeField] private bool randomizeYaw = true;
+    [SerializeField] private Vector2 randomYawRange = new Vector2(-180f, 180f);
 
     [Header("Condition Bias")]
     [SerializeField] private bool preferCriticalVictims;
@@ -53,6 +55,12 @@ public class VictimSpawnPoint : MonoBehaviour
         if (alignToSurfaceNormal)
         {
             rotation = Quaternion.FromToRotation(Vector3.up, transform.up) * rotation;
+        }
+
+        if (randomizeYaw)
+        {
+            float yawOffset = UnityEngine.Random.Range(randomYawRange.x, randomYawRange.y);
+            rotation = Quaternion.AngleAxis(yawOffset, transform.up.sqrMagnitude > 0.0001f ? transform.up.normalized : Vector3.up) * rotation;
         }
 
         return new Pose(position, rotation);

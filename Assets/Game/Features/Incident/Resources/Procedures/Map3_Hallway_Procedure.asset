@@ -1,0 +1,97 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54f027457bc046f1b30dd21d2c896616, type: 3}
+  m_Name: Map3_Hallway_Procedure
+  m_EditorClassIdentifier: Assembly-CSharp::IncidentProcedureDefinition
+  procedureId: map3_hallway_procedure
+  scenarioId: hallway_fire
+  title: Hallway Fire Procedure
+  titleLocalizationKey: 
+  summary: Protect the egress path, search for trapped occupants behind smoke, and treat victim extraction as the primary tactical priority.
+  summaryLocalizationKey: 
+  hazardType: 
+  fireLocation: Hallway
+  severityBand: 
+  requiresKnownVictimRisk: 0
+  primaryPriority: 0
+  secondaryPriority: 2
+  tertiaryPriority: 1
+  checklistItems:
+  - itemId: extract_victims_from_hallway
+    title: Extract trapped victims behind the smoke corridor
+    titleLocalizationKey: 
+    description: Search the threatened rooms and deliver victims to the safe zone as soon as a viable path exists.
+    descriptionLocalizationKey: 
+    itemType: 0
+    priority: 3
+    validationMode: 1
+    completionSignalKey: deliver-target
+    invalidationSignalKey: 
+    completionStateKey: any-rescue-delivered
+    invalidationStateKey: 
+    defaultChecked: 0
+    hiddenUntilRelevant: 0
+    relevanceConditionSummary: 
+    scoringAxis: 0
+    scoreDelta: 12
+    failureFeedback: No extracted victim has been verified by the current procedure signals.
+    failureFeedbackLocalizationKey: 
+  - itemId: keep_hallway_tenable
+    title: Keep the hallway tenable while pushing rescue
+    titleLocalizationKey: 
+    description: Manage fire and smoke so the corridor remains usable for movement and extraction.
+    descriptionLocalizationKey: 
+    itemType: 1
+    priority: 2
+    validationMode: 0
+    completionSignalKey: 
+    invalidationSignalKey: 
+    completionStateKey: mission-complete
+    invalidationStateKey: any-victim-dead
+    defaultChecked: 0
+    hiddenUntilRelevant: 0
+    relevanceConditionSummary: 
+    scoringAxis: 1
+    scoreDelta: 5
+    failureFeedback: Corridor-control actions are not yet verified by the procedure layer.
+    failureFeedbackLocalizationKey: 
+  exceptionRules:
+  - ruleId: bypass_full_control_for_immediate_rescue
+    title: Bypass full fire control for immediate rescue
+    titleLocalizationKey: 
+    triggerSummary: If victims are trapped behind smoke and still reachable, rescue may take precedence over perfect corridor control.
+    triggerSummaryLocalizationKey: 
+    rationale: This is a justified life-safety deviation if it prevents a delayed extraction from becoming a fatal delay.
+    rationaleLocalizationKey: 
+    primaryBenefitAxis: 0
+    primaryRiskAxis: 2
+    recommendedSignalKey: deliver-target
+    penaltySignalKey: 
+    recommendedScoreDelta: 10
+    penaltyScoreDelta: -10
+  successDebriefLines:
+  - lineId: hallway_success
+    text: The hallway procedure favored life safety first, and victim extraction was verified during the incident.
+    textLocalizationKey: 
+    scoringAxis: 0
+    severity: 1
+  failureDebriefLines:
+  - lineId: hallway_failure
+    text: The hallway run did not verify any victim extraction, so the procedure objective remained incomplete.
+    textLocalizationKey: 
+    scoringAxis: 0
+    severity: 3
+  lifeSafetyWeight: 45
+  fireControlWeight: 20
+  crewSafetyWeight: 20
+  procedureComplianceWeight: 10
+  timeEfficiencyWeight: 5

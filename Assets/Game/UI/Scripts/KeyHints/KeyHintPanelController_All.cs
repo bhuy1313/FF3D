@@ -103,7 +103,6 @@ public class KeyHintPanelController_All : MonoBehaviour
         public ContextState(
             IncidentMissionSystem.MissionState missionState,
             string missionId,
-            string stageId,
             string controlScheme,
             int inventoryItemCount,
             bool isGrabActive,
@@ -121,7 +120,6 @@ public class KeyHintPanelController_All : MonoBehaviour
         {
             MissionState = missionState;
             MissionId = missionId ?? string.Empty;
-            StageId = stageId ?? string.Empty;
             ControlScheme = controlScheme ?? string.Empty;
             InventoryItemCount = inventoryItemCount;
             IsGrabActive = isGrabActive;
@@ -140,7 +138,6 @@ public class KeyHintPanelController_All : MonoBehaviour
 
         public IncidentMissionSystem.MissionState MissionState { get; }
         public string MissionId { get; }
-        public string StageId { get; }
         public string ControlScheme { get; }
         public int InventoryItemCount { get; }
         public bool IsGrabActive { get; }
@@ -161,16 +158,13 @@ public class KeyHintPanelController_All : MonoBehaviour
     private sealed class ContextualHintProfile
     {
         public string missionId;
-        public string stageId;
         public List<string> actionNames = new List<string>();
 
-        public bool Matches(string currentMissionId, string currentStageId)
+        public bool Matches(string currentMissionId)
         {
             bool missionMatches = string.IsNullOrWhiteSpace(missionId) ||
                                   string.Equals(missionId.Trim(), currentMissionId, System.StringComparison.OrdinalIgnoreCase);
-            bool stageMatches = string.IsNullOrWhiteSpace(stageId) ||
-                                string.Equals(stageId.Trim(), currentStageId, System.StringComparison.OrdinalIgnoreCase);
-            return missionMatches && stageMatches;
+            return missionMatches;
         }
     }
 
@@ -451,14 +445,13 @@ public class KeyHintPanelController_All : MonoBehaviour
         }
 
         string missionId = missionSystem.MissionId;
-        string stageId = missionSystem.CurrentStageId;
 
-        if (TryGetConfiguredContextActionNames(missionId, stageId, out actionNames))
+        if (TryGetConfiguredContextActionNames(missionId, out actionNames))
         {
             return true;
         }
 
-        if (useBuiltInTutorialProfiles && TryGetBuiltInTutorialActionNames(missionId, stageId, out actionNames))
+        if (useBuiltInTutorialProfiles && TryGetBuiltInTutorialActionNames(missionId, out actionNames))
         {
             return true;
         }
@@ -472,7 +465,7 @@ public class KeyHintPanelController_All : MonoBehaviour
         return !fallbackToAllActionsWhenNoContextMatch;
     }
 
-    private bool TryGetConfiguredContextActionNames(string missionId, string stageId, out List<string> actionNames)
+    private bool TryGetConfiguredContextActionNames(string missionId, out List<string> actionNames)
     {
         actionNames = null;
         if (contextualHintProfiles == null)
@@ -483,7 +476,7 @@ public class KeyHintPanelController_All : MonoBehaviour
         for (int i = 0; i < contextualHintProfiles.Count; i++)
         {
             ContextualHintProfile profile = contextualHintProfiles[i];
-            if (profile == null || !profile.Matches(missionId, stageId))
+            if (profile == null || !profile.Matches(missionId))
             {
                 continue;
             }
@@ -495,7 +488,7 @@ public class KeyHintPanelController_All : MonoBehaviour
         return false;
     }
 
-    private static bool TryGetBuiltInTutorialActionNames(string missionId, string stageId, out List<string> actionNames)
+    private static bool TryGetBuiltInTutorialActionNames(string missionId, out List<string> actionNames)
     {
         actionNames = null;
         if (!string.Equals(missionId, "tutorial-incident", System.StringComparison.OrdinalIgnoreCase))
@@ -900,7 +893,6 @@ public class KeyHintPanelController_All : MonoBehaviour
             return new ContextState(
                 IncidentMissionSystem.MissionState.Idle,
                 string.Empty,
-                string.Empty,
                 scheme,
                 0,
                 false,
@@ -936,7 +928,6 @@ public class KeyHintPanelController_All : MonoBehaviour
         return new ContextState(
             missionSystem.State,
             missionSystem.MissionId,
-            missionSystem.CurrentStageId,
             scheme,
             inventoryItemCount,
             isGrabActive,
@@ -975,7 +966,6 @@ public class KeyHintPanelController_All : MonoBehaviour
                left.HoveredCommandTarget == right.HoveredCommandTarget &&
                left.SelectedCommandTarget == right.SelectedCommandTarget &&
                string.Equals(left.MissionId, right.MissionId, System.StringComparison.Ordinal) &&
-               string.Equals(left.StageId, right.StageId, System.StringComparison.Ordinal) &&
                string.Equals(left.ControlScheme, right.ControlScheme, System.StringComparison.Ordinal);
     }
 

@@ -276,8 +276,9 @@ public class SmokeHazard : MonoBehaviour
         if (fireSimulationManager != null && fireSimulationManager.IsInitialized && triggerZone != null)
         {
             Bounds bounds = triggerZone.bounds;
-            density += fireSimulationManager.GetBurningTrackedNodeCount(bounds) * smokePerBurningFire;
-            density += fireSimulationManager.GetBurningTrackedIntensitySum(bounds) * smokePerFireIntensity;
+            fireSimulationManager.GetBurningTrackedStats(bounds, out int burningCount, out float intensitySum);
+            density += burningCount * smokePerBurningFire;
+            density += intensitySum * smokePerFireIntensity;
         }
         density -= passiveVentilationRelief;
         density -= ventilation.Relief;
