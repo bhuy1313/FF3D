@@ -143,7 +143,7 @@ public class DebugIncidentPayloadSpawner : MonoBehaviour
 
         if (setupRoot.LastResolvedAnchor != null)
         {
-            LoadingFlowState.ClearPendingIncidentPayload();
+            Debug.Log("[DebugIncidentPayloadSpawner] Debug payload applied successfully and kept available for runtime UI consumers.", this);
         }
         else
         {

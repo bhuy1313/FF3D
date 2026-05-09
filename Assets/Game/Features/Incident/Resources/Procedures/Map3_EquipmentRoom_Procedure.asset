@@ -16,7 +16,7 @@ MonoBehaviour:
   scenarioId: equipment_room_fire
   title: Equipment Room Fire Procedure
   titleLocalizationKey: 
-  summary: Isolate the electrical hazard first, maintain a protected approach, and only commit to suppression once the panel area is safer.
+  summary: Assess the electrical hazard, isolate the source when possible, verify life risk, and suppress only after the approach is acceptably safe.
   summaryLocalizationKey: 
   hazardType: Electrical
   fireLocation: 
@@ -26,29 +26,86 @@ MonoBehaviour:
   secondaryPriority: 0
   tertiaryPriority: 1
   checklistItems:
-  - itemId: isolate_power
-    title: Isolate the electrical source before direct suppression
+  - itemId: confirm_fire_location
+    title: Confirm the exact fire location
     titleLocalizationKey: 
-    description: Shut down the energized source before committing close suppression around the panel fire.
+    description: Identify the equipment room fire compartment and choose a safe approach route.
+    descriptionLocalizationKey: 
+    itemType: 0
+    priority: 2
+    validationMode: 0
+    completionSignalKey: 
+    invalidationSignalKey: 
+    completionStateKey: 
+    invalidationStateKey: 
+    defaultChecked: 0
+    hiddenUntilRelevant: 0
+    relevanceConditionSummary: 
+    scoringAxis: 3
+    scoreDelta: 3
+    failureFeedback: 
+    failureFeedbackLocalizationKey: 
+  - itemId: assess_electrical_hazard
+    title: Assess the electrical hazard
+    titleLocalizationKey: 
+    description: Check for energized equipment, panel involvement, and other electrical risks before closing in.
     descriptionLocalizationKey: 
     itemType: 0
     priority: 3
-    validationMode: 1
-    completionSignalKey: hazard-isolated
-    invalidationSignalKey: hazard-reactivated
+    validationMode: 0
+    completionSignalKey: 
+    invalidationSignalKey: 
     completionStateKey: 
     invalidationStateKey: 
     defaultChecked: 0
     hiddenUntilRelevant: 0
     relevanceConditionSummary: 
     scoringAxis: 2
-    scoreDelta: 12
-    failureFeedback: Electrical fire control remained unverified because the hazard was not isolated.
+    scoreDelta: 4
+    failureFeedback: 
     failureFeedbackLocalizationKey: 
-  - itemId: control_fire_after_isolation
-    title: Finish extinguishment after isolation
+  - itemId: isolate_power_if_possible
+    title: Isolate the electrical source if possible
     titleLocalizationKey: 
-    description: Once the electrical source is safer, complete suppression and hold the compartment.
+    description: Attempt to shut down the power source before direct suppression when it can be done safely.
+    descriptionLocalizationKey: 
+    itemType: 0
+    priority: 3
+    validationMode: 0
+    completionSignalKey: 
+    invalidationSignalKey: 
+    completionStateKey: 
+    invalidationStateKey: 
+    defaultChecked: 0
+    hiddenUntilRelevant: 0
+    relevanceConditionSummary: 
+    scoringAxis: 2
+    scoreDelta: 5
+    failureFeedback: 
+    failureFeedbackLocalizationKey: 
+  - itemId: verify_life_risk
+    title: Verify whether anyone is at immediate life risk
+    titleLocalizationKey: 
+    description: Check for trapped or exposed occupants near the equipment room before committing deeper.
+    descriptionLocalizationKey: 
+    itemType: 1
+    priority: 2
+    validationMode: 0
+    completionSignalKey: 
+    invalidationSignalKey: 
+    completionStateKey: 
+    invalidationStateKey: 
+    defaultChecked: 0
+    hiddenUntilRelevant: 0
+    relevanceConditionSummary: 
+    scoringAxis: 0
+    scoreDelta: 3
+    failureFeedback: 
+    failureFeedbackLocalizationKey: 
+  - itemId: suppress_after_hazard_control
+    title: Suppress the fire after hazard control
+    titleLocalizationKey: 
+    description: Begin direct fire attack only once the main electrical danger is acceptably reduced.
     descriptionLocalizationKey: 
     itemType: 1
     priority: 2
@@ -62,7 +119,26 @@ MonoBehaviour:
     relevanceConditionSummary: 
     scoringAxis: 1
     scoreDelta: 5
-    failureFeedback: Fire suppression completion is not yet verified by the procedure layer.
+    failureFeedback: 
+    failureFeedbackLocalizationKey: 
+  - itemId: check_reflash_and_scene_safety
+    title: Check for re-flash and scene safety
+    titleLocalizationKey: 
+    description: Reassess the room after knockdown to confirm the area is stable and safe to hold.
+    descriptionLocalizationKey: 
+    itemType: 1
+    priority: 1
+    validationMode: 0
+    completionSignalKey: 
+    invalidationSignalKey: 
+    completionStateKey: 
+    invalidationStateKey: 
+    defaultChecked: 0
+    hiddenUntilRelevant: 0
+    relevanceConditionSummary: 
+    scoringAxis: 3
+    scoreDelta: 2
+    failureFeedback: 
     failureFeedbackLocalizationKey: 
   exceptionRules:
   - ruleId: emergency_entry_for_visible_victim
@@ -80,13 +156,13 @@ MonoBehaviour:
     penaltyScoreDelta: -10
   successDebriefLines:
   - lineId: equipment_room_success
-    text: Electrical isolation was verified before or during control, which matches the recommended equipment room procedure.
+    text: The recommended sequence is locate, assess electrical risk, isolate when possible, verify life hazard, then suppress and reassess.
     textLocalizationKey: 
     scoringAxis: 2
     severity: 1
   failureDebriefLines:
   - lineId: equipment_room_failure
-    text: The run left the electrical control step unverified; this is a major procedural risk for panel-room incidents.
+    text: Equipment room incidents should emphasize electrical risk control before direct suppression whenever conditions allow.
     textLocalizationKey: 
     scoringAxis: 2
     severity: 3

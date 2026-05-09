@@ -9,7 +9,7 @@ public sealed class IncidentProcedureDebugOverlay : MonoBehaviour
     [SerializeField] private bool showOverlay = true;
     [SerializeField] private KeyCode toggleKey = KeyCode.P;
     [SerializeField] private Vector2 overlayPosition = new Vector2(24f, 320f);
-    [SerializeField] private float overlayWidth = 440f;
+    [SerializeField] private float overlayWidth = 460f;
 
     [Header("References")]
     [SerializeField] private IncidentMissionSystem missionSystem;
@@ -52,12 +52,9 @@ public sealed class IncidentProcedureDebugOverlay : MonoBehaviour
             return;
         }
 
-        float contentHeight = Mathf.Max(140f, labelStyle.CalcHeight(new GUIContent(overlayText), Mathf.Max(200f, overlayWidth - 16f)));
-        Rect rect = new Rect(
-            overlayPosition.x,
-            overlayPosition.y,
-            Mathf.Max(280f, overlayWidth),
-            contentHeight + 16f);
+        float width = Mathf.Max(300f, overlayWidth);
+        float height = Mathf.Max(160f, labelStyle.CalcHeight(new GUIContent(overlayText), width - 16f) + 16f);
+        Rect rect = new Rect(overlayPosition.x, overlayPosition.y, width, height);
 
         GUI.Box(rect, GUIContent.none, boxStyle);
         GUI.Label(new Rect(rect.x + 8f, rect.y + 8f, rect.width - 16f, rect.height - 16f), overlayText, labelStyle);
@@ -67,6 +64,7 @@ public sealed class IncidentProcedureDebugOverlay : MonoBehaviour
     {
         StringBuilder builder = new StringBuilder();
         builder.AppendLine("Procedure Checklist");
+
         if (!missionSystem.HasActiveProcedure)
         {
             builder.AppendLine("No active procedure resolved.");
@@ -74,11 +72,6 @@ public sealed class IncidentProcedureDebugOverlay : MonoBehaviour
             builder.AppendLine("- Scene was started directly without Call Phase payload");
             builder.AppendLine("- No matching IncidentProcedureDefinition was found");
             builder.AppendLine("- Scripts have not recompiled cleanly in Unity yet");
-            builder.AppendLine();
-            builder.AppendLine("Expected flow:");
-            builder.AppendLine("- Start from Call Phase");
-            builder.AppendLine("- Submit one of the Map3 scenarios");
-            builder.AppendLine("- Enter On Site Phase");
             builder.AppendLine();
             builder.AppendLine("Toggle: " + toggleKey);
             return builder.ToString();
@@ -105,22 +98,21 @@ public sealed class IncidentProcedureDebugOverlay : MonoBehaviour
             builder.Append(prefix);
             builder.Append(' ');
             builder.Append(item.Title);
-            builder.Append(" | ");
+            builder.Append("  <");
             builder.Append(item.ItemType);
             builder.Append(" | ");
             builder.Append(item.Priority);
-            builder.AppendLine();
+            builder.AppendLine(">");
 
             if (!string.IsNullOrWhiteSpace(item.Description))
             {
-                builder.Append("    ");
                 builder.AppendLine(item.Description);
             }
-        }
 
-        if (checklistBuffer.Count == 0)
-        {
-            builder.AppendLine("No checklist items resolved.");
+            if (i < checklistBuffer.Count - 1)
+            {
+                builder.AppendLine();
+            }
         }
 
         builder.AppendLine();
@@ -154,7 +146,6 @@ public sealed class IncidentProcedureDebugOverlay : MonoBehaviour
         {
             labelStyle = new GUIStyle(GUI.skin.label);
             labelStyle.wordWrap = true;
-            labelStyle.richText = false;
             labelStyle.fontSize = 12;
             labelStyle.normal.textColor = Color.white;
         }

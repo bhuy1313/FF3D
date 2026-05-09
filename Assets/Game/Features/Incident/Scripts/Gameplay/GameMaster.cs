@@ -3,7 +3,7 @@ using UnityEngine;
 public class GameMaster : MonoBehaviour
 {
     [SerializeField] private bool ensureMovementInputLock = true;
-    [SerializeField] private bool ensureProcedureDebugOverlay = true;
+    [SerializeField] private bool ensureProcedureDebugOverlay = false;
 
     private void Awake()
     {

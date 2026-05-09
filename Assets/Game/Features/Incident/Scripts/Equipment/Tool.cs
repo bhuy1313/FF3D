@@ -134,15 +134,15 @@ public class Tool : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotBrea
             return;
         }
 
-        Breakable breakable = FindBreakableInView(user);
-        if (breakable == null)
+        IBotBreakableTarget breakableTarget = FindBreakableTargetInView(user);
+        if (breakableTarget == null)
         {
             UseDamageableInView(user);
             return;
         }
 
         GameObject source = user != null ? user : gameObject;
-        breakable.TryStartBreak(source, toolKind);
+        breakableTarget.TryStartBreak(source, toolKind);
     }
 
     public bool UseOnTarget(GameObject user, IBotBreakableTarget target)
@@ -175,14 +175,14 @@ public class Tool : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotBrea
         }
     }
 
-    private Breakable FindBreakableInView(GameObject user)
+    private IBotBreakableTarget FindBreakableTargetInView(GameObject user)
     {
         if (!TryGetUseHit(user, out UseHit hit))
         {
             return null;
         }
 
-        return FindBreakable(hit.Collider);
+        return FindBreakableTarget(hit.Collider);
     }
 
     private void UseDamageableInView(GameObject user)
@@ -351,20 +351,20 @@ public class Tool : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotBrea
         return foundHit;
     }
 
-    private static Breakable FindBreakable(Collider collider)
+    private static IBotBreakableTarget FindBreakableTarget(Collider collider)
     {
         if (collider == null)
         {
             return null;
         }
 
-        if (collider.TryGetComponent(out Breakable direct))
+        if (collider.TryGetComponent(out IBotBreakableTarget direct))
         {
             return direct;
         }
 
         if (collider.attachedRigidbody != null &&
-            collider.attachedRigidbody.TryGetComponent(out Breakable rigidbodyOwner))
+            collider.attachedRigidbody.TryGetComponent(out IBotBreakableTarget rigidbodyOwner))
         {
             return rigidbodyOwner;
         }
@@ -372,7 +372,7 @@ public class Tool : MonoBehaviour, IInteractable, IPickupable, IUsable, IBotBrea
         Transform parent = collider.transform.parent;
         while (parent != null)
         {
-            if (parent.TryGetComponent(out Breakable parentBreakable))
+            if (parent.TryGetComponent(out IBotBreakableTarget parentBreakable))
             {
                 return parentBreakable;
             }

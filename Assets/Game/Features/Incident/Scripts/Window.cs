@@ -3,10 +3,15 @@ using System.Collections.Generic;
 using RayFire;
 using UnityEngine;
 using StarterAssets;
+using TrueJourney.BotBehavior;
 
 [DisallowMultipleComponent]
-public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, IDamageable
+public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, IDamageable, IBotBreakableTarget
 {
+    private const float LegacyGlassFireAxeTime = 0.1f;
+    private const float LegacyGlassSledgeHammerTime = 0.1f;
+    private const float LegacyGlassCrowbarTime = 0.18f;
+
     private sealed class SashRuntime
     {
         public Transform Transform;
@@ -34,6 +39,14 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
     [SerializeField] private bool allowToggle = true;
     [SerializeField] private bool breakOnInteract;
     [SerializeField] private bool isLocked;
+    [SerializeField] private float breakInteractDuration = 0.35f;
+    [SerializeField] private bool lockPlayerWhileBreaking = true;
+    [SerializeField] private BreakToolKind[] supportedBreakTools =
+    {
+        BreakToolKind.FireAxe,
+        BreakToolKind.SledgeHammer,
+        BreakToolKind.Crowbar
+    };
 
     [Header("Ventilation")]
     [SerializeField] private float smokeVentilationReliefWhenOpen = 0.28f;
@@ -87,10 +100,15 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
     [SerializeField] private bool isBroken;
     [SerializeField] private int openSashCount;
     [SerializeField] private int brokenSashCount;
+    [SerializeField] private bool isBreakInProgress;
 
     private readonly List<SashRuntime> sashes = new List<SashRuntime>(2);
     private bool initialized;
     private Coroutine activeClimbRoutine;
+    private Coroutine breakRoutine;
+    private GameObject activeBreaker;
+    private PlayerActionLock activePlayerLock;
+    private PlayerInteractionAnimationState activeAnimationState;
     [Header("Locked Shake Effect")]
     [SerializeField] private float lockedShakeDuration = 0.3f;
     [SerializeField] private float lockedShakeIntensity = 4.5f;
@@ -102,6 +120,9 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
     public bool IsBroken => CountBrokenSashes() > 0;
     public bool IsLocked => isLocked;
     public bool IsDoubleSash => sashes.Count > 1;
+    public bool CanBeClearedByBot => !IsBroken;
+    public bool IsBreakInProgress => isBreakInProgress;
+    public GameObject ActiveBreaker => activeBreaker;
     public float SmokeVentilationRelief => GetVentilationContribution(smokeVentilationReliefWhenOpen, smokeVentilationReliefWhenBroken);
     public float FireDraftRisk => GetVentilationContribution(fireDraftRiskWhenOpen, fireDraftRiskWhenBroken);
 
@@ -118,6 +139,7 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
         fireDraftRiskWhenOpen = Mathf.Max(0f, fireDraftRiskWhenOpen);
         fireDraftRiskWhenBroken = Mathf.Max(fireDraftRiskWhenOpen, fireDraftRiskWhenBroken);
         breakDamageThreshold = Mathf.Max(0f, breakDamageThreshold);
+        breakInteractDuration = Mathf.Max(0.01f, breakInteractDuration);
         climbAnchorForwardOffset = Mathf.Max(0.1f, climbAnchorForwardOffset);
         climbProbeOriginHeight = Mathf.Max(0f, climbProbeOriginHeight);
         climbProbeDownwardOffset = Mathf.Max(0.1f, climbProbeDownwardOffset);
@@ -189,8 +211,7 @@ if (lockedShakeTimer > 0f)
 
         if (breakOnInteract)
         {
-            Vector3 impactPoint = interactor != null ? interactor.transform.position : transform.position;
-            BreakPreferredSash(impactPoint, ResolveImpactDirection(interactor, impactPoint), interactor);
+            TryStartBreakInteraction(interactor);
             return;
         }
 
@@ -198,6 +219,7 @@ if (lockedShakeTimer > 0f)
         if (!shouldOpen && !allowToggle)
             return;
 
+        TriggerPlayerOpenWindowAnimation(interactor);
         SetAllUnbrokenSashesOpenState(shouldOpen);
     }
 
@@ -212,6 +234,11 @@ if (lockedShakeTimer > 0f)
                 sashes[i]?.Transform != null ? sashes[i].Transform.position : transform.position,
                 transform.forward,
                 null);
+    }
+
+    private void OnDisable()
+    {
+        CancelBreakInteraction();
     }
 
     public void SetOpenState(bool isOpen)
@@ -252,8 +279,71 @@ if (lockedShakeTimer > 0f)
         if (!TryResolveClimbTraversal(interactor, out Vector3 startPosition, out Quaternion startRotation, out Vector3 endPosition, out Quaternion endRotation))
             return false;
 
+        PlayerInteractionAnimationState.GetOrCreate(interactor)?.PulseAction(PlayerInteractionAnimationAction.ClimbOver, 0.2f, this);
         activeClimbRoutine = StartCoroutine(PerformClimbOverRoutine(interactor, startPosition, startRotation, endPosition, endRotation));
         return true;
+    }
+
+    public Vector3 GetWorldPosition()
+    {
+        return GetWindowCenterWorld();
+    }
+
+    public bool TryGetBreakStandPose(Vector3 breakerPosition, out Vector3 standPosition, out Quaternion standRotation)
+    {
+        standPosition = breakerPosition;
+        standRotation = Quaternion.LookRotation(
+            Vector3.ProjectOnPlane(GetWindowCenterWorld() - breakerPosition, Vector3.up).normalized,
+            Vector3.up);
+        return false;
+    }
+
+    public bool IsOnSameSide(Vector3 pointA, Vector3 pointB)
+    {
+        Vector3 planePoint = GetWindowCenterWorld();
+        Vector3 planeNormal = Vector3.ProjectOnPlane(transform.forward, Vector3.up);
+        if (planeNormal.sqrMagnitude <= 0.0001f)
+        {
+            return true;
+        }
+
+        planeNormal.Normalize();
+        float sideA = Vector3.Dot(Vector3.ProjectOnPlane(pointA - planePoint, Vector3.up), planeNormal);
+        float sideB = Vector3.Dot(Vector3.ProjectOnPlane(pointB - planePoint, Vector3.up), planeNormal);
+        return sideA * sideB >= 0f;
+    }
+
+    public bool SupportsBreakTool(BreakToolKind toolKind)
+    {
+        if (supportedBreakTools == null || supportedBreakTools.Length == 0)
+        {
+            return TryGetLegacyBreakDuration(toolKind, out _);
+        }
+
+        for (int i = 0; i < supportedBreakTools.Length; i++)
+        {
+            if (supportedBreakTools[i] == toolKind)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public bool TryStartBreak(GameObject breaker, BreakToolKind toolKind)
+    {
+        if (!SupportsBreakTool(toolKind))
+        {
+            return false;
+        }
+
+        if (!TryGetLegacyBreakDuration(toolKind, out float duration))
+        {
+            duration = Mathf.Max(0.01f, breakInteractDuration);
+        }
+
+        return TryStartBreakInteraction(breaker, duration);
     }
 
     public void TakeDamage(float amount, GameObject source, Vector3 hitPoint, Vector3 hitNormal)
@@ -316,6 +406,97 @@ if (lockedShakeTimer > 0f)
     {
         SashRuntime sash = GetNearestBreakableSash(worldPoint);
         BreakSash(sash, worldPoint, impactDirection, source);
+    }
+
+    private bool TryStartBreakInteraction(GameObject interactor)
+    {
+        return TryStartBreakInteraction(interactor, Mathf.Max(0.01f, breakInteractDuration));
+    }
+
+    private bool TryStartBreakInteraction(GameObject interactor, float duration)
+    {
+        if (isBreakInProgress || CountBrokenSashes() >= sashes.Count)
+            return false;
+
+        activeBreaker = interactor;
+        isBreakInProgress = true;
+
+        if (
+            lockPlayerWhileBreaking
+            && interactor != null
+            && interactor.GetComponent<BotCommandAgent>() == null
+        )
+        {
+            activePlayerLock = PlayerActionLock.GetOrCreate(interactor);
+            activePlayerLock?.AcquireFullLock();
+        }
+
+        if (interactor != null && interactor.GetComponent<BotCommandAgent>() == null)
+        {
+            activeAnimationState = PlayerInteractionAnimationState.GetOrCreate(interactor);
+            activeAnimationState?.BeginAction(PlayerInteractionAnimationAction.BreakingObject, this, duration);
+            PlayerContinuousActionBus.StartAction();
+        }
+
+        breakRoutine = StartCoroutine(BreakAfterDelay(Mathf.Max(0.01f, duration)));
+        return true;
+    }
+
+    private IEnumerator BreakAfterDelay(float duration)
+    {
+        float endTime = Time.time + duration;
+        while (Time.time < endTime)
+        {
+            if (!isActiveAndEnabled || CountBrokenSashes() >= sashes.Count)
+            {
+                CancelBreakInteraction();
+                yield break;
+            }
+
+            float progress = 1f - ((endTime - Time.time) / duration);
+            if (activeBreaker != null && activeBreaker.GetComponent<BotCommandAgent>() == null)
+            {
+                PlayerContinuousActionBus.UpdateProgress(progress);
+            }
+
+            yield return null;
+        }
+
+        Vector3 impactPoint = activeBreaker != null ? activeBreaker.transform.position : transform.position;
+        BreakPreferredSash(impactPoint, ResolveImpactDirection(activeBreaker, impactPoint), activeBreaker);
+        EndBreakInteraction();
+    }
+
+    private void CancelBreakInteraction()
+    {
+        if (breakRoutine != null)
+        {
+            StopCoroutine(breakRoutine);
+            breakRoutine = null;
+        }
+
+        EndBreakInteraction();
+    }
+
+    private void EndBreakInteraction()
+    {
+        if (isBreakInProgress && activeBreaker != null && activeBreaker.GetComponent<BotCommandAgent>() == null)
+        {
+            PlayerContinuousActionBus.EndAction(CountBrokenSashes() > 0);
+        }
+
+        isBreakInProgress = false;
+        activeBreaker = null;
+        activeAnimationState?.EndAction(PlayerInteractionAnimationAction.BreakingObject, this, force: true);
+        activeAnimationState = null;
+
+        if (activePlayerLock != null)
+        {
+            activePlayerLock.ReleaseFullLock();
+            activePlayerLock = null;
+        }
+
+        breakRoutine = null;
     }
 
     private SashRuntime GetNearestBreakableSash(Vector3 worldPoint)
@@ -775,6 +956,36 @@ if (lockedShakeTimer > 0f)
         }
 
         return count;
+    }
+
+    private static bool TryGetLegacyBreakDuration(BreakToolKind toolKind, out float duration)
+    {
+        duration = 0f;
+        switch (toolKind)
+        {
+            case BreakToolKind.FireAxe:
+                duration = LegacyGlassFireAxeTime;
+                return true;
+            case BreakToolKind.SledgeHammer:
+                duration = LegacyGlassSledgeHammerTime;
+                return true;
+            case BreakToolKind.Crowbar:
+                duration = LegacyGlassCrowbarTime;
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private void TriggerPlayerOpenWindowAnimation(GameObject interactor)
+    {
+        if (interactor == null || interactor.GetComponent<BotCommandAgent>() != null)
+        {
+            return;
+        }
+
+        PlayerInteractionAnimationState state = PlayerInteractionAnimationState.GetOrCreate(interactor);
+        state?.PulseAction(PlayerInteractionAnimationAction.OpeningWindow, 0.2f, this);
     }
 
     private GameObject[] ResolveShatterTargetsForSash(SashRuntime sash)

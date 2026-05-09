@@ -13,6 +13,7 @@ namespace StarterAssets
         [SerializeField] private FirstPersonController firstPersonController;
         [SerializeField] private FPSInventorySystem inventorySystem;
         [SerializeField] private FPSInteractionSystem interactionSystem;
+        [SerializeField] private PlayerInteractionAnimationState interactionAnimationState;
         [Tooltip("Velocity is converted into this local space before being sent to the animator.")]
         [SerializeField] private Transform velocityReference;
 
@@ -40,6 +41,27 @@ namespace StarterAssets
         [SerializeField] private string isHoldingParameter = "IsHolding";
         [SerializeField] private string hasItemParameter = "HasItem";
         [SerializeField] private string isCarryingVictimParameter = "IsCarryingVictim";
+        [SerializeField] private string isOpeningDoorParameter = "IsOpeningDoor";
+        [SerializeField] private string isOpeningWindowParameter = "IsOpeningWindow";
+        [SerializeField] private string isBreakingObjectParameter = "IsBreakingObject";
+        [SerializeField] private string isUsingDeviceParameter = "IsUsingDevice";
+        [SerializeField] private string isConnectingHoseParameter = "IsConnectingHose";
+        [SerializeField] private string isRescuingParameter = "IsRescuing";
+        [SerializeField] private string isStabilizingParameter = "IsStabilizing";
+
+        [Header("Trigger Parameters")]
+        [SerializeField] private string openDoorTriggerParameter = "OpenDoorTrigger";
+        [SerializeField] private string openWindowTriggerParameter = "OpenWindowTrigger";
+        [SerializeField] private string breakObjectTriggerParameter = "BreakObjectTrigger";
+        [SerializeField] private string useDeviceTriggerParameter = "UseDeviceTrigger";
+        [SerializeField] private string connectHoseTriggerParameter = "ConnectHoseTrigger";
+        [SerializeField] private string rescueTriggerParameter = "RescueTrigger";
+        [SerializeField] private string stabilizeTriggerParameter = "StabilizeTrigger";
+        [SerializeField] private string climbTriggerParameter = "ClimbTrigger";
+        [SerializeField] private string climbOverTriggerParameter = "ClimbOverTrigger";
+
+        [Header("Float Parameters")]
+        [SerializeField] private string speedParameter = "Speed";
 
         [Header("Int Parameters")]
         [SerializeField] private string itemCountParameter = "ItemCount";
@@ -75,12 +97,20 @@ namespace StarterAssets
         [SerializeField] private string heldItemName;
         [SerializeField] private string heldItemTypeName;
         [SerializeField] private bool isCarryingVictim;
+        [SerializeField] private bool isOpeningDoor;
+        [SerializeField] private bool isOpeningWindow;
+        [SerializeField] private bool isBreakingObject;
+        [SerializeField] private bool isUsingDevice;
+        [SerializeField] private bool isConnectingHose;
+        [SerializeField] private bool isRescuing;
+        [SerializeField] private bool isStabilizing;
 
         private readonly Dictionary<string, int> parameterHashes = new Dictionary<string, int>();
         private readonly Dictionary<string, int> dynamicHoldingParameterHashes = new Dictionary<string, int>();
         private readonly HashSet<int> floatParameterHashes = new HashSet<int>();
         private readonly HashSet<int> boolParameterHashes = new HashSet<int>();
         private readonly HashSet<int> intParameterHashes = new HashSet<int>();
+        private readonly HashSet<int> triggerParameterHashes = new HashSet<int>();
         private readonly HashSet<int> activeDynamicHoldingHashes = new HashSet<int>();
         private readonly List<int> dynamicHoldingHashesToDisable = new List<int>();
         private readonly Dictionary<int, bool> boolParameterValues = new Dictionary<int, bool>();
@@ -105,6 +135,11 @@ namespace StarterAssets
 
         private void LateUpdate()
         {
+            if (interactionAnimationState == null)
+            {
+                interactionAnimationState = GetComponent<PlayerInteractionAnimationState>();
+            }
+
             UpdateVelocityState();
             UpdateAnimationState();
             PushAnimatorParameters();
@@ -138,6 +173,11 @@ namespace StarterAssets
                 interactionSystem = GetComponent<FPSInteractionSystem>();
             }
 
+            if (interactionAnimationState == null)
+            {
+                interactionAnimationState = GetComponent<PlayerInteractionAnimationState>();
+            }
+
             if (animator == null)
             {
                 animator = GetComponentInChildren<Animator>();
@@ -169,6 +209,23 @@ namespace StarterAssets
             CacheHash(isHoldingParameter);
             CacheHash(hasItemParameter);
             CacheHash(isCarryingVictimParameter);
+            CacheHash(isOpeningDoorParameter);
+            CacheHash(isOpeningWindowParameter);
+            CacheHash(isBreakingObjectParameter);
+            CacheHash(isUsingDeviceParameter);
+            CacheHash(isConnectingHoseParameter);
+            CacheHash(isRescuingParameter);
+            CacheHash(isStabilizingParameter);
+            CacheHash(openDoorTriggerParameter);
+            CacheHash(openWindowTriggerParameter);
+            CacheHash(breakObjectTriggerParameter);
+            CacheHash(useDeviceTriggerParameter);
+            CacheHash(connectHoseTriggerParameter);
+            CacheHash(rescueTriggerParameter);
+            CacheHash(stabilizeTriggerParameter);
+            CacheHash(climbTriggerParameter);
+            CacheHash(climbOverTriggerParameter);
+            CacheHash(speedParameter);
 
             CacheHash(itemCountParameter);
             CacheHash(heldItemNameHashParameter);
@@ -182,6 +239,7 @@ namespace StarterAssets
             floatParameterHashes.Clear();
             boolParameterHashes.Clear();
             intParameterHashes.Clear();
+            triggerParameterHashes.Clear();
             boolParameterValues.Clear();
             intParameterValues.Clear();
 
@@ -204,6 +262,9 @@ namespace StarterAssets
                         break;
                     case AnimatorControllerParameterType.Int:
                         intParameterHashes.Add(parameter.nameHash);
+                        break;
+                    case AnimatorControllerParameterType.Trigger:
+                        triggerParameterHashes.Add(parameter.nameHash);
                         break;
                 }
             }
@@ -256,6 +317,13 @@ namespace StarterAssets
             heldItemName = isHolding ? heldObject.name : string.Empty;
             heldItemTypeName = ResolveHeldItemTypeName(heldObject);
             isCarryingVictim = interactionSystem != null && interactionSystem.IsCarryingVictim;
+            isOpeningDoor = interactionAnimationState != null && interactionAnimationState.IsActionActive(PlayerInteractionAnimationAction.OpeningDoor);
+            isOpeningWindow = interactionAnimationState != null && interactionAnimationState.IsActionActive(PlayerInteractionAnimationAction.OpeningWindow);
+            isBreakingObject = interactionAnimationState != null && interactionAnimationState.IsActionActive(PlayerInteractionAnimationAction.BreakingObject);
+            isUsingDevice = interactionAnimationState != null && interactionAnimationState.IsActionActive(PlayerInteractionAnimationAction.UsingDevice);
+            isConnectingHose = interactionAnimationState != null && interactionAnimationState.IsActionActive(PlayerInteractionAnimationAction.ConnectingHose);
+            isRescuing = interactionAnimationState != null && interactionAnimationState.IsActionActive(PlayerInteractionAnimationAction.Rescuing);
+            isStabilizing = interactionAnimationState != null && interactionAnimationState.IsActionActive(PlayerInteractionAnimationAction.Stabilizing);
         }
 
         private void PushAnimatorParameters()
@@ -281,12 +349,39 @@ namespace StarterAssets
             SetBool(isHoldingParameter, isHolding);
             SetBool(hasItemParameter, itemCount > 0);
             SetBool(isCarryingVictimParameter, isCarryingVictim);
+            SetBool(isOpeningDoorParameter, isOpeningDoor);
+            SetBool(isOpeningWindowParameter, isOpeningWindow);
+            SetBool(isBreakingObjectParameter, isBreakingObject);
+            SetBool(isUsingDeviceParameter, isUsingDevice);
+            SetBool(isConnectingHoseParameter, isConnectingHose);
+            SetBool(isRescuingParameter, isRescuing);
+            SetBool(isStabilizingParameter, isStabilizing);
 
+            SetFloat(speedParameter, speed);
             SetInt(itemCountParameter, itemCount);
             SetInt(heldItemNameHashParameter, string.IsNullOrWhiteSpace(heldItemName) ? 0 : Animator.StringToHash(heldItemName));
             SetInt(heldItemTypeHashParameter, string.IsNullOrWhiteSpace(heldItemTypeName) ? 0 : Animator.StringToHash(heldItemTypeName));
 
+            PushInteractionTriggers();
             UpdateDynamicHoldingParameters();
+        }
+
+        private void PushInteractionTriggers()
+        {
+            if (interactionAnimationState == null)
+            {
+                return;
+            }
+
+            TryConsumeTrigger(PlayerInteractionAnimationAction.OpeningDoor, openDoorTriggerParameter);
+            TryConsumeTrigger(PlayerInteractionAnimationAction.OpeningWindow, openWindowTriggerParameter);
+            TryConsumeTrigger(PlayerInteractionAnimationAction.BreakingObject, breakObjectTriggerParameter);
+            TryConsumeTrigger(PlayerInteractionAnimationAction.UsingDevice, useDeviceTriggerParameter);
+            TryConsumeTrigger(PlayerInteractionAnimationAction.ConnectingHose, connectHoseTriggerParameter);
+            TryConsumeTrigger(PlayerInteractionAnimationAction.Rescuing, rescueTriggerParameter);
+            TryConsumeTrigger(PlayerInteractionAnimationAction.Stabilizing, stabilizeTriggerParameter);
+            TryConsumeTrigger(PlayerInteractionAnimationAction.Climb, climbTriggerParameter);
+            TryConsumeTrigger(PlayerInteractionAnimationAction.ClimbOver, climbOverTriggerParameter);
         }
 
         private void UpdateDynamicHoldingParameters()
@@ -445,6 +540,21 @@ namespace StarterAssets
 
             animator.SetBool(parameterHash, value);
             boolParameterValues[parameterHash] = value;
+        }
+
+        private void TryConsumeTrigger(PlayerInteractionAnimationAction action, string parameterName)
+        {
+            if (!interactionAnimationState.ConsumeTrigger(action))
+            {
+                return;
+            }
+
+            if (!TryGetHash(parameterName, out int parameterHash) || !triggerParameterHashes.Contains(parameterHash))
+            {
+                return;
+            }
+
+            animator.SetTrigger(parameterHash);
         }
 
         private static string ResolveHeldItemTypeName(GameObject heldObject)

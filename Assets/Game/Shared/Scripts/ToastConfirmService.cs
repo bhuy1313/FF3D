@@ -219,4 +219,6 @@ public class ToastConfirmView : MonoBehaviour
         canvasGroup.interactable = visible;
         canvasGroup.blocksRaycasts = visible;
     }
+
+    
 }

@@ -11,6 +11,7 @@ public class SubMenuEscapeHost : MonoBehaviour
     [SerializeField] private SubMenuPanelController subMenuPanelController;
     [SerializeField] private WheelSelector wheelSelector;
     [SerializeField] private MissionEndOverlayController missionEndOverlayController;
+    [SerializeField] private GuideBookRuntimeBootstrap guideBookRuntimeBootstrap;
     [SerializeField] private bool closePanelOnStart = true;
     [SerializeField] private GameObject settingPanelPrefab;
     [SerializeField] private GameObject toastPrefab;
@@ -67,6 +68,13 @@ public class SubMenuEscapeHost : MonoBehaviour
             return;
         }
 
+        ResolveGuideBookRuntimeBootstrap();
+        if (guideBookRuntimeBootstrap != null && guideBookRuntimeBootstrap.IsGuideBookVisible)
+        {
+            guideBookRuntimeBootstrap.RequestCloseGuideBook();
+            return;
+        }
+
         if (IsSettingsOpen())
         {
             RequestCloseSettings();
@@ -120,6 +128,16 @@ public class SubMenuEscapeHost : MonoBehaviour
         }
 
         wheelSelector = FindAnyObjectByType<WheelSelector>(FindObjectsInactive.Include);
+    }
+
+    private void ResolveGuideBookRuntimeBootstrap()
+    {
+        if (guideBookRuntimeBootstrap != null)
+        {
+            return;
+        }
+
+        guideBookRuntimeBootstrap = FindAnyObjectByType<GuideBookRuntimeBootstrap>(FindObjectsInactive.Include);
     }
 
     private void BindSubMenuActions()
@@ -293,6 +311,12 @@ public class SubMenuEscapeHost : MonoBehaviour
 
     public void ForceCloseAll()
     {
+        ResolveGuideBookRuntimeBootstrap();
+        if (guideBookRuntimeBootstrap != null && guideBookRuntimeBootstrap.IsGuideBookVisible)
+        {
+            guideBookRuntimeBootstrap.RequestCloseGuideBook();
+        }
+
         if (IsSettingsOpen())
         {
             SetSettingsVisible(false);

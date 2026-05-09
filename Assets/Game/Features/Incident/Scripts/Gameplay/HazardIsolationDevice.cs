@@ -74,6 +74,7 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
 
     private Coroutine transitionRoutine;
     private PlayerActionLock activePlayerLock;
+    private PlayerInteractionAnimationState activeAnimationState;
     private FireSimulationManager subscribedManager;
     private readonly List<FireRuntimeNode> linkedFireNodeBuffer = new List<FireRuntimeNode>();
 
@@ -262,13 +263,51 @@ public class HazardIsolationDevice : MonoBehaviour, IInteractable, IBotHazardIso
         currentStateSummary = BuildTransitionSummary(nextState);
         RefreshPresentation();
         AcquirePlayerLock(interactor);
-
         float waitSeconds = Mathf.Max(0.01f, interactionDuration);
-        yield return new WaitForSeconds(waitSeconds);
+        bool isPlayerInteractor = interactor != null && interactor.GetComponent<BotCommandAgent>() == null;
+        if (isPlayerInteractor)
+        {
+            activeAnimationState = PlayerInteractionAnimationState.GetOrCreate(interactor);
+            activeAnimationState?.BeginAction(PlayerInteractionAnimationAction.UsingDevice, this, waitSeconds);
+            PlayerContinuousActionBus.StartAction();
+        }
+
+        float endTime = Time.time + waitSeconds;
+        while (Time.time < endTime)
+        {
+            if (!isActiveAndEnabled)
+            {
+                if (isPlayerInteractor)
+                {
+                    PlayerContinuousActionBus.EndAction(false);
+                }
+
+                transitionRoutine = null;
+                ReleasePlayerLock();
+                isTransitionInProgress = false;
+                activeAnimationState?.EndAction(PlayerInteractionAnimationAction.UsingDevice, this, force: true);
+                activeAnimationState = null;
+                yield break;
+            }
+
+            if (isPlayerInteractor)
+            {
+                float progress = 1f - ((endTime - Time.time) / waitSeconds);
+                PlayerContinuousActionBus.UpdateProgress(progress);
+            }
+
+            yield return null;
+        }
 
         transitionRoutine = null;
         ReleasePlayerLock();
         ApplyIsolationState(nextState, invokeEvents: true);
+        activeAnimationState?.EndAction(PlayerInteractionAnimationAction.UsingDevice, this, force: true);
+        activeAnimationState = null;
+        if (isPlayerInteractor)
+        {
+            PlayerContinuousActionBus.EndAction(true);
+        }
     }
 
     private void ResolveFireSimulationManager()

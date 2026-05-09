@@ -8,11 +8,6 @@ public class FPSInventorySystem : MonoBehaviour
     [SerializeField] private Transform equipRoot;
     [SerializeField] private Transform inventoryRoot;
     [SerializeField] private bool hideStoredItems = true;
-    [Header("EquipRoot Rotation Lag")]
-    [SerializeField] private bool useEquipRootRotationLag = true;
-    [SerializeField] private float equipRootRotationFollowSpeed = 12f;
-    [SerializeField] private float equipRootRotationMaxAngle = 8f;
-    [SerializeField] private bool createRuntimeLagPivot = true;
 
     private class InventorySlot
     {
@@ -25,8 +20,6 @@ public class FPSInventorySystem : MonoBehaviour
 
     private readonly System.Collections.Generic.List<InventorySlot> slots = new System.Collections.Generic.List<InventorySlot>();
     private int activeIndex = -1;
-    private ChildRotationLag rotationLag;
-    private Transform runtimeLagPivot;
 
     public bool HasItem => activeIndex >= 0 && activeIndex < slots.Count;
     public int ItemCount => slots.Count;
@@ -46,9 +39,6 @@ public class FPSInventorySystem : MonoBehaviour
             }
         }
 
-        ConfigureEquipRootRotationLag();
-        ApplyRotationLagSettings();
-
         if (inventoryRoot == null)
         {
             GameObject root = new GameObject("InventoryRoot");
@@ -59,7 +49,6 @@ public class FPSInventorySystem : MonoBehaviour
 
     private void LateUpdate()
     {
-        ApplyRotationLagSettings();
         TickRuntimeInventoryItems(Time.deltaTime);
     }
 
@@ -421,71 +410,4 @@ public class FPSInventorySystem : MonoBehaviour
         return false;
     }
 
-    private void ConfigureEquipRootRotationLag()
-    {
-        if (equipRoot == null)
-        {
-            return;
-        }
-
-        if (useEquipRootRotationLag && createRuntimeLagPivot && Application.isPlaying)
-        {
-            Transform followParent = equipRoot.parent;
-            if (followParent == null)
-            {
-                return;
-            }
-
-            if (runtimeLagPivot == null)
-            {
-                Transform existingPivot = followParent.Find("EquipRootLagPivot");
-                if (existingPivot != null)
-                {
-                    runtimeLagPivot = existingPivot;
-                }
-                else
-                {
-                    GameObject pivot = new GameObject("EquipRootLagPivot");
-                    pivot.transform.SetParent(followParent, false);
-                    pivot.transform.localPosition = equipRoot.localPosition;
-                    pivot.transform.localRotation = equipRoot.localRotation;
-                    runtimeLagPivot = pivot.transform;
-                }
-            }
-
-            rotationLag = runtimeLagPivot.GetComponent<ChildRotationLag>();
-            if (rotationLag == null)
-            {
-                rotationLag = runtimeLagPivot.gameObject.AddComponent<ChildRotationLag>();
-            }
-
-            equipRoot = runtimeLagPivot;
-            return;
-        }
-
-        rotationLag = equipRoot.GetComponent<ChildRotationLag>();
-        if (rotationLag == null)
-        {
-            rotationLag = equipRoot.gameObject.AddComponent<ChildRotationLag>();
-        }
-    }
-
-    private void ApplyRotationLagSettings()
-    {
-        if (rotationLag == null)
-        {
-            return;
-        }
-
-        if (!useEquipRootRotationLag)
-        {
-            rotationLag.enabled = false;
-            return;
-        }
-
-        rotationLag.enabled = true;
-        rotationLag.parentToFollow = equipRoot.parent;
-        rotationLag.followSpeed = Mathf.Max(0.01f, equipRootRotationFollowSpeed);
-        rotationLag.maxAngle = Mathf.Clamp(equipRootRotationMaxAngle, 0f, 45f);
-    }
 }

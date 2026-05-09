@@ -9,6 +9,7 @@ public class GameMasterUiMovementInputLock : MonoBehaviour
     [SerializeField] private DispatchNotesUIController dispatchNotesUI;
     [SerializeField] private SubMenuPanelController subMenuPanelController;
     [SerializeField] private SubMenuEscapeHost subMenuEscapeHost;
+    [SerializeField] private CanvasGroup guideScreenCanvasGroup;
 
     [Header("Player References")]
     [SerializeField] private GameObject playerRoot;
@@ -83,6 +84,11 @@ public class GameMasterUiMovementInputLock : MonoBehaviour
         }
 
         if (subMenuEscapeHost != null && subMenuEscapeHost.IsSettingsVisible)
+        {
+            return true;
+        }
+
+        if (guideScreenCanvasGroup != null && guideScreenCanvasGroup.alpha > 0.001f && guideScreenCanvasGroup.blocksRaycasts)
         {
             return true;
         }
@@ -195,6 +201,15 @@ public class GameMasterUiMovementInputLock : MonoBehaviour
         if (subMenuEscapeHost == null)
         {
             subMenuEscapeHost = FindAnyObjectByType<SubMenuEscapeHost>(FindObjectsInactive.Include);
+        }
+
+        if (guideScreenCanvasGroup == null)
+        {
+            GuideBookRuntimeBootstrap guideBootstrap = FindAnyObjectByType<GuideBookRuntimeBootstrap>(FindObjectsInactive.Include);
+            if (guideBootstrap != null)
+            {
+                guideScreenCanvasGroup = guideBootstrap.GuideScreenCanvasGroup;
+            }
         }
 
         if (playerRoot == null)

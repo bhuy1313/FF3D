@@ -11,8 +11,8 @@ GameObject:
   - component: {fileID: 5842722545830707931}
   - component: {fileID: 1090410461770226201}
   - component: {fileID: 5642897880644840470}
-  - component: {fileID: 4144566255784083906}
   - component: {fileID: 3649061564086455094}
+  - component: {fileID: 4144566255784083906}
   - component: {fileID: 2905292877014590051}
   - component: {fileID: 2074493410722087504}
   - component: {fileID: 3994074983981014269}
@@ -79,28 +79,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Item
   itemName: Crowbar
-  itemDescription: 
-  itemIcon: {fileID: 0}
---- !u!114 &4144566255784083906
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7227241211258806717}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshModifier
-  m_SerializedVersion: 0
-  m_OverrideArea: 0
-  m_Area: 0
-  m_OverrideGenerateLinks: 0
-  m_GenerateLinks: 0
-  m_IgnoreFromBuild: 1
-  m_ApplyToChildren: 1
-  m_AffectedAgents: ffffffff
+  itemDescription: A sturdy crowbar useful for prying open doors and breaking objects.
+  itemIcon: {fileID: 21300000, guid: 27705a47f1d977d4b97a1865c04a49fd, type: 3}
 --- !u!114 &3649061564086455094
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -124,6 +104,26 @@ MonoBehaviour:
   botUseCooldown: 0.6
   currentHolder: {fileID: 0}
   claimOwner: {fileID: 0}
+--- !u!114 &4144566255784083906
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7227241211258806717}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshModifier
+  m_SerializedVersion: 0
+  m_OverrideArea: 0
+  m_Area: 0
+  m_OverrideGenerateLinks: 0
+  m_GenerateLinks: 0
+  m_IgnoreFromBuild: 1
+  m_ApplyToChildren: 1
+  m_AffectedAgents: ffffffff
 --- !u!114 &2905292877014590051
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -137,6 +137,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TrueJourney.BotCommands::TrueJourney.BotBehavior.BotEquippedItemPoseProfile
   overrideBotEquippedPose: 1
+  logPoseResolution: 1
   poseEntries:
   - key: 0
     pose:

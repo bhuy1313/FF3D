@@ -16,7 +16,7 @@ MonoBehaviour:
   scenarioId: storage_room_fire
   title: Storage Room Fire Procedure
   titleLocalizationKey: 
-  summary: Control combustible spread, protect adjacent rooms, and avoid letting smoke overwhelm the research wing.
+  summary: Confirm the burning storage compartment, assess combustible spread risk, protect nearby spaces, and keep smoke from cutting off the research wing.
   summaryLocalizationKey: 
   hazardType: 
   fireLocation: 
@@ -26,10 +26,67 @@ MonoBehaviour:
   secondaryPriority: 2
   tertiaryPriority: 0
   checklistItems:
-  - itemId: contain_storage_room_fire
-    title: Contain the storage room fire before spread
+  - itemId: confirm_storage_room_location
+    title: Confirm the exact storage room involved
     titleLocalizationKey: 
-    description: Stop extension from the storage room into nearby circulation and work spaces.
+    description: Identify the burning room and confirm the best access route before committing.
+    descriptionLocalizationKey: 
+    itemType: 0
+    priority: 2
+    validationMode: 0
+    completionSignalKey: 
+    invalidationSignalKey: 
+    completionStateKey: 
+    invalidationStateKey: 
+    defaultChecked: 0
+    hiddenUntilRelevant: 0
+    relevanceConditionSummary: 
+    scoringAxis: 3
+    scoreDelta: 3
+    failureFeedback: 
+    failureFeedbackLocalizationKey: 
+  - itemId: assess_combustible_spread_risk
+    title: Assess combustible spread risk
+    titleLocalizationKey: 
+    description: Check the fuel package, smoke output, and likelihood of extension into nearby spaces.
+    descriptionLocalizationKey: 
+    itemType: 0
+    priority: 3
+    validationMode: 0
+    completionSignalKey: 
+    invalidationSignalKey: 
+    completionStateKey: 
+    invalidationStateKey: 
+    defaultChecked: 0
+    hiddenUntilRelevant: 0
+    relevanceConditionSummary: 
+    scoringAxis: 1
+    scoreDelta: 4
+    failureFeedback: 
+    failureFeedbackLocalizationKey: 
+  - itemId: verify_adjacent_occupant_risk
+    title: Verify no one nearby is threatened or cut off
+    titleLocalizationKey: 
+    description: Check whether smoke or fire spread threatens people in adjacent circulation or work areas.
+    descriptionLocalizationKey: 
+    itemType: 2
+    priority: 2
+    validationMode: 0
+    completionSignalKey: 
+    invalidationSignalKey: 
+    completionStateKey: 
+    invalidationStateKey: 
+    defaultChecked: 0
+    hiddenUntilRelevant: 1
+    relevanceConditionSummary: Becomes critical if a trapped victim is encountered during suppression.
+    scoringAxis: 0
+    scoreDelta: 4
+    failureFeedback: 
+    failureFeedbackLocalizationKey: 
+  - itemId: contain_fire_within_storage_compartment
+    title: Contain the fire within the storage compartment
+    titleLocalizationKey: 
+    description: Prioritize stopping extension from the room into nearby circulation and work spaces.
     descriptionLocalizationKey: 
     itemType: 0
     priority: 3
@@ -42,27 +99,46 @@ MonoBehaviour:
     hiddenUntilRelevant: 0
     relevanceConditionSummary: 
     scoringAxis: 1
-    scoreDelta: 10
-    failureFeedback: Fire containment remains unverified by the current procedure layer.
+    scoreDelta: 5
+    failureFeedback: 
     failureFeedbackLocalizationKey: 
-  - itemId: verify_secondary_victims
-    title: Verify no one is cut off by smoke spread
+  - itemId: protect_adjacent_rooms_and_routes
+    title: Protect adjacent rooms and movement routes
     titleLocalizationKey: 
-    description: Check adjacent occupancy risk while the fire is being contained.
+    description: Keep nearby rooms and access routes from becoming compromised by spread or smoke.
     descriptionLocalizationKey: 
-    itemType: 2
+    itemType: 1
     priority: 2
-    validationMode: 1
-    completionSignalKey: deliver-target
+    validationMode: 0
+    completionSignalKey: 
     invalidationSignalKey: 
-    completionStateKey: any-rescue-delivered
+    completionStateKey: 
     invalidationStateKey: 
     defaultChecked: 0
-    hiddenUntilRelevant: 1
-    relevanceConditionSummary: Becomes critical if a trapped victim is encountered during suppression.
-    scoringAxis: 0
-    scoreDelta: 6
-    failureFeedback: No rescue delivery was verified for the storage wing procedure.
+    hiddenUntilRelevant: 0
+    relevanceConditionSummary: 
+    scoringAxis: 2
+    scoreDelta: 3
+    failureFeedback: 
+    failureFeedbackLocalizationKey: 
+  - itemId: reassess_smoke_and_reflash
+    title: Reassess smoke conditions and re-flash risk
+    titleLocalizationKey: 
+    description: Review whether the research wing remains safe and whether the storage room is stable after control.
+    descriptionLocalizationKey: 
+    itemType: 1
+    priority: 1
+    validationMode: 0
+    completionSignalKey: 
+    invalidationSignalKey: 
+    completionStateKey: 
+    invalidationStateKey: 
+    defaultChecked: 0
+    hiddenUntilRelevant: 0
+    relevanceConditionSummary: 
+    scoringAxis: 3
+    scoreDelta: 2
+    failureFeedback: 
     failureFeedbackLocalizationKey: 
   exceptionRules:
   - ruleId: rescue_from_spread_zone
@@ -80,13 +156,13 @@ MonoBehaviour:
     penaltyScoreDelta: -8
   successDebriefLines:
   - lineId: storage_success
-    text: The storage-room procedure emphasized spread control, and the run maintained that containment-first posture.
+    text: The recommended sequence is confirm the compartment, assess spread risk, verify nearby life hazard, contain the fire, protect adjacent spaces, and reassess.
     textLocalizationKey: 
     scoringAxis: 1
     severity: 1
   failureDebriefLines:
   - lineId: storage_failure
-    text: The storage-room run left its core containment step unverified, so spread-control performance is unclear.
+    text: Storage room incidents should emphasize compartment containment and smoke management before treating nearby areas as secure.
     textLocalizationKey: 
     scoringAxis: 1
     severity: 2

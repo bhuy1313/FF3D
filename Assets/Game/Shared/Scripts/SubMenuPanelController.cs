@@ -15,12 +15,14 @@ public class SubMenuPanelController : MonoBehaviour
     [SerializeField] private Button quitButton;
     [SerializeField] private Button mainMenuButton;
     [SerializeField] private Button settingsButton;
+    [SerializeField] private Button guideButton;
 
     [Header("Events")]
     [SerializeField] private UnityEvent onResumePressed;
     [SerializeField] private UnityEvent onQuitPressed;
     [SerializeField] private UnityEvent onMainMenuPressed;
     [SerializeField] private UnityEvent onSettingsPressed;
+    [SerializeField] private UnityEvent onGuidePressed;
 
     [Header("Default Actions")]
     [SerializeField] private bool closeOnResumePressed = true;
@@ -31,6 +33,7 @@ public class SubMenuPanelController : MonoBehaviour
     private UnityAction runtimeQuitAction;
     private UnityAction runtimeMainMenuAction;
     private UnityAction runtimeSettingsAction;
+    private UnityAction runtimeGuideAction;
     private bool buttonEventsBound;
 
     public bool IsOpen => canvasGroup != null && canvasGroup.alpha > 0.001f;
@@ -38,6 +41,7 @@ public class SubMenuPanelController : MonoBehaviour
     public Button QuitButton => quitButton;
     public Button MainMenuButton => mainMenuButton;
     public Button SettingsButton => settingsButton;
+    public Button GuideButton => guideButton;
 
     public void EnsureInitialized()
     {
@@ -78,6 +82,13 @@ public class SubMenuPanelController : MonoBehaviour
             settingsButton = FindNestedButton(transform, "BtnSetting") ??
                              FindButtonByLabel(transform, "Settings") ??
                              FindButtonByLabel(transform, "Setting");
+        }
+
+        if (guideButton == null)
+        {
+            guideButton = FindNestedButton(transform, "btnGuide") ??
+                          FindNestedButton(transform, "BtnGuide") ??
+                          FindButtonByLabel(transform, "Guide");
         }
 
         BindButtonEvents();
@@ -133,6 +144,12 @@ public class SubMenuPanelController : MonoBehaviour
         runtimeSettingsAction = action;
     }
 
+    public void SetGuideAction(UnityAction action)
+    {
+        EnsureInitialized();
+        runtimeGuideAction = action;
+    }
+
     private void BindButtonEvents()
     {
         if (buttonEventsBound)
@@ -146,6 +163,7 @@ public class SubMenuPanelController : MonoBehaviour
         RebindButton(quitButton, HandleQuitPressed);
         RebindButton(mainMenuButton, HandleMainMenuPressed);
         RebindButton(settingsButton, HandleSettingsPressed);
+        RebindButton(guideButton, HandleGuidePressed);
     }
 
     private void HandleResumePressed()
@@ -186,6 +204,12 @@ public class SubMenuPanelController : MonoBehaviour
     {
         onSettingsPressed?.Invoke();
         runtimeSettingsAction?.Invoke();
+    }
+
+    private void HandleGuidePressed()
+    {
+        onGuidePressed?.Invoke();
+        runtimeGuideAction?.Invoke();
     }
 
     private static void RebindButton(Button button, UnityAction action)

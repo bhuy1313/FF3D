@@ -9,6 +9,7 @@ public class SubMenuGameplayLock : MonoBehaviour
     [Header("SubMenu References")]
     [SerializeField] private SubMenuPanelController subMenuPanelController;
     [SerializeField] private SubMenuEscapeHost subMenuEscapeHost;
+    [SerializeField] private CanvasGroup guideScreenCanvasGroup;
 
     [Header("Gameplay References")]
     [SerializeField] private GameObject playerRoot;
@@ -73,7 +74,8 @@ public class SubMenuGameplayLock : MonoBehaviour
     private bool ShouldLockGameplay()
     {
         return (subMenuPanelController != null && subMenuPanelController.IsOpen) ||
-               (subMenuEscapeHost != null && subMenuEscapeHost.IsSettingsVisible);
+               (subMenuEscapeHost != null && subMenuEscapeHost.IsSettingsVisible) ||
+               (guideScreenCanvasGroup != null && guideScreenCanvasGroup.alpha > 0.001f && guideScreenCanvasGroup.blocksRaycasts);
     }
 
     private void AcquireGameplayLock()
@@ -174,6 +176,15 @@ public class SubMenuGameplayLock : MonoBehaviour
         if (subMenuEscapeHost == null)
         {
             subMenuEscapeHost = GetComponent<SubMenuEscapeHost>();
+        }
+
+        if (guideScreenCanvasGroup == null)
+        {
+            GuideBookRuntimeBootstrap guideBootstrap = FindAnyObjectByType<GuideBookRuntimeBootstrap>(FindObjectsInactive.Include);
+            if (guideBootstrap != null)
+            {
+                guideScreenCanvasGroup = guideBootstrap.GuideScreenCanvasGroup;
+            }
         }
 
         if (playerRoot == null)

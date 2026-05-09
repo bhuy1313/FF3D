@@ -97,6 +97,7 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
     private bool[] managedColliderStates;
     private VictimCondition victimCondition;
     private PlayerActionLock activePlayerActionLock;
+    private PlayerInteractionAnimationState activeAnimationState;
     private bool hasActiveProgressLock;
     private bool hasActiveCarryRestriction;
 
@@ -315,7 +316,38 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
 
     private IEnumerator BeginCarryAfterDelay(float duration)
     {
-        yield return new WaitForSeconds(duration);
+        bool isPlayerRescuer = IsPlayerRescuer(activeRescuer);
+        if (isPlayerRescuer)
+        {
+            activeAnimationState = PlayerInteractionAnimationState.GetOrCreate(activeRescuer);
+            activeAnimationState?.BeginAction(PlayerInteractionAnimationAction.Rescuing, this, duration);
+            PlayerContinuousActionBus.StartAction();
+        }
+
+        float endTime = Time.time + Mathf.Max(0.01f, duration);
+        while (Time.time < endTime)
+        {
+            if (!isActiveAndEnabled || isRescued || activeCarryAnchor == null)
+            {
+                if (isPlayerRescuer)
+                {
+                    PlayerContinuousActionBus.EndAction(false);
+                }
+
+                rescueRoutine = null;
+                activeAnimationState?.EndAction(PlayerInteractionAnimationAction.Rescuing, this, force: true);
+                activeAnimationState = null;
+                yield break;
+            }
+
+            if (isPlayerRescuer)
+            {
+                float progress = 1f - ((endTime - Time.time) / Mathf.Max(0.01f, duration));
+                PlayerContinuousActionBus.UpdateProgress(progress);
+            }
+
+            yield return null;
+        }
 
         rescueRoutine = null;
         if (isRescued || activeCarryAnchor == null)
@@ -323,6 +355,12 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
             isRescueInProgress = false;
             activeRescuer = null;
             ReleasePlayerProgressLock();
+            if (isPlayerRescuer)
+            {
+                PlayerContinuousActionBus.EndAction(false);
+            }
+            activeAnimationState?.EndAction(PlayerInteractionAnimationAction.Rescuing, this, force: true);
+            activeAnimationState = null;
             yield break;
         }
 
@@ -338,11 +376,49 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
         {
             SetColliderStates(false);
         }
+
+        if (isPlayerRescuer)
+        {
+            PlayerContinuousActionBus.EndAction(true);
+        }
+        activeAnimationState?.EndAction(PlayerInteractionAnimationAction.Rescuing, this, force: true);
+        activeAnimationState = null;
     }
 
     private IEnumerator StabilizeAfterDelay(float duration)
     {
-        yield return new WaitForSeconds(duration);
+        bool isPlayerRescuer = IsPlayerRescuer(activeRescuer);
+        if (isPlayerRescuer)
+        {
+            activeAnimationState = PlayerInteractionAnimationState.GetOrCreate(activeRescuer);
+            activeAnimationState?.BeginAction(PlayerInteractionAnimationAction.Stabilizing, this, duration);
+            PlayerContinuousActionBus.StartAction();
+        }
+
+        float endTime = Time.time + Mathf.Max(0.01f, duration);
+        while (Time.time < endTime)
+        {
+            if (!isActiveAndEnabled || isRescued || isCarried || victimCondition == null)
+            {
+                if (isPlayerRescuer)
+                {
+                    PlayerContinuousActionBus.EndAction(false);
+                }
+
+                stabilizationRoutine = null;
+                activeAnimationState?.EndAction(PlayerInteractionAnimationAction.Stabilizing, this, force: true);
+                activeAnimationState = null;
+                yield break;
+            }
+
+            if (isPlayerRescuer)
+            {
+                float progress = 1f - ((endTime - Time.time) / Mathf.Max(0.01f, duration));
+                PlayerContinuousActionBus.UpdateProgress(progress);
+            }
+
+            yield return null;
+        }
 
         stabilizationRoutine = null;
         if (isRescued || isCarried || victimCondition == null)
@@ -350,6 +426,12 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
             isRescueInProgress = false;
             activeRescuer = null;
             ReleasePlayerProgressLock();
+            if (isPlayerRescuer)
+            {
+                PlayerContinuousActionBus.EndAction(false);
+            }
+            activeAnimationState?.EndAction(PlayerInteractionAnimationAction.Stabilizing, this, force: true);
+            activeAnimationState = null;
             yield break;
         }
 
@@ -357,6 +439,12 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
         isRescueInProgress = false;
         activeRescuer = null;
         ReleasePlayerProgressLock();
+        if (isPlayerRescuer)
+        {
+            PlayerContinuousActionBus.EndAction(true);
+        }
+        activeAnimationState?.EndAction(PlayerInteractionAnimationAction.Stabilizing, this, force: true);
+        activeAnimationState = null;
     }
 
     private IEnumerator FinishExtractionAfterDelay(float duration)

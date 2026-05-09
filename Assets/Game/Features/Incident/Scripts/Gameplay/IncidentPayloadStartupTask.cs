@@ -6,7 +6,6 @@ using UnityEngine;
 public class IncidentPayloadStartupTask : SceneStartupTask
 {
     [Header("Payload")]
-    [SerializeField] private bool clearPendingPayloadAfterApply = true;
     [SerializeField] private bool logResolvedPayload = true;
 
     [Header("Scene Bindings")]
@@ -82,11 +81,6 @@ public class IncidentPayloadStartupTask : SceneStartupTask
                 $"fireCount={payload.initialFireCount}, intensity={payload.initialFireIntensity:0.00}, " +
                 $"smoke={payload.startSmokeDensity:0.00}, smokeMul={payload.smokeAccumulationMultiplier:0.00}.",
                 resolvedAnchor);
-        }
-
-        if (clearPendingPayloadAfterApply)
-        {
-            LoadingFlowState.ClearPendingIncidentPayload();
         }
 
         yield break;

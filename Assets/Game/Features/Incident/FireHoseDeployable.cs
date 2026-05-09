@@ -50,7 +50,6 @@ public class FireHoseDeployable : MonoBehaviour
     {
         UpdateHeadForwardFromObservedMotion();
         HandleMovement();
-        HandleGroundFollow();
         HandleKnotPlacement();
         DrawDebugVisualization();
         CacheObservedHeadPosition();
@@ -108,18 +107,6 @@ public class FireHoseDeployable : MonoBehaviour
 
         lastObservedHeadPosition = head.position;
         hasObservedHeadPosition = true;
-    }
-
-    void HandleGroundFollow()
-    {
-        if (TryProbeGround(head.position, out RaycastHit hit))
-        {
-            Vector3 target = hit.point + Vector3.up * heightOffset;
-            head.position = Vector3.Lerp(
-                head.position,
-                target,
-                groundFollowSpeed * Time.deltaTime);
-        }
     }
 
     void HandleKnotPlacement()

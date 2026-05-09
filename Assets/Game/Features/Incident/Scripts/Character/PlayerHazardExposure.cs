@@ -8,6 +8,7 @@ public class PlayerHazardExposure : MonoBehaviour
     private const float SmokeSubmissionGraceSeconds = 0.1f;
     private const int MaxTrackedFireGlareTargets = 4;
     private static readonly RaycastHit[] FireGlareHitBuffer = new RaycastHit[32];
+    private static readonly Vector2 DefaultViewportPosition = new Vector2(0.5f, 0.5f);
 
     [Header("Smoke")]
     [SerializeField] private float smokeRiseSpeed = 2.5f;
@@ -25,6 +26,7 @@ public class PlayerHazardExposure : MonoBehaviour
     [SerializeField] private bool requireLineOfSightForFireGlare = true;
     [SerializeField] private LayerMask fireGlareObstacleMask = ~0;
     [SerializeField, Range(1, MaxTrackedFireGlareTargets)] private int simultaneousFireOverlayCount = 2;
+    [SerializeField, Min(0.02f)] private float fireGlareScanInterval = 0.1f;
 
     [Header("Runtime")]
     [SerializeField, Range(0f, 1f)] private float smokeDensity01;
@@ -35,6 +37,10 @@ public class PlayerHazardExposure : MonoBehaviour
 
     private float smokeSubmissionDensity;
     private float lastSmokeSubmissionTime = float.NegativeInfinity;
+    private float nextFireGlareScanTime;
+    private readonly float[] fireTargetIntensities = new float[MaxTrackedFireGlareTargets];
+    private readonly float[] fireTargetDistances = new float[MaxTrackedFireGlareTargets];
+    private readonly Vector2[] fireTargetPositions = CreateDefaultFireViewportPositions();
 
     public float SmokeDensity01 => smokeDensity01;
     public bool IsInSmoke => isInSmoke;
@@ -42,7 +48,7 @@ public class PlayerHazardExposure : MonoBehaviour
     public Vector2 FireGlareViewportPosition =>
         fireGlareViewportPositions != null && fireGlareViewportPositions.Length > 0
             ? fireGlareViewportPositions[0]
-            : new Vector2(0.5f, 0.5f);
+            : DefaultViewportPosition;
     public int InSightFireCount => inSightFireCount;
     public int SimultaneousFireOverlayCount => Mathf.Clamp(simultaneousFireOverlayCount, 1, MaxTrackedFireGlareTargets);
     public Vector3 SmokeExposureSamplePoint => ResolveSmokeExposureSamplePoint();
@@ -60,6 +66,7 @@ public class PlayerHazardExposure : MonoBehaviour
         fireMinimumViewDot = Mathf.Clamp01(fireMinimumViewDot);
         fireViewportEdgeFade = Mathf.Max(0.01f, fireViewportEdgeFade);
         simultaneousFireOverlayCount = Mathf.Clamp(simultaneousFireOverlayCount, 1, MaxTrackedFireGlareTargets);
+        fireGlareScanInterval = Mathf.Max(0.02f, fireGlareScanInterval);
         smokeDensity01 = Mathf.Clamp01(smokeDensity01);
         inSightFireCount = Mathf.Max(0, inSightFireCount);
 
@@ -73,7 +80,7 @@ public class PlayerHazardExposure : MonoBehaviour
 
     private void Update()
     {
-        ResolveCamera();
+        EnsureCameraResolved();
         UpdateSmokeExposure(Time.deltaTime);
         UpdateFireGlare(Time.deltaTime);
     }
@@ -107,7 +114,7 @@ public class PlayerHazardExposure : MonoBehaviour
 
         if (index < 0 || index >= fireGlareViewportPositions.Length)
         {
-            return new Vector2(0.5f, 0.5f);
+            return DefaultViewportPosition;
         }
 
         return fireGlareViewportPositions[index];
@@ -137,7 +144,7 @@ public class PlayerHazardExposure : MonoBehaviour
         return Time.time - lastSmokeSubmissionTime <= SmokeSubmissionGraceSeconds;
     }
 
-    private void ResolveCamera()
+    private void EnsureCameraResolved()
     {
         if (targetCamera != null && targetCamera.isActiveAndEnabled)
         {
@@ -154,7 +161,7 @@ public class PlayerHazardExposure : MonoBehaviour
 
     private Vector3 ResolveSmokeExposureSamplePoint()
     {
-        ResolveCamera();
+        EnsureCameraResolved();
         if (targetCamera != null)
         {
             return targetCamera.transform.position;
@@ -168,49 +175,15 @@ public class PlayerHazardExposure : MonoBehaviour
         EnsureFireSlotArrays();
 
         float safeDeltaTime = Mathf.Max(0f, deltaTime);
-        float[] targetIntensities = new float[MaxTrackedFireGlareTargets];
-        Vector2[] targetPositions = CreateDefaultFireViewportPositions();
-        float[] targetDistances = new float[MaxTrackedFireGlareTargets];
         int trackedSlotCount = SimultaneousFireOverlayCount;
-        int visibleFireCount = 0;
-
-        for (int i = 0; i < targetDistances.Length; i++)
+        if (ShouldScanFireGlare())
         {
-            targetDistances[i] = float.PositiveInfinity;
+            ScanFireGlareTargets(trackedSlotCount);
         }
-
-        if (targetCamera != null)
-        {
-            foreach (IFireTarget fireTarget in BotRuntimeRegistry.ActiveFireTargets)
-            {
-                bool passes = TryEvaluateFireTarget(
-                    fireTarget,
-                    out float candidateIntensity,
-                    out Vector2 candidateViewportPosition,
-                    out float candidateDistance);
-
-                if (!passes)
-                {
-                    continue;
-                }
-
-                visibleFireCount++;
-                InsertFireCandidate(
-                    trackedSlotCount,
-                    candidateDistance,
-                    candidateIntensity,
-                    candidateViewportPosition,
-                    targetDistances,
-                    targetIntensities,
-                    targetPositions);
-            }
-        }
-
-        inSightFireCount = visibleFireCount;
 
         for (int i = 0; i < MaxTrackedFireGlareTargets; i++)
         {
-            float targetGlare = i < trackedSlotCount ? targetIntensities[i] : 0f;
+            float targetGlare = i < trackedSlotCount ? fireTargetIntensities[i] : 0f;
             float speed = targetGlare >= fireGlareBySlot[i]
                 ? fireGlareRiseSpeed
                 : fireGlareFallSpeed;
@@ -219,12 +192,78 @@ public class PlayerHazardExposure : MonoBehaviour
 
             if (targetGlare > 0f)
             {
-                fireGlareViewportPositions[i] = targetPositions[i];
+                fireGlareViewportPositions[i] = fireTargetPositions[i];
             }
             else if (fireGlareBySlot[i] <= 0.0001f)
             {
-                fireGlareViewportPositions[i] = new Vector2(0.5f, 0.5f);
+                fireGlareViewportPositions[i] = DefaultViewportPosition;
             }
+        }
+    }
+
+    private bool ShouldScanFireGlare()
+    {
+        if (targetCamera == null || !targetCamera.isActiveAndEnabled)
+        {
+            EnsureCameraResolved();
+        }
+
+        if (targetCamera == null)
+        {
+            ResetFireTargetBuffers();
+            inSightFireCount = 0;
+            nextFireGlareScanTime = Time.time + fireGlareScanInterval;
+            return false;
+        }
+
+        if (Time.time < nextFireGlareScanTime)
+        {
+            return false;
+        }
+
+        nextFireGlareScanTime = Time.time + fireGlareScanInterval;
+        return true;
+    }
+
+    private void ScanFireGlareTargets(int trackedSlotCount)
+    {
+        ResetFireTargetBuffers();
+
+        int visibleFireCount = 0;
+        foreach (IFireTarget fireTarget in BotRuntimeRegistry.ActiveFireTargets)
+        {
+            bool passes = TryEvaluateFireTarget(
+                fireTarget,
+                out float candidateIntensity,
+                out Vector2 candidateViewportPosition,
+                out float candidateDistance);
+
+            if (!passes)
+            {
+                continue;
+            }
+
+            visibleFireCount++;
+            InsertFireCandidate(
+                trackedSlotCount,
+                candidateDistance,
+                candidateIntensity,
+                candidateViewportPosition,
+                fireTargetDistances,
+                fireTargetIntensities,
+                fireTargetPositions);
+        }
+
+        inSightFireCount = visibleFireCount;
+    }
+
+    private void ResetFireTargetBuffers()
+    {
+        for (int i = 0; i < MaxTrackedFireGlareTargets; i++)
+        {
+            fireTargetIntensities[i] = 0f;
+            fireTargetDistances[i] = float.PositiveInfinity;
+            fireTargetPositions[i] = DefaultViewportPosition;
         }
     }
 
@@ -235,7 +274,7 @@ public class PlayerHazardExposure : MonoBehaviour
         out float distanceToPlayer)
     {
         intensity01 = 0f;
-        viewportPosition = new Vector2(0.5f, 0.5f);
+        viewportPosition = DefaultViewportPosition;
         distanceToPlayer = float.PositiveInfinity;
 
         if (targetCamera == null || fireTarget == null || !fireTarget.IsBurning)

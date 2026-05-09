@@ -11,6 +11,8 @@ namespace StarterAssets
 {
     public class FPSCommandSystem : MonoBehaviour
     {
+        private const string PlayerActionMapName = "Player";
+
         private readonly struct CommandWheelPage
         {
             public CommandWheelPage(string label, BotCommandType slot0, BotCommandType slot1, BotCommandType slot2, BotCommandType slot3)
@@ -63,6 +65,9 @@ namespace StarterAssets
         [SerializeField] private bool showDebugOverlay = true;
         [SerializeField] private bool logCommandSelection = true;
         [SerializeField] private Vector2 debugOverlayOffset = new Vector2(16f, 16f);
+        [SerializeField, Min(0f)] private float idleHoverRefreshInterval = 0.05f;
+        [SerializeField, Min(0f)] private float hoverRefreshPositionThreshold = 0.01f;
+        [SerializeField, Range(0f, 1f)] private float hoverRefreshLookThreshold = 0.9995f;
 
         [Header("Extinguish Command")]
         [SerializeField] private float extinguishScanRadius = 2.25f;
@@ -98,6 +103,12 @@ namespace StarterAssets
         private ICommandable pendingCommandable;
         private GameObject pendingCommandTarget;
         [SerializeField] private int activeCommandPageIndex;
+        private Vector3 lastHoverSamplePosition;
+        private Vector3 lastHoverSampleForward;
+        private float nextIdleHoverRefreshTime;
+#if ENABLE_INPUT_SYSTEM
+        private readonly Dictionary<string, InputAction> cachedInputActions = new Dictionary<string, InputAction>();
+#endif
 
         public GameObject HoveredCommandTarget => hoveredCommandTarget;
         public GameObject SelectedCommandTarget => selectedCommandTarget;
@@ -127,6 +138,7 @@ namespace StarterAssets
             }
 
             BotOutlineVisibilityManager.ConfigureRenderingLayer(botOutlineRenderingLayer);
+            CacheHoverSampleState();
         }
 
         private void OnDestroy()
@@ -166,7 +178,10 @@ namespace StarterAssets
                 return;
             }
 
-            UpdateHoveredCommandable();
+            if (ShouldRefreshHoveredCommandable())
+            {
+                UpdateHoveredCommandable();
+            }
 
             if (WasCommandActionPressedThisFrame("CommandCancel", cancelCommandKey))
             {
@@ -236,6 +251,54 @@ namespace StarterAssets
             }
 
             DrawDebugRay(ray, hit.distance, Color.green);
+        }
+
+        private bool ShouldRefreshHoveredCommandable()
+        {
+            if (viewCamera == null)
+            {
+                return false;
+            }
+
+            if (isAwaitingCommandSelection || commandState.IsAwaitingTarget)
+            {
+                CacheHoverSampleState();
+                nextIdleHoverRefreshTime = Time.time;
+                return true;
+            }
+
+            if (Time.time >= nextIdleHoverRefreshTime)
+            {
+                CacheHoverSampleState();
+                nextIdleHoverRefreshTime = Time.time + idleHoverRefreshInterval;
+                return true;
+            }
+
+            bool moved = (transform.position - lastHoverSamplePosition).sqrMagnitude >=
+                hoverRefreshPositionThreshold * hoverRefreshPositionThreshold;
+            bool looked = Vector3.Dot(lastHoverSampleForward, viewCamera.transform.forward) <= hoverRefreshLookThreshold;
+            bool hasCommandIntent =
+                WasCommandActionPressedThisFrame("CommandMove", moveCommandKey) ||
+                WasCommandActionPressedThisFrame("CommandCancel", cancelCommandKey) ||
+                WasCommandActionPressedThisFrame("CommandCancelAllFollow", cancelAllFollowKey) ||
+                WasCommandActionPressedThisFrame("ToggleBotOutline", toggleBotOutlineKey) ||
+                WasCommandActionPressedThisFrame("CommandCyclePage", cycleCommandPageKey) ||
+                WasCommandActionPressedThisFrame("CommandCyclePagePrevious", cycleCommandPagePreviousKey);
+
+            if (!moved && !looked && !hasCommandIntent)
+            {
+                return false;
+            }
+
+            CacheHoverSampleState();
+            nextIdleHoverRefreshTime = Time.time + idleHoverRefreshInterval;
+            return true;
+        }
+
+        private void CacheHoverSampleState()
+        {
+            lastHoverSamplePosition = transform.position;
+            lastHoverSampleForward = viewCamera != null ? viewCamera.transform.forward : transform.forward;
         }
 
         private void TryStartCommandSelection()
@@ -1520,12 +1583,26 @@ namespace StarterAssets
         private bool TryGetPlayerAction(string actionName, out InputAction action)
         {
             action = null;
-            if (playerInput == null || playerInput.actions == null)
+            if (string.IsNullOrWhiteSpace(actionName) || playerInput == null || playerInput.actions == null)
             {
                 return false;
             }
 
-            action = playerInput.actions.FindAction(actionName, throwIfNotFound: false);
+            if (cachedInputActions.TryGetValue(actionName, out action) && action != null)
+            {
+                return true;
+            }
+
+            InputActionMap playerActionMap = playerInput.actions.FindActionMap(PlayerActionMapName, throwIfNotFound: false);
+            action = playerActionMap != null
+                ? playerActionMap.FindAction(actionName, throwIfNotFound: false)
+                : playerInput.actions.FindAction(actionName, throwIfNotFound: false);
+
+            if (action != null)
+            {
+                cachedInputActions[actionName] = action;
+            }
+
             return action != null;
         }
 #endif

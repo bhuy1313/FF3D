@@ -72,6 +72,7 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
     private int currentOpenDirection = -1;
     private Coroutine pryRoutine;
     private PlayerActionLock activePlayerLock;
+    private PlayerInteractionAnimationState activeAnimationState;
 
     public bool IsOpen => isOpen;
     public bool IsLocked => isLocked;
@@ -312,6 +313,8 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
 
     private void OpenDoor(GameObject interactor)
     {
+        TriggerPlayerOpenDoorAnimation(interactor);
+
         if (audioSource != null && openSound != null)
         {
             audioSource.PlayOneShot(openSound);
@@ -395,7 +398,34 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
 
     private IEnumerator PryOpenAfterDelay(float duration, GameObject interactor)
     {
-        yield return new WaitForSeconds(duration);
+        bool isPlayerPryer = interactor != null && interactor.GetComponent<BotCommandAgent>() == null;
+        if (isPlayerPryer)
+        {
+            PlayerContinuousActionBus.StartAction();
+        }
+
+        float endTime = Time.time + Mathf.Max(0.01f, duration);
+        while (Time.time < endTime)
+        {
+            if (!isActiveAndEnabled || !HasRequiredDoorGeometry() || !isPryInProgress)
+            {
+                if (isPlayerPryer)
+                {
+                    PlayerContinuousActionBus.EndAction(false);
+                }
+
+                pryRoutine = null;
+                yield break;
+            }
+
+            if (isPlayerPryer)
+            {
+                float progress = 1f - ((endTime - Time.time) / Mathf.Max(0.01f, duration));
+                PlayerContinuousActionBus.UpdateProgress(progress);
+            }
+
+            yield return null;
+        }
 
         pryRoutine = null;
         if (!isActiveAndEnabled || !HasRequiredDoorGeometry())
@@ -403,6 +433,10 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
             isPryInProgress = false;
             activePryer = null;
             ReleasePryLock();
+            if (isPlayerPryer)
+            {
+                PlayerContinuousActionBus.EndAction(false);
+            }
             yield break;
         }
 
@@ -415,6 +449,10 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
         isPryInProgress = false;
         activePryer = null;
         ReleasePryLock();
+        if (isPlayerPryer)
+        {
+            PlayerContinuousActionBus.EndAction(true);
+        }
     }
 
     private void ApplyLegacyLockMigration()
@@ -442,7 +480,20 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
 
         isPryInProgress = false;
         activePryer = null;
+        activeAnimationState?.EndAction(PlayerInteractionAnimationAction.BreakingObject, this, force: true);
+        activeAnimationState = null;
         ReleasePryLock();
+    }
+
+    private void TriggerPlayerOpenDoorAnimation(GameObject interactor)
+    {
+        if (interactor == null || interactor.GetComponent<BotCommandAgent>() != null)
+        {
+            return;
+        }
+
+        PlayerInteractionAnimationState state = PlayerInteractionAnimationState.GetOrCreate(interactor);
+        state?.PulseAction(PlayerInteractionAnimationAction.OpeningDoor, 0.2f, this);
     }
 
     private void AcquirePryLock(GameObject interactor)

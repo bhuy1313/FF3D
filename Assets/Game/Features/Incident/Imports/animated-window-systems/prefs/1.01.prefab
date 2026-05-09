@@ -59,6 +59,8 @@ MonoBehaviour:
   allowToggle: 1
   breakOnInteract: 0
   isLocked: 0
+  breakInteractDuration: 0.35
+  lockPlayerWhileBreaking: 1
   smokeVentilationReliefWhenOpen: 0.28
   smokeVentilationReliefWhenBroken: 0.48
   fireDraftRiskWhenOpen: 0.08
@@ -87,11 +89,21 @@ MonoBehaviour:
   climbTraverseDuration: 0.55
   climbTraverseArcHeight: 0.35
   climbTraverseTiltAngle: 8
+  climbTraverseTiltScale: 0.65
+  climbTraverseMidPauseDuration: 0.16
+  climbTraverseMidPauseNormalizedTime: 0.5
+  climbTraverseMidPauseCompression: 0.035
+  climbTraverseMidPauseExtraTiltAngle: 2.5
+  climbTraverseMidPauseExtraTiltScale: 0.55
   drawClimbDebug: 0
   isOpen: 0
   isBroken: 0
   openSashCount: 0
   brokenSashCount: 0
+  isBreakInProgress: 0
+  lockedShakeDuration: 0.3
+  lockedShakeIntensity: 4.5
+  lockedShakeSpeed: 60
 --- !u!1 &2529068132785715841
 GameObject:
   m_ObjectHideFlags: 0

@@ -29,7 +29,7 @@ public class StartupOverviewCinematicController : MonoBehaviour
     [Header("Skip")]
     [SerializeField] private bool allowSkip = true;
     [SerializeField] private float skipAvailableDelay = 0.35f;
-    [SerializeField] private string skipButtonLabel = "Skip";
+    [SerializeField] private string skipButtonLabel = "Esc To Skip";
     [SerializeField] private Vector2 skipButtonSize = new Vector2(180f, 56f);
     [SerializeField] private Vector2 skipButtonScreenOffset = new Vector2(-32f, 32f);
     [SerializeField] private int skipButtonSortingOrder = 32761;
@@ -68,7 +68,6 @@ public class StartupOverviewCinematicController : MonoBehaviour
     private float[] segmentDurations = System.Array.Empty<float>();
     private float totalPathDuration;
     private GameObject runtimeSkipCanvasObject;
-    private Button runtimeSkipButton;
     private TMP_Text runtimeSkipButtonText;
 
     public bool IsPlaying => playRoutine != null;
@@ -676,9 +675,9 @@ public class StartupOverviewCinematicController : MonoBehaviour
             return;
         }
 
-        if (runtimeSkipCanvasObject != null && runtimeSkipButton != null && runtimeSkipButtonText != null)
+        if (runtimeSkipCanvasObject != null && runtimeSkipButtonText != null)
         {
-            runtimeSkipButtonText.text = string.IsNullOrWhiteSpace(skipButtonLabel) ? "Skip" : skipButtonLabel;
+            runtimeSkipButtonText.text = string.IsNullOrWhiteSpace(skipButtonLabel) ? "Esc To Skip" : skipButtonLabel;
             runtimeSkipCanvasObject.SetActive(true);
             return;
         }
@@ -693,36 +692,18 @@ public class StartupOverviewCinematicController : MonoBehaviour
         scaler.referenceResolution = new Vector2(1920f, 1080f);
         scaler.matchWidthOrHeight = 0.5f;
 
-        runtimeSkipCanvasObject.AddComponent<GraphicRaycaster>();
-
-        GameObject buttonObject = new GameObject("SkipButton");
-        buttonObject.transform.SetParent(runtimeSkipCanvasObject.transform, false);
-
-        RectTransform buttonRect = buttonObject.AddComponent<RectTransform>();
-        buttonRect.anchorMin = new Vector2(1f, 1f);
-        buttonRect.anchorMax = new Vector2(1f, 1f);
-        buttonRect.pivot = new Vector2(1f, 1f);
-        buttonRect.sizeDelta = skipButtonSize;
-        buttonRect.anchoredPosition = new Vector2(skipButtonScreenOffset.x, -Mathf.Abs(skipButtonScreenOffset.y));
-
-        Image buttonImage = buttonObject.AddComponent<Image>();
-        buttonImage.color = new Color(0.07f, 0.07f, 0.07f, 0.82f);
-
-        runtimeSkipButton = buttonObject.AddComponent<Button>();
-        runtimeSkipButton.targetGraphic = buttonImage;
-        runtimeSkipButton.onClick.AddListener(RequestSkip);
-
-        GameObject labelObject = new GameObject("Label");
-        labelObject.transform.SetParent(buttonObject.transform, false);
+        GameObject labelObject = new GameObject("SkipLabel");
+        labelObject.transform.SetParent(runtimeSkipCanvasObject.transform, false);
 
         RectTransform labelRect = labelObject.AddComponent<RectTransform>();
-        labelRect.anchorMin = Vector2.zero;
-        labelRect.anchorMax = Vector2.one;
-        labelRect.offsetMin = Vector2.zero;
-        labelRect.offsetMax = Vector2.zero;
+        labelRect.anchorMin = new Vector2(1f, 1f);
+        labelRect.anchorMax = new Vector2(1f, 1f);
+        labelRect.pivot = new Vector2(1f, 1f);
+        labelRect.sizeDelta = skipButtonSize;
+        labelRect.anchoredPosition = new Vector2(skipButtonScreenOffset.x, -Mathf.Abs(skipButtonScreenOffset.y));
 
         runtimeSkipButtonText = labelObject.AddComponent<TextMeshProUGUI>();
-        runtimeSkipButtonText.text = string.IsNullOrWhiteSpace(skipButtonLabel) ? "Skip" : skipButtonLabel;
+        runtimeSkipButtonText.text = string.IsNullOrWhiteSpace(skipButtonLabel) ? "Esc To Skip" : skipButtonLabel;
         runtimeSkipButtonText.fontSize = 28f;
         runtimeSkipButtonText.alignment = TextAlignmentOptions.Center;
         runtimeSkipButtonText.color = Color.white;
@@ -733,18 +714,12 @@ public class StartupOverviewCinematicController : MonoBehaviour
 
     private void ReleaseRuntimeSkipButton()
     {
-        if (runtimeSkipButton != null)
-        {
-            runtimeSkipButton.onClick.RemoveListener(RequestSkip);
-        }
-
         if (runtimeSkipCanvasObject != null)
         {
             Destroy(runtimeSkipCanvasObject);
         }
 
         runtimeSkipCanvasObject = null;
-        runtimeSkipButton = null;
         runtimeSkipButtonText = null;
         skipRequested = false;
         skipInputEnabled = false;
@@ -754,10 +729,6 @@ public class StartupOverviewCinematicController : MonoBehaviour
     {
         bool shouldEnable = allowSkip && elapsed >= Mathf.Max(0f, skipAvailableDelay);
         skipInputEnabled = shouldEnable;
-        if (runtimeSkipButton != null)
-        {
-            runtimeSkipButton.interactable = shouldEnable;
-        }
 
         if (runtimeSkipCanvasObject != null && runtimeSkipCanvasObject.activeSelf != allowSkip)
         {

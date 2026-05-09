@@ -133,16 +133,22 @@ namespace StarterAssets
 		public bool EnableCameraMotion = true;
 		[Tooltip("Base bob frequency while walking.")]
 		public float WalkBobFrequency = 8.0f;
+		[Tooltip("Reference walk speed that keeps the authored walk bob frequency unchanged.")]
+		public float WalkBobReferenceSpeed = 6.0f;
 		[Tooltip("Side-to-side bob amount while walking.")]
 		public float WalkBobHorizontalAmplitude = 0.015f;
 		[Tooltip("Vertical bob amount while walking.")]
 		public float WalkBobVerticalAmplitude = 0.025f;
 		[Tooltip("Frequency multiplier while sprinting.")]
 		public float SprintBobFrequencyMultiplier = 1.35f;
+		[Tooltip("Reference sprint speed that keeps the authored sprint bob feel unchanged.")]
+		public float SprintBobReferenceSpeed = 10.0f;
 		[Tooltip("Amplitude multiplier while sprinting.")]
 		public float SprintBobAmplitudeMultiplier = 1.45f;
 		[Tooltip("Frequency multiplier while crouching.")]
 		public float CrouchBobFrequencyMultiplier = 0.75f;
+		[Tooltip("Reference crouch speed that keeps the authored crouch bob feel unchanged.")]
+		public float CrouchBobReferenceSpeed = 2.0f;
 		[Tooltip("Amplitude multiplier while crouching.")]
 		public float CrouchBobAmplitudeMultiplier = 0.6f;
 		[Tooltip("How quickly bob and tilt blend in and out.")]
@@ -907,6 +913,7 @@ namespace StarterAssets
 						bobFrequency *= CrouchBobFrequencyMultiplier;
 					}
 					bobFrequency *= weightBobFrequencyMultiplier;
+					bobFrequency *= GetCameraBobSpeedScale();
 
 					float bobAmplitudeScale = motionScale;
 					if (_wantsSprint)
@@ -976,6 +983,33 @@ namespace StarterAssets
 
 			float horizontalSpeed = new Vector3(_controller.velocity.x, 0f, _controller.velocity.z).magnitude;
 			return Mathf.Clamp01(horizontalSpeed / maxMoveSpeed);
+		}
+
+		private float GetCameraBobSpeedScale()
+		{
+			float targetSpeed = GetTargetGroundSpeed(GetCurrentMovementBurdenKg());
+			float referenceSpeed = GetCurrentCameraBobReferenceSpeed();
+			if (referenceSpeed <= 0.01f)
+			{
+				return 1f;
+			}
+
+			return Mathf.Max(0.1f, targetSpeed / referenceSpeed);
+		}
+
+		private float GetCurrentCameraBobReferenceSpeed()
+		{
+			if (_isCrouching)
+			{
+				return Mathf.Max(0.01f, CrouchBobReferenceSpeed);
+			}
+
+			if (_wantsSprint)
+			{
+				return Mathf.Max(0.01f, SprintBobReferenceSpeed);
+			}
+
+			return Mathf.Max(0.01f, WalkBobReferenceSpeed);
 		}
 
 		private bool ShouldApplyAirborneCameraOffset()
@@ -1285,6 +1319,7 @@ namespace StarterAssets
 				CancelClimbStartTransition(clearCurrentLadder: false);
 			}
 
+			PlayerInteractionAnimationState.GetOrCreate(gameObject)?.PulseAction(PlayerInteractionAnimationAction.Climb, Mathf.Max(0.1f, ClimbStartSnapDuration));
 			_climbStartRoutine = StartCoroutine(BeginClimbFromInteractRoutine(ladder));
 		}
 

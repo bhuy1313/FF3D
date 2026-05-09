@@ -116,6 +116,7 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
 
     private Coroutine breakRoutine;
     private PlayerActionLock activePlayerLock;
+    private PlayerInteractionAnimationState activeAnimationState;
 
     public BreakableType Type => breakableType;
     public bool IsBroken => isBroken;
@@ -242,6 +243,8 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
         onBreakStarted?.Invoke();
         if (breaker != null && breaker.GetComponent<BotCommandAgent>() == null)
         {
+            activeAnimationState = PlayerInteractionAnimationState.GetOrCreate(breaker);
+            activeAnimationState?.BeginAction(PlayerInteractionAnimationAction.BreakingObject, this, requirement.TimeToBreak);
             PlayerContinuousActionBus.StartAction();
         }
 
@@ -351,6 +354,8 @@ public class Breakable : MonoBehaviour, IInteractable, IBotBreakableTarget
         isBreakInProgress = false;
         activeBreaker = null;
         activeToolKind = BreakToolKind.None;
+        activeAnimationState?.EndAction(PlayerInteractionAnimationAction.BreakingObject, this, force: true);
+        activeAnimationState = null;
 
         if (activePlayerLock != null)
         {

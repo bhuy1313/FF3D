@@ -10,19 +10,19 @@ GameObject:
   m_Component:
   - component: {fileID: 1094207202177416888}
   - component: {fileID: 1527773579464602259}
-  - component: {fileID: 2977060554844639201}
   - component: {fileID: 2739072201973825438}
+  - component: {fileID: 2977060554844639201}
   - component: {fileID: 9177469773513182376}
   - component: {fileID: 317705974320527891}
   - component: {fileID: 7404256443553440381}
   - component: {fileID: 6610283024095116843}
   m_Layer: 0
-  m_Name: FireHose
+  m_Name: FireHose_Head
   m_TagString: Water
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1094207202177416888
 Transform:
   m_ObjectHideFlags: 0
@@ -68,6 +68,21 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
+--- !u!114 &2739072201973825438
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1816086955231797324}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea4286af94a06ba42979375c3b5f50bf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Item
+  itemName: Fire Hose
+  itemDescription: None
+  itemIcon: {fileID: 0}
 --- !u!114 &2977060554844639201
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -141,21 +156,6 @@ MonoBehaviour:
   botStandDistanceOverride: 0
   drawArcGizmo: 1
   drawGizmoOnlyWhenSelected: 1
---- !u!114 &2739072201973825438
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1816086955231797324}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ea4286af94a06ba42979375c3b5f50bf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Item
-  itemName: Fire Hose
-  itemDescription: None
-  itemIcon: {fileID: 0}
 --- !u!114 &9177469773513182376
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -210,6 +210,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TrueJourney.BotCommands::TrueJourney.BotBehavior.BotEquippedItemPoseProfile
   overrideBotEquippedPose: 1
+  logPoseResolution: 1
   poseEntries:
   - key: 6
     pose:

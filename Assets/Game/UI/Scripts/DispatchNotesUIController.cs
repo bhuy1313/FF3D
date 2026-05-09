@@ -174,6 +174,7 @@ public class DispatchNotesUIController : MonoBehaviour
 
     private void Awake()
     {
+        ResolveCoreReferences();
         inputState = Object.FindAnyObjectByType<StarterAssetsInputs>();
 
         if (uiContainer != null)
@@ -204,6 +205,7 @@ public class DispatchNotesUIController : MonoBehaviour
 
     private void Update()
     {
+        ResolveCoreReferences();
         bool togglePressed = false;
 
         if (inputState != null)
@@ -225,9 +227,6 @@ public class DispatchNotesUIController : MonoBehaviour
 
         if (togglePressed)
         {
-            Debug.Log(
-                "[DispatchNotesUIController] Input detected (Player or Direct Key), toggling notes."
-            );
             ToggleNotes();
         }
     }
@@ -272,6 +271,7 @@ public class DispatchNotesUIController : MonoBehaviour
 
     private void InitializeData()
     {
+        ResolveCoreReferences();
         ApplyReadabilityProfile();
 
         if (
@@ -285,6 +285,7 @@ public class DispatchNotesUIController : MonoBehaviour
 
         if (notesContentText == null)
         {
+            Debug.LogWarning("[DispatchNotesUIController] notesContentText is missing.", this);
             return;
         }
 
@@ -347,6 +348,19 @@ public class DispatchNotesUIController : MonoBehaviour
         notesContentText.text = sb.ToString();
         RefreshNotesScrollLayout();
         isInitialized = true;
+    }
+
+    private void ResolveCoreReferences()
+    {
+        if (uiContainer == null)
+        {
+            uiContainer = gameObject;
+        }
+
+        if (notesContentText == null)
+        {
+            notesContentText = GetComponentInChildren<TMP_Text>(true);
+        }
     }
 
     private void ResolveAnimationReferences()

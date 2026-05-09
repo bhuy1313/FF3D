@@ -1,25 +1,10 @@
 using UnityEngine;
 using UnityEngine.UI;
-using TrueJourney.BotBehavior;
 using TMPro;
 using StarterAssets;
 
 namespace FF3D.UI
 {
-    [System.Serializable]
-    public struct ToolIconMapping
-    {
-        public BreakToolKind ToolKind;
-        public Sprite Icon;
-    }
-
-    [System.Serializable]
-    public struct ExtinguisherIconMapping
-    {
-        public FireExtinguisherType ExtinguisherType;
-        public Sprite Icon;
-    }
-
     public class EquippedItemUI : MonoBehaviour
     {
         [Header("References")]
@@ -28,8 +13,6 @@ namespace FF3D.UI
 
         [Header("Settings")]
         [SerializeField] private Sprite emptySlotSprite;
-        [SerializeField] private ToolIconMapping[] toolIcons;
-        [SerializeField] private ExtinguisherIconMapping[] extinguisherIcons;
 
         [Header("Extinguisher Fill UI")]
         [SerializeField] private GameObject extinguisherFillRoot;
@@ -108,64 +91,25 @@ namespace FF3D.UI
 
         private void UpdateIcon(GameObject item)
         {
-            Tool tool = item.GetComponent<Tool>();
-            
-            if (tool != null && tool.ToolKind != BreakToolKind.None)
+            Item itemData = item != null ? item.GetComponent<Item>() : null;
+            if (itemData != null && itemData.ItemIcon != null)
             {
-                Sprite foundIcon = null;
-                if (toolIcons != null)
-                {
-                    for (int i = 0; i < toolIcons.Length; i++)
-                    {
-                        if (toolIcons[i].ToolKind == tool.ToolKind)
-                        {
-                            foundIcon = toolIcons[i].Icon;
-                            break;
-                        }
-                    }
-                }
-
-                if (foundIcon != null)
-                {
-                    ShowItemIcon(foundIcon);
-                    return;
-                }
+                ShowItemIcon(itemData.ItemIcon);
+            }
+            else
+            {
+                HideItemIcon();
             }
 
-            FireExtinguisher extinguisher = item.GetComponent<FireExtinguisher>();
+            FireExtinguisher extinguisher = item != null ? item.GetComponent<FireExtinguisher>() : null;
             if (extinguisher != null)
             {
                 currentHeldExtinguisher = extinguisher;
-                Sprite extinguisherIcon = null;
-                if (extinguisherIcons != null)
-                {
-                    FireExtinguisherType extinguisherType = extinguisher.ExtinguisherType;
-                    for (int i = 0; i < extinguisherIcons.Length; i++)
-                    {
-                        if (extinguisherIcons[i].ExtinguisherType == extinguisherType)
-                        {
-                            extinguisherIcon = extinguisherIcons[i].Icon;
-                            break;
-                        }
-                    }
-                }
-
-                if (extinguisherIcon != null)
-                {
-                    ShowItemIcon(extinguisherIcon);
-                    return;
-                }
-
-                HideItemIcon();
-                return;
             }
             else
             {
                 currentHeldExtinguisher = null;
             }
-            
-            // Fallback to empty state if not a tool or no icon mapped
-            SetEmptyState();
         }
 
         private void SetEmptyState()

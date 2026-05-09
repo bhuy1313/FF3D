@@ -191,8 +191,8 @@ GameObject:
   - component: {fileID: 553468921299418875}
   - component: {fileID: 8785765127927313614}
   - component: {fileID: 5039271393193485205}
-  - component: {fileID: 8037682574301293432}
   - component: {fileID: 4747125290758802551}
+  - component: {fileID: 8037682574301293432}
   - component: {fileID: 1903276542891532427}
   - component: {fileID: 3457956569486771843}
   - component: {fileID: 9052012914034352240}
@@ -260,27 +260,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Item
   itemName: Fire Axe
   itemDescription: A sturdy fire axe useful for chopping wood and breaking objects.
-  itemIcon: {fileID: 0}
---- !u!114 &8037682574301293432
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 979707955808453874}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshModifier
-  m_SerializedVersion: 0
-  m_OverrideArea: 0
-  m_Area: 0
-  m_OverrideGenerateLinks: 0
-  m_GenerateLinks: 0
-  m_IgnoreFromBuild: 1
-  m_ApplyToChildren: 1
-  m_AffectedAgents: ffffffff
+  itemIcon: {fileID: 21300000, guid: 96e9fa1d66e69c54e8cc5811523e7314, type: 3}
 --- !u!114 &4747125290758802551
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -304,6 +284,26 @@ MonoBehaviour:
   botUseCooldown: 0.6
   currentHolder: {fileID: 0}
   claimOwner: {fileID: 0}
+--- !u!114 &8037682574301293432
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 979707955808453874}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshModifier
+  m_SerializedVersion: 0
+  m_OverrideArea: 0
+  m_Area: 0
+  m_OverrideGenerateLinks: 0
+  m_GenerateLinks: 0
+  m_IgnoreFromBuild: 1
+  m_ApplyToChildren: 1
+  m_AffectedAgents: ffffffff
 --- !u!114 &1903276542891532427
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -317,6 +317,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TrueJourney.BotCommands::TrueJourney.BotBehavior.BotEquippedItemPoseProfile
   overrideBotEquippedPose: 1
+  logPoseResolution: 1
   poseEntries:
   - key: 0
     pose:

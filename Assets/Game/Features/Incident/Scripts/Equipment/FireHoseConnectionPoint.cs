@@ -23,6 +23,7 @@ public class FireHoseConnectionPoint : MonoBehaviour, IInteractable
     private Coroutine interactionRoutine;
     private GameObject activeInteractor;
     private PlayerActionLock activePlayerLock;
+    private PlayerInteractionAnimationState activeAnimationState;
 
     public bool ProvidesPressurizedWater => providesPressurizedWater && SupplyPressureMultiplier > 0f;
     public float SupplyPressureMultiplier => providesPressurizedWater ? Mathf.Max(0f, supplyPressureMultiplier) : 0f;
@@ -57,8 +58,42 @@ public class FireHoseConnectionPoint : MonoBehaviour, IInteractable
         interactionInProgress = true;
         activeInteractor = interactor;
         AcquirePlayerLock(interactor);
+        float duration = Mathf.Max(0.01f, interactionDuration);
+        bool isPlayerInteractor = interactor != null && interactor.GetComponent<BotCommandAgent>() == null;
+        if (isPlayerInteractor)
+        {
+            activeAnimationState = PlayerInteractionAnimationState.GetOrCreate(interactor);
+            activeAnimationState?.BeginAction(PlayerInteractionAnimationAction.ConnectingHose, this, duration);
+            PlayerContinuousActionBus.StartAction();
+        }
 
-        yield return new WaitForSeconds(Mathf.Max(0.01f, interactionDuration));
+        float endTime = Time.time + duration;
+        while (Time.time < endTime)
+        {
+            if (!isActiveAndEnabled || hose == null)
+            {
+                if (isPlayerInteractor)
+                {
+                    PlayerContinuousActionBus.EndAction(false);
+                }
+
+                interactionRoutine = null;
+                interactionInProgress = false;
+                activeInteractor = null;
+                ReleasePlayerLock();
+                activeAnimationState?.EndAction(PlayerInteractionAnimationAction.ConnectingHose, this, force: true);
+                activeAnimationState = null;
+                yield break;
+            }
+
+            if (isPlayerInteractor)
+            {
+                float progress = 1f - ((endTime - Time.time) / duration);
+                PlayerContinuousActionBus.UpdateProgress(progress);
+            }
+
+            yield return null;
+        }
 
         interactionRoutine = null;
         interactionInProgress = false;
@@ -67,10 +102,20 @@ public class FireHoseConnectionPoint : MonoBehaviour, IInteractable
 
         if (!isActiveAndEnabled || hose == null)
         {
+            if (isPlayerInteractor)
+            {
+                PlayerContinuousActionBus.EndAction(false);
+            }
             yield break;
         }
 
         ApplyInteraction(hose);
+        activeAnimationState?.EndAction(PlayerInteractionAnimationAction.ConnectingHose, this, force: true);
+        activeAnimationState = null;
+        if (isPlayerInteractor)
+        {
+            PlayerContinuousActionBus.EndAction(true);
+        }
     }
 
     private void ApplyInteraction(FireHose hose)

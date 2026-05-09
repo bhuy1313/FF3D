@@ -33,19 +33,39 @@ public class TargetToggleUI : MonoBehaviour
     [SerializeField] private RectTransform borderFrame;
     [SerializeField] private Vector2 defaultBorderSize = new Vector2(24f, 24f);
     [SerializeField] private Vector2 interactionBorderSize = new Vector2(80f, 80f);
+    [SerializeField] private GameObject crosshairRoot;
 
     private CrosshairState currentState = (CrosshairState)(-1);
+    private bool hideWhileContinuousAction;
 
     private void Awake()
     {
         ResolveInteractionSystem();
         ResolveBorderFrame();
+        ResolveCrosshairRoot();
+        PlayerContinuousActionBus.OnActionStarted += HandleActionStarted;
+        PlayerContinuousActionBus.OnActionEnded += HandleActionEnded;
+    }
+
+    private void OnDestroy()
+    {
+        PlayerContinuousActionBus.OnActionStarted -= HandleActionStarted;
+        PlayerContinuousActionBus.OnActionEnded -= HandleActionEnded;
     }
 
     private void Update()
     {
         ResolveInteractionSystem();
         ResolveBorderFrame();
+        ResolveCrosshairRoot();
+
+        if (hideWhileContinuousAction)
+        {
+            SetCrosshairRootVisible(false);
+            return;
+        }
+
+        SetCrosshairRootVisible(true);
         SetState(ResolveState());
     }
 
@@ -73,6 +93,27 @@ public class TargetToggleUI : MonoBehaviour
             grabIcon,
             pickupIcon,
             climbIcon);
+    }
+
+    private void ResolveCrosshairRoot()
+    {
+        if (crosshairRoot != null)
+        {
+            return;
+        }
+
+        if (borderFrame != null)
+        {
+            crosshairRoot = borderFrame.gameObject;
+            return;
+        }
+
+        if (defaultIcon != null)
+        {
+            crosshairRoot = defaultIcon.transform.parent != null
+                ? defaultIcon.transform.parent.gameObject
+                : defaultIcon;
+        }
     }
 
     private CrosshairState ResolveState()
@@ -173,5 +214,26 @@ public class TargetToggleUI : MonoBehaviour
         }
 
         return null;
+    }
+
+    private void HandleActionStarted(string actionText)
+    {
+        hideWhileContinuousAction = true;
+        SetCrosshairRootVisible(false);
+    }
+
+    private void HandleActionEnded(bool success)
+    {
+        hideWhileContinuousAction = false;
+        SetCrosshairRootVisible(true);
+        currentState = (CrosshairState)(-1);
+    }
+
+    private void SetCrosshairRootVisible(bool visible)
+    {
+        if (crosshairRoot != null && crosshairRoot.activeSelf != visible)
+        {
+            crosshairRoot.SetActive(visible);
+        }
     }
 }

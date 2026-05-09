@@ -22,4 +22,9 @@ public class DisableAnimatorEvent : MonoBehaviour
             animator.enabled = false;
         }
     }
+
+    public void Start()
+    {
+
+    }
 }

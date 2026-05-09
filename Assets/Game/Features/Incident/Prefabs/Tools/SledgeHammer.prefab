@@ -127,6 +127,8 @@ GameObject:
   - component: {fileID: 6528605001282081931}
   - component: {fileID: 7092688488436906014}
   - component: {fileID: 1674137923998995101}
+  - component: {fileID: 1570778553315852748}
+  - component: {fileID: 3823844910625312284}
   m_Layer: 0
   m_Name: SledgeHammer
   m_TagString: Untagged
@@ -190,8 +192,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Item
   itemName: SledgeHammer
-  itemDescription: SledgeHammer
-  itemIcon: {fileID: 0}
+  itemDescription: A heavy sledgehammer useful for smashing through tough barriers
+    and breaking objects.
+  itemIcon: {fileID: 21300000, guid: 10ab747b57fa36449ad5062d06476116, type: 3}
 --- !u!114 &6528605001282081931
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -248,6 +251,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TrueJourney.BotCommands::TrueJourney.BotBehavior.BotEquippedItemPoseProfile
   overrideBotEquippedPose: 1
+  logPoseResolution: 1
   poseEntries:
   - key: 0
     pose:
@@ -266,3 +270,60 @@ MonoBehaviour:
       leftHandIkHintLocalPosition: {x: 0, y: 0, z: 0}
       overrideSpineAimMaxWeight: 0
       spineAimMaxWeight: 0
+--- !u!114 &1570778553315852748
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3278099281585694142}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c85dffbce88f476e865da8f7d718f5c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerEquippedItemPoseProfile
+  overridePlayerEquippedPose: 1
+  equippedLocalPosition: {x: -0.015000075, y: 0.11799938, z: 0.033998743}
+  equippedLocalEulerAngles: {x: 277.51697, y: 347.93582, z: 89.12851}
+--- !u!114 &3823844910625312284
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3278099281585694142}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6aae98af4160c3f44a105545f7b49970, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: RayFireAssembly::RayFire.RayfireGun
+  axis: 0
+  maxDistance: 2
+  target: {fileID: 0}
+  rounds: 2
+  rate: 0.3
+  type: 1
+  strength: 2
+  radius: 2
+  offset: 0
+  demolishCluster: 1
+  affectInactive: 1
+  rigid: 1
+  rigidRoot: 1
+  rigidBody: 1
+  damage: 0
+  debris: 1
+  dust: 1
+  flash: 0
+  Flash:
+    intensityMin: 0.5
+    intensityMax: 0.7
+    rangeMin: 5
+    rangeMax: 7
+    distance: 0.4
+    color: {r: 1, g: 1, b: 0.8, a: 1}
+  mask: -1
+  tagFilter: Untagged
+  showRay: 0
+  showHit: 1
+  shooting: 0

@@ -15,6 +15,9 @@ namespace StarterAssets
 #endif
     public class FPSInteractionSystem : MonoBehaviour
     {
+        private const int FocusRaycastHitBufferSize = 16;
+        private static readonly RaycastHit[] FocusRaycastHitBuffer = new RaycastHit[FocusRaycastHitBufferSize];
+
         public enum InteractionFocusKind
         {
             None,
@@ -34,6 +37,9 @@ namespace StarterAssets
         [SerializeField] private bool drawDebugRay;
         [SerializeField] private bool enableOutlineHighlight = true;
         [SerializeField, Range(0, 31)] private int outlineRenderingLayer = 6;
+        [SerializeField, Min(0f)] private float idleFocusRefreshInterval = 0.05f;
+        [SerializeField, Min(0f)] private float focusRefreshPositionThreshold = 0.01f;
+        [SerializeField, Range(0f, 1f)] private float focusRefreshLookThreshold = 0.9995f;
 
         // Input
         [SerializeField] private StarterAssetsInputs input;
@@ -95,6 +101,9 @@ namespace StarterAssets
         private bool hasLoggedLegacyGrabFireWarning;
         private IRescuableTarget cachedCarriedRescuable;
         private bool isCarryingVictim;
+        private Vector3 lastFocusSamplePosition;
+        private Vector3 lastFocusSampleForward;
+        private float nextIdleFocusRefreshTime;
 
         private void Awake()
         {
@@ -118,6 +127,7 @@ namespace StarterAssets
 
             grabDistance = interactDistance;
             ResolveGrabPoint();
+            CacheFocusSampleState();
         }
 
         private void Update()
@@ -130,13 +140,9 @@ namespace StarterAssets
             cachedCarriedRescuable = FindPlayerCarriedRescuable();
             isCarryingVictim = cachedCarriedRescuable != null;
 
-            if (IsGrabActive)
+            if (ShouldRefreshFocus())
             {
-                UpdateFocus(grabbedBody != null ? grabbedBody.transform : null);
-            }
-            else
-            {
-                UpdateFocus(null);
+                UpdateFocus(IsGrabActive && grabbedBody != null ? grabbedBody.transform : null);
             }
 
             bool currentGrab = input != null && input.grab;
@@ -248,14 +254,22 @@ namespace StarterAssets
         private void UpdateFocus(Transform ignoredRoot)
         {
             Ray ray = viewCamera.ScreenPointToRay(new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 0f));
-
-            RaycastHit[] hits = Physics.RaycastAll(ray, interactDistance, interactMask, QueryTriggerInteraction.Ignore);
-            if (hits != null && hits.Length > 0)
+            int hitCount = Physics.RaycastNonAlloc(
+                ray,
+                FocusRaycastHitBuffer,
+                interactDistance,
+                interactMask,
+                QueryTriggerInteraction.Ignore);
+            if (hitCount > 0)
             {
-                System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
-                for (int i = 0; i < hits.Length; i++)
+                float bestDistance = float.PositiveInfinity;
+                Collider bestCollider = null;
+                InteractionFocusKind bestFocusKind = InteractionFocusKind.None;
+                IInteractable bestInteractable = null;
+
+                for (int i = 0; i < hitCount; i++)
                 {
-                    RaycastHit hit = hits[i];
+                    RaycastHit hit = FocusRaycastHitBuffer[i];
                     if (ignoredRoot != null && hit.collider != null && hit.collider.transform.IsChildOf(ignoredRoot))
                     {
                         continue;
@@ -263,13 +277,27 @@ namespace StarterAssets
 
                     if (TryResolveFocus(hit.collider, out InteractionFocusKind focusKind, out IInteractable interactable))
                     {
-                        SetFocus(hit.collider.gameObject, interactable, focusKind);
-                        if (drawDebugRay)
+                        if (hit.distance >= bestDistance)
                         {
-                            Debug.DrawRay(ray.origin, ray.direction * interactDistance, Color.green);
+                            continue;
                         }
-                        return;
+
+                        bestDistance = hit.distance;
+                        bestCollider = hit.collider;
+                        bestFocusKind = focusKind;
+                        bestInteractable = interactable;
                     }
+                }
+
+                if (bestCollider != null)
+                {
+                    SetFocus(bestCollider.gameObject, bestInteractable, bestFocusKind);
+                    if (drawDebugRay)
+                    {
+                        Debug.DrawRay(ray.origin, ray.direction * interactDistance, Color.green);
+                    }
+
+                    return;
                 }
             }
 
@@ -279,6 +307,49 @@ namespace StarterAssets
             {
                 Debug.DrawRay(ray.origin, ray.direction * interactDistance, Color.red);
             }
+        }
+
+        private bool ShouldRefreshFocus()
+        {
+            if (viewCamera == null)
+            {
+                return false;
+            }
+
+            if (IsGrabActive)
+            {
+                CacheFocusSampleState();
+                nextIdleFocusRefreshTime = Time.time;
+                return true;
+            }
+
+            if (Time.time >= nextIdleFocusRefreshTime)
+            {
+                CacheFocusSampleState();
+                nextIdleFocusRefreshTime = Time.time + idleFocusRefreshInterval;
+                return true;
+            }
+
+            bool moved = (transform.position - lastFocusSamplePosition).sqrMagnitude >=
+                focusRefreshPositionThreshold * focusRefreshPositionThreshold;
+            bool looked = Vector3.Dot(lastFocusSampleForward, viewCamera.transform.forward) <= focusRefreshLookThreshold;
+            bool hasIntentInput = input != null &&
+                (input.interact || input.pickup || input.use || input.grab || input.climbOver || input.drop || input.move.sqrMagnitude > 0.0001f);
+
+            if (!moved && !looked && !hasIntentInput)
+            {
+                return false;
+            }
+
+            CacheFocusSampleState();
+            nextIdleFocusRefreshTime = Time.time + idleFocusRefreshInterval;
+            return true;
+        }
+
+        private void CacheFocusSampleState()
+        {
+            lastFocusSamplePosition = transform.position;
+            lastFocusSampleForward = viewCamera != null ? viewCamera.transform.forward : transform.forward;
         }
 
         private static IInteractable FindInteractable(Collider collider)

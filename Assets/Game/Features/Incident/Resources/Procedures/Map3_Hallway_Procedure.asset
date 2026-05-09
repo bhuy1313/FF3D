@@ -16,7 +16,7 @@ MonoBehaviour:
   scenarioId: hallway_fire
   title: Hallway Fire Procedure
   titleLocalizationKey: 
-  summary: Protect the egress path, search for trapped occupants behind smoke, and treat victim extraction as the primary tactical priority.
+  summary: Assess smoke and fire spread in the corridor, protect the escape path, verify trapped occupants, and balance rescue with corridor control.
   summaryLocalizationKey: 
   hazardType: 
   fireLocation: Hallway
@@ -26,43 +26,119 @@ MonoBehaviour:
   secondaryPriority: 2
   tertiaryPriority: 1
   checklistItems:
-  - itemId: extract_victims_from_hallway
-    title: Extract trapped victims behind the smoke corridor
+  - itemId: confirm_hallway_fire_area
+    title: Confirm the affected hallway area
     titleLocalizationKey: 
-    description: Search the threatened rooms and deliver victims to the safe zone as soon as a viable path exists.
+    description: Identify where the corridor fire and smoke are concentrated before committing deeper.
+    descriptionLocalizationKey: 
+    itemType: 0
+    priority: 2
+    validationMode: 0
+    completionSignalKey: 
+    invalidationSignalKey: 
+    completionStateKey: 
+    invalidationStateKey: 
+    defaultChecked: 0
+    hiddenUntilRelevant: 0
+    relevanceConditionSummary: 
+    scoringAxis: 3
+    scoreDelta: 3
+    failureFeedback: 
+    failureFeedbackLocalizationKey: 
+  - itemId: assess_smoke_and_egress
+    title: Assess smoke conditions and egress usability
+    titleLocalizationKey: 
+    description: Judge whether the hallway still functions as a viable movement and escape route.
     descriptionLocalizationKey: 
     itemType: 0
     priority: 3
-    validationMode: 1
-    completionSignalKey: deliver-target
+    validationMode: 0
+    completionSignalKey: 
     invalidationSignalKey: 
-    completionStateKey: any-rescue-delivered
+    completionStateKey: 
+    invalidationStateKey: 
+    defaultChecked: 0
+    hiddenUntilRelevant: 0
+    relevanceConditionSummary: 
+    scoringAxis: 2
+    scoreDelta: 4
+    failureFeedback: 
+    failureFeedbackLocalizationKey: 
+  - itemId: verify_trapped_occupants
+    title: Verify trapped occupants behind the smoke
+    titleLocalizationKey: 
+    description: Determine whether people remain behind lab doors or in the threatened corridor zone.
+    descriptionLocalizationKey: 
+    itemType: 0
+    priority: 3
+    validationMode: 0
+    completionSignalKey: 
+    invalidationSignalKey: 
+    completionStateKey: 
     invalidationStateKey: 
     defaultChecked: 0
     hiddenUntilRelevant: 0
     relevanceConditionSummary: 
     scoringAxis: 0
-    scoreDelta: 12
-    failureFeedback: No extracted victim has been verified by the current procedure signals.
+    scoreDelta: 5
+    failureFeedback: 
     failureFeedbackLocalizationKey: 
-  - itemId: keep_hallway_tenable
-    title: Keep the hallway tenable while pushing rescue
+  - itemId: organize_rescue_priority
+    title: Prioritize rescue where access remains viable
     titleLocalizationKey: 
-    description: Manage fire and smoke so the corridor remains usable for movement and extraction.
+    description: If occupants may still be inside, push rescue decisions early while preserving crew safety.
+    descriptionLocalizationKey: 
+    itemType: 0
+    priority: 3
+    validationMode: 0
+    completionSignalKey: 
+    invalidationSignalKey: 
+    completionStateKey: 
+    invalidationStateKey: 
+    defaultChecked: 0
+    hiddenUntilRelevant: 0
+    relevanceConditionSummary: 
+    scoringAxis: 0
+    scoreDelta: 5
+    failureFeedback: 
+    failureFeedbackLocalizationKey: 
+  - itemId: control_fire_to_keep_corridor_usable
+    title: Control fire and smoke to keep the corridor usable
+    titleLocalizationKey: 
+    description: Manage the fire so the hallway can still support rescue, movement, and evacuation.
     descriptionLocalizationKey: 
     itemType: 1
     priority: 2
     validationMode: 0
     completionSignalKey: 
     invalidationSignalKey: 
-    completionStateKey: mission-complete
-    invalidationStateKey: any-victim-dead
+    completionStateKey: 
+    invalidationStateKey: 
     defaultChecked: 0
     hiddenUntilRelevant: 0
     relevanceConditionSummary: 
     scoringAxis: 1
     scoreDelta: 5
-    failureFeedback: Corridor-control actions are not yet verified by the procedure layer.
+    failureFeedback: 
+    failureFeedbackLocalizationKey: 
+  - itemId: reassess_victims_and_egress
+    title: Reassess victims, smoke, and egress
+    titleLocalizationKey: 
+    description: Review whether conditions changed after initial control and whether the route remains tenable.
+    descriptionLocalizationKey: 
+    itemType: 1
+    priority: 1
+    validationMode: 0
+    completionSignalKey: 
+    invalidationSignalKey: 
+    completionStateKey: 
+    invalidationStateKey: 
+    defaultChecked: 0
+    hiddenUntilRelevant: 0
+    relevanceConditionSummary: 
+    scoringAxis: 3
+    scoreDelta: 2
+    failureFeedback: 
     failureFeedbackLocalizationKey: 
   exceptionRules:
   - ruleId: bypass_full_control_for_immediate_rescue
@@ -80,13 +156,13 @@ MonoBehaviour:
     penaltyScoreDelta: -10
   successDebriefLines:
   - lineId: hallway_success
-    text: The hallway procedure favored life safety first, and victim extraction was verified during the incident.
+    text: The recommended sequence is assess corridor conditions, verify trapped occupants, prioritize rescue, then keep the hallway usable and reassess.
     textLocalizationKey: 
     scoringAxis: 0
     severity: 1
   failureDebriefLines:
   - lineId: hallway_failure
-    text: The hallway run did not verify any victim extraction, so the procedure objective remained incomplete.
+    text: Hallway incidents should emphasize smoke assessment, egress protection, and rescue prioritization before treating the corridor as stable.
     textLocalizationKey: 
     scoringAxis: 0
     severity: 3
