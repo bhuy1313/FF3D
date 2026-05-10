@@ -4,6 +4,7 @@ using UnityEngine;
 public class FireHoseAssembly : MonoBehaviour
 {
     [Header("References")]
+    [SerializeField] private FireHoseRig rig;
     [SerializeField] private FireHoseDeployable deployable;
     [SerializeField] private FireHoseDeployed staticHose;
     [SerializeField] private FireHoseTailVisual dynamicTail;
@@ -11,6 +12,7 @@ public class FireHoseAssembly : MonoBehaviour
     [SerializeField] private Transform headTransform;
     [SerializeField] private Transform hoseOrigin;
     [SerializeField] private Transform hoseExit;
+    [SerializeField] private FireHose shooter;
 
     [Header("Carry")]
     [SerializeField] private bool lockHeadPhysicsWhileHeld = true;
@@ -29,6 +31,9 @@ public class FireHoseAssembly : MonoBehaviour
     public bool IsHeadHeld => isHeadHeld;
     public GameObject CurrentHolder => currentHolder;
     public bool IsAttached => currentSocket != null;
+    public FireHose Shooter => shooter;
+    public FireHoseRig Rig => rig;
+    public Transform HeadTransform => headTransform;
 
     void Awake()
     {
@@ -52,10 +57,12 @@ public class FireHoseAssembly : MonoBehaviour
 
     void ResolveReferences()
     {
+        rig ??= GetComponent<FireHoseRig>();
         deployable ??= GetComponentInChildren<FireHoseDeployable>(true);
         staticHose ??= GetComponentInChildren<FireHoseDeployed>(true);
         dynamicTail ??= GetComponentInChildren<FireHoseTailVisual>(true);
         headPickup ??= GetComponentInChildren<FireHoseHeadPickup>(true);
+        shooter ??= GetComponentInChildren<FireHose>(true);
 
         if (headTransform == null)
         {
@@ -113,6 +120,16 @@ public class FireHoseAssembly : MonoBehaviour
         {
             deployable.useInputMovement = false;
         }
+
+        if (shooter != null)
+        {
+            shooter.gameObject.SetActive(false);
+        }
+    }
+
+    public void ConfigureRig(FireHoseRig owner)
+    {
+        rig = owner;
     }
 
     public void HandleHeadPickedUp(GameObject picker)

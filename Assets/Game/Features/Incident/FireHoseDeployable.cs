@@ -36,6 +36,7 @@ public class FireHoseDeployable : MonoBehaviour
     private float distanceSinceLastKnot;
     private bool hasFirstKnot = false;
     private bool hasObservedHeadPosition = false;
+    private bool hasForcedStartKnot = false;
 
     void Start()
     {
@@ -44,6 +45,21 @@ public class FireHoseDeployable : MonoBehaviour
             lastObservedHeadPosition = head.position;
             hasObservedHeadPosition = true;
         }
+    }
+
+    public void ResetPathFromStartKnot(Vector3 startPosition, Vector3 startNormal)
+    {
+        Path.Clear();
+        hasFirstKnot = false;
+        hasForcedStartKnot = false;
+        distanceSinceLastKnot = 0f;
+        lastKnotPos = startPosition;
+        lastSamplePoint = startPosition;
+        lastNormal = startNormal.sqrMagnitude > 0.0001f ? startNormal.normalized : Vector3.up;
+
+        AddKnot(startPosition, lastNormal);
+        hasFirstKnot = true;
+        hasForcedStartKnot = true;
     }
 
     void Update()
@@ -123,6 +139,13 @@ public class FireHoseDeployable : MonoBehaviour
         {
             AddKnot(currentPoint, currentNormal);
             hasFirstKnot = true;
+            return;
+        }
+
+        if (hasForcedStartKnot)
+        {
+            lastSamplePoint = currentPoint;
+            hasForcedStartKnot = false;
             return;
         }
 

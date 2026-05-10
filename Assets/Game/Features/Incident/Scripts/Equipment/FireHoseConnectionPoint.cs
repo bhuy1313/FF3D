@@ -218,6 +218,18 @@ public class FireHoseConnectionPoint : MonoBehaviour, IInteractable
                 {
                     return heldHose;
                 }
+
+                FireHoseHeadPickup headPickup =
+                    heldObject.GetComponent<FireHoseHeadPickup>() ??
+                    heldObject.GetComponentInParent<FireHoseHeadPickup>();
+                if (headPickup != null)
+                {
+                    FireHoseAssembly assembly = headPickup.GetComponentInParent<FireHoseAssembly>();
+                    if (assembly != null && assembly.Shooter != null)
+                    {
+                        return assembly.Shooter;
+                    }
+                }
             }
         }
 

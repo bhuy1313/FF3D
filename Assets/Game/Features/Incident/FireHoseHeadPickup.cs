@@ -5,6 +5,7 @@ using UnityEngine;
 public class FireHoseHeadPickup : MonoBehaviour,
     IInteractable,
     IPickupable,
+    IUsable,
     IMovementWeightSource,
     IHandOccupyingObject,
     IInventoryStowBlocker,
@@ -43,6 +44,17 @@ public class FireHoseHeadPickup : MonoBehaviour,
 
     public void Interact(GameObject interactor)
     {
+    }
+
+    public void Use(GameObject user)
+    {
+        FireHose shooter = assembly != null ? assembly.Shooter : null;
+        if (shooter == null)
+        {
+            return;
+        }
+
+        shooter.Use(user);
     }
 
     public void OnPickup(GameObject picker)
