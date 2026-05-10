@@ -10,6 +10,14 @@ public sealed class IncidentProcedureChecklistItemView : MonoBehaviour
     [SerializeField] private TextMeshProUGUI descText;
     [SerializeField] private TextMeshProUGUI subDescText;
     [SerializeField] private LayoutElement layoutElement;
+    [SerializeField] private Button toggleButton;
+    [SerializeField] private Image toggleImage;
+    [SerializeField] private Color checkedColor = new Color(0.2f, 0.75f, 0.3f, 1f);
+    [SerializeField] private Color uncheckedColor = new Color(0.4f, 0.4f, 0.4f, 1f);
+
+    private IncidentMissionSystem missionSystem;
+    private string boundItemId;
+    private bool boundIsCompleted;
 
     public void Bind(IncidentProcedureChecklistItem item)
     {
@@ -18,12 +26,30 @@ public sealed class IncidentProcedureChecklistItemView : MonoBehaviour
             SetText(tagText, string.Empty);
             SetText(descText, string.Empty);
             SetText(subDescText, string.Empty);
+            boundItemId = null;
+            boundIsCompleted = false;
+            ApplyToggleVisual(false);
+            SetToggleInteractable(false);
             return;
         }
 
+        ResolveRuntimeReferences();
         SetText(tagText, item.Title);
         SetText(descText, item.Description);
         SetText(subDescText, $"{item.ItemType} | {item.Priority}");
+        boundItemId = item.ItemId;
+
+        bool isCompleted = item.DefaultChecked;
+        if (missionSystem != null &&
+            missionSystem.TryGetProcedureChecklistStatus(item.ItemId, out bool runtimeCompleted, out bool isContradicted, out bool isRelevant))
+        {
+            isCompleted = runtimeCompleted && !isContradicted && isRelevant;
+        }
+
+        boundIsCompleted = isCompleted;
+        ApplyToggleVisual(boundIsCompleted);
+        SetToggleInteractable(missionSystem != null);
+
         if (layoutElement != null)
         {
             layoutElement.minHeight = 120f;
@@ -50,10 +76,79 @@ public sealed class IncidentProcedureChecklistItemView : MonoBehaviour
         tagText = FindText("Tag");
         descText = FindText("Desc");
         subDescText = FindText("SubDesc");
+        Transform imageRoot = FindDeepChild(transform, "Image");
+        toggleButton = imageRoot != null ? imageRoot.GetComponent<Button>() : null;
+        toggleImage = imageRoot != null ? imageRoot.GetComponent<Image>() : null;
         layoutElement = GetComponent<LayoutElement>();
         if (layoutElement == null)
         {
             layoutElement = gameObject.AddComponent<LayoutElement>();
+        }
+
+        BindToggleButton();
+    }
+
+    private void Awake()
+    {
+        AutoBind();
+        ResolveRuntimeReferences();
+        BindToggleButton();
+    }
+
+    private void ResolveRuntimeReferences()
+    {
+        if (missionSystem == null)
+        {
+            missionSystem = FindAnyObjectByType<IncidentMissionSystem>();
+        }
+    }
+
+    private void BindToggleButton()
+    {
+        if (toggleButton == null)
+        {
+            return;
+        }
+
+        toggleButton.onClick.RemoveListener(HandleToggleClicked);
+        toggleButton.onClick.AddListener(HandleToggleClicked);
+    }
+
+    private void HandleToggleClicked()
+    {
+        if (missionSystem == null || string.IsNullOrWhiteSpace(boundItemId))
+        {
+            ResolveRuntimeReferences();
+        }
+
+        if (missionSystem == null || string.IsNullOrWhiteSpace(boundItemId))
+        {
+            return;
+        }
+
+        bool nextValue = !boundIsCompleted;
+        if (!missionSystem.SetProcedureChecklistCompleted(boundItemId, nextValue))
+        {
+            return;
+        }
+
+        boundIsCompleted = nextValue;
+        ApplyToggleVisual(boundIsCompleted);
+    }
+
+    private void ApplyToggleVisual(bool isCompleted)
+    {
+        if (toggleImage != null)
+        {
+            toggleImage.color = isCompleted ? checkedColor : uncheckedColor;
+        }
+    }
+
+    private void SetToggleInteractable(bool interactable)
+    {
+        if (toggleButton != null)
+        {
+            toggleButton.interactable = interactable;
         }
     }
 

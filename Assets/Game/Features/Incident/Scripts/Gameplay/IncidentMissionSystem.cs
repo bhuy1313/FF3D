@@ -487,6 +487,37 @@ public partial class IncidentMissionSystem : MonoBehaviour
         procedureRuntime?.BuildChecklistStatuses(results);
     }
 
+    public bool TryGetProcedureChecklistStatus(string itemId, out bool isCompleted, out bool isContradicted, out bool isRelevant)
+    {
+        if (procedureRuntime != null)
+        {
+            return procedureRuntime.TryGetChecklistStatus(itemId, out isCompleted, out isContradicted, out isRelevant);
+        }
+
+        isCompleted = false;
+        isContradicted = false;
+        isRelevant = false;
+        return false;
+    }
+
+    public bool SetProcedureChecklistCompleted(string itemId, bool isCompleted)
+    {
+        if (missionState != MissionState.Running || procedureRuntime == null)
+        {
+            return false;
+        }
+
+        bool didChange = procedureRuntime.SetChecklistCompleted(itemId, isCompleted);
+        if (!didChange)
+        {
+            return false;
+        }
+
+        MarkProgressDirty();
+        RefreshRuntimeStateIfDirty();
+        return true;
+    }
+
     private void OnGUI()
     {
         if (!showMissionOverlay)
