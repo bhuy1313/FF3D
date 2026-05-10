@@ -92,6 +92,7 @@ public class SubMenuPanelController : MonoBehaviour
         }
 
         BindButtonEvents();
+        SyncBlurVisibility();
     }
 
     public void Open()
@@ -105,6 +106,7 @@ public class SubMenuPanelController : MonoBehaviour
         canvasGroup.alpha = 1f;
         canvasGroup.interactable = true;
         canvasGroup.blocksRaycasts = true;
+        SyncBlurVisibility();
     }
 
     public void Close()
@@ -118,6 +120,7 @@ public class SubMenuPanelController : MonoBehaviour
         canvasGroup.alpha = 0f;
         canvasGroup.interactable = false;
         canvasGroup.blocksRaycasts = false;
+        SyncBlurVisibility();
     }
 
     public void SetResumeAction(UnityAction action)
@@ -224,6 +227,12 @@ public class SubMenuPanelController : MonoBehaviour
         {
             button.onClick.AddListener(action);
         }
+    }
+
+    private void SyncBlurVisibility()
+    {
+        bool shouldShowBlur = canvasGroup != null && canvasGroup.alpha > 0.001f;
+        UiBlurCoordinator.SetBlurRequested(this, shouldShowBlur);
     }
 
     private static RectTransform FindNestedRect(Transform root, string objectName)
