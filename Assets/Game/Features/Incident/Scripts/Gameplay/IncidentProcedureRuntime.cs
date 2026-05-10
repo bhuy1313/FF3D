@@ -211,6 +211,71 @@ public sealed class IncidentProcedureRuntime
         }
     }
 
+    public bool TryGetChecklistStatus(string itemId, out bool isCompleted, out bool isContradicted, out bool isRelevant)
+    {
+        isCompleted = false;
+        isContradicted = false;
+        isRelevant = false;
+
+        if (string.IsNullOrWhiteSpace(itemId))
+        {
+            return false;
+        }
+
+        for (int i = 0; i < checklistStates.Count; i++)
+        {
+            ChecklistRuntimeState state = checklistStates[i];
+            if (state == null || state.Item == null)
+            {
+                continue;
+            }
+
+            if (!string.Equals(state.Item.ItemId, itemId, System.StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            isCompleted = state.IsCompleted;
+            isContradicted = state.IsContradicted;
+            isRelevant = state.IsRelevant;
+            return true;
+        }
+
+        return false;
+    }
+
+    public bool SetChecklistCompleted(string itemId, bool isCompleted)
+    {
+        if (string.IsNullOrWhiteSpace(itemId))
+        {
+            return false;
+        }
+
+        for (int i = 0; i < checklistStates.Count; i++)
+        {
+            ChecklistRuntimeState state = checklistStates[i];
+            if (state == null || state.Item == null)
+            {
+                continue;
+            }
+
+            if (!string.Equals(state.Item.ItemId, itemId, System.StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            state.IsCompleted = isCompleted;
+            if (isCompleted)
+            {
+                state.IsContradicted = false;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
     public string BuildOverlaySummary()
     {
         if (definition == null)

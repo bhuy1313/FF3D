@@ -12,16 +12,9 @@ public sealed class IncidentProcedureChecklistPresenter : MonoBehaviour
     [SerializeField] private IncidentProcedureChecklistPanelView panelView;
     [SerializeField] [Min(1)] private int layoutRebuildPasses = 3;
 
-    [Header("Debug")]
-    [SerializeField] private bool createRuntimeRebuildButton = true;
-    [SerializeField] private Vector2 rebuildButtonAnchorPosition = new Vector2(-170f, -28f);
-    [SerializeField] private Vector2 rebuildButtonSize = new Vector2(150f, 42f);
-
     private IncidentProcedureDefinition lastBoundDefinition;
     private Coroutine layoutRebuildRoutine;
-    private Button runtimeRebuildButton;
-    private TextMeshProUGUI runtimeRebuildButtonLabel;
-    private int manualRebuildCount;
+    private int lastObservedBodyChildCount = -1;
 
     private void Awake()
     {
@@ -31,13 +24,13 @@ public sealed class IncidentProcedureChecklistPresenter : MonoBehaviour
     private void OnEnable()
     {
         ResolveReferences();
-        EnsureRuntimeRebuildButton();
+        SyncObservedBodyChildCount();
     }
 
     private void Start()
     {
         ResolveReferences();
-        EnsureRuntimeRebuildButton();
+        SyncObservedBodyChildCount();
         RefreshChecklist();
     }
 
@@ -53,6 +46,11 @@ public sealed class IncidentProcedureChecklistPresenter : MonoBehaviour
         if (definition != lastBoundDefinition)
         {
             RefreshChecklist();
+        }
+
+        if (TryConsumeBodyChildCountChange())
+        {
+            RebuildChecklistLayout();
         }
     }
 
@@ -80,7 +78,8 @@ public sealed class IncidentProcedureChecklistPresenter : MonoBehaviour
 
         if (definition == null || definition.ChecklistItems == null)
         {
-            SetAllChildrenActive(root, false);
+            DestroyAllChildren(root);
+            SyncObservedBodyChildCount();
             RebuildChecklistLayout();
             return;
         }
@@ -127,30 +126,12 @@ public sealed class IncidentProcedureChecklistPresenter : MonoBehaviour
             Transform child = root.GetChild(i);
             if (child != null)
             {
-                child.gameObject.SetActive(false);
+                Destroy(child.gameObject);
             }
         }
 
+        SyncObservedBodyChildCount();
         RebuildChecklistLayout();
-    }
-
-    public void RebuildChecklistLayoutNow()
-    {
-        manualRebuildCount++;
-        Debug.Log($"{nameof(IncidentProcedureChecklistPresenter)} manual rebuild requested. Count={manualRebuildCount}", this);
-
-        if (layoutRebuildRoutine != null)
-        {
-            StopCoroutine(layoutRebuildRoutine);
-            layoutRebuildRoutine = null;
-        }
-
-        if (runtimeRebuildButtonLabel != null)
-        {
-            runtimeRebuildButtonLabel.text = $"REBUILDING {manualRebuildCount}";
-        }
-
-        layoutRebuildRoutine = StartCoroutine(RebuildChecklistLayoutRoutine());
     }
 
     private void ResolveReferences()
@@ -170,62 +151,34 @@ public sealed class IncidentProcedureChecklistPresenter : MonoBehaviour
         }
     }
 
-    private void EnsureRuntimeRebuildButton()
+    private bool TryConsumeBodyChildCountChange()
     {
-        if (!createRuntimeRebuildButton || runtimeRebuildButton != null)
+        Transform bodyRoot = panelView != null ? panelView.ActionItemsBodyRoot : null;
+        if (bodyRoot == null)
         {
-            return;
+            return false;
         }
 
-        if (panelView == null || panelView.PanelRootRect == null)
+        int currentChildCount = bodyRoot.childCount;
+        if (lastObservedBodyChildCount < 0)
         {
-            ResolveReferences();
+            lastObservedBodyChildCount = currentChildCount;
+            return false;
         }
 
-        RectTransform parent = panelView != null
-            ? panelView.PanelRootRect != null
-                ? panelView.PanelRootRect
-                : panelView.transform as RectTransform
-            : transform as RectTransform;
-        if (parent == null)
+        if (currentChildCount == lastObservedBodyChildCount)
         {
-            return;
+            return false;
         }
 
-        GameObject buttonObject = new GameObject("RuntimeRebuildLayoutButton");
-        buttonObject.transform.SetParent(parent, false);
-        buttonObject.transform.SetAsLastSibling();
+        lastObservedBodyChildCount = currentChildCount;
+        return true;
+    }
 
-        RectTransform rect = buttonObject.AddComponent<RectTransform>();
-        rect.anchorMin = new Vector2(1f, 1f);
-        rect.anchorMax = new Vector2(1f, 1f);
-        rect.pivot = new Vector2(1f, 1f);
-        rect.anchoredPosition = rebuildButtonAnchorPosition;
-        rect.sizeDelta = rebuildButtonSize;
-
-        Image image = buttonObject.AddComponent<Image>();
-        image.color = new Color(0.08f, 0.08f, 0.08f, 0.85f);
-        image.raycastTarget = true;
-
-        runtimeRebuildButton = buttonObject.AddComponent<Button>();
-        runtimeRebuildButton.targetGraphic = image;
-        runtimeRebuildButton.onClick.AddListener(RebuildChecklistLayoutNow);
-
-        GameObject labelObject = new GameObject("Label");
-        labelObject.transform.SetParent(buttonObject.transform, false);
-
-        RectTransform labelRect = labelObject.AddComponent<RectTransform>();
-        labelRect.anchorMin = Vector2.zero;
-        labelRect.anchorMax = Vector2.one;
-        labelRect.offsetMin = Vector2.zero;
-        labelRect.offsetMax = Vector2.zero;
-
-        runtimeRebuildButtonLabel = labelObject.AddComponent<TextMeshProUGUI>();
-        runtimeRebuildButtonLabel.text = "REBUILD";
-        runtimeRebuildButtonLabel.fontSize = 18f;
-        runtimeRebuildButtonLabel.alignment = TextAlignmentOptions.Center;
-        runtimeRebuildButtonLabel.color = Color.white;
-        runtimeRebuildButtonLabel.raycastTarget = false;
+    private void SyncObservedBodyChildCount()
+    {
+        Transform bodyRoot = panelView != null ? panelView.ActionItemsBodyRoot : null;
+        lastObservedBodyChildCount = bodyRoot != null ? bodyRoot.childCount : -1;
     }
 
     private void RebuildChecklistLayout()
@@ -248,11 +201,6 @@ public sealed class IncidentProcedureChecklistPresenter : MonoBehaviour
         }
 
         ForceChecklistLayoutPass();
-        if (runtimeRebuildButtonLabel != null)
-        {
-            runtimeRebuildButtonLabel.text = manualRebuildCount > 0 ? $"REBUILD {manualRebuildCount}" : "REBUILD";
-        }
-
         layoutRebuildRoutine = null;
     }
 
@@ -432,19 +380,19 @@ public sealed class IncidentProcedureChecklistPresenter : MonoBehaviour
         Canvas.ForceUpdateCanvases();
     }
 
-    private static void SetAllChildrenActive(Transform root, bool active)
+    private static void DestroyAllChildren(Transform root)
     {
         if (root == null)
         {
             return;
         }
 
-        for (int i = 0; i < root.childCount; i++)
+        for (int i = root.childCount - 1; i >= 0; i--)
         {
             Transform child = root.GetChild(i);
             if (child != null)
             {
-                child.gameObject.SetActive(active);
+                Destroy(child.gameObject);
             }
         }
     }
