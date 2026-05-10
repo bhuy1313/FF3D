@@ -5,7 +5,10 @@ public class FireTruckHosePickupPoint : MonoBehaviour, IInteractable
 {
     [SerializeField] private FireHoseConnectionSystem connectionSystem;
     [SerializeField] private GameObject hoseBodyPrefab;
+    [SerializeField] private GameObject obiRodPrefab;
+    [SerializeField] private GameObject obiRodStartPrefab;
     [SerializeField] private Transform rigParent;
+    [SerializeField] private int headLayer;
     [SerializeField] private bool isSingleUse = true;
     [SerializeField] private LayerMask groundMask = ~0;
     [SerializeField] private float forwardOffset = 1.1f;
@@ -102,6 +105,9 @@ public class FireTruckHosePickupPoint : MonoBehaviour, IInteractable
 
     public bool IsSingleUse => isSingleUse;
     public GameObject HoseBodyPrefab => hoseBodyPrefab;
+    public GameObject ObiRodPrefab => obiRodPrefab;
+    public GameObject ObiRodStartPrefab => obiRodStartPrefab;
+    public int HeadLayer => headLayer;
 
     public Transform ResolveRigParent()
     {

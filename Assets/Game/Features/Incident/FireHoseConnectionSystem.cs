@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Obi;
 
 [DisallowMultipleComponent]
 public class FireHoseConnectionSystem : MonoBehaviour
@@ -50,13 +51,11 @@ public class FireHoseConnectionSystem : MonoBehaviour
             return false;
         }
 
-        FireHoseRig rig = CreateRuntimeRig(sourcePoint);
+        FireHoseRig rig = CreateRuntimeRig(sourcePoint, startKnotPosition, startKnotNormal);
         if (rig == null)
         {
             return false;
         }
-
-        rig.PrepareForDeploy(sourcePoint, headSpawnPosition, startKnotPosition, startKnotNormal);
 
         activeRigs.Add(new ActiveRigRecord
         {
@@ -68,7 +67,7 @@ public class FireHoseConnectionSystem : MonoBehaviour
         return true;
     }
 
-    private FireHoseRig CreateRuntimeRig(FireTruckHosePickupPoint sourcePoint)
+    private FireHoseRig CreateRuntimeRig(FireTruckHosePickupPoint sourcePoint, Vector3 rootWorldPosition, Vector3 startKnotNormal)
     {
         if (sourcePoint.HoseBodyPrefab == null)
         {
@@ -79,6 +78,8 @@ public class FireHoseConnectionSystem : MonoBehaviour
 
         GameObject root = new GameObject("FireHoseRig_Runtime");
         root.transform.SetParent(parent, false);
+        root.transform.position = rootWorldPosition;
+        root.transform.rotation = Quaternion.identity;
 
         FireHoseAssembly assembly = root.AddComponent<FireHoseAssembly>();
         FireHoseRig rig = root.AddComponent<FireHoseRig>();
@@ -86,34 +87,95 @@ public class FireHoseConnectionSystem : MonoBehaviour
         GameObject hoseBody = Instantiate(sourcePoint.HoseBodyPrefab, root.transform);
         hoseBody.name = sourcePoint.HoseBodyPrefab.name;
 
-        GameObject headObject = CreateRuntimeHead(root.transform);
-        headObject.name = "FireHose_Head";
+        Transform obiRodStart = SpawnObiRod(sourcePoint, root.transform, rootWorldPosition, startKnotNormal);
+        if (obiRodStart == null)
+        {
+            return null;
+        }
+
+        obiRodStart.name = "FireHose_Head";
+        obiRodStart.gameObject.layer = sourcePoint.HeadLayer;
+        if (obiRodStart.GetComponent<FireHoseHeadPickup>() == null)
+        {
+            obiRodStart.gameObject.AddComponent<FireHoseHeadPickup>();
+        }
 
         FireHoseDeployable deployable = hoseBody.GetComponentInChildren<FireHoseDeployable>(true);
         if (deployable != null)
         {
-            deployable.head = headObject.transform;
+            deployable.head = obiRodStart;
         }
 
         assembly.ConfigureRig(rig);
+        rig.PrepareForDeploy(sourcePoint, obiRodStart.position, rootWorldPosition, startKnotNormal);
 
         return rig;
     }
 
-    private static GameObject CreateRuntimeHead(Transform parent)
+    private static Transform SpawnObiRod(
+        FireTruckHosePickupPoint sourcePoint,
+        Transform fallbackParent,
+        Vector3 startKnotPosition,
+        Vector3 startKnotNormal)
     {
-        GameObject headObject = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        headObject.transform.SetParent(parent, false);
-        headObject.transform.localScale = Vector3.one * 0.3f;
-        headObject.transform.localRotation = Quaternion.identity;
-        headObject.layer = 14;
+        if (sourcePoint == null)
+        {
+            return null;
+        }
 
-        Rigidbody body = headObject.AddComponent<Rigidbody>();
-        body.mass = 12f;
-        body.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+        GameObject rodPrefab = sourcePoint.ObiRodPrefab;
+        GameObject startPrefab = sourcePoint.ObiRodStartPrefab;
+        if (rodPrefab == null || startPrefab == null)
+        {
+            return null;
+        }
 
-        headObject.AddComponent<FireHoseHeadPickup>();
-        return headObject;
+        Transform parent = fallbackParent;
+        ObiSolver solver = Object.FindFirstObjectByType<ObiSolver>();
+        if (solver != null)
+        {
+            parent = solver.transform;
+        }
+
+        Vector3 normal = startKnotNormal.sqrMagnitude > 0.0001f ? startKnotNormal.normalized : Vector3.up;
+        Vector3 rodAxis = Vector3.ProjectOnPlane(sourcePoint.transform.forward, normal);
+        if (rodAxis.sqrMagnitude <= 0.0001f)
+        {
+            rodAxis = Vector3.ProjectOnPlane(sourcePoint.transform.right, normal);
+        }
+
+        if (rodAxis.sqrMagnitude <= 0.0001f)
+        {
+            rodAxis = Vector3.Cross(normal, Vector3.up);
+        }
+
+        if (rodAxis.sqrMagnitude <= 0.0001f)
+        {
+            rodAxis = Vector3.right;
+        }
+
+        rodAxis.Normalize();
+
+        rodAxis = -rodAxis;
+
+        Vector3 startPosition = startKnotPosition + normal * 0.08f;
+        Vector3 rodPosition = startPosition + rodAxis * 1.37f;
+        Quaternion rodRotation = Quaternion.LookRotation(Vector3.Cross(normal, rodAxis), normal);
+
+        GameObject obiRod = Object.Instantiate(rodPrefab, rodPosition, rodRotation, parent);
+        obiRod.name = rodPrefab.name;
+
+        Vector3 startOffset = rodRotation * new Vector3(-1.37f, 0f, 0f);
+        GameObject obiRodStart = Object.Instantiate(startPrefab, rodPosition + startOffset, rodRotation, parent);
+        obiRodStart.name = startPrefab.name;
+        
+        ObiParticleAttachment[] attachments = obiRod.GetComponents<ObiParticleAttachment>();
+        if (attachments.Length > 1)
+        {
+            attachments[1].target = obiRodStart.transform;
+        }
+
+        return obiRodStart.transform;
     }
 
     public bool TryConnectHeldRigToHydrant(FireHoseConnectionPoint connectionPoint, GameObject interactor)

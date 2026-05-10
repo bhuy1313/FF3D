@@ -130,6 +130,8 @@ public class FireHoseAssembly : MonoBehaviour
     public void ConfigureRig(FireHoseRig owner)
     {
         rig = owner;
+        ResolveReferences();
+        WireComponents();
     }
 
     public void HandleHeadPickedUp(GameObject picker)
@@ -164,6 +166,7 @@ public class FireHoseAssembly : MonoBehaviour
             headRigidbody.isKinematic = true;
             headRigidbody.detectCollisions = false;
         }
+
     }
 
     public void HandleHeadDropped(GameObject dropper)
@@ -185,6 +188,7 @@ public class FireHoseAssembly : MonoBehaviour
             headRigidbody.isKinematic = cachedHeadWasKinematic;
             headRigidbody.detectCollisions = cachedHeadDetectCollisions;
         }
+
     }
 
     public bool TryAttachHeadToSocket(

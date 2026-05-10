@@ -99,9 +99,10 @@ public class FireHoseDeployed : MonoBehaviour
         List<Knot> liftedKnots = GetSurfaceLiftedKnots(segment.Knots);
         List<Vector3> resampled = FireHosePathSampler.Resample(liftedKnots, sampleSpacing);
         List<Vector3> spline = FireHosePathSampler.CatmullRom(resampled);
+        List<Vector3> localSpline = ConvertWorldPointsToLocal(segment.GameObject.transform, spline);
 
         segment.Mesh = FireHoseMeshBuilder.Build(
-            spline,
+            localSpline,
             segment.Mesh,
             segment.LastUp,
             out Vector3 lastUp,
@@ -124,5 +125,22 @@ public class FireHoseDeployed : MonoBehaviour
         }
 
         return liftedKnots;
+    }
+
+    private static List<Vector3> ConvertWorldPointsToLocal(Transform targetTransform, List<Vector3> worldPoints)
+    {
+        List<Vector3> localPoints = new List<Vector3>(worldPoints.Count);
+        if (targetTransform == null)
+        {
+            localPoints.AddRange(worldPoints);
+            return localPoints;
+        }
+
+        for (int i = 0; i < worldPoints.Count; i++)
+        {
+            localPoints.Add(targetTransform.InverseTransformPoint(worldPoints[i]));
+        }
+
+        return localPoints;
     }
 }

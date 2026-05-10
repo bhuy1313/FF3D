@@ -7,7 +7,7 @@ public class FireHoseExitAutoAlign : MonoBehaviour
     [SerializeField] private Transform groundReference;
     [SerializeField] private FireHoseDeployable deployable;
     [SerializeField] private FireHoseDeployed staticHose;
-    [SerializeField] private float fallbackSurfaceOffset = 0.12f;
+    [SerializeField] private float fallbackSurfaceOffset = 0.03f;
     [SerializeField] private bool keepLocalPlanarOffsetZero = true;
 
     void Reset()
