@@ -39,6 +39,7 @@ public sealed partial class FireSimulationManager
                 node.HazardType = activeIncidentHazardType;
             }
             node.Heat = Mathf.Max(node.Heat, ignitionHeat);
+            RefreshNodeSpreadPoolMembership(node);
             NotifyStateChanged();
         }
 
@@ -55,6 +56,7 @@ public sealed partial class FireSimulationManager
         ResetRuntimeStateToBaseline(useAuthoringIgnition: false);
         activeIncidentHazardType = hazardType;
         activeHazardSourceIsolated = hazardSourceIsolated;
+        RefreshAllSpreadPoolMembership();
         MarkVisualStateDirty();
         NotifyStateChanged();
     }
@@ -136,6 +138,7 @@ public sealed partial class FireSimulationManager
             node.HasEverBurned = true;
         }
 
+        RefreshNodeSpreadPoolMembership(node);
         MarkVisualStateDirty();
         NotifyStateChanged();
         return nodeIndex;
@@ -274,6 +277,7 @@ public sealed partial class FireSimulationManager
             node.HasEverBurned = true;
         }
 
+        RefreshNodeSpreadPoolMembership(node);
         MarkVisualStateDirty();
         NotifyStateChanged();
     }
@@ -361,5 +365,7 @@ public sealed partial class FireSimulationManager
                 ? Mathf.Max(0.01f, node.IgnitionThreshold)
                 : 0f;
         }
+
+        RefreshAllSpreadPoolMembership();
     }
 }

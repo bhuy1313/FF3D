@@ -36,6 +36,6 @@ public class FireHydrantHoseConnectPoint : MonoBehaviour, IInteractable
     {
         connectionPoint ??= GetComponent<FireHoseConnectionPoint>();
         connectionSystem ??= GetComponentInParent<FireHoseConnectionSystem>();
-        connectionSystem ??= FindFirstObjectByType<FireHoseConnectionSystem>();
+        connectionSystem ??= FindAnyObjectByType<FireHoseConnectionSystem>();
     }
 }

@@ -153,6 +153,11 @@ public static class CallPhaseUiChromeRuntimeLocalizer
             return;
         }
 
+        if (IsRuntimeValueText(targetObject))
+        {
+            return;
+        }
+
         LocalizedText localizedText = targetObject.GetComponent<LocalizedText>();
         if (localizedText != null)
         {
@@ -167,6 +172,44 @@ public static class CallPhaseUiChromeRuntimeLocalizer
 
         localizedText = targetObject.AddComponent<LocalizedText>();
         localizedText.SetKey(localizationKey);
+    }
+
+    private static bool IsRuntimeValueText(GameObject targetObject)
+    {
+        if (targetObject == null)
+        {
+            return false;
+        }
+
+        string objectName = targetObject.name ?? string.Empty;
+        if (
+            objectName.IndexOf("ValueText", System.StringComparison.OrdinalIgnoreCase) >= 0
+            || objectName.IndexOf("SeverityText", System.StringComparison.OrdinalIgnoreCase) >= 0
+        )
+        {
+            return true;
+        }
+
+        Transform current = targetObject.transform;
+        while (current != null)
+        {
+            if (string.Equals(current.name, "ValueRoot", System.StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            if (
+                string.Equals(current.name, "SubmitReportPopupV2", System.StringComparison.Ordinal)
+                && string.Equals(targetObject.name, "ValueTextV2", System.StringComparison.Ordinal)
+            )
+            {
+                return true;
+            }
+
+            current = current.parent;
+        }
+
+        return false;
     }
 
     private static void AttachShortValueOverrideIfNeeded(TMP_Text text)

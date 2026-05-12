@@ -37,6 +37,10 @@ public sealed partial class FireSimulationManager : MonoBehaviour
     private readonly List<FireSurfaceNodeAuthoring> runtimeIncidentNodes = new List<FireSurfaceNodeAuthoring>();
     private readonly List<FireSimulationBotTarget> botFireTargets = new List<FireSimulationBotTarget>();
     private readonly List<FireSimulationAreaGroupTarget> botFireGroups = new List<FireSimulationAreaGroupTarget>();
+    private readonly List<int> activeSpreadNodeIndices = new List<int>();
+    private readonly HashSet<int> activeSpreadNodeIndexLookup = new HashSet<int>();
+    [Header("Runtime Debug")]
+    [SerializeField] private List<string> activeSpreadNodeDebugEntries = new List<string>();
     private FireRuntimeGraph runtimeGraph;
     private float simulationTickAccumulator;
     private float nodeHeatLogAccumulator;

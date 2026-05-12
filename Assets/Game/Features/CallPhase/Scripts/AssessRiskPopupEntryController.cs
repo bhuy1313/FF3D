@@ -13,6 +13,7 @@ using UnityEngine.UI;
 /// </summary>
 public partial class AssessRiskPopupEntryController : MonoBehaviour
 {
+    
     private static readonly Color DisabledBorderColor =
         CallPhaseFunctionButtonVisuals.InactiveColor;
     private static readonly Color EnabledAssessRiskBorderColor =
@@ -21,6 +22,7 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
         CallPhaseFunctionButtonVisuals.ActiveColor;
     private static readonly Color PopupButtonNormalColor = Color.white;
     private static readonly Color PopupButtonSelectedColor = new Color(0.95f, 0.72f, 0.38f, 1f);
+
 
     // Normal border color for severity option buttons when not selected (#303E51)
     private static readonly Color SeverityOptionBorderNormalColor = new Color(
@@ -150,6 +152,28 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
     [SerializeField]
     private GameObject submitPopupConfirmedTextObject;
 
+    [Header("Submit Popup V2 Value References")]
+    [SerializeField]
+    private GameObject submitPopupAddressValueTextObject;
+
+    [SerializeField]
+    private GameObject submitPopupFireLocationValueTextObject;
+
+    [SerializeField]
+    private GameObject submitPopupOccupantRiskValueTextObject;
+
+    [SerializeField]
+    private GameObject submitPopupHazardValueTextObject;
+
+    [SerializeField]
+    private GameObject submitPopupSpreadStatusValueTextObject;
+
+    [SerializeField]
+    private GameObject submitPopupCallerSafetyValueTextObject;
+
+    [SerializeField]
+    private GameObject submitPopupSeverityValueTextObject;
+
     [SerializeField]
     private GameObject resultPopupRootObject;
 
@@ -192,6 +216,13 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
     private TMP_Text submitPopupSummaryText;
     private TMP_Text submitPopupConfirmedText;
     private TMP_Text submitPopupConfirmLabel;
+    private TMP_Text submitPopupAddressValueText;
+    private TMP_Text submitPopupFireLocationValueText;
+    private TMP_Text submitPopupOccupantRiskValueText;
+    private TMP_Text submitPopupHazardValueText;
+    private TMP_Text submitPopupSpreadStatusValueText;
+    private TMP_Text submitPopupCallerSafetyValueText;
+    private TMP_Text submitPopupSeverityValueText;
     private TMP_Text resultPopupSummaryText;
     private TMP_Text resultPopupReviewText;
     private GameObject severityOverlay;
@@ -847,6 +878,15 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
             {
                 submitPopupBackButton = FindButtonInChildren(
                     submitReportPopup.transform,
+                    "btnBackV2",
+                    CallPhaseUiChromeText.Tr("common.btn.back", "Back")
+                );
+            }
+
+            if (submitPopupBackButton == null)
+            {
+                submitPopupBackButton = FindButtonInChildren(
+                    submitReportPopup.transform,
                     "btnBack",
                     CallPhaseUiChromeText.Tr("common.btn.back", "Back")
                 );
@@ -855,6 +895,15 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
             if (submitPopupConfirmButton == null)
             {
                 submitPopupConfirmButton = GetButtonFromObject(submitPopupConfirmButtonObject);
+            }
+
+            if (submitPopupConfirmButton == null)
+            {
+                submitPopupConfirmButton = FindButtonInChildren(
+                    submitReportPopup.transform,
+                    "btnConfirmV2",
+                    CallPhaseUiChromeText.Tr("callphase.btn.confirm_submit", "Confirm Submit")
+                );
             }
 
             if (submitPopupConfirmButton == null)
@@ -873,7 +922,10 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
 
             if (submitPopupSummaryText == null)
             {
-                submitPopupSummaryText = GetTextFromObject(submitPopupSummaryTextObject);
+                submitPopupSummaryText = GetScopedTextFromObject(
+                    submitPopupSummaryTextObject,
+                    submitReportPopup
+                );
             }
 
             if (submitPopupSummaryText == null)
@@ -886,7 +938,10 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
 
             if (submitPopupConfirmedText == null)
             {
-                submitPopupConfirmedText = GetTextFromObject(submitPopupConfirmedTextObject);
+                submitPopupConfirmedText = GetScopedTextFromObject(
+                    submitPopupConfirmedTextObject,
+                    submitReportPopup
+                );
             }
 
             if (submitPopupConfirmedText == null)
@@ -894,6 +949,62 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
                 submitPopupConfirmedText = FindTextInChildrenByName(
                     submitReportPopup.transform,
                     "confirmedText"
+                );
+            }
+
+            if (submitPopupAddressValueText == null)
+            {
+                submitPopupAddressValueText = GetScopedTextFromObject(
+                    submitPopupAddressValueTextObject,
+                    submitReportPopup
+                );
+            }
+
+            if (submitPopupFireLocationValueText == null)
+            {
+                submitPopupFireLocationValueText = GetScopedTextFromObject(
+                    submitPopupFireLocationValueTextObject,
+                    submitReportPopup
+                );
+            }
+
+            if (submitPopupOccupantRiskValueText == null)
+            {
+                submitPopupOccupantRiskValueText = GetScopedTextFromObject(
+                    submitPopupOccupantRiskValueTextObject,
+                    submitReportPopup
+                );
+            }
+
+            if (submitPopupHazardValueText == null)
+            {
+                submitPopupHazardValueText = GetScopedTextFromObject(
+                    submitPopupHazardValueTextObject,
+                    submitReportPopup
+                );
+            }
+
+            if (submitPopupSpreadStatusValueText == null)
+            {
+                submitPopupSpreadStatusValueText = GetScopedTextFromObject(
+                    submitPopupSpreadStatusValueTextObject,
+                    submitReportPopup
+                );
+            }
+
+            if (submitPopupCallerSafetyValueText == null)
+            {
+                submitPopupCallerSafetyValueText = GetScopedTextFromObject(
+                    submitPopupCallerSafetyValueTextObject,
+                    submitReportPopup
+                );
+            }
+
+            if (submitPopupSeverityValueText == null)
+            {
+                submitPopupSeverityValueText = GetScopedTextFromObject(
+                    submitPopupSeverityValueTextObject,
+                    submitReportPopup
                 );
             }
 
@@ -999,13 +1110,38 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
             submitReportPopup
         );
         WarnIfMissingReference(
-            "Submit popup summary text",
-            submitPopupSummaryText,
+            "Submit popup address value text",
+            submitPopupAddressValueText,
             submitReportPopup
         );
         WarnIfMissingReference(
-            "Submit popup confirmed text",
-            submitPopupConfirmedText,
+            "Submit popup fire location value text",
+            submitPopupFireLocationValueText,
+            submitReportPopup
+        );
+        WarnIfMissingReference(
+            "Submit popup occupant risk value text",
+            submitPopupOccupantRiskValueText,
+            submitReportPopup
+        );
+        WarnIfMissingReference(
+            "Submit popup hazard value text",
+            submitPopupHazardValueText,
+            submitReportPopup
+        );
+        WarnIfMissingReference(
+            "Submit popup spread status value text",
+            submitPopupSpreadStatusValueText,
+            submitReportPopup
+        );
+        WarnIfMissingReference(
+            "Submit popup caller safety value text",
+            submitPopupCallerSafetyValueText,
+            submitReportPopup
+        );
+        WarnIfMissingReference(
+            "Submit popup severity value text",
+            submitPopupSeverityValueText,
             submitReportPopup
         );
         WarnIfMissingReference("Result popup", resultPopup, this);
@@ -1273,26 +1409,6 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
         {
             submitPopupConfirmButton.interactable = !IsReportSubmitted();
         }
-
-        Image background =
-            submitPopupConfirmButton != null
-                ? submitPopupConfirmButton.targetGraphic as Image
-                : null;
-        if (background != null)
-        {
-            background.color =
-                submitPopupConfirmButton != null && submitPopupConfirmButton.interactable
-                    ? PopupButtonSelectedColor
-                    : PopupButtonNormalColor;
-        }
-
-        if (submitPopupConfirmLabel != null)
-        {
-            submitPopupConfirmLabel.color =
-                submitPopupConfirmButton != null && submitPopupConfirmButton.interactable
-                    ? PopupButtonEnabledTextColor
-                    : PopupButtonDisabledTextColor;
-        }
     }
 
     private TMP_Text GetButtonLabel(Button button)
@@ -1374,13 +1490,64 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
 
     private void PopulateSubmitReportSummary()
     {
-        if (submitPopupSummaryText == null)
+        bool populatedSubmitFields = false;
+        populatedSubmitFields |= TryPopulateSubmitPopupValue(
+            submitPopupAddressValueText,
+            "Address"
+        );
+        populatedSubmitFields |= TryPopulateSubmitPopupValue(
+            submitPopupFireLocationValueText,
+            FireLocationFieldId
+        );
+        populatedSubmitFields |= TryPopulateSubmitPopupValue(
+            submitPopupOccupantRiskValueText,
+            "OccupantRisk"
+        );
+        populatedSubmitFields |= TryPopulateSubmitPopupValue(
+            submitPopupHazardValueText,
+            "hazard"
+        );
+        populatedSubmitFields |= TryPopulateSubmitPopupValue(
+            submitPopupSpreadStatusValueText,
+            "SpreadStatus"
+        );
+        populatedSubmitFields |= TryPopulateSubmitPopupValue(
+            submitPopupCallerSafetyValueText,
+            "CallerSafety"
+        );
+        populatedSubmitFields |= TryPopulateSubmitPopupValue(
+            submitPopupSeverityValueText,
+            SeverityFieldId
+        );
+
+        if (populatedSubmitFields || submitPopupSummaryText == null)
         {
             return;
         }
 
         CallPhaseUiChromeText.ApplyCurrentFont(submitPopupSummaryText);
         submitPopupSummaryText.text = BuildSubmittedReportSummaryText();
+    }
+
+    private bool TryPopulateSubmitPopupValue(TMP_Text valueText, string fieldId)
+    {
+        if (valueText == null || string.IsNullOrWhiteSpace(fieldId))
+        {
+            return false;
+        }
+
+        string resolvedValue = GetFieldValueOrFallback(fieldId);
+        valueText.text = GetDisplayValue(resolvedValue, fieldId);
+        CallPhaseUiChromeText.ApplyCurrentFont(valueText);
+
+        if (string.Equals(fieldId, SeverityFieldId, StringComparison.OrdinalIgnoreCase))
+        {
+            valueText.color = IsMissingValue(resolvedValue)
+                ? Color.white
+                : GetSeverityOverlayColor(resolvedValue);
+        }
+
+        return true;
     }
 
     private void PopulateResultPopupSummary()
@@ -1418,14 +1585,23 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
     // Efficiency is only scored once the report is complete enough to be meaningfully comparable.
     private void CachePopupSummaryValueTexts()
     {
-        popupSummaryValueTexts.Clear();
+        CachePopupValueTexts(assessRiskPopup, SummaryFieldIds, popupSummaryValueTexts);
+    }
 
-        if (assessRiskPopup == null)
+    private void CachePopupValueTexts(
+        GameObject popupRootObject,
+        string[] candidateFieldIds,
+        Dictionary<string, TMP_Text> targetCache
+    )
+    {
+        targetCache.Clear();
+
+        if (popupRootObject == null)
         {
             return;
         }
 
-        Transform popupRoot = assessRiskPopup.transform;
+        Transform popupRoot = popupRootObject.transform;
         Transform[] transforms = popupRoot.GetComponentsInChildren<Transform>(true);
         for (int i = 0; i < transforms.Length; i++)
         {
@@ -1441,13 +1617,13 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
                 continue;
             }
 
-            string fieldId = FindFieldIdForValueRoot(candidate);
-            if (string.IsNullOrWhiteSpace(fieldId) || popupSummaryValueTexts.ContainsKey(fieldId))
+            string fieldId = FindFieldIdForValueRoot(candidate, popupRoot, candidateFieldIds);
+            if (string.IsNullOrWhiteSpace(fieldId) || targetCache.ContainsKey(fieldId))
             {
                 continue;
             }
 
-            popupSummaryValueTexts[fieldId] = valueText;
+            targetCache[fieldId] = valueText;
         }
     }
 
@@ -1935,17 +2111,29 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
 
     private string FindFieldIdForValueRoot(Transform valueRoot)
     {
-        if (valueRoot == null || assessRiskPopup == null)
+        return FindFieldIdForValueRoot(
+            valueRoot,
+            assessRiskPopup != null ? assessRiskPopup.transform : null,
+            SummaryFieldIds
+        );
+    }
+
+    private string FindFieldIdForValueRoot(
+        Transform valueRoot,
+        Transform popupRoot,
+        string[] candidateFieldIds
+    )
+    {
+        if (valueRoot == null || popupRoot == null)
         {
             return null;
         }
 
         Transform current = valueRoot;
-        Transform popupRoot = assessRiskPopup.transform;
 
         while (current != null && current != popupRoot)
         {
-            string fieldId = FindFieldIdInSiblingLabels(current);
+            string fieldId = FindFieldIdInSiblingLabels(current, candidateFieldIds);
             if (!string.IsNullOrWhiteSpace(fieldId))
             {
                 return fieldId;
@@ -1957,7 +2145,7 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
         return null;
     }
 
-    private string FindFieldIdInSiblingLabels(Transform current)
+    private string FindFieldIdInSiblingLabels(Transform current, string[] candidateFieldIds)
     {
         Transform parent = current != null ? current.parent : null;
         if (parent == null)
@@ -1981,7 +2169,7 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
             TMP_Text[] texts = sibling.GetComponentsInChildren<TMP_Text>(true);
             for (int textIndex = 0; textIndex < texts.Length; textIndex++)
             {
-                string fieldId = GetFieldIdForSummaryLabel(texts[textIndex]);
+                string fieldId = GetFieldIdForSummaryLabel(texts[textIndex], candidateFieldIds);
                 if (!string.IsNullOrWhiteSpace(fieldId))
                 {
                     return fieldId;
@@ -2161,7 +2349,36 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
 
     private TMP_Text GetTextFromObject(GameObject targetObject)
     {
-        return targetObject != null ? targetObject.GetComponent<TMP_Text>() : null;
+        if (targetObject == null)
+        {
+            return null;
+        }
+
+        TMP_Text directText = targetObject.GetComponent<TMP_Text>();
+        if (directText != null)
+        {
+            return directText;
+        }
+
+        return GetFirstTextInHierarchy(targetObject.transform);
+    }
+
+    private TMP_Text GetScopedTextFromObject(GameObject targetObject, GameObject rootObject)
+    {
+        TMP_Text text = GetTextFromObject(targetObject);
+        if (text == null)
+        {
+            return null;
+        }
+
+        if (rootObject == null)
+        {
+            return text;
+        }
+
+        Transform textTransform = text.transform;
+        Transform rootTransform = rootObject.transform;
+        return textTransform == rootTransform || textTransform.IsChildOf(rootTransform) ? text : null;
     }
 
     private void WarnIfMissingReference(
@@ -2240,6 +2457,11 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
 
     private string GetFieldIdForSummaryLabel(TMP_Text text)
     {
+        return GetFieldIdForSummaryLabel(text, SummaryFieldIds);
+    }
+
+    private string GetFieldIdForSummaryLabel(TMP_Text text, string[] candidateFieldIds)
+    {
         if (text == null)
         {
             return null;
@@ -2263,9 +2485,15 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
             return null;
         }
 
-        for (int i = 0; i < SummaryFieldIds.Length; i++)
+        string aliasedFieldId = GetFieldIdForSummaryLabelAlias(normalizedLabel, candidateFieldIds);
+        if (!string.IsNullOrWhiteSpace(aliasedFieldId))
         {
-            string fieldId = SummaryFieldIds[i];
+            return aliasedFieldId;
+        }
+
+        for (int i = 0; i < candidateFieldIds.Length; i++)
+        {
+            string fieldId = candidateFieldIds[i];
             foreach (
                 string candidateLabel in CallPhaseUiChromeText.GetFieldDisplayNameCandidates(
                     fieldId
@@ -2280,6 +2508,46 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
         }
 
         return null;
+    }
+
+    private string GetFieldIdForSummaryLabelAlias(string normalizedLabel, string[] candidateFieldIds)
+    {
+        if (string.IsNullOrWhiteSpace(normalizedLabel) || candidateFieldIds == null)
+        {
+            return null;
+        }
+
+        if (
+            ContainsFieldId(candidateFieldIds, SeverityFieldId)
+            && (
+                normalizedLabel == "severity assessment"
+                || normalizedLabel == "priority"
+                || normalizedLabel == "severity"
+            )
+        )
+        {
+            return SeverityFieldId;
+        }
+
+        return null;
+    }
+
+    private bool ContainsFieldId(string[] candidateFieldIds, string fieldId)
+    {
+        if (candidateFieldIds == null || string.IsNullOrWhiteSpace(fieldId))
+        {
+            return false;
+        }
+
+        for (int i = 0; i < candidateFieldIds.Length; i++)
+        {
+            if (string.Equals(candidateFieldIds[i], fieldId, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private string NormalizeSummaryLabel(string value)

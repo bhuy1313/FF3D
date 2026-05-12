@@ -62,7 +62,7 @@ public class FireHoseConnectionEndpoint : MonoBehaviour, IInteractable
     private void ResolveReferences()
     {
         connectionSystem ??= GetComponentInParent<FireHoseConnectionSystem>();
-        connectionSystem ??= FindFirstObjectByType<FireHoseConnectionSystem>();
+        connectionSystem ??= FindAnyObjectByType<FireHoseConnectionSystem>();
         truckPickupPoint ??= GetComponent<FireTruckHosePickupPoint>();
         hydrantConnectPoint ??= GetComponent<FireHydrantHoseConnectPoint>();
     }

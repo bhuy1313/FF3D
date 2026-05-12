@@ -52,7 +52,7 @@ public class GuideBookTab1ContentStyler : MonoBehaviour
             bool isBullet = LooksLikeBullet(normalized);
 
             text.richText = true;
-            text.enableWordWrapping = true;
+            text.textWrappingMode = TextWrappingModes.Normal;
             text.overflowMode = TextOverflowModes.Overflow;
 
             if (isTitle)

@@ -54,7 +54,7 @@ public class FireTruckHosePickupPoint : MonoBehaviour, IInteractable
     private void ResolveReferences()
     {
         connectionSystem ??= GetComponentInParent<FireHoseConnectionSystem>();
-        connectionSystem ??= FindFirstObjectByType<FireHoseConnectionSystem>();
+        connectionSystem ??= FindAnyObjectByType<FireHoseConnectionSystem>();
         rigParent ??= transform;
     }
 

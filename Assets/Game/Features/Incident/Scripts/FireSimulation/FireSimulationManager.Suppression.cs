@@ -21,6 +21,7 @@ public sealed partial class FireSimulationManager
 
             float intensityScale = Mathf.Max(0.35f, Mathf.Clamp01(node.Heat / Mathf.Max(0.01f, node.IgnitionThreshold)));
             node.Heat += amount * intensityScale;
+            RefreshNodeSpreadPoolMembership(node);
         }
 
         NotifyStateChanged();
@@ -61,6 +62,7 @@ public sealed partial class FireSimulationManager
             MarkNodeRecentlySuppressed(node);
         }
 
+        RefreshNodeSpreadPoolMembership(node);
         NotifyStateChanged();
         return true;
     }
@@ -119,6 +121,7 @@ public sealed partial class FireSimulationManager
                 }
             }
 
+            RefreshNodeSpreadPoolMembership(node);
             affectedNodeCount++;
         }
 

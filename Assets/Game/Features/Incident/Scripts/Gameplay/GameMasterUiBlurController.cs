@@ -146,7 +146,7 @@ public sealed class GameMasterUiBlurController : MonoBehaviour
             return null;
         }
 
-        Transform[] transforms = FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        Transform[] transforms = FindObjectsByType<Transform>(FindObjectsInactive.Include);
         for (int i = 0; i < transforms.Length; i++)
         {
             Transform candidate = transforms[i];

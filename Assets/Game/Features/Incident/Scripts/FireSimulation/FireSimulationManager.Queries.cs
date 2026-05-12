@@ -302,6 +302,7 @@ public sealed partial class FireSimulationManager
             return;
         }
 
+        RemoveNodeFromSpreadPool(node.Index);
         node.IsRemoved = true;
         node.IsTrackedByIncident = false;
         node.Heat = 0f;

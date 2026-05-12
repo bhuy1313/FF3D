@@ -6,7 +6,7 @@ public sealed partial class FireSimulationManager
     {
         bool changed = false;
 
-        // Phase 1: decay suppression timers and queue spread from currently burning nodes.
+        // Phase 1: decay suppression timers across the graph.
         for (int i = 0; i < runtimeGraph.Count; i++)
         {
             FireRuntimeNode node = runtimeGraph.GetNode(i);
@@ -16,6 +16,24 @@ public sealed partial class FireSimulationManager
             }
 
             changed |= TickNode(node, deltaTime);
+        }
+
+        // Phase 1b: queue spread only from burning nodes that still have valid targets.
+        for (int i = activeSpreadNodeIndices.Count - 1; i >= 0; i--)
+        {
+            int nodeIndex = activeSpreadNodeIndices[i];
+            FireRuntimeNode source = runtimeGraph.GetNode(nodeIndex);
+            if (!ShouldKeepNodeInSpreadPool(source))
+            {
+                RemoveNodeFromSpreadPool(nodeIndex);
+                continue;
+            }
+
+            SpreadHeatToNeighbors(source, deltaTime);
+            if (!ShouldKeepNodeInSpreadPool(source))
+            {
+                RemoveNodeFromSpreadPool(nodeIndex);
+            }
         }
 
         // Phase 2: apply queued heat deltas, clamp, mark saturation, remove if extinguished.
@@ -70,6 +88,8 @@ public sealed partial class FireSimulationManager
                 RemoveRuntimeNode(node);
                 changed = true;
             }
+
+            RefreshNodeSpreadPoolMembership(node);
         }
 
         return changed;
@@ -84,12 +104,6 @@ public sealed partial class FireSimulationManager
 
         float previousSuppressionTimer = node.SuppressionRecoveryTimer;
         node.SuppressionRecoveryTimer = Mathf.Max(0f, node.SuppressionRecoveryTimer - deltaTime);
-
-        if (node.IsBurning)
-        {
-            SpreadHeatToNeighbors(node, deltaTime);
-        }
-
         return !Mathf.Approximately(previousSuppressionTimer, node.SuppressionRecoveryTimer);
     }
 
@@ -140,6 +154,123 @@ public sealed partial class FireSimulationManager
 
             float spreadHeat = source.Heat * transferPerSecond * deltaTime;
             target.PendingHeatDelta = Mathf.Max(target.PendingHeatDelta, spreadHeat);
+        }
+    }
+
+    private void RefreshAllSpreadPoolMembership()
+    {
+        activeSpreadNodeIndices.Clear();
+        activeSpreadNodeIndexLookup.Clear();
+
+        if (runtimeGraph == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < runtimeGraph.Count; i++)
+        {
+            RefreshNodeSpreadPoolMembership(runtimeGraph.GetNode(i));
+        }
+
+        SyncActiveSpreadDebugEntries();
+    }
+
+    private void RefreshNodeSpreadPoolMembership(FireRuntimeNode node)
+    {
+        if (node == null)
+        {
+            return;
+        }
+
+        if (ShouldKeepNodeInSpreadPool(node))
+        {
+            AddNodeToSpreadPool(node.Index);
+            return;
+        }
+
+        RemoveNodeFromSpreadPool(node.Index);
+    }
+
+    private bool ShouldKeepNodeInSpreadPool(FireRuntimeNode node)
+    {
+        if (node == null || node.IsRemoved || !node.IsBurning)
+        {
+            return false;
+        }
+
+        return HasSpreadReceivableNeighbor(node);
+    }
+
+    private bool HasSpreadReceivableNeighbor(FireRuntimeNode source)
+    {
+        if (source == null || runtimeGraph == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < source.NeighborIndices.Count; i++)
+        {
+            FireRuntimeNode target = runtimeGraph.GetNode(source.NeighborIndices[i]);
+            if (CanReceiveSpread(target))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool CanReceiveSpread(FireRuntimeNode node)
+    {
+        return node != null &&
+            !node.IsRemoved &&
+            !node.HasReachedSpreadSaturation &&
+            node.SuppressionRecoveryTimer <= 0f;
+    }
+
+    private void AddNodeToSpreadPool(int nodeIndex)
+    {
+        if (nodeIndex < 0 || !activeSpreadNodeIndexLookup.Add(nodeIndex))
+        {
+            return;
+        }
+
+        activeSpreadNodeIndices.Add(nodeIndex);
+        SyncActiveSpreadDebugEntries();
+    }
+
+    private void RemoveNodeFromSpreadPool(int nodeIndex)
+    {
+        if (nodeIndex < 0 || !activeSpreadNodeIndexLookup.Remove(nodeIndex))
+        {
+            return;
+        }
+
+        activeSpreadNodeIndices.Remove(nodeIndex);
+        SyncActiveSpreadDebugEntries();
+    }
+
+    private void SyncActiveSpreadDebugEntries()
+    {
+        activeSpreadNodeDebugEntries.Clear();
+        if (runtimeGraph == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < activeSpreadNodeIndices.Count; i++)
+        {
+            int nodeIndex = activeSpreadNodeIndices[i];
+            FireRuntimeNode node = runtimeGraph.GetNode(nodeIndex);
+            if (node == null)
+            {
+                activeSpreadNodeDebugEntries.Add($"[{nodeIndex}] <missing>");
+                continue;
+            }
+
+            string nodeId = node.Authoring != null ? node.Authoring.NodeId : $"Node{nodeIndex}";
+            activeSpreadNodeDebugEntries.Add(
+                $"[{nodeIndex}] {nodeId} | Heat={node.Heat:0.00}/{node.IgnitionThreshold:0.00} | Neighbors={node.NeighborIndices.Count}");
         }
     }
 }

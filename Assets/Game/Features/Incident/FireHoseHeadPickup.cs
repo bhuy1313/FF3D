@@ -27,13 +27,13 @@ public class FireHoseHeadPickup : MonoBehaviour,
         cachedRigidbody = GetComponent<Rigidbody>();
         if (assembly == null)
         {
-            assembly = GetComponentInParent<FireHoseAssembly>() ?? FindFirstObjectByType<FireHoseAssembly>();
+            assembly = GetComponentInParent<FireHoseAssembly>() ?? FindAnyObjectByType<FireHoseAssembly>();
         }
     }
 
     void Reset()
     {
-        assembly = GetComponentInParent<FireHoseAssembly>() ?? FindFirstObjectByType<FireHoseAssembly>();
+        assembly = GetComponentInParent<FireHoseAssembly>() ?? FindAnyObjectByType<FireHoseAssembly>();
         cachedRigidbody = GetComponent<Rigidbody>();
     }
 

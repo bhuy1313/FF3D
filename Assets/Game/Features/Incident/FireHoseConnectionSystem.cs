@@ -136,7 +136,7 @@ public class FireHoseConnectionSystem : MonoBehaviour
         }
 
         Transform parent = fallbackParent;
-        ObiSolver solver = Object.FindFirstObjectByType<ObiSolver>();
+        ObiSolver solver = Object.FindAnyObjectByType<ObiSolver>();
         if (solver != null)
         {
             parent = solver.transform;
