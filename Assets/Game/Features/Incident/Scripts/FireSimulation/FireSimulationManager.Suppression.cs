@@ -11,17 +11,18 @@ public sealed partial class FireSimulationManager
             return;
         }
 
-        for (int i = 0; i < runtimeGraph.Count; i++)
+        WakeSimulation();
+        for (int i = 0; i < burningTrackedNodeIndices.Count; i++)
         {
-            FireRuntimeNode node = runtimeGraph.GetNode(i);
-            if (node == null || !node.IsTrackedByIncident || !node.IsBurning || !bounds.Contains(node.Position))
+            FireRuntimeNode node = runtimeGraph.GetNode(burningTrackedNodeIndices[i]);
+            if (node == null || !bounds.Contains(node.Position))
             {
                 continue;
             }
 
             float intensityScale = Mathf.Max(0.35f, Mathf.Clamp01(node.Heat / Mathf.Max(0.01f, node.IgnitionThreshold)));
             node.Heat += amount * intensityScale;
-            RefreshNodeSpreadPoolMembership(node);
+            RefreshNodeRuntimeMembership(node);
         }
 
         NotifyStateChanged();
@@ -62,7 +63,8 @@ public sealed partial class FireSimulationManager
             MarkNodeRecentlySuppressed(node);
         }
 
-        RefreshNodeSpreadPoolMembership(node);
+        WakeSimulation();
+        RefreshNodeRuntimeMembership(node);
         NotifyStateChanged();
         return true;
     }
@@ -121,7 +123,8 @@ public sealed partial class FireSimulationManager
                 }
             }
 
-            RefreshNodeSpreadPoolMembership(node);
+            WakeSimulation();
+            RefreshNodeRuntimeMembership(node);
             affectedNodeCount++;
         }
 

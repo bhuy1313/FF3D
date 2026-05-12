@@ -4936,9 +4936,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ea4286af94a06ba42979375c3b5f50bf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Item
-  itemName: Fire Extinguisher
-  itemDescription: 
-  itemIcon: {fileID: 0}
+  itemName: Fire Extinguisher_CO2
+  itemDescription: Discharges high-pressure carbon dioxide to smother flames and
+    remove oxygen. Ideal for electrical fires and flammable liquids. Leaves no residue
+    behind.
+  itemIcon: {fileID: 21300000, guid: addfefa295a4d794a8059ebe13a6d76b, type: 3}
 --- !u!54 &4463430447187467704
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -4964,7 +4966,7 @@ Rigidbody:
   m_UseGravity: 1
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 0
+  m_Constraints: 80
   m_CollisionDetection: 0
 --- !u!114 &6613088716479368706
 MonoBehaviour:
@@ -4999,6 +5001,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TrueJourney.BotCommands::TrueJourney.BotBehavior.BotEquippedItemPoseProfile
   overrideBotEquippedPose: 1
+  logPoseResolution: 1
   poseEntries:
   - key: 0
     pose:
@@ -5013,6 +5016,23 @@ MonoBehaviour:
       useLeftHandIkTarget: 0
       leftHandIkWeight: 0
       leftHandIkLocalPosition: {x: 0, y: 0, z: 0}
+      useLeftHandIkHint: 0
+      leftHandIkHintLocalPosition: {x: 0, y: 0, z: 0}
+      overrideSpineAimMaxWeight: 1
+      spineAimMaxWeight: 0.4
+  - key: 3
+    pose:
+      equippedLocalPosition: {x: 0.6, y: 0.15, z: 0.05}
+      equippedLocalEulerAngles: {x: 270, y: 90, z: 0}
+      useRightHandIkTarget: 0
+      rightHandIkWeight: 0
+      rightHandIkLocalPosition: {x: 0, y: 0, z: 0}
+      rightHandIkLocalEulerAngles: {x: 0, y: 0, z: 0}
+      useRightHandIkHint: 0
+      rightHandIkHintLocalPosition: {x: 0, y: 0, z: 0}
+      useLeftHandIkTarget: 1
+      leftHandIkWeight: 1
+      leftHandIkLocalPosition: {x: 0.111, y: 0.977, z: 0.401}
       useLeftHandIkHint: 0
       leftHandIkHintLocalPosition: {x: 0, y: 0, z: 0}
       overrideSpineAimMaxWeight: 1

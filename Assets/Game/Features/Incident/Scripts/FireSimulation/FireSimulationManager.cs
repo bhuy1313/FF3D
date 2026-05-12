@@ -32,6 +32,12 @@ public sealed partial class FireSimulationManager : MonoBehaviour
     [Header("Effects")]
     [Tooltip("Forces fire effect snapshots and clustering to resync periodically even when simulation state was not marked dirty. Set <= 0 to only sync on dirty state changes.")]
     [SerializeField] [Min(0f)] private float effectSyncInterval = 0.75f;
+    [Header("Runtime Debug")]
+    [SerializeField] private bool simulationSleeping;
+    [SerializeField] private int debugActiveSpreadNodeCount;
+    [SerializeField] private int debugBurningTrackedNodeCount;
+    [SerializeField] private int debugRecoveryTimerNodeCount;
+    [SerializeField] private int debugVisualActiveNodeCount;
 
     private readonly List<FireNodeSnapshot> nodeSnapshots = new List<FireNodeSnapshot>();
     private readonly List<FireSurfaceNodeAuthoring> runtimeIncidentNodes = new List<FireSurfaceNodeAuthoring>();
@@ -39,7 +45,12 @@ public sealed partial class FireSimulationManager : MonoBehaviour
     private readonly List<FireSimulationAreaGroupTarget> botFireGroups = new List<FireSimulationAreaGroupTarget>();
     private readonly List<int> activeSpreadNodeIndices = new List<int>();
     private readonly HashSet<int> activeSpreadNodeIndexLookup = new HashSet<int>();
-    [Header("Runtime Debug")]
+    private readonly List<int> burningTrackedNodeIndices = new List<int>();
+    private readonly HashSet<int> burningTrackedNodeIndexLookup = new HashSet<int>();
+    private readonly List<int> recoveryTimerNodeIndices = new List<int>();
+    private readonly HashSet<int> recoveryTimerNodeIndexLookup = new HashSet<int>();
+    private readonly List<int> visualActiveNodeIndices = new List<int>();
+    private readonly HashSet<int> visualActiveNodeIndexLookup = new HashSet<int>();
     [SerializeField] private List<string> activeSpreadNodeDebugEntries = new List<string>();
     private FireRuntimeGraph runtimeGraph;
     private float simulationTickAccumulator;
@@ -80,6 +91,11 @@ public sealed partial class FireSimulationManager : MonoBehaviour
     private void Update()
     {
         if (!initialized || runtimeGraph == null || simulationProfile == null)
+        {
+            return;
+        }
+
+        if (simulationSleeping)
         {
             return;
         }
@@ -147,6 +163,7 @@ public sealed partial class FireSimulationManager : MonoBehaviour
 
         runtimeGraph = surfaceGraph.BuildRuntimeGraph();
         initialized = runtimeGraph != null;
+        simulationSleeping = false;
         BindSceneConsumers();
         EnsureEffectManager();
         ResetRuntimeStateToBaseline(useAuthoringIgnition: true);

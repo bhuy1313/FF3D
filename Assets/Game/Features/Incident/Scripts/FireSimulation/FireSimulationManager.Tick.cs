@@ -6,10 +6,10 @@ public sealed partial class FireSimulationManager
     {
         bool changed = false;
 
-        // Phase 1: decay suppression timers across the graph.
-        for (int i = 0; i < runtimeGraph.Count; i++)
+        // Phase 1: decay suppression timers only on nodes that currently need it.
+        for (int i = recoveryTimerNodeIndices.Count - 1; i >= 0; i--)
         {
-            FireRuntimeNode node = runtimeGraph.GetNode(i);
+            FireRuntimeNode node = runtimeGraph.GetNode(recoveryTimerNodeIndices[i]);
             if (node == null || node.IsRemoved)
             {
                 continue;
@@ -89,9 +89,10 @@ public sealed partial class FireSimulationManager
                 changed = true;
             }
 
-            RefreshNodeSpreadPoolMembership(node);
+            RefreshNodeRuntimeMembership(node);
         }
 
+        UpdateSimulationSleepState();
         return changed;
     }
 
@@ -157,25 +158,36 @@ public sealed partial class FireSimulationManager
         }
     }
 
-    private void RefreshAllSpreadPoolMembership()
+    private void RefreshAllRuntimePools()
     {
         activeSpreadNodeIndices.Clear();
         activeSpreadNodeIndexLookup.Clear();
+        burningTrackedNodeIndices.Clear();
+        burningTrackedNodeIndexLookup.Clear();
+        recoveryTimerNodeIndices.Clear();
+        recoveryTimerNodeIndexLookup.Clear();
+        visualActiveNodeIndices.Clear();
+        visualActiveNodeIndexLookup.Clear();
 
         if (runtimeGraph == null)
         {
+            UpdateRuntimeDebugCounts();
+            SyncActiveSpreadDebugEntries();
+            simulationSleeping = true;
             return;
         }
 
         for (int i = 0; i < runtimeGraph.Count; i++)
         {
-            RefreshNodeSpreadPoolMembership(runtimeGraph.GetNode(i));
+            RefreshNodeRuntimeMembership(runtimeGraph.GetNode(i));
         }
 
+        UpdateRuntimeDebugCounts();
         SyncActiveSpreadDebugEntries();
+        UpdateSimulationSleepState();
     }
 
-    private void RefreshNodeSpreadPoolMembership(FireRuntimeNode node)
+    private void RefreshNodeRuntimeMembership(FireRuntimeNode node)
     {
         if (node == null)
         {
@@ -189,6 +201,33 @@ public sealed partial class FireSimulationManager
         }
 
         RemoveNodeFromSpreadPool(node.Index);
+
+        if (node.IsTrackedByIncident && node.IsBurning && !node.IsRemoved)
+        {
+            AddNodeToBurningTrackedPool(node.Index);
+        }
+        else
+        {
+            RemoveNodeFromBurningTrackedPool(node.Index);
+        }
+
+        if (!node.IsRemoved && node.SuppressionRecoveryTimer > 0f)
+        {
+            AddNodeToRecoveryTimerPool(node.Index);
+        }
+        else
+        {
+            RemoveNodeFromRecoveryTimerPool(node.Index);
+        }
+
+        if (ShouldRenderNodeEffect(node))
+        {
+            AddNodeToVisualActivePool(node.Index);
+        }
+        else
+        {
+            RemoveNodeFromVisualActivePool(node.Index);
+        }
     }
 
     private bool ShouldKeepNodeInSpreadPool(FireRuntimeNode node)
@@ -236,6 +275,7 @@ public sealed partial class FireSimulationManager
         }
 
         activeSpreadNodeIndices.Add(nodeIndex);
+        UpdateRuntimeDebugCounts();
         SyncActiveSpreadDebugEntries();
     }
 
@@ -247,7 +287,80 @@ public sealed partial class FireSimulationManager
         }
 
         activeSpreadNodeIndices.Remove(nodeIndex);
+        UpdateRuntimeDebugCounts();
         SyncActiveSpreadDebugEntries();
+    }
+
+    private void AddNodeToBurningTrackedPool(int nodeIndex)
+    {
+        if (nodeIndex >= 0 && burningTrackedNodeIndexLookup.Add(nodeIndex))
+        {
+            burningTrackedNodeIndices.Add(nodeIndex);
+            UpdateRuntimeDebugCounts();
+        }
+    }
+
+    private void RemoveNodeFromBurningTrackedPool(int nodeIndex)
+    {
+        if (nodeIndex >= 0 && burningTrackedNodeIndexLookup.Remove(nodeIndex))
+        {
+            burningTrackedNodeIndices.Remove(nodeIndex);
+            UpdateRuntimeDebugCounts();
+        }
+    }
+
+    private void AddNodeToRecoveryTimerPool(int nodeIndex)
+    {
+        if (nodeIndex >= 0 && recoveryTimerNodeIndexLookup.Add(nodeIndex))
+        {
+            recoveryTimerNodeIndices.Add(nodeIndex);
+            UpdateRuntimeDebugCounts();
+        }
+    }
+
+    private void RemoveNodeFromRecoveryTimerPool(int nodeIndex)
+    {
+        if (nodeIndex >= 0 && recoveryTimerNodeIndexLookup.Remove(nodeIndex))
+        {
+            recoveryTimerNodeIndices.Remove(nodeIndex);
+            UpdateRuntimeDebugCounts();
+        }
+    }
+
+    private void AddNodeToVisualActivePool(int nodeIndex)
+    {
+        if (nodeIndex >= 0 && visualActiveNodeIndexLookup.Add(nodeIndex))
+        {
+            visualActiveNodeIndices.Add(nodeIndex);
+            UpdateRuntimeDebugCounts();
+        }
+    }
+
+    private void RemoveNodeFromVisualActivePool(int nodeIndex)
+    {
+        if (nodeIndex >= 0 && visualActiveNodeIndexLookup.Remove(nodeIndex))
+        {
+            visualActiveNodeIndices.Remove(nodeIndex);
+            UpdateRuntimeDebugCounts();
+        }
+    }
+
+    private void WakeSimulation()
+    {
+        simulationSleeping = false;
+    }
+
+    private void UpdateSimulationSleepState()
+    {
+        simulationSleeping = activeSpreadNodeIndices.Count == 0 && recoveryTimerNodeIndices.Count == 0;
+    }
+
+    private void UpdateRuntimeDebugCounts()
+    {
+        debugActiveSpreadNodeCount = activeSpreadNodeIndices.Count;
+        debugBurningTrackedNodeCount = burningTrackedNodeIndices.Count;
+        debugRecoveryTimerNodeCount = recoveryTimerNodeIndices.Count;
+        debugVisualActiveNodeCount = visualActiveNodeIndices.Count;
     }
 
     private void SyncActiveSpreadDebugEntries()

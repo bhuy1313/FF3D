@@ -57,7 +57,7 @@ public sealed partial class FireSimulationManager
 
     public int GetBurningTrackedNodeCount()
     {
-        return CountNodes(node => node != null && node.IsTrackedByIncident && node.IsBurning);
+        return initialized && runtimeGraph != null ? burningTrackedNodeIndices.Count : 0;
     }
 
     public int GetBurningTrackedNodeCount(Bounds bounds)
@@ -75,10 +75,10 @@ public sealed partial class FireSimulationManager
             return;
         }
 
-        for (int i = 0; i < runtimeGraph.Count; i++)
+        for (int i = 0; i < burningTrackedNodeIndices.Count; i++)
         {
-            FireRuntimeNode node = runtimeGraph.GetNode(i);
-            if (node == null || !node.IsTrackedByIncident || !node.IsBurning || !bounds.Contains(node.Position))
+            FireRuntimeNode node = runtimeGraph.GetNode(burningTrackedNodeIndices[i]);
+            if (node == null || !bounds.Contains(node.Position))
             {
                 continue;
             }
@@ -106,10 +106,10 @@ public sealed partial class FireSimulationManager
             return;
         }
 
-        for (int i = 0; i < runtimeGraph.Count; i++)
+        for (int i = 0; i < burningTrackedNodeIndices.Count; i++)
         {
-            FireRuntimeNode node = runtimeGraph.GetNode(i);
-            if (node == null || !node.IsTrackedByIncident || !node.IsBurning || !bounds.Contains(node.Position))
+            FireRuntimeNode node = runtimeGraph.GetNode(burningTrackedNodeIndices[i]);
+            if (node == null || !bounds.Contains(node.Position))
             {
                 continue;
             }
@@ -146,10 +146,10 @@ public sealed partial class FireSimulationManager
         Vector3 bestPosition = fallbackPosition;
         bool found = false;
 
-        for (int i = 0; i < runtimeGraph.Count; i++)
+        for (int i = 0; i < burningTrackedNodeIndices.Count; i++)
         {
-            FireRuntimeNode node = runtimeGraph.GetNode(i);
-            if (node == null || !node.IsTrackedByIncident || !node.IsBurning || !bounds.Contains(node.Position))
+            FireRuntimeNode node = runtimeGraph.GetNode(burningTrackedNodeIndices[i]);
+            if (node == null || !bounds.Contains(node.Position))
             {
                 continue;
             }
@@ -303,6 +303,9 @@ public sealed partial class FireSimulationManager
         }
 
         RemoveNodeFromSpreadPool(node.Index);
+        RemoveNodeFromBurningTrackedPool(node.Index);
+        RemoveNodeFromRecoveryTimerPool(node.Index);
+        RemoveNodeFromVisualActivePool(node.Index);
         node.IsRemoved = true;
         node.IsTrackedByIncident = false;
         node.Heat = 0f;

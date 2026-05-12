@@ -19,6 +19,11 @@ public sealed class FireSimulationScorchDecalBinder : MonoBehaviour
     [SerializeField] private float raycastBackoff = 0.65f;
     [SerializeField] private float raycastDistance = 1.8f;
     [SerializeField] private float projectorDepth = 0.18f;
+    [SerializeField] [Min(1)] private int maxProjectorsPerNode = 3;
+    [SerializeField] [Min(0f)] private float surfaceProbeRadius = 0.45f;
+    [SerializeField] [Range(0f, 1f)] private float sideProbeBias = 0.7f;
+    [SerializeField] [Range(0f, 1f)] private float diagonalProbeBias = 0.35f;
+    [SerializeField] [Range(0f, 180f)] private float minSurfaceSeparationAngle = 22f;
     [SerializeField] private bool requireSurfaceHit = true;
     [SerializeField] [Range(0f, 90f)] private float maxSurfaceNormalAngle = 35f;
     [SerializeField] [Range(0f, 180f)] private float startAngleFade = 40f;
@@ -33,9 +38,16 @@ public sealed class FireSimulationScorchDecalBinder : MonoBehaviour
 
     private sealed class RuntimeScorchDecal
     {
-        public DecalProjector Projector;
+        public readonly List<DecalProjector> Projectors = new List<DecalProjector>();
         public float ScorchAmount;
         public float LastSeenTime;
+    }
+
+    private struct SurfacePlacement
+    {
+        public Vector3 Position;
+        public Vector3 Normal;
+        public float Score;
     }
 
     public void Configure(FireSimulationManager manager, Material material, LayerMask mask, int decalLimit)
@@ -75,9 +87,18 @@ public sealed class FireSimulationScorchDecalBinder : MonoBehaviour
 
         foreach (KeyValuePair<int, RuntimeScorchDecal> pair in decalsByNodeIndex)
         {
-            if (pair.Value?.Projector != null)
+            RuntimeScorchDecal decal = pair.Value;
+            if (decal == null)
             {
-                Destroy(pair.Value.Projector.gameObject);
+                continue;
+            }
+
+            for (int i = 0; i < decal.Projectors.Count; i++)
+            {
+                if (decal.Projectors[i] != null)
+                {
+                    Destroy(decal.Projectors[i].gameObject);
+                }
             }
         }
 
@@ -114,18 +135,16 @@ public sealed class FireSimulationScorchDecalBinder : MonoBehaviour
 
         decal.LastSeenTime = Time.time;
         decal.ScorchAmount = Mathf.Clamp01(decal.ScorchAmount + Time.deltaTime * growthPerSecond * Mathf.Max(0.2f, snapshot.Intensity));
-        if (!TryPlaceProjector(decal.Projector, snapshot.Position, snapshot.SurfaceNormal))
+        int activeProjectorCount = TryPlaceProjectors(decal, snapshot.Position, snapshot.SurfaceNormal);
+        if (activeProjectorCount <= 0)
         {
-            decal.Projector.gameObject.SetActive(false);
+            SetProjectorsActive(decal, 0, false);
             return;
         }
 
         float size = Mathf.Lerp(minSize, maxSize, decal.ScorchAmount);
         float opacity = Mathf.Clamp01(Mathf.Max(decal.ScorchAmount, snapshot.Intensity * 0.25f)) * maxOpacity;
-        decal.Projector.size = new Vector3(size, size, projectorDepth);
-        decal.Projector.pivot = new Vector3(0f, 0f, projectorDepth * 0.5f);
-        decal.Projector.fadeFactor = opacity;
-        decal.Projector.gameObject.SetActive(opacity > 0.001f);
+        ApplyProjectorVisuals(decal, activeProjectorCount, size, opacity);
     }
 
     private RuntimeScorchDecal ResolveDecal(int nodeIndex)
@@ -141,56 +160,94 @@ public sealed class FireSimulationScorchDecalBinder : MonoBehaviour
         }
 
         Transform root = ResolveRoot();
-        GameObject decalObject = new GameObject($"FireNode_{nodeIndex}_ScorchDecal");
-        decalObject.transform.SetParent(root, true);
-
-        DecalProjector projector = decalObject.AddComponent<DecalProjector>();
-        projector.material = ResolveMaterial();
-        projector.drawDistance = 70f;
-        projector.fadeScale = 0.35f;
-        projector.startAngleFade = startAngleFade;
-        projector.endAngleFade = Mathf.Max(startAngleFade, endAngleFade);
-        projector.uvScale = Vector2.one;
-        projector.uvBias = Vector2.zero;
-        projector.size = new Vector3(minSize, minSize, projectorDepth);
-        projector.pivot = new Vector3(0f, 0f, projectorDepth * 0.5f);
-        projector.fadeFactor = 0f;
-        decalObject.SetActive(false);
-
         decal = new RuntimeScorchDecal
         {
-            Projector = projector,
             LastSeenTime = Time.time
         };
+
+        EnsureProjectorCount(decal, root, nodeIndex);
         decalsByNodeIndex.Add(nodeIndex, decal);
         return decal;
     }
 
-    private bool TryPlaceProjector(DecalProjector projector, Vector3 nodePosition, Vector3 surfaceNormal)
+    private int TryPlaceProjectors(RuntimeScorchDecal decal, Vector3 nodePosition, Vector3 surfaceNormal)
     {
-        Vector3 normal = surfaceNormal.sqrMagnitude > 0.001f ? surfaceNormal.normalized : Vector3.up;
-        Vector3 origin = nodePosition + normal * raycastBackoff;
-        if (Physics.Raycast(origin, -normal, out RaycastHit hit, raycastBackoff + raycastDistance, surfaceMask, triggerInteraction))
+        if (decal == null)
         {
-            Vector3 hitNormal = hit.normal.sqrMagnitude > 0.001f ? hit.normal.normalized : normal;
-            if (Vector3.Angle(normal, hitNormal) > maxSurfaceNormalAngle)
+            return 0;
+        }
+
+        EnsureProjectorCount(decal, ResolveRoot(), -1);
+        List<SurfacePlacement> placements = CollectSurfacePlacements(nodePosition, surfaceNormal);
+        int activeCount = Mathf.Min(placements.Count, decal.Projectors.Count);
+        for (int i = 0; i < activeCount; i++)
+        {
+            PlaceProjector(decal.Projectors[i], placements[i].Position, placements[i].Normal);
+        }
+
+        SetProjectorsActive(decal, activeCount, false);
+        return activeCount;
+    }
+
+    private List<SurfacePlacement> CollectSurfacePlacements(Vector3 nodePosition, Vector3 surfaceNormal)
+    {
+        List<SurfacePlacement> placements = new List<SurfacePlacement>(maxProjectorsPerNode);
+        Vector3 normal = surfaceNormal.sqrMagnitude > 0.001f ? surfaceNormal.normalized : Vector3.up;
+        Vector3 tangent = ResolveTangent(normal);
+        Vector3 bitangent = Vector3.Cross(normal, tangent).normalized;
+
+        TryAddSurfacePlacement(placements, nodePosition, normal, normal, 1f);
+        TryAddSurfacePlacement(placements, nodePosition, normal, Vector3.Normalize(normal + tangent * sideProbeBias), 0.85f);
+        TryAddSurfacePlacement(placements, nodePosition, normal, Vector3.Normalize(normal - tangent * sideProbeBias), 0.85f);
+        TryAddSurfacePlacement(placements, nodePosition, normal, Vector3.Normalize(normal + bitangent * sideProbeBias), 0.85f);
+        TryAddSurfacePlacement(placements, nodePosition, normal, Vector3.Normalize(normal - bitangent * sideProbeBias), 0.85f);
+        TryAddSurfacePlacement(placements, nodePosition, normal, Vector3.Normalize(normal + (tangent + bitangent) * diagonalProbeBias), 0.7f);
+        TryAddSurfacePlacement(placements, nodePosition, normal, Vector3.Normalize(normal + (tangent - bitangent) * diagonalProbeBias), 0.7f);
+        TryAddSurfacePlacement(placements, nodePosition, normal, Vector3.Normalize(normal + (-tangent + bitangent) * diagonalProbeBias), 0.7f);
+        TryAddSurfacePlacement(placements, nodePosition, normal, Vector3.Normalize(normal - (tangent + bitangent) * diagonalProbeBias), 0.7f);
+        return placements;
+    }
+
+    private void TryAddSurfacePlacement(
+        List<SurfacePlacement> placements,
+        Vector3 nodePosition,
+        Vector3 fallbackNormal,
+        Vector3 probeNormal,
+        float probeWeight)
+    {
+        if (placements.Count >= maxProjectorsPerNode)
+        {
+            return;
+        }
+
+        Vector3 normalizedProbe = probeNormal.sqrMagnitude > 0.001f ? probeNormal.normalized : fallbackNormal;
+        Vector3 origin = nodePosition + normalizedProbe * (raycastBackoff + surfaceProbeRadius);
+        if (Physics.Raycast(origin, -normalizedProbe, out RaycastHit hit, raycastBackoff + raycastDistance + surfaceProbeRadius, surfaceMask, triggerInteraction))
+        {
+            Vector3 hitNormal = hit.normal.sqrMagnitude > 0.001f ? hit.normal.normalized : fallbackNormal;
+            if (Vector3.Angle(normalizedProbe, hitNormal) > maxSurfaceNormalAngle)
             {
-                return false;
+                return;
             }
 
-            normal = hitNormal;
-            nodePosition = hit.point;
+            if (!IsDistinctSurface(placements, hitNormal))
+            {
+                return;
+            }
+
+            float distanceScore = 1f - Mathf.Clamp01(hit.distance / Mathf.Max(0.01f, raycastBackoff + raycastDistance + surfaceProbeRadius));
+            placements.Add(new SurfacePlacement
+            {
+                Position = hit.point,
+                Normal = hitNormal,
+                Score = probeWeight * distanceScore
+            });
+            placements.Sort(static (a, b) => b.Score.CompareTo(a.Score));
         }
         else if (requireSurfaceHit)
         {
-            return false;
+            return;
         }
-
-        projector.transform.position = nodePosition + normal * surfaceOffset;
-        projector.transform.rotation = Quaternion.LookRotation(-normal, ResolveTangent(normal));
-        projector.startAngleFade = startAngleFade;
-        projector.endAngleFade = Mathf.Max(startAngleFade, endAngleFade);
-        return true;
     }
 
     private void HideStaleDecals()
@@ -199,7 +256,7 @@ public sealed class FireSimulationScorchDecalBinder : MonoBehaviour
         foreach (KeyValuePair<int, RuntimeScorchDecal> pair in decalsByNodeIndex)
         {
             RuntimeScorchDecal decal = pair.Value;
-            if (decal?.Projector == null)
+            if (decal == null || decal.Projectors.Count == 0)
             {
                 staleNodeIndices.Add(pair.Key);
                 continue;
@@ -207,7 +264,10 @@ public sealed class FireSimulationScorchDecalBinder : MonoBehaviour
 
             if (Time.time - decal.LastSeenTime > 0.5f)
             {
-                decal.Projector.gameObject.SetActive(decal.ScorchAmount > 0.001f);
+                if (decal.ScorchAmount <= 0.001f)
+                {
+                    SetProjectorsActive(decal, 0, false);
+                }
             }
         }
 
@@ -259,6 +319,112 @@ public sealed class FireSimulationScorchDecalBinder : MonoBehaviour
         return decalRoot;
     }
 
+    private void EnsureProjectorCount(RuntimeScorchDecal decal, Transform root, int nodeIndex)
+    {
+        if (decal == null || root == null)
+        {
+            return;
+        }
+
+        while (decal.Projectors.Count < maxProjectorsPerNode)
+        {
+            int projectorIndex = decal.Projectors.Count;
+            string objectName = nodeIndex >= 0
+                ? $"FireNode_{nodeIndex}_ScorchDecal_{projectorIndex}"
+                : $"FireNode_ScorchDecal_{projectorIndex}";
+            GameObject decalObject = new GameObject(objectName);
+            decalObject.transform.SetParent(root, true);
+
+            DecalProjector projector = decalObject.AddComponent<DecalProjector>();
+            projector.material = ResolveMaterial();
+            projector.drawDistance = 70f;
+            projector.fadeScale = 0.35f;
+            projector.startAngleFade = startAngleFade;
+            projector.endAngleFade = Mathf.Max(startAngleFade, endAngleFade);
+            projector.uvScale = Vector2.one;
+            projector.uvBias = Vector2.zero;
+            projector.size = new Vector3(minSize, minSize, projectorDepth);
+            projector.pivot = new Vector3(0f, 0f, projectorDepth * 0.5f);
+            projector.fadeFactor = 0f;
+            decalObject.SetActive(false);
+            decal.Projectors.Add(projector);
+        }
+    }
+
+    private void PlaceProjector(DecalProjector projector, Vector3 nodePosition, Vector3 normal)
+    {
+        if (projector == null)
+        {
+            return;
+        }
+
+        projector.transform.position = nodePosition + normal * surfaceOffset;
+        projector.transform.rotation = Quaternion.LookRotation(-normal, ResolveTangent(normal));
+        projector.startAngleFade = startAngleFade;
+        projector.endAngleFade = Mathf.Max(startAngleFade, endAngleFade);
+    }
+
+    private void ApplyProjectorVisuals(RuntimeScorchDecal decal, int activeProjectorCount, float size, float opacity)
+    {
+        if (decal == null)
+        {
+            return;
+        }
+
+        float opacityPerProjector = activeProjectorCount > 1
+            ? Mathf.Clamp01(opacity / Mathf.Sqrt(activeProjectorCount))
+            : opacity;
+
+        for (int i = 0; i < decal.Projectors.Count; i++)
+        {
+            DecalProjector projector = decal.Projectors[i];
+            if (projector == null)
+            {
+                continue;
+            }
+
+            bool active = i < activeProjectorCount && opacityPerProjector > 0.001f;
+            projector.size = new Vector3(size, size, projectorDepth);
+            projector.pivot = new Vector3(0f, 0f, projectorDepth * 0.5f);
+            projector.fadeFactor = active ? opacityPerProjector : 0f;
+            projector.gameObject.SetActive(active);
+        }
+    }
+
+    private void SetProjectorsActive(RuntimeScorchDecal decal, int activeProjectorCount, bool active)
+    {
+        if (decal == null)
+        {
+            return;
+        }
+
+        int threshold = active ? Mathf.Clamp(activeProjectorCount, 0, decal.Projectors.Count) : 0;
+        for (int i = threshold; i < decal.Projectors.Count; i++)
+        {
+            DecalProjector projector = decal.Projectors[i];
+            if (projector == null)
+            {
+                continue;
+            }
+
+            projector.fadeFactor = 0f;
+            projector.gameObject.SetActive(false);
+        }
+    }
+
+    private bool IsDistinctSurface(List<SurfacePlacement> placements, Vector3 normal)
+    {
+        for (int i = 0; i < placements.Count; i++)
+        {
+            if (Vector3.Angle(placements[i].Normal, normal) < minSurfaceSeparationAngle)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private static Vector3 ResolveTangent(Vector3 normal)
     {
         Vector3 tangent = Vector3.ProjectOnPlane(Vector3.forward, normal);
@@ -279,6 +445,9 @@ public sealed class FireSimulationScorchDecalBinder : MonoBehaviour
         raycastBackoff = Mathf.Max(0f, raycastBackoff);
         raycastDistance = Mathf.Max(0.01f, raycastDistance);
         projectorDepth = Mathf.Max(0.02f, projectorDepth);
+        maxProjectorsPerNode = Mathf.Max(1, maxProjectorsPerNode);
+        surfaceProbeRadius = Mathf.Max(0f, surfaceProbeRadius);
+        minSurfaceSeparationAngle = Mathf.Clamp(minSurfaceSeparationAngle, 0f, 180f);
         endAngleFade = Mathf.Max(startAngleFade, endAngleFade);
         growthPerSecond = Mathf.Max(0f, growthPerSecond);
     }
