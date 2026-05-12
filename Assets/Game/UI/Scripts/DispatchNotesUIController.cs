@@ -194,12 +194,14 @@ public class DispatchNotesUIController : MonoBehaviour
     private void OnDisable()
     {
         KillActiveSequence();
+        UiBlurCoordinator.SetBlurRequested(this, false);
         RestoreCursorStateIfNeeded();
     }
 
     private void OnDestroy()
     {
         KillActiveSequence();
+        UiBlurCoordinator.SetBlurRequested(this, false);
         RestoreCursorStateIfNeeded();
     }
 
@@ -802,6 +804,7 @@ public class DispatchNotesUIController : MonoBehaviour
 
         KillActiveSequence();
         EnsureUiContainerActiveForTween();
+        UiBlurCoordinator.SetBlurRequested(this, targetOpen);
 
         if (targetOpen)
         {
@@ -886,6 +889,7 @@ public class DispatchNotesUIController : MonoBehaviour
             animatedCanvasGroup.alpha = visible ? 1f : 0f;
             animatedCanvasGroup.interactable = visible;
             animatedCanvasGroup.blocksRaycasts = visible;
+            UiBlurCoordinator.SetBlurRequested(this, visible);
 
             if (animatedRoot != null && visible)
             {
@@ -897,6 +901,7 @@ public class DispatchNotesUIController : MonoBehaviour
         }
 
         uiContainer.SetActive(visible);
+        UiBlurCoordinator.SetBlurRequested(this, visible);
     }
 
     private void RefreshNotesScrollLayout()

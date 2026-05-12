@@ -141,7 +141,10 @@ public partial class AssessRiskPopupEntryController
         if (assessRiskButton != null)
         {
             assessRiskButton.interactable = interactable;
-            CallPhaseFunctionButtonVisuals.Apply(assessRiskButton, interactable);
+            CallPhaseFunctionButtonVisuals.Apply(
+                assessRiskButton,
+                interactable,
+                CallPhaseFunctionButtonVisuals.AssessRiskActiveColor);
         }
 
         UpdateAssessRiskBorderVisuals(interactable);
@@ -159,7 +162,9 @@ public partial class AssessRiskPopupEntryController
 
         if (submitReportButtonLabel != null)
         {
-            submitReportButtonLabel.color = interactable ? EnabledBorderColor : DisabledBorderColor;
+            submitReportButtonLabel.color = interactable
+                ? EnabledSubmitReportBorderColor
+                : DisabledBorderColor;
         }
     }
 

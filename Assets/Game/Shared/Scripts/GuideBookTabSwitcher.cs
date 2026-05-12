@@ -53,6 +53,7 @@ public class GuideBookTabSwitcher : MonoBehaviour
         ResolveButtons();
         ResolveTabs();
         ResolveTab5SubTabs();
+        EnsureButtonVisuals();
         BindButtons();
         BindTab5SubTabButtons();
     }
@@ -279,6 +280,37 @@ public class GuideBookTabSwitcher : MonoBehaviour
         }
     }
 
+    private void EnsureButtonVisuals()
+    {
+        EnsureButtonVisuals(tocButtons);
+        EnsureButtonVisuals(tab5SubTabButtons);
+    }
+
+    private static void EnsureButtonVisuals(Button[] buttons)
+    {
+        if (buttons == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < buttons.Length; i++)
+        {
+            Button button = buttons[i];
+            if (button == null)
+            {
+                continue;
+            }
+
+            GuideBookListButtonVisual visual = button.GetComponent<GuideBookListButtonVisual>();
+            if (visual == null)
+            {
+                visual = button.gameObject.AddComponent<GuideBookListButtonVisual>();
+            }
+
+            visual.RefreshBindings();
+        }
+    }
+
     private void RefreshButtonVisuals()
     {
         for (int i = 0; i < tocButtons.Length; i++)
@@ -291,17 +323,18 @@ public class GuideBookTabSwitcher : MonoBehaviour
 
             bool isActive = i == currentTabIndex;
             GuideBookListButtonVisual visual = button.GetComponent<GuideBookListButtonVisual>();
-            if (visual != null)
-            {
-                visual.SetSelected(isActive);
-            }
-
             TMP_Text[] texts = button.GetComponentsInChildren<TMP_Text>(true);
             for (int j = 0; j < texts.Length; j++)
             {
                 TMP_Text text = texts[j];
                 text.color = isActive ? activeTextColor : inactiveTextColor;
                 text.fontStyle = isActive ? activeTextStyle : inactiveTextStyle;
+            }
+
+            if (visual != null)
+            {
+                visual.RefreshLabelBindings();
+                visual.SetSelected(isActive);
             }
         }
     }
@@ -323,17 +356,18 @@ public class GuideBookTabSwitcher : MonoBehaviour
 
             bool isActive = i == currentTab5SubTabIndex;
             GuideBookListButtonVisual visual = button.GetComponent<GuideBookListButtonVisual>();
-            if (visual != null)
-            {
-                visual.SetSelected(isActive);
-            }
-
             TMP_Text[] texts = button.GetComponentsInChildren<TMP_Text>(true);
             for (int j = 0; j < texts.Length; j++)
             {
                 TMP_Text text = texts[j];
                 text.color = isActive ? activeTextColor : inactiveTextColor;
                 text.fontStyle = isActive ? activeTextStyle : inactiveTextStyle;
+            }
+
+            if (visual != null)
+            {
+                visual.RefreshLabelBindings();
+                visual.SetSelected(isActive);
             }
         }
     }

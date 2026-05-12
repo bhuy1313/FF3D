@@ -64,6 +64,16 @@ public sealed class IncidentProcedureChecklistToggle : MonoBehaviour
         ApplyVisibleState(false);
     }
 
+    private void OnDisable()
+    {
+        UiBlurCoordinator.SetBlurRequested(this, false);
+    }
+
+    private void OnDestroy()
+    {
+        UiBlurCoordinator.SetBlurRequested(this, false);
+    }
+
     private void ApplyVisibleState(bool visible)
     {
         if (checklistRoot == null)
@@ -88,6 +98,8 @@ public sealed class IncidentProcedureChecklistToggle : MonoBehaviour
         {
             checklistRoot.SetActive(visible);
         }
+
+        UiBlurCoordinator.SetBlurRequested(this, visible);
 
         if (visible)
         {

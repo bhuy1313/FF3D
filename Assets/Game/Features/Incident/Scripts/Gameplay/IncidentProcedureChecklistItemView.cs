@@ -15,6 +15,10 @@ public sealed class IncidentProcedureChecklistItemView : MonoBehaviour
     [SerializeField] private Color checkedColor = new Color(0.2f, 0.75f, 0.3f, 1f);
     [SerializeField] private Color uncheckedColor = new Color(0.4f, 0.4f, 0.4f, 1f);
 
+    [Header("Audio")]
+    [SerializeField] private AudioClip checkSound;
+    [SerializeField, Range(0f, 1f)] private float checkSoundVolume = 1f;
+
     private IncidentMissionSystem missionSystem;
     private string boundItemId;
     private bool boundIsCompleted;
@@ -134,6 +138,10 @@ public sealed class IncidentProcedureChecklistItemView : MonoBehaviour
 
         boundIsCompleted = nextValue;
         ApplyToggleVisual(boundIsCompleted);
+        if (boundIsCompleted && checkSound != null)
+        {
+            AudioService.PlayClip2D(checkSound, AudioBus.Ui, checkSoundVolume);
+        }
     }
 
     private void ApplyToggleVisual(bool isCompleted)
