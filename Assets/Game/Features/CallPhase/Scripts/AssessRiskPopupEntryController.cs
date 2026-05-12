@@ -225,6 +225,8 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
     private TMP_Text submitPopupSeverityValueText;
     private TMP_Text resultPopupSummaryText;
     private TMP_Text resultPopupReviewText;
+    private TMP_Text headerFactsCapturedValueText;
+    private Image headerFactsCapturedProgressImage;
     private GameObject severityOverlay;
     private TMP_Text severityOverlayValueText;
     private Button lowSeverityButton;
@@ -252,6 +254,7 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
         SetAssessRiskButtonInteractable(false);
         SetSubmitReportButtonInteractable(false);
         UpdateSubmitReportButtonLabel();
+        RefreshHeaderFactsCapturedProgress();
         HidePopupImmediate();
         HideSubmitPopupImmediate();
         HideResultPopupImmediate();
@@ -264,6 +267,7 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
         SubscribeToUi();
         RefreshAssessRiskButtonState();
         RefreshSubmitReportButtonState();
+        RefreshHeaderFactsCapturedProgress();
     }
 
     private void Start()
@@ -274,6 +278,7 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
         HideSeverityOverlayImmediate();
         RefreshAssessRiskButtonState();
         RefreshSubmitReportButtonState();
+        RefreshHeaderFactsCapturedProgress();
     }
 
     private void Update()
@@ -354,6 +359,7 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
         HideSeverityOverlayImmediate();
         RefreshAssessRiskButtonState();
         RefreshSubmitReportButtonState();
+        RefreshHeaderFactsCapturedProgress();
         UpdateSubmitReportButtonLabel();
     }
 
@@ -438,6 +444,7 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
         RefreshAssessRiskButtonState();
         RefreshSubmitReportButtonState();
         UpdateSubmitReportButtonLabel();
+        RefreshHeaderFactsCapturedProgress();
 
         if (isPopupOpen)
         {
@@ -742,6 +749,26 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
             submitReportButtonLabel = GetButtonLabel(submitReportButton);
         }
 
+        if (headerFactsCapturedValueText == null)
+        {
+            Transform valueTextTransform = transform.Find(
+                "Container/Header/Right/Value/Text (TMP)"
+            );
+            headerFactsCapturedValueText =
+                valueTextTransform != null ? valueTextTransform.GetComponent<TMP_Text>() : null;
+        }
+
+        if (headerFactsCapturedProgressImage == null)
+        {
+            Transform progressTransform = transform.Find(
+                "Container/Header/Right/Bar/Image/BarProcessV2"
+            );
+            headerFactsCapturedProgressImage =
+                progressTransform != null ? progressTransform.GetComponent<Image>() : null;
+        }
+
+        RefreshHeaderFactsCapturedProgress();
+
         CacheSubmitReportBorderImages();
 
         if (assessRiskPopup == null)
@@ -1013,6 +1040,12 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
             PopulateConfirmedFacts();
         }
 
+        GameObject resultPopupV2 = FindSiblingObject("ResultPopupV2");
+        if (resultPopupV2 != null)
+        {
+            resultPopup = resultPopupV2;
+        }
+
         if (resultPopup == null)
         {
             resultPopup = resultPopupRootObject;
@@ -1025,6 +1058,11 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
 
         if (resultPopup != null)
         {
+            if (IsResultPopupV2())
+            {
+                ClearResultPopupReferencesOutsideRoot();
+            }
+
             if (resultPopupBlockerImage == null)
             {
                 resultPopupBlockerImage = resultPopup.GetComponent<Image>();
@@ -1033,6 +1071,20 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
             if (resultPopupBackButton == null)
             {
                 resultPopupBackButton = GetButtonFromObject(resultPopupBackButtonObject);
+            }
+
+            if (IsResultPopupV2() && !IsComponentUnderResultPopup(resultPopupBackButton))
+            {
+                resultPopupBackButton = null;
+            }
+
+            if (resultPopupBackButton == null)
+            {
+                resultPopupBackButton = FindButtonInChildren(
+                    resultPopup.transform,
+                    "btnBackV2",
+                    CallPhaseUiChromeText.Tr("common.btn.back", "Back")
+                );
             }
 
             if (resultPopupBackButton == null)
@@ -1049,6 +1101,11 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
                 resultPopupNextPhaseButton = GetButtonFromObject(resultPopupNextPhaseButtonObject);
             }
 
+            if (IsResultPopupV2() && !IsComponentUnderResultPopup(resultPopupNextPhaseButton))
+            {
+                resultPopupNextPhaseButton = null;
+            }
+
             if (resultPopupNextPhaseButton == null)
             {
                 resultPopupNextPhaseButton = FindButtonInChildren(
@@ -1058,9 +1115,28 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
                 );
             }
 
+            if (resultPopupNextPhaseButton == null)
+            {
+                resultPopupNextPhaseButton = FindButtonInChildren(
+                    resultPopup.transform,
+                    null,
+                    "Proceed to Next Phase"
+                );
+            }
+
+            if (resultPopupNextPhaseButton == null && IsResultPopupV2())
+            {
+                resultPopupNextPhaseButton = FindResultPopupV2NextPhaseButton();
+            }
+
             if (resultPopupSummaryText == null)
             {
                 resultPopupSummaryText = GetTextFromObject(resultPopupSummaryTextObject);
+            }
+
+            if (IsResultPopupV2() && !IsComponentUnderResultPopup(resultPopupSummaryText))
+            {
+                resultPopupSummaryText = null;
             }
 
             if (resultPopupSummaryText == null)
@@ -1076,6 +1152,11 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
                 resultPopupReviewText = GetTextFromObject(resultPopupReviewTextObject);
             }
 
+            if (IsResultPopupV2() && !IsComponentUnderResultPopup(resultPopupReviewText))
+            {
+                resultPopupReviewText = null;
+            }
+
             if (resultPopupReviewText == null)
             {
                 resultPopupReviewText = FindTextInChildrenByName(
@@ -1083,6 +1164,8 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
                     "resultText"
                 );
             }
+
+            ResolveResultPopupV2References();
         }
 
         WarnIfMissingReference("Assess Risk button", assessRiskButton, this);
@@ -1145,14 +1228,20 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
             submitReportPopup
         );
         WarnIfMissingReference("Result popup", resultPopup, this);
-        WarnIfMissingReference("Result popup back button", resultPopupBackButton, resultPopup);
+        if (!IsResultPopupV2())
+        {
+            WarnIfMissingReference("Result popup back button", resultPopupBackButton, resultPopup);
+        }
         WarnIfMissingReference(
             "Result popup next phase button",
             resultPopupNextPhaseButton,
             resultPopup
         );
-        WarnIfMissingReference("Result popup summary text", resultPopupSummaryText, resultPopup);
-        WarnIfMissingReference("Result popup review text", resultPopupReviewText, resultPopup);
+        if (!IsResultPopupV2())
+        {
+            WarnIfMissingReference("Result popup summary text", resultPopupSummaryText, resultPopup);
+            WarnIfMissingReference("Result popup review text", resultPopupReviewText, resultPopup);
+        }
         WarnIfMissingReference("Severity overlay", severityOverlay, this);
         WarnIfMissingReference(
             "Severity overlay value text",
@@ -1221,9 +1310,8 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
             resultPopupBlockerImage.enabled = true;
         }
 
-        PopulateResultPopupSummary();
-        PopulateResultPopupReview();
         resultPopup.SetActive(true);
+        PopulateResultPopup();
         ClearCurrentSelection();
         RefreshAssessRiskButtonState();
         RefreshSubmitReportButtonState();
@@ -1582,6 +1670,19 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
         resultPopupReviewText.text = BuildResultPopupReviewText();
     }
 
+    private void PopulateResultPopup()
+    {
+        CallPhaseResultSnapshot snapshot = BuildCallPhaseResultSnapshot();
+        if (IsResultPopupV2())
+        {
+            PopulateResultPopupV2(snapshot);
+            return;
+        }
+
+        PopulateResultPopupSummary();
+        PopulateResultPopupReview();
+    }
+
     // Efficiency is only scored once the report is complete enough to be meaningfully comparable.
     private void CachePopupSummaryValueTexts()
     {
@@ -1790,6 +1891,24 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
 
             valueText.text = GetDisplayValue(GetPopupSummaryValue(fieldId), fieldId);
             CallPhaseUiChromeText.ApplyCurrentFont(valueText);
+        }
+    }
+
+    private void RefreshHeaderFactsCapturedProgress()
+    {
+        int gatheredCount = CountGatheredInfoFields();
+        int gatheredTotal = SummaryFieldIds.Length;
+        float gatheredRatio = gatheredTotal > 0 ? (float)gatheredCount / gatheredTotal : 0f;
+
+        if (headerFactsCapturedValueText != null)
+        {
+            CallPhaseUiChromeText.ApplyCurrentFont(headerFactsCapturedValueText);
+            headerFactsCapturedValueText.text = $"{gatheredCount}/{gatheredTotal}";
+        }
+
+        if (headerFactsCapturedProgressImage != null)
+        {
+            headerFactsCapturedProgressImage.fillAmount = Mathf.Clamp01(gatheredRatio);
         }
     }
 
