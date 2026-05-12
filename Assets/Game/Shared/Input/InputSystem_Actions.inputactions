@@ -241,6 +241,15 @@
                     "initialStateCheck": false
                 },
                 {
+                    "name": "ToggleFlashlight",
+                    "type": "Button",
+                    "id": "7f91a3a0-5b42-47be-b5e0-9c6dfb1d4a71",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "ToggleMissionHud",
                     "type": "Button",
                     "id": "a3db5ed5-40ec-47b7-a4ac-cf733d7e17c2",
@@ -782,6 +791,28 @@
                     "processors": "",
                     "groups": "KeyboardMouse",
                     "action": "ToggleDispatchNotes",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "174587e4-7632-4947-9b9d-d897d9757ce7",
+                    "path": "<Keyboard>/r",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "KeyboardMouse",
+                    "action": "ToggleFlashlight",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "18a1758f-bcdb-47f3-8048-fd7c1f21aa93",
+                    "path": "<Gamepad>/rightShoulder",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Gamepad",
+                    "action": "ToggleFlashlight",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },

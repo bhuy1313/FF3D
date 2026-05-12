@@ -14,6 +14,8 @@ internal sealed class BotMovePickupOptions
     public Action<BotCommandType> PrepareForIssuedCommand;
     public Action<string, string> LogPathFlow;
     public Func<IPickupable, string> GetPickupableName;
+    public Func<Vector3, bool> MoveToDestination;
+    public Func<bool> ShouldRefreshPathCheck;
     public Action<bool, IPickupable> SetPickupWindow;
     public Func<IBotExtinguisherItem, bool> TryEnsureExtinguisherEquipped;
     public Func<IBotBreakTool, bool> TryEnsureBreakToolEquipped;
@@ -73,7 +75,9 @@ internal sealed class BotMovePickupController
         else
         {
             options.NavMeshAgent.isStopped = false;
-            accepted = options.NavMeshAgent.SetDestination(destination);
+            accepted = options.MoveToDestination != null
+                ? options.MoveToDestination(destination)
+                : options.NavMeshAgent.SetDestination(destination);
         }
 
         if (!accepted)
@@ -104,6 +108,7 @@ internal sealed class BotMovePickupController
             {
                 options.SetPickupWindow?.Invoke(true, currentMovePickupTarget);
                 options.LogPathFlow?.Invoke($"move-pickup-approach:{pickupName}", "Moving.");
+                RefreshPickupPathIfNeeded(options);
                 return false;
             }
 
@@ -125,6 +130,7 @@ internal sealed class BotMovePickupController
             {
                 options.SetPickupWindow?.Invoke(true, currentMovePickupTarget);
                 options.LogPathFlow?.Invoke($"move-pickup-approach:{pickupName}", "Moving.");
+                RefreshPickupPathIfNeeded(options);
                 return false;
             }
 
@@ -152,6 +158,7 @@ internal sealed class BotMovePickupController
         {
             options.SetPickupWindow?.Invoke(true, currentMovePickupTarget);
             options.LogPathFlow?.Invoke($"move-pickup-approach:{pickupName}", "Moving.");
+            RefreshPickupPathIfNeeded(options);
             return false;
         }
 
@@ -163,6 +170,26 @@ internal sealed class BotMovePickupController
             pickedUp ? "Picked up item." : "Failed to pick up item.");
         currentMovePickupTarget = null;
         return pickedUp;
+    }
+
+    private void RefreshPickupPathIfNeeded(BotMovePickupOptions options)
+    {
+        if (options?.MoveToDestination == null ||
+            options.ShouldRefreshPathCheck == null ||
+            !options.ShouldRefreshPathCheck() ||
+            currentMovePickupTarget?.Rigidbody == null)
+        {
+            return;
+        }
+
+        Vector3 destination = currentMovePickupTarget.Rigidbody.transform.position;
+        if (options.NavMeshSampleDistance > 0f &&
+            NavMesh.SamplePosition(destination, out NavMeshHit navMeshHit, options.NavMeshSampleDistance, options.NavMeshAgent.areaMask))
+        {
+            destination = navMeshHit.position;
+        }
+
+        options.MoveToDestination(destination);
     }
 
     private static float GetPickupableHorizontalDistance(IPickupable pickupable, Vector3 fromPosition)

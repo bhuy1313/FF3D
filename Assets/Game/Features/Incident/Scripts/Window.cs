@@ -39,6 +39,7 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
     [SerializeField] private bool allowToggle = true;
     [SerializeField] private bool breakOnInteract;
     [SerializeField] private bool isLocked;
+    [SerializeField] private float interactOpenDelay = 0f;
     [SerializeField] private float breakInteractDuration = 0.35f;
     [SerializeField] private bool lockPlayerWhileBreaking = true;
     [SerializeField] private BreakToolKind[] supportedBreakTools =
@@ -106,6 +107,7 @@ public class Window : MonoBehaviour, IInteractable, IOpenable, ISmokeVentPoint, 
     private bool initialized;
     private Coroutine activeClimbRoutine;
     private Coroutine breakRoutine;
+    private Coroutine pendingOpenRoutine;
     private GameObject activeBreaker;
     private PlayerActionLock activePlayerLock;
     private PlayerInteractionAnimationState activeAnimationState;
@@ -209,6 +211,9 @@ if (lockedShakeTimer > 0f)
             return;
         }
 
+        if (pendingOpenRoutine != null)
+            return;
+
         if (breakOnInteract)
         {
             TryStartBreakInteraction(interactor);
@@ -218,6 +223,13 @@ if (lockedShakeTimer > 0f)
         bool shouldOpen = HasClosedUnbrokenSash();
         if (!shouldOpen && !allowToggle)
             return;
+
+        if (shouldOpen && interactOpenDelay > 0f)
+        {
+            TriggerPlayerOpenWindowAnimation(interactor);
+            pendingOpenRoutine = StartCoroutine(OpenAfterDelay(interactOpenDelay));
+            return;
+        }
 
         TriggerPlayerOpenWindowAnimation(interactor);
         SetAllUnbrokenSashesOpenState(shouldOpen);
@@ -238,6 +250,7 @@ if (lockedShakeTimer > 0f)
 
     private void OnDisable()
     {
+        CancelPendingOpen();
         CancelBreakInteraction();
     }
 
@@ -258,6 +271,7 @@ if (lockedShakeTimer > 0f)
             return;
         }
 
+        CancelPendingOpen();
         SetAllUnbrokenSashesOpenState(isOpen);
     }
 
@@ -465,6 +479,24 @@ if (lockedShakeTimer > 0f)
         Vector3 impactPoint = activeBreaker != null ? activeBreaker.transform.position : transform.position;
         BreakPreferredSash(impactPoint, ResolveImpactDirection(activeBreaker, impactPoint), activeBreaker);
         EndBreakInteraction();
+    }
+
+    private IEnumerator OpenAfterDelay(float duration)
+    {
+        yield return new WaitForSeconds(Mathf.Max(0f, duration));
+        pendingOpenRoutine = null;
+        SetAllUnbrokenSashesOpenState(true);
+    }
+
+    private void CancelPendingOpen()
+    {
+        if (pendingOpenRoutine == null)
+        {
+            return;
+        }
+
+        StopCoroutine(pendingOpenRoutine);
+        pendingOpenRoutine = null;
     }
 
     private void CancelBreakInteraction()

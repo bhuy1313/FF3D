@@ -747,6 +747,8 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
             PrepareForIssuedCommand = prepareIssuedCommand ? PrepareForIssuedCommand : null,
             LogPathFlow = LogPathClearingFlow,
             GetPickupableName = GetPickupableName,
+            MoveToDestination = MoveTo,
+            ShouldRefreshPathCheck = ShouldRefreshPathClearingCheckCommand,
             SetPickupWindow = SetPickupWindow,
             TryEnsureExtinguisherEquipped = tool => TryEnsureExtinguisherEquipped(tool, false),
             TryEnsureBreakToolEquipped = TryEnsureBreakToolEquipped

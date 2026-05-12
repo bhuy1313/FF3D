@@ -8,7 +8,8 @@ namespace TrueJourney.BotBehavior
         FireAxe = 1,
         SledgeHammer = 2,
         ChainSaw = 3,
-        Crowbar = 4
+        Crowbar = 4,
+        BoltCutter = 5
     }
 
     public interface IBotBreakTool

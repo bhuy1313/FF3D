@@ -1,4 +1,5 @@
 using System.Collections;
+using UnityEngine.Serialization;
 using StarterAssets;
 using Unity.Cinemachine;
 using UnityEngine;
@@ -29,10 +30,14 @@ public class StartupOverviewCinematicController : MonoBehaviour
     [Header("Skip")]
     [SerializeField] private bool allowSkip = true;
     [SerializeField] private float skipAvailableDelay = 0.35f;
-    [SerializeField] private string skipButtonLabel = "Esc To Skip";
-    [SerializeField] private Vector2 skipButtonSize = new Vector2(180f, 56f);
-    [SerializeField] private Vector2 skipButtonScreenOffset = new Vector2(-32f, 32f);
-    [SerializeField] private int skipButtonSortingOrder = 32761;
+    [FormerlySerializedAs("skipButtonLabel")]
+    [SerializeField] private string skipLabel = "Esc To Skip";
+    [FormerlySerializedAs("skipButtonSize")]
+    [SerializeField] private Vector2 skipLabelSize = new Vector2(180f, 56f);
+    [FormerlySerializedAs("skipButtonScreenOffset")]
+    [SerializeField] private Vector2 skipLabelScreenOffset = new Vector2(-32f, 32f);
+    [FormerlySerializedAs("skipButtonSortingOrder")]
+    [SerializeField] private int skipLabelSortingOrder = 32761;
 
     [Header("Motion Feel")]
     [SerializeField] private bool useSmoothPathInterpolation = true;
@@ -677,7 +682,7 @@ public class StartupOverviewCinematicController : MonoBehaviour
 
         if (runtimeSkipCanvasObject != null && runtimeSkipButtonText != null)
         {
-            runtimeSkipButtonText.text = string.IsNullOrWhiteSpace(skipButtonLabel) ? "Esc To Skip" : skipButtonLabel;
+            runtimeSkipButtonText.text = string.IsNullOrWhiteSpace(skipLabel) ? "Esc To Skip" : skipLabel;
             runtimeSkipCanvasObject.SetActive(true);
             return;
         }
@@ -685,7 +690,7 @@ public class StartupOverviewCinematicController : MonoBehaviour
         runtimeSkipCanvasObject = new GameObject("StartupOverviewSkipCanvas");
         Canvas canvas = runtimeSkipCanvasObject.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = skipButtonSortingOrder;
+        canvas.sortingOrder = skipLabelSortingOrder;
 
         CanvasScaler scaler = runtimeSkipCanvasObject.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -699,11 +704,11 @@ public class StartupOverviewCinematicController : MonoBehaviour
         labelRect.anchorMin = new Vector2(1f, 1f);
         labelRect.anchorMax = new Vector2(1f, 1f);
         labelRect.pivot = new Vector2(1f, 1f);
-        labelRect.sizeDelta = skipButtonSize;
-        labelRect.anchoredPosition = new Vector2(skipButtonScreenOffset.x, -Mathf.Abs(skipButtonScreenOffset.y));
+        labelRect.sizeDelta = skipLabelSize;
+        labelRect.anchoredPosition = new Vector2(skipLabelScreenOffset.x, -Mathf.Abs(skipLabelScreenOffset.y));
 
         runtimeSkipButtonText = labelObject.AddComponent<TextMeshProUGUI>();
-        runtimeSkipButtonText.text = string.IsNullOrWhiteSpace(skipButtonLabel) ? "Esc To Skip" : skipButtonLabel;
+        runtimeSkipButtonText.text = string.IsNullOrWhiteSpace(skipLabel) ? "Esc To Skip" : skipLabel;
         runtimeSkipButtonText.fontSize = 28f;
         runtimeSkipButtonText.alignment = TextAlignmentOptions.Center;
         runtimeSkipButtonText.color = Color.white;

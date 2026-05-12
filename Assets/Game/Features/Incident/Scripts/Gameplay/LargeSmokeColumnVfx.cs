@@ -6,6 +6,12 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class LargeSmokeColumnVfx : MonoBehaviour
 {
+    private enum HeightPlacementMode
+    {
+        AnchorBounds = 0,
+        RoofRaycast = 1
+    }
+
     [Header("Scale")]
     [SerializeField, Min(0.1f)] private float columnScale = 0.65f;
     [SerializeField, Min(0f)] private float emissionStrength = 1f;
@@ -18,7 +24,11 @@ public class LargeSmokeColumnVfx : MonoBehaviour
     [SerializeField] private bool placeAtAnchorBoundsCenter;
     [SerializeField] private Vector3 exteriorDirection = new Vector3(0f, 0f, -1f);
     [SerializeField, Min(0f)] private float exteriorOffset = 2.5f;
+    [SerializeField] private HeightPlacementMode heightPlacementMode = HeightPlacementMode.AnchorBounds;
     [SerializeField, Range(0f, 1f)] private float verticalBoundsBias = 0.72f;
+    [SerializeField, Min(0.1f)] private float roofRaycastDistance = 100f;
+    [SerializeField, Min(0f)] private float roofClearanceOffset = 0.15f;
+    [SerializeField, Min(0f)] private float roofRaycastStartOffset = 0.05f;
     [SerializeField] private Vector3 placementOffset = new Vector3(0f, 0.35f, 0f);
     [SerializeField, Min(0f)] private float placementRetryDuration = 4f;
 
@@ -121,6 +131,9 @@ public class LargeSmokeColumnVfx : MonoBehaviour
         minimumVisibleEmissionScale = Mathf.Clamp01(minimumVisibleEmissionScale);
         exteriorOffset = Mathf.Max(0f, exteriorOffset);
         verticalBoundsBias = Mathf.Clamp01(verticalBoundsBias);
+        roofRaycastDistance = Mathf.Max(0.1f, roofRaycastDistance);
+        roofClearanceOffset = Mathf.Max(0f, roofClearanceOffset);
+        roofRaycastStartOffset = Mathf.Max(0f, roofRaycastStartOffset);
         placementRetryDuration = Mathf.Max(0f, placementRetryDuration);
 
         if (isActiveAndEnabled)
@@ -600,6 +613,7 @@ public class LargeSmokeColumnVfx : MonoBehaviour
         }
 
         position += placementOffset;
+        position = ResolveHeightPlacement(anchor, bounds, position);
         transform.position = position;
     }
 
@@ -800,6 +814,70 @@ public class LargeSmokeColumnVfx : MonoBehaviour
         }
 
         return new Bounds(anchor.transform.position, anchor.RuntimeZoneSize);
+    }
+
+    private Vector3 ResolveHeightPlacement(IncidentPayloadAnchor anchor, Bounds bounds, Vector3 position)
+    {
+        if (heightPlacementMode != HeightPlacementMode.RoofRaycast)
+        {
+            return position;
+        }
+
+        Vector3 rayOrigin = new Vector3(
+            position.x,
+            bounds.max.y + roofRaycastStartOffset,
+            position.z);
+
+        Ray ray = new Ray(rayOrigin, Vector3.up);
+        Collider[] ignoredColliders = anchor.GetComponentsInChildren<Collider>(true);
+        RaycastHit[] hits = Physics.RaycastAll(ray, roofRaycastDistance, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+        if (hits == null || hits.Length == 0)
+        {
+            return position;
+        }
+
+        float bestY = float.NegativeInfinity;
+        bool foundHit = false;
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Collider hitCollider = hits[i].collider;
+            if (hitCollider == null || IsIgnoredRoofHit(hitCollider, ignoredColliders))
+            {
+                continue;
+            }
+
+            if (hits[i].point.y > bestY)
+            {
+                bestY = hits[i].point.y;
+                foundHit = true;
+            }
+        }
+
+        if (!foundHit)
+        {
+            return position;
+        }
+
+        position.y = bestY + roofClearanceOffset + placementOffset.y;
+        return position;
+    }
+
+    private static bool IsIgnoredRoofHit(Collider candidate, Collider[] ignoredColliders)
+    {
+        if (candidate == null || ignoredColliders == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < ignoredColliders.Length; i++)
+        {
+            if (ignoredColliders[i] == candidate)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private Vector3 ResolveExteriorDirection()

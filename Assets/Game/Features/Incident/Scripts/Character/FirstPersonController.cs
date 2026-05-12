@@ -197,6 +197,8 @@ namespace StarterAssets
 		private PlayerVitals _vitals;
 		private FPSInteractionSystem _interactionSystem;
 		private FPSInventorySystem _inventorySystem;
+		private PlayerFlashlightController _flashlightController;
+		private PlayerCameraLookPresetController _cameraLookPresetController;
 
 		private const float _threshold = 0.00001f;
 		private bool _wantsSprint;
@@ -304,6 +306,8 @@ namespace StarterAssets
 			_vitals = GetComponent<PlayerVitals>();
 			_interactionSystem = GetComponent<FPSInteractionSystem>();
 			_inventorySystem = GetComponent<FPSInventorySystem>();
+			_flashlightController = GetComponent<PlayerFlashlightController>();
+			_cameraLookPresetController = GetComponent<PlayerCameraLookPresetController>();
 #if ENABLE_INPUT_SYSTEM
 			_playerInput = GetComponent<PlayerInput>();
 			if (_playerInput != null && _playerInput.actions != null)
@@ -331,6 +335,8 @@ namespace StarterAssets
 			_wasGroundedLastFrame = Grounded;
 			_wasClimbingLastFrame = _isClimbing;
 			EnsureFootstepAudioComponent();
+			EnsureFlashlightComponent();
+			EnsureCameraLookPresetComponent();
 		}
 
 		private void EnsureFootstepAudioComponent()
@@ -338,6 +344,32 @@ namespace StarterAssets
 			if (GetComponent<PlayerFootstepAudio>() == null)
 			{
 				gameObject.AddComponent<PlayerFootstepAudio>();
+			}
+		}
+
+		private void EnsureFlashlightComponent()
+		{
+			if (_flashlightController == null)
+			{
+				_flashlightController = GetComponent<PlayerFlashlightController>();
+			}
+
+			if (_flashlightController == null)
+			{
+				_flashlightController = gameObject.AddComponent<PlayerFlashlightController>();
+			}
+		}
+
+		private void EnsureCameraLookPresetComponent()
+		{
+			if (_cameraLookPresetController == null)
+			{
+				_cameraLookPresetController = GetComponent<PlayerCameraLookPresetController>();
+			}
+
+			if (_cameraLookPresetController == null)
+			{
+				_cameraLookPresetController = gameObject.AddComponent<PlayerCameraLookPresetController>();
 			}
 		}
 

@@ -8,6 +8,7 @@ public class IncidentSmokeColumnMapSetupTask : IncidentMapSetupTask
     [SerializeField] private LargeSmokeColumnVfx ventSmokeColumnPrefab;
     [SerializeField] private Transform runtimeParent;
     [SerializeField] private bool spawnOnlyWhenAnchorResolved = true;
+    [SerializeField, Min(0.01f)] private float mainSmokeColumnScaleMultiplier = 1f;
     [SerializeField] private bool spawnVentSmokeColumns = true;
     [SerializeField] private Vector3 ventLocalDirection = Vector3.forward;
     [SerializeField, Range(0f, 1f)] private float ventUpwardBias = 0.62f;
@@ -63,6 +64,9 @@ public class IncidentSmokeColumnMapSetupTask : IncidentMapSetupTask
 
         runtimeSmokeColumn = Instantiate(smokeColumnPrefab, parent);
         runtimeSmokeColumn.gameObject.name = smokeColumnPrefab.gameObject.name;
+        runtimeSmokeColumn.transform.localScale = Vector3.Scale(
+            smokeColumnPrefab.transform.localScale,
+            Vector3.one * mainSmokeColumnScaleMultiplier);
         runtimeSmokeColumn.PlaceNearAnchor(anchor);
         runtimeSmokeColumn.BindSmokeHazard(anchor.RuntimeSmokeHazard);
         SpawnVentSmokeColumns(anchor, parent);

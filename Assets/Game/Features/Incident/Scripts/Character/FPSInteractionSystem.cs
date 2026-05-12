@@ -33,6 +33,7 @@ namespace StarterAssets
         [Header("Raycast")]
         [SerializeField] private Camera viewCamera;
         [SerializeField] private float interactDistance = 3f;
+        [SerializeField] private float interactRepeatThreshold = 0.5f;
         [SerializeField] private LayerMask interactMask = ~0;
         [SerializeField] private bool drawDebugRay;
         [SerializeField] private bool enableOutlineHighlight = true;
@@ -104,6 +105,7 @@ namespace StarterAssets
         private Vector3 lastFocusSamplePosition;
         private Vector3 lastFocusSampleForward;
         private float nextIdleFocusRefreshTime;
+        private float nextAllowedInteractTime;
 
         private void Awake()
         {
@@ -171,8 +173,7 @@ namespace StarterAssets
 
                 if (interactPressedWhileGrabbed && CanInteractWhileGrabbed(currentInteractable))
                 {
-                    currentInteractable.Interact(gameObject);
-                    NotifyInteractionSignalRelay(currentTarget, currentInteractable, gameObject);
+                    TryInteractCurrentTarget();
                 }
 
                 BlockGameplayActionsWhileGrabbed();
@@ -211,8 +212,7 @@ namespace StarterAssets
 
                 if (currentInteractable != null && !IsGeneralInteractionBlockedByCarry(currentInteractable))
                 {
-                    currentInteractable.Interact(gameObject);
-                    NotifyInteractionSignalRelay(currentTarget, currentInteractable, gameObject);
+                    TryInteractCurrentTarget();
                 }
             }
 
@@ -307,6 +307,18 @@ namespace StarterAssets
             {
                 Debug.DrawRay(ray.origin, ray.direction * interactDistance, Color.red);
             }
+        }
+
+        private void TryInteractCurrentTarget()
+        {
+            if (currentInteractable == null || Time.time < nextAllowedInteractTime)
+            {
+                return;
+            }
+
+            currentInteractable.Interact(gameObject);
+            NotifyInteractionSignalRelay(currentTarget, currentInteractable, gameObject);
+            nextAllowedInteractTime = Time.time + Mathf.Max(0f, interactRepeatThreshold);
         }
 
         private bool ShouldRefreshFocus()

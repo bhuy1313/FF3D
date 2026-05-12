@@ -32,6 +32,7 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
     [Header("Motion Shared")]
     [SerializeField] private float animationSpeed = 6f;
     [SerializeField] private bool startsOpen;
+    [SerializeField] private float interactOpenDelay = 0f;
     [Header("Forced Entry")]
     [FormerlySerializedAs("requiresCrowbarToOpenWhenClosed")]
     [SerializeField] private bool legacyRequiresCrowbarToOpenWhenClosed;
@@ -71,6 +72,7 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
     private bool initialized;
     private int currentOpenDirection = -1;
     private Coroutine pryRoutine;
+    private Coroutine pendingOpenRoutine;
     private PlayerActionLock activePlayerLock;
     private PlayerInteractionAnimationState activeAnimationState;
 
@@ -113,6 +115,7 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
 
     private void OnDisable()
     {
+        CancelPendingOpen();
         CancelActivePry();
         BotRuntimeRegistry.UnregisterPryTarget(this);
     }
@@ -167,8 +170,14 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
             return;
         }
 
+        if (pendingOpenRoutine != null)
+        {
+            return;
+        }
+
         if (isOpen)
         {
+            TriggerPlayerOpenDoorAnimation(interactor);
             CloseDoor();
             return;
         }
@@ -176,6 +185,13 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
         if (isLocked)
         {
             lockedShakeTimer = lockedShakeDuration;
+            return;
+        }
+
+        if (interactOpenDelay > 0f)
+        {
+            TriggerPlayerOpenDoorAnimation(interactor);
+            pendingOpenRoutine = StartCoroutine(OpenDoorAfterDelay(interactOpenDelay, interactor));
             return;
         }
 
@@ -219,6 +235,7 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
         }
 
         CancelActivePry();
+        CancelPendingOpen();
 
         if (open)
         {
@@ -314,6 +331,12 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
     private void OpenDoor(GameObject interactor)
     {
         TriggerPlayerOpenDoorAnimation(interactor);
+        OpenDoorImmediate(interactor);
+    }
+
+    private void OpenDoorImmediate(GameObject interactor)
+    {
+        CancelPendingOpen();
 
         if (audioSource != null && openSound != null)
         {
@@ -334,6 +357,8 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
 
     private void CloseDoor()
     {
+        CancelPendingOpen();
+
         if (audioSource != null && closeSound != null)
         {
             audioSource.PlayOneShot(closeSound);
@@ -348,6 +373,24 @@ public class Door : MonoBehaviour, IInteractable, IOpenable, IPryOpenable, ISmok
         }
 
         targetLocalRotation = closedLocalRotation;
+    }
+
+    private IEnumerator OpenDoorAfterDelay(float duration, GameObject interactor)
+    {
+        yield return new WaitForSeconds(Mathf.Max(0f, duration));
+        pendingOpenRoutine = null;
+        OpenDoorImmediate(interactor);
+    }
+
+    private void CancelPendingOpen()
+    {
+        if (pendingOpenRoutine == null)
+        {
+            return;
+        }
+
+        StopCoroutine(pendingOpenRoutine);
+        pendingOpenRoutine = null;
     }
 
     private int DetermineOpenDirection(GameObject interactor)

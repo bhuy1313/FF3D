@@ -49,7 +49,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IncidentPayloadStartupTask
   blocksStartupSequence: 1
-  clearPendingPayloadAfterApply: 1
+  startupTaskPhase: 0
   logResolvedPayload: 1
   explicitMapSetupRoot: {fileID: 6795961276938328196}
   explicitAnchors: []
@@ -98,6 +98,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StartupOverlayRevealTask
   blocksStartupSequence: 1
+  startupTaskPhase: 0
   blackHoldDuration: 0.5
   revealDuration: 1.5
   useUnscaledTime: 1
@@ -168,6 +169,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 3725515602443661945}
+  - {fileID: 3417629101844735201}
   - {fileID: 5835050266681781383}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -328,7 +330,12 @@ MonoBehaviour:
   showRetryButton: 1
   showMainMenuButton: 1
   hideOtherUIOnMissionEnd: 1
-  uiObjectsToHideOnMissionEnd: []
+  uiObjectsToHideOnMissionEnd:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
   mainMenuSceneName: MainMenu
   playDeathCameraFallBeforeResultPopup: 1
   deathCameraFallDuration: 0.9
@@ -400,12 +407,11 @@ MonoBehaviour:
   clearInputsWhileLocked: 1
   gameplayCanvas: {fileID: 0}
   explicitTasks:
-  - {fileID: 3186400958273640192}
-  - {fileID: 8257045420443869963}
   - {fileID: 642135791357913581}
+  - {fileID: 3186400958273640192}
   - {fileID: 2207755680025630218}
-  - {fileID: 5724600685280160435}
   - {fileID: 7199952912551866077}
+  - {fileID: 8257045420443869963}
   playerControllerOverride: {fileID: 0}
   playerActionLock: {fileID: 0}
   playerInputs: {fileID: 0}
@@ -461,7 +467,8 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 8133098220468062158}
   m_Father: {fileID: 5835050266681781383}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &3186400958273640192
@@ -476,8 +483,97 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8b42df2704a34e9bab4f494932b31f72, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StartupOverviewCinematicTask
-  blocksStartupSequence: 1
+  blocksStartupSequence: 0
+  startupTaskPhase: 0
   overviewController: {fileID: 0}
+  startupOverlayRevealTask: {fileID: 7481389681590536972}
+--- !u!1 &3417629101844735200
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3417629101844735201}
+  - component: {fileID: 6132078451184493202}
+  - component: {fileID: 2446819305174728842}
+  m_Layer: 0
+  m_Name: IncidentIconManagers
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3417629101844735201
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3417629101844735200}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8916907086897807096}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6132078451184493202
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3417629101844735200}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee1682cfcef39394cb0e4efb4b2cd5ea, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FireNodeIconManager
+  simulationManager: {fileID: 9103052700435118138}
+  referenceCamera: {fileID: 0}
+  showBurningNodeIcons: 1
+  burningNodeIconSprite: {fileID: 0}
+  burningNodeIconOffset: {x: 0, y: 0.85, z: 0}
+  burningNodeIconScreenSize: 42
+  burningNodeIconFadeStartDistance: 6
+  burningNodeIconVisibleDistance: 18
+  reverseDistanceFade: 0
+  burningNodeIconColor: {r: 1, g: 0.96, b: 0.9, a: 0.95}
+  debugBurningNodeIcons: 0
+  debugLastSnapshotCount: 0
+  debugVisibleIconCandidateCount: 0
+  debugActiveIconCount: 0
+  debugResolvedCameraName: 
+  debugResolvedDistanceSourceName: 
+--- !u!114 &2446819305174728842
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3417629101844735200}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba6aafc9fa814f148bc3fdc4d3dee703, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TrueJourney.BotCommands::BotIconManager
+  referenceCamera: {fileID: 0}
+  showBotIcons: 1
+  botIconSprite: {fileID: 0}
+  botIconOffset: {x: 0, y: 2.1, z: 0}
+  botIconScreenSize: 40
+  botIconFadeStartDistance: 10
+  botIconVisibleDistance: 28
+  reverseDistanceFade: 0
+  botIconColor: {r: 0.82, g: 0.96, b: 1, a: 0.95}
+  debugBotIcons: 0
+  debugVisibleBotCandidateCount: 0
+  debugActiveBotIconCount: 0
+  debugResolvedCameraName: 
+  debugResolvedDistanceSourceName: 
 --- !u!1 &4046201125533456000
 GameObject:
   m_ObjectHideFlags: 0
@@ -527,6 +623,85 @@ MonoBehaviour:
   includeInactiveBindings: 1
   stopAfterFirstAppliedBinding: 0
   warnWhenPresetUnmapped: 0
+--- !u!1 &5901003934070655160
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8133098220468062158}
+  - component: {fileID: 7481389681590536972}
+  m_Layer: 0
+  m_Name: StartupOverlayRevealTask
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8133098220468062158
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5901003934070655160}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3186400958273640191}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7481389681590536972
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5901003934070655160}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c3d4f27d7a24d0f9f1c50f63d9779ec, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StartupOverlayRevealTask
+  blocksStartupSequence: 1
+  startupTaskPhase: 0
+  blackHoldDuration: 0.5
+  revealDuration: 1.5
+  useUnscaledTime: 1
+  revealCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  overlayImage: {fileID: 0}
+  overlayColor: {r: 0, g: 0, b: 0, a: 1}
+  edgeSoftness: 0.18
+  textureSize: 256
+  sortingOrder: 32760
+  destroyRuntimeOverlayWhenDone: 1
 --- !u!1 &5936671440419410941
 GameObject:
   m_ObjectHideFlags: 0
@@ -572,8 +747,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WindowLockRandomizerStartupTask
   blocksStartupSequence: 1
+  startupTaskPhase: 0
   lockedPercentage: 20
-  openPercentage: 0
+  openPercentage: 20
   includeInactiveWindows: 1
   useDeterministicSeed: 0
   seedOffset: 0
@@ -590,7 +766,7 @@ GameObject:
   - component: {fileID: 4687050247040898487}
   - component: {fileID: 8257045420443869963}
   m_Layer: 0
-  m_Name: Entrance Camera
+  m_Name: EntranceCameraIntroTask
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -681,6 +857,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EntranceCameraStartupTask
   blocksStartupSequence: 1
+  startupTaskPhase: 1
   entranceCameraIntro: {fileID: 4687050247040898487}
   startupOverlayRevealTask: {fileID: 936584210503712684}
 --- !u!1 &7133681939997042460
@@ -778,6 +955,7 @@ MonoBehaviour:
   ventSmokeColumnPrefab: {fileID: 7421803955126301003, guid: 9c7191915fc34348a5a52645c6b60bc5, type: 3}
   runtimeParent: {fileID: 0}
   spawnOnlyWhenAnchorResolved: 1
+  mainSmokeColumnScaleMultiplier: 2
   spawnVentSmokeColumns: 1
   ventLocalDirection: {x: 0, y: 0, z: 1}
   ventUpwardBias: 0.62
@@ -829,13 +1007,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VictimPlacementStartupTask
   blocksStartupSequence: 1
+  startupTaskPhase: 0
   victimPrefab: {fileID: 8675152600097378572, guid: 557eb5e26df167a4fb747c5bea651109, type: 3}
   runtimeParent: {fileID: 0}
-  explicitSpawnPoints:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
+  explicitSpawnPoints: []
   includeInactiveSpawnPoints: 1
   fallbackVictimCountWhenUnknown: 2
   compromisedRiskFallbackVictimCount: 1
@@ -843,7 +1018,7 @@ MonoBehaviour:
   deterministicPlacement: 0
   clearExistingVictimsBeforeSpawn: 1
   removeFireNodesNearSpawnedVictims: 1
-  spawnedVictimFireClearRadius: 1.5
+  spawnedVictimFireClearRadius: 3
   avoidHazardLinkedFireNodesWhenSelectingSpawnPoints: 1
   incidentMissionSystem: {fileID: 6783775267924060584}
   refreshMissionObjectivesAfterSpawn: 1
@@ -914,6 +1089,7 @@ MonoBehaviour:
   simulationProfile: {fileID: 11400000, guid: b4ab4f88c49d4bf2a92ee58b4d54bff2, type: 2}
   suppressionProfile: {fileID: 11400000, guid: b8e3f5a91d4c2e8074a6f9c3b21d5e80, type: 2}
   effectManager: {fileID: 9202031649153982278}
+  fireNodeIconManager: {fileID: 6132078451184493202}
   ordinaryEffectPrefab: {fileID: 0}
   electricalEffectPrefab: {fileID: 0}
   flammableLiquidEffectPrefab: {fileID: 0}
@@ -946,9 +1122,21 @@ MonoBehaviour:
   flammableLiquidEffectPrefab: {fileID: 6531741778656793356, guid: 9e88bd0cbfe197b4eb9e8796b900d5cb, type: 3}
   gasEffectPrefab: {fileID: 3279744518791058138, guid: 18fee232004d8064aa84acc732629a23, type: 3}
   effectRoot: {fileID: 0}
+  pooledEffectRoot: {fileID: 0}
   maxVisibleEffects: 4
   referenceCamera: {fileID: 0}
-  maxVisibleDistance: 50
+  enableEffectClustering: 1
+  clusterTargetSize: 3
+  clusterMergeDistance: 1.9
+  clusterHeightTolerance: 0.9
+  clusterScaleBonusPerExtraNode: 0.3
+  debugInputSnapshotCount: 0
+  debugRenderGroupCount: 0
+  debugClusteredGroupCount: 0
+  debugClusteredNodeCount: 0
+  debugBestSameHazardNeighborCount: 0
+  debugBestHorizontalNeighborDistance: -1
+  debugBestHeightDelta: -1
 --- !u!114 &5801840532896120417
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1064,8 +1252,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DoorLockRandomizerStartupTask
   blocksStartupSequence: 1
+  startupTaskPhase: 0
   lockedPercentage: 20
-  openPercentage: 0
+  openPercentage: 20
   forceUnlockDoorsWhenOpening: 1
   includeInactiveDoors: 1
   useDeterministicSeed: 0

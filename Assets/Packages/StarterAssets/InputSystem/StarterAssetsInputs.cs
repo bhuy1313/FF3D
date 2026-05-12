@@ -20,6 +20,7 @@ namespace StarterAssets
 		public bool grab;
 		public bool climbOver;
 		public bool dispatchNotes;
+		public bool flashlightToggle;
 		public bool toggleFullscreenMinimap;
 		public bool closeFullscreenMinimap;
 		public bool minimapZoomIn;
@@ -107,6 +108,16 @@ namespace StarterAssets
 			ToggleDispatchNotesInput();
 		}
 
+		public void OnToggleFlashlight(InputValue value)
+		{
+			if (!value.isPressed)
+			{
+				return;
+			}
+
+			ToggleFlashlightInput();
+		}
+
 		public void OnToggleFullscreenMinimap(InputValue value)
 		{
 			ToggleFullscreenMinimapInput(value.isPressed);
@@ -169,6 +180,11 @@ namespace StarterAssets
 		public void ToggleDispatchNotesInput()
 		{
 			dispatchNotes = !dispatchNotes;
+		}
+
+		public void ToggleFlashlightInput()
+		{
+			flashlightToggle = true;
 		}
 
 		public void InteractInput(bool newInteractState)
@@ -236,6 +252,7 @@ namespace StarterAssets
 			use = false;
 			drop = false;
 			climbOver = false;
+			flashlightToggle = false;
 			toggleFullscreenMinimap = false;
 			closeFullscreenMinimap = false;
 			minimapZoomIn = false;
@@ -262,6 +279,7 @@ namespace StarterAssets
 			drop = false;
 			grab = false;
 			climbOver = false;
+			flashlightToggle = false;
 			toggleFullscreenMinimap = false;
 			closeFullscreenMinimap = false;
 			minimapZoomIn = false;

@@ -7,6 +7,7 @@ public class FireTruckHosePickupPoint : MonoBehaviour, IInteractable
     [SerializeField] private GameObject hoseBodyPrefab;
     [SerializeField] private GameObject obiRodPrefab;
     [SerializeField] private GameObject obiRodStartPrefab;
+    [SerializeField] private GameObject obiRodEndPrefab;
     [SerializeField] private Transform rigParent;
     [SerializeField] private int headLayer;
     [SerializeField] private bool isSingleUse = true;
@@ -107,6 +108,7 @@ public class FireTruckHosePickupPoint : MonoBehaviour, IInteractable
     public GameObject HoseBodyPrefab => hoseBodyPrefab;
     public GameObject ObiRodPrefab => obiRodPrefab;
     public GameObject ObiRodStartPrefab => obiRodStartPrefab;
+    public GameObject ObiRodEndPrefab => obiRodEndPrefab;
     public int HeadLayer => headLayer;
 
     public Transform ResolveRigParent()

@@ -80,7 +80,13 @@ public sealed partial class FireSimulationManager
         for (int i = 0; i < placements.Count; i++)
         {
             FireIncidentPlacement placement = placements[i];
-            TrackClosestNode(placement.Position, placement.InitialIntensity01, placement.Kind);
+            FireSurfaceNodeAuthoring runtimeNodeAuthoring = i < runtimeIncidentNodes.Count
+                ? runtimeIncidentNodes[i]
+                : null;
+            if (!TrackRuntimeNode(runtimeNodeAuthoring, placement.InitialIntensity01, placement.Kind))
+            {
+                TrackClosestNode(placement.Position, placement.InitialIntensity01, placement.Kind);
+            }
         }
 
         return true;
@@ -200,6 +206,76 @@ public sealed partial class FireSimulationManager
         }
 
         runtimeIncidentNodes.Clear();
+    }
+
+    private bool TrackRuntimeNode(
+        FireSurfaceNodeAuthoring authoring,
+        float normalizedHeat,
+        FireIncidentNodeKind kind)
+    {
+        if (!initialized || runtimeGraph == null || authoring == null)
+        {
+            return false;
+        }
+
+        FireRuntimeNode node = FindRuntimeNode(authoring);
+        if (node == null)
+        {
+            return false;
+        }
+
+        ApplyIncidentState(node, normalizedHeat, kind);
+        return true;
+    }
+
+    private FireRuntimeNode FindRuntimeNode(FireSurfaceNodeAuthoring authoring)
+    {
+        if (!initialized || runtimeGraph == null || authoring == null)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < runtimeGraph.Count; i++)
+        {
+            FireRuntimeNode node = runtimeGraph.GetNode(i);
+            if (node != null && node.Authoring == authoring)
+            {
+                return node;
+            }
+        }
+
+        return null;
+    }
+
+    private void ApplyIncidentState(FireRuntimeNode node, float normalizedHeat, FireIncidentNodeKind kind)
+    {
+        if (node == null)
+        {
+            return;
+        }
+
+        node.IsTrackedByIncident = true;
+        node.IncidentNodeKind = kind;
+        float clampedHeat01 = Mathf.Clamp01(normalizedHeat);
+        if (clampedHeat01 > 0f && kind != FireIncidentNodeKind.Late)
+        {
+            node.HazardType = activeIncidentHazardType;
+        }
+
+        float maxHeat = simulationProfile != null
+            ? Mathf.Max(node.IgnitionThreshold, simulationProfile.MaxHeat)
+            : node.IgnitionThreshold * 2f;
+        float heat = clampedHeat01 > 0f
+            ? Mathf.Lerp(node.IgnitionThreshold, maxHeat, clampedHeat01)
+            : 0f;
+        node.Heat = Mathf.Max(node.Heat, heat);
+        if (node.IsBurning)
+        {
+            node.HasEverBurned = true;
+        }
+
+        MarkVisualStateDirty();
+        NotifyStateChanged();
     }
 
     private Transform EnsureRuntimeIncidentNodeRoot()

@@ -89,7 +89,7 @@ namespace FF3D.Editor
             ensureSimulationManager = EditorGUILayout.ToggleLeft("Ensure FireSimulationManager + FireSurfaceGraph", ensureSimulationManager);
             ensureDefaultSteps = EditorGUILayout.ToggleLeft("Ensure default IncidentMapSetupTasks", ensureDefaultSteps);
             ensureDebugPayloadSpawner = EditorGUILayout.ToggleLeft("Ensure DebugIncidentPayloadSpawner", ensureDebugPayloadSpawner);
-            ensureEffectManagerAndClusterTemplate = EditorGUILayout.ToggleLeft("Ensure FireEffectManager + ClusterViewTemplate", ensureEffectManagerAndClusterTemplate);
+            ensureEffectManagerAndClusterTemplate = EditorGUILayout.ToggleLeft("Ensure FireEffectManager + FireNodeEffectView template", ensureEffectManagerAndClusterTemplate);
             assignSceneMatchedProfiles = EditorGUILayout.ToggleLeft("Assign scene-matched profiles", assignSceneMatchedProfiles);
             createProfilesIfMissing = EditorGUILayout.ToggleLeft("Create profiles if missing", createProfilesIfMissing);
 

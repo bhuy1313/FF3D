@@ -16,6 +16,13 @@ public class FireHoseConnectionSystem : MonoBehaviour
         public FireHoseConnectionPoint targetPoint;
     }
 
+    private struct SpawnedObiRod
+    {
+        public GameObject Rod;
+        public Transform Start;
+        public GameObject End;
+    }
+
     [Header("Runtime")]
     [SerializeField] private List<ActiveRigRecord> activeRigs = new List<ActiveRigRecord>();
 
@@ -87,32 +94,29 @@ public class FireHoseConnectionSystem : MonoBehaviour
         GameObject hoseBody = Instantiate(sourcePoint.HoseBodyPrefab, root.transform);
         hoseBody.name = sourcePoint.HoseBodyPrefab.name;
 
-        Transform obiRodStart = SpawnObiRod(sourcePoint, root.transform, rootWorldPosition, startKnotNormal);
-        if (obiRodStart == null)
+        SpawnedObiRod spawnedObiRod = SpawnObiRod(sourcePoint, root.transform, rootWorldPosition, startKnotNormal);
+        if (spawnedObiRod.Start == null || spawnedObiRod.End == null)
         {
             return null;
         }
 
-        obiRodStart.name = "FireHose_Head";
-        obiRodStart.gameObject.layer = sourcePoint.HeadLayer;
-        if (obiRodStart.GetComponent<FireHoseHeadPickup>() == null)
-        {
-            obiRodStart.gameObject.AddComponent<FireHoseHeadPickup>();
-        }
+        spawnedObiRod.Start.name = "FireHose_Knot";
+        spawnedObiRod.Start.gameObject.layer = sourcePoint.HeadLayer;
 
         FireHoseDeployable deployable = hoseBody.GetComponentInChildren<FireHoseDeployable>(true);
         if (deployable != null)
         {
-            deployable.head = obiRodStart;
+            deployable.head = spawnedObiRod.Start;
         }
 
         assembly.ConfigureRig(rig);
-        rig.PrepareForDeploy(sourcePoint, obiRodStart.position, rootWorldPosition, startKnotNormal);
+        EnsureConnectorHeadPickup(spawnedObiRod.End, assembly);
+        rig.PrepareForDeploy(sourcePoint, spawnedObiRod.Start.position, rootWorldPosition, startKnotNormal);
 
         return rig;
     }
 
-    private static Transform SpawnObiRod(
+    private static SpawnedObiRod SpawnObiRod(
         FireTruckHosePickupPoint sourcePoint,
         Transform fallbackParent,
         Vector3 startKnotPosition,
@@ -120,14 +124,15 @@ public class FireHoseConnectionSystem : MonoBehaviour
     {
         if (sourcePoint == null)
         {
-            return null;
+            return default;
         }
 
         GameObject rodPrefab = sourcePoint.ObiRodPrefab;
         GameObject startPrefab = sourcePoint.ObiRodStartPrefab;
-        if (rodPrefab == null || startPrefab == null)
+        GameObject endPrefab = sourcePoint.ObiRodEndPrefab;
+        if (rodPrefab == null || startPrefab == null || endPrefab == null)
         {
-            return null;
+            return default;
         }
 
         Transform parent = fallbackParent;
@@ -165,17 +170,57 @@ public class FireHoseConnectionSystem : MonoBehaviour
         GameObject obiRod = Object.Instantiate(rodPrefab, rodPosition, rodRotation, parent);
         obiRod.name = rodPrefab.name;
 
+        GameObject obiRodEnd = Object.Instantiate(endPrefab, rodPosition, rodRotation, parent);
+        obiRodEnd.name = "FireHose_ConnectorHead";
+
         Vector3 startOffset = rodRotation * new Vector3(-1.37f, 0f, 0f);
         GameObject obiRodStart = Object.Instantiate(startPrefab, rodPosition + startOffset, rodRotation, parent);
         obiRodStart.name = startPrefab.name;
+
+        if (obiRod.TryGetComponent(out ObiRodPickup existingPickup))
+        {
+            existingPickup.SetPickupRigidbody(obiRodEnd.GetComponent<Rigidbody>());
+        }
+        else
+        {
+            ObiRodPickup pickup = obiRod.AddComponent<ObiRodPickup>();
+            pickup.SetPickupRigidbody(obiRodEnd.GetComponent<Rigidbody>());
+        }
         
         ObiParticleAttachment[] attachments = obiRod.GetComponents<ObiParticleAttachment>();
+        if (attachments.Length > 0)
+        {
+            attachments[0].target = obiRodEnd.transform;
+        }
+
         if (attachments.Length > 1)
         {
             attachments[1].target = obiRodStart.transform;
         }
 
-        return obiRodStart.transform;
+        return new SpawnedObiRod
+        {
+            Rod = obiRod,
+            Start = obiRodStart.transform,
+            End = obiRodEnd
+        };
+    }
+
+    private static FireHoseHeadPickup EnsureConnectorHeadPickup(GameObject obiRodEnd, FireHoseAssembly assembly)
+    {
+        if (obiRodEnd == null)
+        {
+            return null;
+        }
+
+        FireHoseHeadPickup pickup = obiRodEnd.GetComponent<FireHoseHeadPickup>();
+        if (pickup == null)
+        {
+            pickup = obiRodEnd.AddComponent<FireHoseHeadPickup>();
+        }
+
+        pickup.ConfigureAssembly(assembly);
+        return pickup;
     }
 
     public bool TryConnectHeldRigToHydrant(FireHoseConnectionPoint connectionPoint, GameObject interactor)
@@ -224,6 +269,11 @@ public class FireHoseConnectionSystem : MonoBehaviour
         if (headPickup == null)
         {
             return null;
+        }
+
+        if (headPickup.Assembly != null && headPickup.Assembly.Rig != null)
+        {
+            return headPickup.Assembly.Rig;
         }
 
         return headPickup.GetComponentInParent<FireHoseRig>();

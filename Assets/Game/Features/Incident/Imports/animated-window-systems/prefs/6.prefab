@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 2497112708483589484}
   - component: {fileID: 7428719912607668750}
-  - component: {fileID: 6392869637699497072}
   - component: {fileID: 3288088928642405733}
   m_Layer: 0
   m_Name: 6
@@ -60,6 +59,7 @@ MonoBehaviour:
   slidingOpenDistance: 0.75
   animationSpeed: 6
   startsOpen: 0
+  interactOpenDelay: 0.5
   legacyRequiresCrowbarToOpenWhenClosed: 0
   lockMode: 0
   startsLocked: 0
@@ -74,26 +74,9 @@ MonoBehaviour:
   isLocked: 0
   isPryInProgress: 0
   activePryer: {fileID: 0}
---- !u!114 &6392869637699497072
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2310176532615551158}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshModifier
-  m_SerializedVersion: 0
-  m_OverrideArea: 0
-  m_Area: 0
-  m_OverrideGenerateLinks: 0
-  m_GenerateLinks: 0
-  m_IgnoreFromBuild: 1
-  m_ApplyToChildren: 1
-  m_AffectedAgents: ffffffff
+  lockedShakeDuration: 0.3
+  lockedShakeIntensity: 4.5
+  lockedShakeSpeed: 60
 --- !u!82 &3288088928642405733
 AudioSource:
   m_ObjectHideFlags: 0
@@ -204,6 +187,7 @@ GameObject:
   - component: {fileID: 7414157130865526825}
   - component: {fileID: 6329959331133682612}
   - component: {fileID: 7475877598032757478}
+  - component: {fileID: 267486218554962324}
   m_Layer: 0
   m_Name: sliding_horizontal_4panels_windowR1
   m_TagString: Untagged
@@ -329,6 +313,26 @@ MeshCollider:
   m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: 7278370688762287282, guid: 4714c1b0c6421724fb84de55b2841dea, type: 3}
+--- !u!114 &267486218554962324
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2935948167913117670}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshModifier
+  m_SerializedVersion: 0
+  m_OverrideArea: 0
+  m_Area: 0
+  m_OverrideGenerateLinks: 0
+  m_GenerateLinks: 0
+  m_IgnoreFromBuild: 1
+  m_ApplyToChildren: 1
+  m_AffectedAgents: ffffffff
 --- !u!1 &4688186646885790525
 GameObject:
   m_ObjectHideFlags: 0
@@ -432,6 +436,7 @@ GameObject:
   - component: {fileID: 5067410396588844146}
   - component: {fileID: 4729704171779020018}
   - component: {fileID: 4415911687895356797}
+  - component: {fileID: 4873788061338478328}
   m_Layer: 0
   m_Name: sliding_horizontal_4panels_windowL1
   m_TagString: Untagged
@@ -557,6 +562,26 @@ MeshCollider:
   m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: -1058169567751146061, guid: 4714c1b0c6421724fb84de55b2841dea, type: 3}
+--- !u!114 &4873788061338478328
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7690437289406244337}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e3fdca004f2d45fe8abbed571a8abd5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshModifier
+  m_SerializedVersion: 0
+  m_OverrideArea: 0
+  m_Area: 0
+  m_OverrideGenerateLinks: 0
+  m_GenerateLinks: 0
+  m_IgnoreFromBuild: 1
+  m_ApplyToChildren: 1
+  m_AffectedAgents: ffffffff
 --- !u!1 &9017350461534800544
 GameObject:
   m_ObjectHideFlags: 0

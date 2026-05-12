@@ -1,9 +1,11 @@
 using UnityEngine;
+using System.Collections;
 
 public class FPSInventorySystem : MonoBehaviour
 {
     [Header("Pickup")]
     [SerializeField] private bool allowPickup = true;
+    [SerializeField, Min(0f)] private float pickupDelay = 0f;
     [SerializeField] private int maxSlots = 6;
     [SerializeField] private Transform equipRoot;
     [SerializeField] private Transform inventoryRoot;
@@ -20,6 +22,7 @@ public class FPSInventorySystem : MonoBehaviour
 
     private readonly System.Collections.Generic.List<InventorySlot> slots = new System.Collections.Generic.List<InventorySlot>();
     private int activeIndex = -1;
+    private Coroutine pendingPickupRoutine;
 
     public bool HasItem => activeIndex >= 0 && activeIndex < slots.Count;
     public int ItemCount => slots.Count;
@@ -54,7 +57,7 @@ public class FPSInventorySystem : MonoBehaviour
 
     public bool TryPickup(GameObject target, GameObject picker)
     {
-        if (!allowPickup || target == null || equipRoot == null || maxSlots <= 0)
+        if (!allowPickup || target == null || equipRoot == null || maxSlots <= 0 || pendingPickupRoutine != null)
         {
             return false;
         }
@@ -71,6 +74,40 @@ public class FPSInventorySystem : MonoBehaviour
         }
 
         if (ContainsItem(pickupable))
+        {
+            return false;
+        }
+
+        if (HasItem && HandOccupancyUtility.BlocksInventoryStow(HeldObject, picker))
+        {
+            return false;
+        }
+
+        PlayerInteractionAnimationState.GetOrCreate(picker)?.PulseAction(PlayerInteractionAnimationAction.Pickup);
+        if (pickupDelay > 0f)
+        {
+            pendingPickupRoutine = StartCoroutine(CompletePickupAfterDelay(pickupable, picker, pickupDelay));
+            return true;
+        }
+
+        return CompletePickup(pickupable, picker);
+    }
+
+    private IEnumerator CompletePickupAfterDelay(IPickupable pickupable, GameObject picker, float delaySeconds)
+    {
+        yield return new WaitForSeconds(delaySeconds);
+        pendingPickupRoutine = null;
+        CompletePickup(pickupable, picker);
+    }
+
+    private bool CompletePickup(IPickupable pickupable, GameObject picker)
+    {
+        if (pickupable == null || pickupable.Rigidbody == null)
+        {
+            return false;
+        }
+
+        if (slots.Count >= maxSlots || ContainsItem(pickupable))
         {
             return false;
         }

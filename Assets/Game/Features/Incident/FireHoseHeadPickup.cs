@@ -72,6 +72,8 @@ public class FireHoseHeadPickup : MonoBehaviour,
         assembly = owner;
     }
 
+    public FireHoseAssembly Assembly => assembly;
+
     public bool BlocksInventoryStow(GameObject owner)
     {
         return owner != null && CurrentHolder == owner;

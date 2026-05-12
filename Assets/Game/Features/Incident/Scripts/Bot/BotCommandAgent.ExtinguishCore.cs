@@ -711,6 +711,11 @@ public partial class BotCommandAgent
             return true;
         }
 
+        if (ShouldRefreshPathClearingCheckCommand())
+        {
+            return true;
+        }
+
         return GetHorizontalDistance(navMeshAgent.destination, destination) > Mathf.Max(0.1f, extinguisherApproachRetargetDistance);
     }
 }

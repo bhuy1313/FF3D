@@ -11,7 +11,8 @@ public enum PlayerInteractionAnimationAction
     Rescuing = 6,
     Stabilizing = 7,
     Climb = 8,
-    ClimbOver = 9
+    ClimbOver = 9,
+    Pickup = 10
 }
 
 [DisallowMultipleComponent]

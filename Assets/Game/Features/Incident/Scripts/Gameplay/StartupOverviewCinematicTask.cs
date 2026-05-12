@@ -5,6 +5,7 @@ using UnityEngine;
 public class StartupOverviewCinematicTask : SceneStartupTask
 {
     [SerializeField] private StartupOverviewCinematicController overviewController;
+    [SerializeField] private StartupOverlayRevealTask startupOverlayRevealTask;
 
     public override bool BlocksStartupSequence => false;
 
@@ -20,9 +21,24 @@ public class StartupOverviewCinematicTask : SceneStartupTask
             overviewController = startupFlow.FindSceneObject<StartupOverviewCinematicController>();
         }
 
+        if (startupOverlayRevealTask == null)
+        {
+            startupOverlayRevealTask = GetComponent<StartupOverlayRevealTask>();
+        }
+
+        if (startupOverlayRevealTask == null && startupFlow != null)
+        {
+            startupOverlayRevealTask = startupFlow.FindSceneObject<StartupOverlayRevealTask>();
+        }
+
         if (overviewController == null)
         {
             yield break;
+        }
+
+        if (startupOverlayRevealTask != null)
+        {
+            startupOverlayRevealTask.Play();
         }
 
         if (!overviewController.TryPlay())
@@ -30,7 +46,9 @@ public class StartupOverviewCinematicTask : SceneStartupTask
             yield break;
         }
 
-        while (overviewController != null && overviewController.IsPlaying)
+        while (
+            (overviewController != null && overviewController.IsPlaying)
+            || (startupOverlayRevealTask != null && startupOverlayRevealTask.IsPlaying))
         {
             yield return null;
         }

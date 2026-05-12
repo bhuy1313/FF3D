@@ -59,6 +59,7 @@ namespace StarterAssets
         [SerializeField] private string stabilizeTriggerParameter = "StabilizeTrigger";
         [SerializeField] private string climbTriggerParameter = "ClimbTrigger";
         [SerializeField] private string climbOverTriggerParameter = "ClimbOverTrigger";
+        [SerializeField] private string pickupTriggerParameter = "PickupTrigger";
 
         [Header("Float Parameters")]
         [SerializeField] private string speedParameter = "Speed";
@@ -113,6 +114,7 @@ namespace StarterAssets
         private readonly HashSet<int> triggerParameterHashes = new HashSet<int>();
         private readonly HashSet<int> activeDynamicHoldingHashes = new HashSet<int>();
         private readonly List<int> dynamicHoldingHashesToDisable = new List<int>();
+        private readonly List<int> triggerHashesToReset = new List<int>();
         private readonly Dictionary<int, bool> boolParameterValues = new Dictionary<int, bool>();
         private readonly Dictionary<int, int> intParameterValues = new Dictionary<int, int>();
 
@@ -140,6 +142,7 @@ namespace StarterAssets
                 interactionAnimationState = GetComponent<PlayerInteractionAnimationState>();
             }
 
+            ResetPendingTriggers();
             UpdateVelocityState();
             UpdateAnimationState();
             PushAnimatorParameters();
@@ -225,6 +228,7 @@ namespace StarterAssets
             CacheHash(stabilizeTriggerParameter);
             CacheHash(climbTriggerParameter);
             CacheHash(climbOverTriggerParameter);
+            CacheHash(pickupTriggerParameter);
             CacheHash(speedParameter);
 
             CacheHash(itemCountParameter);
@@ -382,6 +386,7 @@ namespace StarterAssets
             TryConsumeTrigger(PlayerInteractionAnimationAction.Stabilizing, stabilizeTriggerParameter);
             TryConsumeTrigger(PlayerInteractionAnimationAction.Climb, climbTriggerParameter);
             TryConsumeTrigger(PlayerInteractionAnimationAction.ClimbOver, climbOverTriggerParameter);
+            TryConsumeTrigger(PlayerInteractionAnimationAction.Pickup, pickupTriggerParameter);
         }
 
         private void UpdateDynamicHoldingParameters()
@@ -554,7 +559,24 @@ namespace StarterAssets
                 return;
             }
 
+            animator.ResetTrigger(parameterHash);
             animator.SetTrigger(parameterHash);
+            triggerHashesToReset.Add(parameterHash);
+        }
+
+        private void ResetPendingTriggers()
+        {
+            if (animator == null || triggerHashesToReset.Count == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < triggerHashesToReset.Count; i++)
+            {
+                animator.ResetTrigger(triggerHashesToReset[i]);
+            }
+
+            triggerHashesToReset.Clear();
         }
 
         private static string ResolveHeldItemTypeName(GameObject heldObject)

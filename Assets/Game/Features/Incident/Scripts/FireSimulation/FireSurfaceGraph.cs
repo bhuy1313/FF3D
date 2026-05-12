@@ -52,22 +52,6 @@ public sealed class FireSurfaceGraph : MonoBehaviour
             results.Add(node);
         }
 
-        if (runtimeOverrideNodes.Count > 0)
-        {
-            for (int i = 0; i < runtimeOverrideNodes.Count; i++)
-            {
-                FireSurfaceNodeAuthoring node = runtimeOverrideNodes[i];
-                if (node == null || !seen.Add(node))
-                {
-                    continue;
-                }
-
-                results.Add(node);
-            }
-
-            return results;
-        }
-
         if (collectNodesFromChildren)
         {
             FireSurfaceNodeAuthoring[] childNodes = GetComponentsInChildren<FireSurfaceNodeAuthoring>(includeInactiveNodes);
@@ -81,6 +65,17 @@ public sealed class FireSurfaceGraph : MonoBehaviour
 
                 results.Add(node);
             }
+        }
+
+        for (int i = 0; i < runtimeOverrideNodes.Count; i++)
+        {
+            FireSurfaceNodeAuthoring node = runtimeOverrideNodes[i];
+            if (node == null || !seen.Add(node))
+            {
+                continue;
+            }
+
+            results.Add(node);
         }
 
         return results;

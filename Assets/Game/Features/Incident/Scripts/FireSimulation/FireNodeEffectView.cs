@@ -91,21 +91,35 @@ public sealed class FireNodeEffectView : MonoBehaviour
 
     public void ApplySnapshot(FireNodeSnapshot snapshot)
     {
+        ApplySnapshot(snapshot, Vector3.one);
+    }
+
+    public void ApplySnapshot(FireNodeSnapshot snapshot, float scaleMultiplier)
+    {
+        ApplySnapshot(snapshot, Vector3.one * Mathf.Max(0.01f, scaleMultiplier));
+    }
+
+    public void ApplySnapshot(FireNodeSnapshot snapshot, Vector3 scaleMultiplier)
+    {
         EnsureFallbackVisual();
 
         float intensity01 = Mathf.Clamp01(snapshot.Intensity);
         float scale = Mathf.Lerp(flameScaleRange.x, flameScaleRange.y, intensity01);
-        float finalScale = scale * nodeScaleMultiplier;
+        float baseScale = scale * nodeScaleMultiplier;
+        Vector3 finalScale = new Vector3(
+            baseScale * Mathf.Max(0.01f, scaleMultiplier.x),
+            baseScale * Mathf.Max(0.01f, scaleMultiplier.y),
+            baseScale * Mathf.Max(0.01f, scaleMultiplier.z));
 
         Vector3 resolvedOffset = scaleVisualOffsetWithEffectScale
-            ? visualOffset * finalScale
+            ? visualOffset * baseScale
             : visualOffset;
         lastNodePosition = snapshot.Position;
         lastResolvedOffset = resolvedOffset;
-        lastFinalScale = finalScale;
+        lastFinalScale = Mathf.Max(finalScale.x, Mathf.Max(finalScale.y, finalScale.z));
         transform.position = snapshot.Position + resolvedOffset;
         transform.rotation = ResolveVisualRotation(snapshot.SurfaceNormal);
-        transform.localScale = Vector3.one * finalScale;
+        transform.localScale = finalScale;
 
         if (visualRoot != null)
         {

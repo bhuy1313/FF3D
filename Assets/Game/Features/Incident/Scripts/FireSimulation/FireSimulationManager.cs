@@ -9,6 +9,7 @@ public sealed partial class FireSimulationManager : MonoBehaviour
     [SerializeField] private FireSimulationProfile simulationProfile;
     [SerializeField] private FireSuppressionProfile suppressionProfile;
     [SerializeField] private FireEffectManager effectManager;
+    [SerializeField] private FireNodeIconManager fireNodeIconManager;
     [SerializeField] private FireNodeEffectView ordinaryEffectPrefab;
     [SerializeField] private FireNodeEffectView electricalEffectPrefab;
     [SerializeField] private FireNodeEffectView flammableLiquidEffectPrefab;
@@ -28,6 +29,9 @@ public sealed partial class FireSimulationManager : MonoBehaviour
     [SerializeField] [Min(0.1f)] private float nodeHeatLogInterval = 0.5f;
     [SerializeField] private bool autoBindSceneConsumers = true;
     [SerializeField] private bool autoRegisterBotFireTargets = true;
+    [Header("Effects")]
+    [Tooltip("Forces fire effect snapshots and clustering to resync periodically even when simulation state was not marked dirty. Set <= 0 to only sync on dirty state changes.")]
+    [SerializeField] [Min(0f)] private float effectSyncInterval = 0.75f;
 
     private readonly List<FireNodeSnapshot> nodeSnapshots = new List<FireNodeSnapshot>();
     private readonly List<FireSurfaceNodeAuthoring> runtimeIncidentNodes = new List<FireSurfaceNodeAuthoring>();
@@ -36,6 +40,7 @@ public sealed partial class FireSimulationManager : MonoBehaviour
     private FireRuntimeGraph runtimeGraph;
     private float simulationTickAccumulator;
     private float nodeHeatLogAccumulator;
+    private float effectSyncAccumulator;
     private bool initialized;
     private FireHazardType activeIncidentHazardType = FireHazardType.OrdinaryCombustibles;
     private bool activeHazardSourceIsolated;
@@ -103,7 +108,12 @@ public sealed partial class FireSimulationManager : MonoBehaviour
             return;
         }
 
-        RefreshVisualStateIfDirty();
+        if (effectSyncInterval > 0f)
+        {
+            effectSyncAccumulator += Time.deltaTime;
+        }
+
+        RefreshVisualStateIfNeeded();
     }
 
     public void InitializeRuntimeGraph()
@@ -111,6 +121,7 @@ public sealed partial class FireSimulationManager : MonoBehaviour
         initialized = false;
         simulationTickAccumulator = 0f;
         nodeHeatLogAccumulator = 0f;
+        effectSyncAccumulator = 0f;
         nodeSnapshots.Clear();
 
         if (surfaceGraph == null || simulationProfile == null)
@@ -141,7 +152,7 @@ public sealed partial class FireSimulationManager : MonoBehaviour
         }
 
         MarkVisualStateDirty();
-        RefreshVisualStateIfDirty();
+        RefreshVisualStateIfNeeded();
         SyncBotFireTargets();
         SyncBotFireGroups();
         NotifyStateChanged();
@@ -202,9 +213,10 @@ public sealed partial class FireSimulationManager : MonoBehaviour
         StateChanged?.Invoke();
     }
 
-    private void RefreshVisualStateIfDirty()
+    private void RefreshVisualStateIfNeeded()
     {
-        if (!nodeSnapshotsDirty)
+        bool shouldForceSync = effectSyncInterval > 0f && effectSyncAccumulator >= effectSyncInterval;
+        if (!nodeSnapshotsDirty && !shouldForceSync)
         {
             return;
         }
@@ -212,6 +224,7 @@ public sealed partial class FireSimulationManager : MonoBehaviour
         BuildNodeSnapshots();
         SyncEffects();
         nodeSnapshotsDirty = false;
+        effectSyncAccumulator = 0f;
     }
 
     private void MarkVisualStateDirty()

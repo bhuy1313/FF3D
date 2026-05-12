@@ -30,6 +30,7 @@ public sealed partial class FireSimulationManager
     private void SyncEffects()
     {
         FireEffectManager runtimeEffectManager = EnsureEffectManager();
+        EnsureFireNodeIconManager();
         if (runtimeEffectManager == null || simulationProfile == null)
         {
             return;
@@ -41,9 +42,15 @@ public sealed partial class FireSimulationManager
     private void DisableEffects()
     {
         FireEffectManager runtimeEffectManager = EnsureEffectManager();
+        FireNodeIconManager runtimeIconManager = EnsureFireNodeIconManager();
         if (runtimeEffectManager != null)
         {
             runtimeEffectManager.DisableAll();
+        }
+
+        if (runtimeIconManager != null)
+        {
+            runtimeIconManager.enabled = false;
         }
     }
 
@@ -68,12 +75,26 @@ public sealed partial class FireSimulationManager
             resolvedEffectRoot,
             maxEffects);
 
-        if (simulationProfile != null)
+        return effectManager;
+    }
+
+    private FireNodeIconManager EnsureFireNodeIconManager()
+    {
+        if (fireNodeIconManager == null)
         {
-            effectManager.SetMaxVisibleDistance(simulationProfile.EffectVisibleDistance);
+            fireNodeIconManager = GetComponent<FireNodeIconManager>();
+            if (fireNodeIconManager == null)
+            {
+                fireNodeIconManager = gameObject.AddComponent<FireNodeIconManager>();
+            }
         }
 
-        return effectManager;
+        if (!fireNodeIconManager.enabled)
+        {
+            fireNodeIconManager.enabled = true;
+        }
+
+        return fireNodeIconManager;
     }
 
     private UnityEngine.Transform EnsureRuntimeFireEffectRoot()
