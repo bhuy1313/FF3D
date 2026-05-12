@@ -13,12 +13,33 @@ using UnityEngine.UI;
 /// </summary>
 public partial class AssessRiskPopupEntryController : MonoBehaviour
 {
-    private static readonly Color DisabledBorderColor = CallPhaseFunctionButtonVisuals.InactiveColor;
-    private static readonly Color EnabledBorderColor = CallPhaseFunctionButtonVisuals.ActiveColor;
+    private static readonly Color DisabledBorderColor =
+        CallPhaseFunctionButtonVisuals.InactiveColor;
+    private static readonly Color EnabledAssessRiskBorderColor =
+        CallPhaseFunctionButtonVisuals.AssessRiskActiveColor;
+    private static readonly Color EnabledSubmitReportBorderColor =
+        CallPhaseFunctionButtonVisuals.ActiveColor;
     private static readonly Color PopupButtonNormalColor = Color.white;
     private static readonly Color PopupButtonSelectedColor = new Color(0.95f, 0.72f, 0.38f, 1f);
-    private static readonly Color PopupButtonEnabledTextColor = new Color(0.19607843f, 0.19607843f, 0.19607843f, 1f);
+
+    // Normal border color for severity option buttons when not selected (#303E51)
+    private static readonly Color SeverityOptionBorderNormalColor = new Color(
+        0.1882352941f,
+        0.2431372549f,
+        0.3176470588f,
+        1f
+    );
+    private static readonly Color PopupButtonEnabledTextColor = new Color(
+        0.19607843f,
+        0.19607843f,
+        0.19607843f,
+        1f
+    );
+    
     private static readonly Color PopupButtonDisabledTextColor = new Color(0.45f, 0.45f, 0.45f, 1f);
+    private static readonly Color SeverityLowColor = new Color(0.30f, 0.78f, 0.45f, 1f);
+    private static readonly Color SeverityMediumColor = new Color(0.95f, 0.72f, 0.24f, 1f);
+    private static readonly Color SeverityHighColor = new Color(0.90f, 0.28f, 0.22f, 1f);
     private const string MissingValueToken = "__CALLPHASE_MISSING__";
     private const string SeverityFieldId = "Severity";
     private const string FireLocationFieldId = "fire_location";
@@ -34,7 +55,7 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
         "OccupantRisk",
         "hazard",
         "SpreadStatus",
-        "CallerSafety"
+        "CallerSafety",
     };
 
     private static readonly string[] ConfirmedFactsFieldIds =
@@ -44,7 +65,7 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
         "OccupantRisk",
         "hazard",
         "SpreadStatus",
-        "CallerSafety"
+        "CallerSafety",
     };
 
     private static readonly string[] SubmitSummaryFieldIds =
@@ -55,51 +76,100 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
         "hazard",
         "SpreadStatus",
         "CallerSafety",
-        SeverityFieldId
+        SeverityFieldId,
     };
-
 
     [Header("Assess Risk Requirements")]
-    [SerializeField] private List<string> requiredForAssessRisk = new List<string>
+    [SerializeField]
+    private List<string> requiredForAssessRisk = new List<string>
     {
         "Address",
-        FireLocationFieldId
+        FireLocationFieldId,
     };
-    [SerializeField] private List<string> recommendedForAssessRisk = new List<string>
+
+    [SerializeField]
+    private List<string> recommendedForAssessRisk = new List<string>
     {
         "OccupantRisk",
         "hazard",
         "SpreadStatus",
-        "CallerSafety"
+        "CallerSafety",
     };
-    [SerializeField] private int minimumRecommendedCount = 1;
+
+    [SerializeField]
+    private int minimumRecommendedCount = 1;
 
     [Header("Scenario")]
-    [SerializeField] private CallPhaseScenarioData scenarioData;
+    [SerializeField]
+    private CallPhaseScenarioData scenarioData;
 
     [Header("Next Phase Flow")]
-    [SerializeField] private string loadingSceneName = "LoadingScene";
-    [SerializeField] private string nextPhaseSceneName = "";
+    [SerializeField]
+    private string loadingSceneName = "LoadingScene";
+
+    [SerializeField]
+    private string nextPhaseSceneName = "";
 
     [Header("UI References")]
-    [SerializeField] private GameObject assessRiskButtonObject;
-    [SerializeField] private GameObject submitReportButtonObject;
-    [SerializeField] private GameObject assessRiskPopupRootObject;
-    [SerializeField] private GameObject assessRiskBackButtonObject;
-    [SerializeField] private GameObject assessRiskConfirmAssessmentButtonObject;
-    [SerializeField] private GameObject assessRiskLowSeverityButtonObject;
-    [SerializeField] private GameObject assessRiskMediumSeverityButtonObject;
-    [SerializeField] private GameObject assessRiskHighSeverityButtonObject;
-    [SerializeField] private GameObject submitReportPopupRootObject;
-    [SerializeField] private GameObject submitPopupBackButtonObject;
-    [SerializeField] private GameObject submitPopupConfirmButtonObject;
-    [SerializeField] private GameObject submitPopupSummaryTextObject;
-    [SerializeField] private GameObject submitPopupConfirmedTextObject;
-    [SerializeField] private GameObject resultPopupRootObject;
-    [SerializeField] private GameObject resultPopupBackButtonObject;
-    [SerializeField] private GameObject resultPopupNextPhaseButtonObject;
-    [SerializeField] private GameObject resultPopupSummaryTextObject;
-    [SerializeField] private GameObject resultPopupReviewTextObject;
+    [SerializeField]
+    private GameObject assessRiskButtonObject;
+
+    [SerializeField]
+    private GameObject submitReportButtonObject;
+
+    [SerializeField]
+    private GameObject assessRiskPopupRootObject;
+
+    [SerializeField]
+    private GameObject assessRiskBackButtonObject;
+
+    [SerializeField]
+    private GameObject assessRiskConfirmAssessmentButtonObject;
+
+    [SerializeField]
+    private GameObject assessRiskLowSeverityButtonObject;
+
+    [SerializeField]
+    private GameObject assessRiskMediumSeverityButtonObject;
+
+    [SerializeField]
+    private GameObject assessRiskHighSeverityButtonObject;
+
+    [SerializeField]
+    private GameObject submitReportPopupRootObject;
+
+    [SerializeField]
+    private GameObject submitPopupBackButtonObject;
+
+    [SerializeField]
+    private GameObject submitPopupConfirmButtonObject;
+
+    [SerializeField]
+    private GameObject submitPopupSummaryTextObject;
+
+    [SerializeField]
+    private GameObject submitPopupConfirmedTextObject;
+
+    [SerializeField]
+    private GameObject resultPopupRootObject;
+
+    [SerializeField]
+    private GameObject resultPopupBackButtonObject;
+
+    [SerializeField]
+    private GameObject resultPopupNextPhaseButtonObject;
+
+    [SerializeField]
+    private GameObject resultPopupSummaryTextObject;
+
+    [SerializeField]
+    private GameObject resultPopupReviewTextObject;
+
+    [SerializeField]
+    private GameObject severityOverlayObject;
+
+    [SerializeField]
+    private GameObject severityOverlayValueTextObject;
 
     private Button assessRiskButton;
     private Button submitReportButton;
@@ -124,6 +194,8 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
     private TMP_Text submitPopupConfirmLabel;
     private TMP_Text resultPopupSummaryText;
     private TMP_Text resultPopupReviewText;
+    private GameObject severityOverlay;
+    private TMP_Text severityOverlayValueText;
     private Button lowSeverityButton;
     private Button mediumSeverityButton;
     private Button highSeverityButton;
@@ -134,7 +206,9 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
     private TranscriptExtractionController transcriptExtractionController;
     private readonly List<Image> assessRiskBorderImages = new List<Image>();
     private readonly List<Image> submitReportBorderImages = new List<Image>();
-    private readonly Dictionary<string, TMP_Text> popupSummaryValueTexts = new Dictionary<string, TMP_Text>();
+    private readonly List<Image> severityOverlayImages = new List<Image>();
+    private readonly Dictionary<string, TMP_Text> popupSummaryValueTexts =
+        new Dictionary<string, TMP_Text>();
     private readonly HashSet<string> loggedMissingUiReferenceWarnings = new HashSet<string>();
     private bool isPopupOpen;
     private bool isSubmitPopupOpen;
@@ -150,6 +224,7 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
         HidePopupImmediate();
         HideSubmitPopupImmediate();
         HideResultPopupImmediate();
+        HideSeverityOverlayImmediate();
     }
 
     private void OnEnable()
@@ -165,13 +240,19 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
         HidePopupImmediate();
         HideSubmitPopupImmediate();
         HideResultPopupImmediate();
+        HideSeverityOverlayImmediate();
         RefreshAssessRiskButtonState();
         RefreshSubmitReportButtonState();
     }
 
     private void Update()
     {
-        if (isPopupOpen || isSubmitPopupOpen || isResultPopupOpen || FollowUpPopupController.AnyPopupOpen)
+        if (
+            isPopupOpen
+            || isSubmitPopupOpen
+            || isResultPopupOpen
+            || FollowUpPopupController.AnyPopupOpen
+        )
         {
             return;
         }
@@ -200,6 +281,7 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
         HidePopupImmediate();
         HideSubmitPopupImmediate();
         HideResultPopupImmediate();
+        HideSeverityOverlayImmediate();
     }
 
     private void OnDestroy()
@@ -238,6 +320,7 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
             resultPopupReviewText.text = string.Empty;
         }
 
+        HideSeverityOverlayImmediate();
         RefreshAssessRiskButtonState();
         RefreshSubmitReportButtonState();
         UpdateSubmitReportButtonLabel();
@@ -248,7 +331,13 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
         RefreshAssessRiskButtonState();
         RefreshSubmitReportButtonState();
 
-        if (isPopupOpen || isSubmitPopupOpen || assessRiskButton == null || !assessRiskButton.interactable || assessRiskPopup == null)
+        if (
+            isPopupOpen
+            || isSubmitPopupOpen
+            || assessRiskButton == null
+            || !assessRiskButton.interactable
+            || assessRiskPopup == null
+        )
         {
             return;
         }
@@ -331,8 +420,11 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
             PopulateConfirmedFacts();
             UpdateSubmitPopupButtonState();
         }
+
+        RefreshSeverityOverlayFromReport();
     }
-private void HidePopupImmediate()
+
+    private void HidePopupImmediate()
     {
         isPopupOpen = false;
         ResetPopupSelectionState();
@@ -375,6 +467,14 @@ private void HidePopupImmediate()
         if (resultPopup != null)
         {
             resultPopup.SetActive(false);
+        }
+    }
+
+    private void HideSeverityOverlayImmediate()
+    {
+        if (severityOverlay != null)
+        {
+            severityOverlay.SetActive(false);
         }
     }
 
@@ -556,6 +656,29 @@ private void HidePopupImmediate()
             scenarioContext = GetComponent<CallPhaseScenarioContext>();
         }
 
+        if (severityOverlay == null)
+        {
+            severityOverlay = severityOverlayObject;
+        }
+
+        if (severityOverlay == null)
+        {
+            severityOverlay = FindObjectInChildrenByName(transform, "ServerityOverlay");
+        }
+
+        if (severityOverlayValueText == null && severityOverlayValueTextObject != null)
+        {
+            severityOverlayValueText = severityOverlayValueTextObject.GetComponent<TMP_Text>();
+        }
+
+        if (severityOverlayValueText == null && severityOverlay != null)
+        {
+            severityOverlayValueText = FindTextInChildrenByName(
+                severityOverlay.transform,
+                "ValueText"
+            );
+        }
+
         if (assessRiskButton == null)
         {
             assessRiskButton = GetButtonFromObject(assessRiskButtonObject);
@@ -563,12 +686,12 @@ private void HidePopupImmediate()
 
         if (askFollowUpButton == null)
         {
-            askFollowUpButton = FindButtonInChildren(transform, "btnAskFollowUp", null);
+            askFollowUpButton = FindButtonInChildren(transform, "btnAskFollowUpV2", null);
         }
 
         if (assessRiskButton == null)
         {
-            assessRiskButton = FindButtonInChildren(transform, "btnAssessRisk", null);
+            assessRiskButton = FindButtonInChildren(transform, "btnAssessRiskV2", null);
         }
 
         CacheAssessRiskBorderImages();
@@ -580,7 +703,7 @@ private void HidePopupImmediate()
 
         if (submitReportButton == null)
         {
-            submitReportButton = FindButtonInChildren(transform, "btnSubmitReport", null);
+            submitReportButton = FindButtonInChildren(transform, "btnSubmitReportV2", null);
         }
 
         if (submitReportButtonLabel == null)
@@ -597,7 +720,7 @@ private void HidePopupImmediate()
 
         if (assessRiskPopup == null)
         {
-            assessRiskPopup = FindSiblingObject("AssessRiskPopup");
+            assessRiskPopup = FindSiblingObject("AssessRiskPopupV2");
         }
 
         if (assessRiskPopup != null)
@@ -614,17 +737,30 @@ private void HidePopupImmediate()
 
             if (popupBackButton == null)
             {
-                popupBackButton = FindButtonInChildren(assessRiskPopup.transform, "btnBack", CallPhaseUiChromeText.Tr("common.btn.back", "Back"));
+                popupBackButton = FindButtonInChildren(
+                    assessRiskPopup.transform,
+                    "btnBack",
+                    CallPhaseUiChromeText.Tr("common.btn.back", "Back")
+                );
             }
 
             if (popupConfirmAssessmentButton == null)
             {
-                popupConfirmAssessmentButton = GetButtonFromObject(assessRiskConfirmAssessmentButtonObject);
+                popupConfirmAssessmentButton = GetButtonFromObject(
+                    assessRiskConfirmAssessmentButtonObject
+                );
             }
 
             if (popupConfirmAssessmentButton == null)
             {
-                popupConfirmAssessmentButton = FindButtonInChildren(assessRiskPopup.transform, "btnConfirm", CallPhaseUiChromeText.Tr("callphase.btn.confirm_assessment", "Confirm Assessment"));
+                popupConfirmAssessmentButton = FindButtonInChildren(
+                    assessRiskPopup.transform,
+                    "btnConfirm",
+                    CallPhaseUiChromeText.Tr(
+                        "callphase.btn.confirm_assessment",
+                        "Confirm Assessment"
+                    )
+                );
             }
 
             if (lowSeverityButton == null)
@@ -634,7 +770,11 @@ private void HidePopupImmediate()
 
             if (lowSeverityButton == null)
             {
-                lowSeverityButton = FindButtonInChildren(assessRiskPopup.transform, "btnLow", CallPhaseUiChromeText.Tr("callphase.severity.low", "LOW"));
+                lowSeverityButton = FindButtonInChildren(
+                    assessRiskPopup.transform,
+                    "btnLow",
+                    CallPhaseUiChromeText.Tr("callphase.severity.low", "LOW")
+                );
             }
 
             if (mediumSeverityButton == null)
@@ -644,7 +784,11 @@ private void HidePopupImmediate()
 
             if (mediumSeverityButton == null)
             {
-                mediumSeverityButton = FindButtonInChildren(assessRiskPopup.transform, "btnMedium", CallPhaseUiChromeText.Tr("callphase.severity.medium", "MEDIUM"));
+                mediumSeverityButton = FindButtonInChildren(
+                    assessRiskPopup.transform,
+                    "btnMedium",
+                    CallPhaseUiChromeText.Tr("callphase.severity.medium", "MEDIUM")
+                );
             }
 
             if (highSeverityButton == null)
@@ -654,7 +798,11 @@ private void HidePopupImmediate()
 
             if (highSeverityButton == null)
             {
-                highSeverityButton = FindButtonInChildren(assessRiskPopup.transform, "btnHigh", CallPhaseUiChromeText.Tr("callphase.severity.high", "HIGH"));
+                highSeverityButton = FindButtonInChildren(
+                    assessRiskPopup.transform,
+                    "btnHigh",
+                    CallPhaseUiChromeText.Tr("callphase.severity.high", "HIGH")
+                );
             }
 
             if (popupConfirmAssessmentLabel == null)
@@ -697,7 +845,11 @@ private void HidePopupImmediate()
 
             if (submitPopupBackButton == null)
             {
-                submitPopupBackButton = FindButtonInChildren(submitReportPopup.transform, "btnBack", CallPhaseUiChromeText.Tr("common.btn.back", "Back"));
+                submitPopupBackButton = FindButtonInChildren(
+                    submitReportPopup.transform,
+                    "btnBack",
+                    CallPhaseUiChromeText.Tr("common.btn.back", "Back")
+                );
             }
 
             if (submitPopupConfirmButton == null)
@@ -707,7 +859,11 @@ private void HidePopupImmediate()
 
             if (submitPopupConfirmButton == null)
             {
-                submitPopupConfirmButton = FindButtonInChildren(submitReportPopup.transform, "btnConfirmSubmit", CallPhaseUiChromeText.Tr("callphase.btn.confirm_submit", "Confirm Submit"));
+                submitPopupConfirmButton = FindButtonInChildren(
+                    submitReportPopup.transform,
+                    "btnConfirmSubmit",
+                    CallPhaseUiChromeText.Tr("callphase.btn.confirm_submit", "Confirm Submit")
+                );
             }
 
             if (submitPopupConfirmLabel == null)
@@ -722,7 +878,10 @@ private void HidePopupImmediate()
 
             if (submitPopupSummaryText == null)
             {
-                submitPopupSummaryText = FindTextInChildrenByName(submitReportPopup.transform, "summaryText");
+                submitPopupSummaryText = FindTextInChildrenByName(
+                    submitReportPopup.transform,
+                    "summaryText"
+                );
             }
 
             if (submitPopupConfirmedText == null)
@@ -732,7 +891,10 @@ private void HidePopupImmediate()
 
             if (submitPopupConfirmedText == null)
             {
-                submitPopupConfirmedText = FindTextInChildrenByName(submitReportPopup.transform, "confirmedText");
+                submitPopupConfirmedText = FindTextInChildrenByName(
+                    submitReportPopup.transform,
+                    "confirmedText"
+                );
             }
 
             UpdateSubmitPopupButtonState();
@@ -764,7 +926,11 @@ private void HidePopupImmediate()
 
             if (resultPopupBackButton == null)
             {
-                resultPopupBackButton = FindButtonInChildren(resultPopup.transform, "btnBack", CallPhaseUiChromeText.Tr("common.btn.back", "Back"));
+                resultPopupBackButton = FindButtonInChildren(
+                    resultPopup.transform,
+                    "btnBack",
+                    CallPhaseUiChromeText.Tr("common.btn.back", "Back")
+                );
             }
 
             if (resultPopupNextPhaseButton == null)
@@ -774,7 +940,11 @@ private void HidePopupImmediate()
 
             if (resultPopupNextPhaseButton == null)
             {
-                resultPopupNextPhaseButton = FindButtonInChildren(resultPopup.transform, "btnNextPhase", null);
+                resultPopupNextPhaseButton = FindButtonInChildren(
+                    resultPopup.transform,
+                    "btnNextPhase",
+                    null
+                );
             }
 
             if (resultPopupSummaryText == null)
@@ -784,7 +954,10 @@ private void HidePopupImmediate()
 
             if (resultPopupSummaryText == null)
             {
-                resultPopupSummaryText = FindTextInChildrenByName(resultPopup.transform, "summaryText");
+                resultPopupSummaryText = FindTextInChildrenByName(
+                    resultPopup.transform,
+                    "summaryText"
+                );
             }
 
             if (resultPopupReviewText == null)
@@ -794,7 +967,10 @@ private void HidePopupImmediate()
 
             if (resultPopupReviewText == null)
             {
-                resultPopupReviewText = FindTextInChildrenByName(resultPopup.transform, "resultText");
+                resultPopupReviewText = FindTextInChildrenByName(
+                    resultPopup.transform,
+                    "resultText"
+                );
             }
         }
 
@@ -803,21 +979,50 @@ private void HidePopupImmediate()
         WarnIfMissingReference("Ask Follow-Up button", askFollowUpButton, this);
         WarnIfMissingReference("Assess Risk popup", assessRiskPopup, this);
         WarnIfMissingReference("Assess Risk back button", popupBackButton, assessRiskPopup);
-        WarnIfMissingReference("Assess Risk confirm button", popupConfirmAssessmentButton, assessRiskPopup);
+        WarnIfMissingReference(
+            "Assess Risk confirm button",
+            popupConfirmAssessmentButton,
+            assessRiskPopup
+        );
         WarnIfMissingReference("LOW severity button", lowSeverityButton, assessRiskPopup);
         WarnIfMissingReference("MEDIUM severity button", mediumSeverityButton, assessRiskPopup);
         WarnIfMissingReference("HIGH severity button", highSeverityButton, assessRiskPopup);
         WarnIfMissingReference("Submit popup", submitReportPopup, this);
-        WarnIfMissingReference("Submit popup back button", submitPopupBackButton, submitReportPopup);
-        WarnIfMissingReference("Submit popup confirm button", submitPopupConfirmButton, submitReportPopup);
-        WarnIfMissingReference("Submit popup summary text", submitPopupSummaryText, submitReportPopup);
-        WarnIfMissingReference("Submit popup confirmed text", submitPopupConfirmedText, submitReportPopup);
+        WarnIfMissingReference(
+            "Submit popup back button",
+            submitPopupBackButton,
+            submitReportPopup
+        );
+        WarnIfMissingReference(
+            "Submit popup confirm button",
+            submitPopupConfirmButton,
+            submitReportPopup
+        );
+        WarnIfMissingReference(
+            "Submit popup summary text",
+            submitPopupSummaryText,
+            submitReportPopup
+        );
+        WarnIfMissingReference(
+            "Submit popup confirmed text",
+            submitPopupConfirmedText,
+            submitReportPopup
+        );
         WarnIfMissingReference("Result popup", resultPopup, this);
         WarnIfMissingReference("Result popup back button", resultPopupBackButton, resultPopup);
-        WarnIfMissingReference("Result popup next phase button", resultPopupNextPhaseButton, resultPopup);
+        WarnIfMissingReference(
+            "Result popup next phase button",
+            resultPopupNextPhaseButton,
+            resultPopup
+        );
         WarnIfMissingReference("Result popup summary text", resultPopupSummaryText, resultPopup);
         WarnIfMissingReference("Result popup review text", resultPopupReviewText, resultPopup);
-
+        WarnIfMissingReference("Severity overlay", severityOverlay, this);
+        WarnIfMissingReference(
+            "Severity overlay value text",
+            severityOverlayValueText,
+            severityOverlay != null ? severityOverlay : this
+        );
     }
 
     private void SelectLowSeverity()
@@ -852,9 +1057,11 @@ private void HidePopupImmediate()
         }
 
         incidentReportController.ApplySeverityAssessment(selectedSeverityValue);
+        RefreshSeverityOverlay(selectedSeverityValue);
         ClosePopup();
     }
-private void OpenResultPopup()
+
+    private void OpenResultPopup()
     {
         if (isResultPopupOpen || resultPopup == null)
         {
@@ -907,7 +1114,8 @@ private void OpenResultPopup()
         RefreshAssessRiskButtonState();
         RefreshSubmitReportButtonState();
     }
-private void ResetPopupSelectionState()
+
+    private void ResetPopupSelectionState()
     {
         selectedSeverityValue = string.Empty;
         UpdateSeverityOptionVisuals();
@@ -929,40 +1137,133 @@ private void ResetPopupSelectionState()
         }
 
         bool isSelected = selectedSeverityValue == severity;
-        Image background = button.targetGraphic as Image;
-        if (background != null)
+        Color severityColor = GetSeverityOptionColor(severity);
+
+        ApplySeverityOptionBorderVisuals(
+            button.transform,
+            isSelected ? severityColor : SeverityOptionBorderNormalColor
+        );
+        ApplySeverityOptionToggleVisuals(button.transform, isSelected, severityColor);
+    }
+
+    private void ApplySeverityOptionBorderVisuals(Transform buttonTransform, Color borderColor)
+    {
+        if (buttonTransform == null)
         {
-            background.color = isSelected ? PopupButtonSelectedColor : PopupButtonNormalColor;
+            return;
         }
 
-        TMP_Text label = GetButtonLabel(button);
-        if (label != null)
+        for (int i = 0; i < buttonTransform.childCount; i++)
         {
-            label.color = PopupButtonEnabledTextColor;
-            label.fontStyle = isSelected ? FontStyles.Bold : FontStyles.Normal;
+            Transform child = buttonTransform.GetChild(i);
+            if (child == null)
+            {
+                continue;
+            }
+
+            if (child.name == "Toggle" || child.name == "Content")
+            {
+                continue;
+            }
+
+            Image image = child.GetComponent<Image>();
+            if (image != null)
+            {
+                image.color = borderColor;
+            }
         }
+    }
+
+    private void ApplySeverityOptionToggleVisuals(
+        Transform buttonTransform,
+        bool isSelected,
+        Color severityColor
+    )
+    {
+        if (buttonTransform == null)
+        {
+            return;
+        }
+
+        Transform toggle = buttonTransform.Find("Toggle");
+        if (toggle == null)
+        {
+            return;
+        }
+
+        Image[] toggleImages = toggle.GetComponentsInChildren<Image>(true);
+        for (int i = 0; i < toggleImages.Length; i++)
+        {
+            Image image = toggleImages[i];
+            if (image == null)
+            {
+                continue;
+            }
+
+            bool isDot =
+                string.Equals(image.gameObject.name, "Handle", StringComparison.Ordinal)
+                || string.Equals(image.gameObject.name, "customToggle", StringComparison.Ordinal);
+
+            if (isDot)
+            {
+                image.enabled = isSelected;
+                image.color = severityColor;
+                continue;
+            }
+
+            image.color = isSelected ? severityColor : PopupButtonNormalColor;
+        }
+    }
+
+    private Color GetSeverityOptionColor(string severity)
+    {
+        if (string.Equals(severity, SeverityLow, StringComparison.OrdinalIgnoreCase))
+        {
+            return SeverityLowColor;
+        }
+
+        if (string.Equals(severity, SeverityMedium, StringComparison.OrdinalIgnoreCase))
+        {
+            return SeverityMediumColor;
+        }
+
+        return SeverityHighColor;
     }
 
     private void UpdateConfirmAssessmentButtonState()
     {
         if (popupConfirmAssessmentButton != null)
         {
-            popupConfirmAssessmentButton.interactable = !string.IsNullOrWhiteSpace(selectedSeverityValue);
-        }
-
-        Image background = popupConfirmAssessmentButton != null ? popupConfirmAssessmentButton.targetGraphic as Image : null;
-        if (background != null)
-        {
-            background.color = popupConfirmAssessmentButton != null && popupConfirmAssessmentButton.interactable
-                ? PopupButtonSelectedColor
-                : PopupButtonNormalColor;
+            popupConfirmAssessmentButton.interactable = !string.IsNullOrWhiteSpace(
+                selectedSeverityValue
+            );
         }
 
         if (popupConfirmAssessmentLabel != null)
         {
-            popupConfirmAssessmentLabel.color = popupConfirmAssessmentButton != null && popupConfirmAssessmentButton.interactable
-                ? PopupButtonEnabledTextColor
-                : PopupButtonDisabledTextColor;
+            popupConfirmAssessmentLabel.color =
+                popupConfirmAssessmentButton != null && popupConfirmAssessmentButton.interactable
+                    ? Color.white
+                    : PopupButtonDisabledTextColor;
+        }
+
+        if (popupConfirmAssessmentButton != null)
+        {
+            Image[] buttonImages = popupConfirmAssessmentButton.GetComponentsInChildren<Image>(
+                true
+            );
+            for (int i = 0; i < buttonImages.Length; i++)
+            {
+                Image image = buttonImages[i];
+                if (image == null || image.transform == popupConfirmAssessmentButton.transform)
+                {
+                    continue;
+                }
+
+                image.color = popupConfirmAssessmentButton.interactable
+                    ? Color.white
+                    : PopupButtonDisabledTextColor;
+            }
         }
     }
 
@@ -973,19 +1274,24 @@ private void ResetPopupSelectionState()
             submitPopupConfirmButton.interactable = !IsReportSubmitted();
         }
 
-        Image background = submitPopupConfirmButton != null ? submitPopupConfirmButton.targetGraphic as Image : null;
+        Image background =
+            submitPopupConfirmButton != null
+                ? submitPopupConfirmButton.targetGraphic as Image
+                : null;
         if (background != null)
         {
-            background.color = submitPopupConfirmButton != null && submitPopupConfirmButton.interactable
-                ? PopupButtonSelectedColor
-                : PopupButtonNormalColor;
+            background.color =
+                submitPopupConfirmButton != null && submitPopupConfirmButton.interactable
+                    ? PopupButtonSelectedColor
+                    : PopupButtonNormalColor;
         }
 
         if (submitPopupConfirmLabel != null)
         {
-            submitPopupConfirmLabel.color = submitPopupConfirmButton != null && submitPopupConfirmButton.interactable
-                ? PopupButtonEnabledTextColor
-                : PopupButtonDisabledTextColor;
+            submitPopupConfirmLabel.color =
+                submitPopupConfirmButton != null && submitPopupConfirmButton.interactable
+                    ? PopupButtonEnabledTextColor
+                    : PopupButtonDisabledTextColor;
         }
     }
 
@@ -1018,7 +1324,7 @@ private void ResetPopupSelectionState()
 
     private void UpdateAssessRiskBorderVisuals(bool interactable)
     {
-        Color targetColor = interactable ? EnabledBorderColor : DisabledBorderColor;
+        Color targetColor = interactable ? EnabledAssessRiskBorderColor : DisabledBorderColor;
 
         for (int i = 0; i < assessRiskBorderImages.Count; i++)
         {
@@ -1054,7 +1360,7 @@ private void ResetPopupSelectionState()
 
     private void UpdateSubmitReportBorderVisuals(bool interactable)
     {
-        Color targetColor = interactable ? EnabledBorderColor : DisabledBorderColor;
+        Color targetColor = interactable ? EnabledSubmitReportBorderColor : DisabledBorderColor;
 
         for (int i = 0; i < submitReportBorderImages.Count; i++)
         {
@@ -1108,8 +1414,9 @@ private void ResetPopupSelectionState()
         CallPhaseUiChromeText.ApplyCurrentFont(resultPopupReviewText);
         resultPopupReviewText.text = BuildResultPopupReviewText();
     }
-// Efficiency is only scored once the report is complete enough to be meaningfully comparable.
-private void CachePopupSummaryValueTexts()
+
+    // Efficiency is only scored once the report is complete enough to be meaningfully comparable.
+    private void CachePopupSummaryValueTexts()
     {
         popupSummaryValueTexts.Clear();
 
@@ -1147,9 +1454,13 @@ private void CachePopupSummaryValueTexts()
     private void PopulateConfirmedFacts()
     {
         List<string> confirmedFacts = GetConfirmedFactDisplayNames();
-        string confirmedFactsText = confirmedFacts.Count > 0
-            ? "- " + string.Join("\n- ", confirmedFacts)
-            : CallPhaseUiChromeText.Tr("callphase.value.no_confirmed_facts", "No confirmed facts yet.");
+        string confirmedFactsText =
+            confirmedFacts.Count > 0
+                ? "- " + string.Join("\n- ", confirmedFacts)
+                : CallPhaseUiChromeText.Tr(
+                    "callphase.value.no_confirmed_facts",
+                    "No confirmed facts yet."
+                );
 
         if (popupConfirmedFactsText == null)
         {
@@ -1164,7 +1475,10 @@ private void CachePopupSummaryValueTexts()
 
         if (submitPopupConfirmedText == null && submitReportPopup != null)
         {
-            submitPopupConfirmedText = FindTextInChildrenByName(submitReportPopup.transform, "confirmedText");
+            submitPopupConfirmedText = FindTextInChildrenByName(
+                submitReportPopup.transform,
+                "confirmedText"
+            );
         }
 
         if (submitPopupConfirmedText != null)
@@ -1184,8 +1498,14 @@ private void CachePopupSummaryValueTexts()
 
         for (int i = 0; i < ConfirmedFactsFieldIds.Length; i++)
         {
-            IncidentReportFieldView fieldView = incidentReportController.GetFieldView(ConfirmedFactsFieldIds[i]);
-            if (fieldView == null || fieldView.CurrentState != ReportFieldState.Confirmed || string.IsNullOrWhiteSpace(fieldView.CurrentValue))
+            IncidentReportFieldView fieldView = incidentReportController.GetFieldView(
+                ConfirmedFactsFieldIds[i]
+            );
+            if (
+                fieldView == null
+                || fieldView.CurrentState != ReportFieldState.Confirmed
+                || string.IsNullOrWhiteSpace(fieldView.CurrentValue)
+            )
             {
                 continue;
             }
@@ -1206,7 +1526,8 @@ private void CachePopupSummaryValueTexts()
         TMP_Text headerText = FindTextByLocalizationKeyOrValue(
             assessRiskPopup.transform,
             "callphase.header.confirmed_facts",
-            "CONFIRMED FACTS");
+            "CONFIRMED FACTS"
+        );
         if (headerText == null)
         {
             return null;
@@ -1229,7 +1550,11 @@ private void CachePopupSummaryValueTexts()
         return null;
     }
 
-    private TMP_Text FindTextByLocalizationKeyOrValue(Transform root, string localizationKey, string fallbackValue)
+    private TMP_Text FindTextByLocalizationKeyOrValue(
+        Transform root,
+        string localizationKey,
+        string fallbackValue
+    )
     {
         if (root == null)
         {
@@ -1246,7 +1571,14 @@ private void CachePopupSummaryValueTexts()
             }
 
             LocalizedText localizedText = text.GetComponent<LocalizedText>();
-            if (localizedText != null && string.Equals(localizedText.LocalizationKey, localizationKey, StringComparison.Ordinal))
+            if (
+                localizedText != null
+                && string.Equals(
+                    localizedText.LocalizationKey,
+                    localizationKey,
+                    StringComparison.Ordinal
+                )
+            )
             {
                 return text;
             }
@@ -1272,7 +1604,10 @@ private void CachePopupSummaryValueTexts()
         for (int i = 0; i < SummaryFieldIds.Length; i++)
         {
             string fieldId = SummaryFieldIds[i];
-            if (!popupSummaryValueTexts.TryGetValue(fieldId, out TMP_Text valueText) || valueText == null)
+            if (
+                !popupSummaryValueTexts.TryGetValue(fieldId, out TMP_Text valueText)
+                || valueText == null
+            )
             {
                 continue;
             }
@@ -1290,7 +1625,11 @@ private void CachePopupSummaryValueTexts()
         }
 
         IncidentReportFieldView fieldView = incidentReportController.GetFieldView(fieldId);
-        if (fieldView == null || fieldView.CurrentState == ReportFieldState.Empty || string.IsNullOrWhiteSpace(fieldView.CurrentValue))
+        if (
+            fieldView == null
+            || fieldView.CurrentState == ReportFieldState.Empty
+            || string.IsNullOrWhiteSpace(fieldView.CurrentValue)
+        )
         {
             return MissingValueToken;
         }
@@ -1306,7 +1645,11 @@ private void CachePopupSummaryValueTexts()
         }
 
         IncidentReportFieldView fieldView = incidentReportController.GetFieldView(fieldId);
-        if (fieldView == null || fieldView.CurrentState == ReportFieldState.Empty || string.IsNullOrWhiteSpace(fieldView.CurrentValue))
+        if (
+            fieldView == null
+            || fieldView.CurrentState == ReportFieldState.Empty
+            || string.IsNullOrWhiteSpace(fieldView.CurrentValue)
+        )
         {
             return MissingValueToken;
         }
@@ -1322,7 +1665,8 @@ private void CachePopupSummaryValueTexts()
     private int CountConfirmedFacts()
     {
         int confirmedCount = 0;
-        List<CallPhaseScenarioScoredFieldData> expectedConfirmedFields = GetReviewExpectedConfirmedFields();
+        List<CallPhaseScenarioScoredFieldData> expectedConfirmedFields =
+            GetReviewExpectedConfirmedFields();
         for (int i = 0; i < expectedConfirmedFields.Count; i++)
         {
             CallPhaseScenarioScoredFieldData fieldConfig = expectedConfirmedFields[i];
@@ -1361,7 +1705,9 @@ private void CachePopupSummaryValueTexts()
         }
 
         string normalizedValue = NormalizeForScenarioComparison(value);
-        string normalizedExpectedValue = NormalizeForScenarioComparison(GetExpectedFieldValue(fieldId));
+        string normalizedExpectedValue = NormalizeForScenarioComparison(
+            GetExpectedFieldValue(fieldId)
+        );
         if (!string.IsNullOrWhiteSpace(normalizedExpectedValue))
         {
             return DoesFieldMatchExpectedValue(fieldId, normalizedValue, normalizedExpectedValue);
@@ -1374,7 +1720,10 @@ private void CachePopupSummaryValueTexts()
             case FireLocationFieldId:
                 return normalizedValue.Contains("kitchen");
             case "OccupantRisk":
-                return normalizedValue.Contains("child") && (normalizedValue.Contains("trapped") || normalizedValue.Contains("upstairs"));
+                return normalizedValue.Contains("child")
+                    && (
+                        normalizedValue.Contains("trapped") || normalizedValue.Contains("upstairs")
+                    );
             case "hazard":
                 return HazardValueUtility.MatchesExpectedSet(value, GetExpectedFieldValue(fieldId));
             case "SpreadStatus":
@@ -1402,16 +1751,20 @@ private void CachePopupSummaryValueTexts()
 
         if (scenarioData == null)
         {
-            scenarioData = Resources.Load<CallPhaseScenarioData>(CallPhaseScenarioData.DefaultScenarioResourcePath);
+            scenarioData = Resources.Load<CallPhaseScenarioData>(
+                CallPhaseScenarioData.DefaultScenarioResourcePath
+            );
         }
     }
 
     private List<string> GetRequiredAssessRiskFields()
     {
-        if (scenarioData != null
+        if (
+            scenarioData != null
             && scenarioData.assessRisk != null
             && scenarioData.assessRisk.requiredForAssessRisk != null
-            && scenarioData.assessRisk.requiredForAssessRisk.Count > 0)
+            && scenarioData.assessRisk.requiredForAssessRisk.Count > 0
+        )
         {
             return scenarioData.assessRisk.requiredForAssessRisk;
         }
@@ -1421,10 +1774,12 @@ private void CachePopupSummaryValueTexts()
 
     private List<string> GetRecommendedAssessRiskFields()
     {
-        if (scenarioData != null
+        if (
+            scenarioData != null
             && scenarioData.assessRisk != null
             && scenarioData.assessRisk.recommendedForAssessRisk != null
-            && scenarioData.assessRisk.recommendedForAssessRisk.Count > 0)
+            && scenarioData.assessRisk.recommendedForAssessRisk.Count > 0
+        )
         {
             return scenarioData.assessRisk.recommendedForAssessRisk;
         }
@@ -1444,13 +1799,19 @@ private void CachePopupSummaryValueTexts()
 
     private string GetExpectedSeverityValue()
     {
-        if (scenarioData != null && scenarioData.assessRisk != null && !string.IsNullOrWhiteSpace(scenarioData.assessRisk.expectedSeverity))
+        if (
+            scenarioData != null
+            && scenarioData.assessRisk != null
+            && !string.IsNullOrWhiteSpace(scenarioData.assessRisk.expectedSeverity)
+        )
         {
             return scenarioData.assessRisk.expectedSeverity.Trim();
         }
 
         string expectedSeverity = GetExpectedFieldValue(SeverityFieldId);
-        return !string.IsNullOrWhiteSpace(expectedSeverity) ? expectedSeverity : ExpectedSeverityValue;
+        return !string.IsNullOrWhiteSpace(expectedSeverity)
+            ? expectedSeverity
+            : ExpectedSeverityValue;
     }
 
     private string GetExpectedFieldValue(string fieldId)
@@ -1485,16 +1846,26 @@ private void CachePopupSummaryValueTexts()
         }
     }
 
-    private bool DoesFieldMatchExpectedValue(string fieldId, string normalizedActualValue, string normalizedExpectedValue)
+    private bool DoesFieldMatchExpectedValue(
+        string fieldId,
+        string normalizedActualValue,
+        string normalizedExpectedValue
+    )
     {
-        if (string.IsNullOrWhiteSpace(normalizedActualValue) || string.IsNullOrWhiteSpace(normalizedExpectedValue))
+        if (
+            string.IsNullOrWhiteSpace(normalizedActualValue)
+            || string.IsNullOrWhiteSpace(normalizedExpectedValue)
+        )
         {
             return false;
         }
 
         if (StringMatches(fieldId, "hazard"))
         {
-            return HazardValueUtility.MatchesExpectedSet(normalizedActualValue, normalizedExpectedValue);
+            return HazardValueUtility.MatchesExpectedSet(
+                normalizedActualValue,
+                normalizedExpectedValue
+            );
         }
 
         return normalizedActualValue.Contains(normalizedExpectedValue)
@@ -1509,7 +1880,8 @@ private void CachePopupSummaryValueTexts()
         {
             return CallPhaseUiChromeText.Tr(
                 "callphase.result.issue.hazard_incomplete",
-                "Hazard information was incomplete.");
+                "Hazard information was incomplete."
+            );
         }
 
         string resolvedActualValue = IsMissingValue(actualHazardValue)
@@ -1679,12 +2051,124 @@ private void CachePopupSummaryValueTexts()
         button.onClick.Invoke();
     }
 
+    private void RefreshSeverityOverlayFromReport()
+    {
+        if (incidentReportController == null)
+        {
+            HideSeverityOverlayImmediate();
+            return;
+        }
+
+        IncidentReportFieldView severityField = incidentReportController.GetFieldView(
+            SeverityFieldId
+        );
+        if (
+            severityField == null
+            || severityField.CurrentState == ReportFieldState.Empty
+            || string.IsNullOrWhiteSpace(severityField.CurrentValue)
+        )
+        {
+            HideSeverityOverlayImmediate();
+            return;
+        }
+
+        RefreshSeverityOverlay(severityField.CurrentValue);
+    }
+
+    private void RefreshSeverityOverlay(string severityValue)
+    {
+        if (severityOverlay == null)
+        {
+            return;
+        }
+
+        string resolvedSeverity = severityValue?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(resolvedSeverity))
+        {
+            HideSeverityOverlayImmediate();
+            return;
+        }
+
+        severityOverlay.SetActive(true);
+
+        if (severityOverlayValueText != null)
+        {
+            severityOverlayValueText.text = CallPhaseUiChromeText.GetSeverityDisplayName(
+                resolvedSeverity
+            );
+        }
+
+        CacheSeverityOverlayImages();
+        Color severityColor = GetSeverityOverlayColor(resolvedSeverity);
+        for (int i = 0; i < severityOverlayImages.Count; i++)
+        {
+            if (severityOverlayImages[i] != null)
+            {
+                severityOverlayImages[i].color = severityColor;
+            }
+        }
+
+        if (severityOverlayValueText != null)
+        {
+            severityOverlayValueText.color = severityColor;
+        }
+    }
+
+    private void CacheSeverityOverlayImages()
+    {
+        severityOverlayImages.Clear();
+        if (severityOverlay == null)
+        {
+            return;
+        }
+
+        // Collect all child Image components, but exclude the Image that is
+        // attached directly to the severityOverlay GameObject itself.
+        Image rootImage = severityOverlay.GetComponent<Image>();
+        Image[] images = severityOverlay.GetComponentsInChildren<Image>(true);
+        for (int i = 0; i < images.Length; i++)
+        {
+            Image img = images[i];
+            if (img == null)
+            {
+                continue;
+            }
+
+            if (rootImage != null && img.gameObject == severityOverlay)
+            {
+                // Skip the root overlay image so it keeps its original color.
+                continue;
+            }
+
+            severityOverlayImages.Add(img);
+        }
+    }
+
+    private Color GetSeverityOverlayColor(string severityValue)
+    {
+        if (string.Equals(severityValue, SeverityLow, StringComparison.OrdinalIgnoreCase))
+        {
+            return SeverityLowColor;
+        }
+
+        if (string.Equals(severityValue, SeverityMedium, StringComparison.OrdinalIgnoreCase))
+        {
+            return SeverityMediumColor;
+        }
+
+        return SeverityHighColor;
+    }
+
     private TMP_Text GetTextFromObject(GameObject targetObject)
     {
         return targetObject != null ? targetObject.GetComponent<TMP_Text>() : null;
     }
 
-    private void WarnIfMissingReference(string referenceName, UnityEngine.Object resolvedReference, UnityEngine.Object context)
+    private void WarnIfMissingReference(
+        string referenceName,
+        UnityEngine.Object resolvedReference,
+        UnityEngine.Object context
+    )
     {
         if (resolvedReference != null || string.IsNullOrWhiteSpace(referenceName))
         {
@@ -1696,7 +2180,10 @@ private void CachePopupSummaryValueTexts()
             return;
         }
 
-        Debug.LogWarning($"{nameof(AssessRiskPopupEntryController)}: Missing UI reference for '{referenceName}'.", context != null ? context : this);
+        Debug.LogWarning(
+            $"{nameof(AssessRiskPopupEntryController)}: Missing UI reference for '{referenceName}'.",
+            context != null ? context : this
+        );
     }
 
     private TMP_Text FindTextInChildrenByName(Transform root, string objectName)
@@ -1759,8 +2246,13 @@ private void CachePopupSummaryValueTexts()
         }
 
         LocalizedText localizedText = text.GetComponent<LocalizedText>();
-        if (localizedText != null
-            && CallPhaseUiChromeText.TryGetFieldIdForLocalizationKey(localizedText.LocalizationKey, out string localizedFieldId))
+        if (
+            localizedText != null
+            && CallPhaseUiChromeText.TryGetFieldIdForLocalizationKey(
+                localizedText.LocalizationKey,
+                out string localizedFieldId
+            )
+        )
         {
             return localizedFieldId;
         }
@@ -1774,7 +2266,11 @@ private void CachePopupSummaryValueTexts()
         for (int i = 0; i < SummaryFieldIds.Length; i++)
         {
             string fieldId = SummaryFieldIds[i];
-            foreach (string candidateLabel in CallPhaseUiChromeText.GetFieldDisplayNameCandidates(fieldId))
+            foreach (
+                string candidateLabel in CallPhaseUiChromeText.GetFieldDisplayNameCandidates(
+                    fieldId
+                )
+            )
             {
                 if (normalizedLabel == NormalizeSummaryLabel(candidateLabel))
                 {
@@ -1860,6 +2356,26 @@ private void CachePopupSummaryValueTexts()
         return null;
     }
 
+    private GameObject FindObjectInChildrenByName(Transform root, string objectName)
+    {
+        if (root == null || string.IsNullOrWhiteSpace(objectName))
+        {
+            return null;
+        }
+
+        Transform[] transforms = root.GetComponentsInChildren<Transform>(true);
+        for (int i = 0; i < transforms.Length; i++)
+        {
+            Transform candidate = transforms[i];
+            if (candidate != null && candidate.name == objectName)
+            {
+                return candidate.gameObject;
+            }
+        }
+
+        return null;
+    }
+
     private GameObject FindSiblingObject(string objectName)
     {
         Transform parent = transform.parent;
@@ -1880,5 +2396,3 @@ private void CachePopupSummaryValueTexts()
         }
     }
 }
-
-
