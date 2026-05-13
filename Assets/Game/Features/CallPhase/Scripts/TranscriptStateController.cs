@@ -15,6 +15,7 @@ public class TranscriptStateController : MonoBehaviour
     [SerializeField] private GameObject normalModeHintRoot;
 
     [Header("Settings")]
+    [SerializeField] private bool showExtractionUi = false;
     [SerializeField] private bool enableDebugLogs = false;
 
     private TranscriptPanelState currentState = TranscriptPanelState.Normal;
@@ -75,15 +76,16 @@ public class TranscriptStateController : MonoBehaviour
     private void ApplyState(TranscriptPanelState state)
     {
         bool isExtractMode = (state == TranscriptPanelState.ExtractMode);
+        bool showExtractionControls = isExtractMode && showExtractionUi;
 
         if (extractionControlRoot != null)
         {
-            extractionControlRoot.SetActive(isExtractMode);
+            extractionControlRoot.SetActive(showExtractionControls);
         }
 
         if (extractionResultRoot != null)
         {
-            extractionResultRoot.SetActive(isExtractMode);
+            extractionResultRoot.SetActive(showExtractionControls);
         }
 
         if (normalModeHintRoot != null)
