@@ -365,14 +365,6 @@ public partial class BotCommandAgent
             return $"RouteFire/{currentRouteFirePhase} | {fireName}";
         }
 
-        if (IsInterruptV2Active)
-        {
-            string fireName = interruptV2State.FireTarget != null
-                ? GetDebugTargetName(interruptV2State.FireTarget)
-                : "UnknownFire";
-            return $"InterruptV2/{interruptV2State.Step} | {fireName}";
-        }
-
         if (currentBlockedBreakable != null &&
             !currentBlockedBreakable.IsBroken &&
             currentBlockedBreakable.CanBeClearedByBot)

@@ -45,6 +45,9 @@ public class FullscreenMinimapController : MonoBehaviour
     [SerializeField] private PlayerActionLock playerActionLock;
 #if ENABLE_INPUT_SYSTEM
     [SerializeField] private PlayerInput playerInput;
+    private InputAction toggleFullscreenAction;
+    private InputAction closeFullscreenAction;
+    private InputAction scrollZoomAction;
 #endif
 
     [Header("Auto Resolve")]
@@ -133,7 +136,6 @@ public class FullscreenMinimapController : MonoBehaviour
 
     private void Update()
     {
-        ResolveReferences();
         if (WasToggleFullscreenPressed())
         {
             ToggleFullscreen();
@@ -280,16 +282,19 @@ public class FullscreenMinimapController : MonoBehaviour
         if (playerInput == null && playerRoot != null)
         {
             playerInput = playerRoot.GetComponent<PlayerInput>();
+            CacheInputActions();
         }
 
         if (playerInput == null && starterAssetsInputs != null)
         {
             playerInput = starterAssetsInputs.GetComponent<PlayerInput>();
+            CacheInputActions();
         }
 
         if (playerInput == null)
         {
             playerInput = FindAnyObjectByType<PlayerInput>();
+            CacheInputActions();
         }
 #endif
 
@@ -740,7 +745,7 @@ public class FullscreenMinimapController : MonoBehaviour
         }
 
 #if ENABLE_INPUT_SYSTEM
-        if (TryGetPlayerAction("ToggleFullscreenMinimap", out InputAction action) && action.WasPressedThisFrame())
+        if (toggleFullscreenAction != null && toggleFullscreenAction.WasPressedThisFrame())
         {
             return true;
         }
@@ -762,7 +767,7 @@ public class FullscreenMinimapController : MonoBehaviour
         }
 
 #if ENABLE_INPUT_SYSTEM
-        if (TryGetPlayerAction("CloseFullscreenMinimap", out InputAction action) && action.WasPressedThisFrame())
+        if (closeFullscreenAction != null && closeFullscreenAction.WasPressedThisFrame())
         {
             return true;
         }
@@ -778,9 +783,9 @@ public class FullscreenMinimapController : MonoBehaviour
     private float ReadScrollZoomDelta()
     {
 #if ENABLE_INPUT_SYSTEM
-        if (TryGetPlayerAction("MinimapScrollZoom", out InputAction action))
+        if (scrollZoomAction != null)
         {
-            float value = action.ReadValue<float>();
+            float value = scrollZoomAction.ReadValue<float>();
             if (Mathf.Abs(value) > Mathf.Epsilon)
             {
                 return value;
@@ -796,16 +801,19 @@ public class FullscreenMinimapController : MonoBehaviour
     }
 
 #if ENABLE_INPUT_SYSTEM
-    private bool TryGetPlayerAction(string actionName, out InputAction action)
+    private void CacheInputActions()
     {
-        action = null;
         if (playerInput == null || playerInput.actions == null)
         {
-            return false;
+            toggleFullscreenAction = null;
+            closeFullscreenAction = null;
+            scrollZoomAction = null;
+            return;
         }
 
-        action = playerInput.actions.FindAction(actionName, throwIfNotFound: false);
-        return action != null;
+        toggleFullscreenAction = playerInput.actions.FindAction("ToggleFullscreenMinimap", throwIfNotFound: false);
+        closeFullscreenAction = playerInput.actions.FindAction("CloseFullscreenMinimap", throwIfNotFound: false);
+        scrollZoomAction = playerInput.actions.FindAction("MinimapScrollZoom", throwIfNotFound: false);
     }
 #endif
 

@@ -16,17 +16,8 @@ public class CharacterSkinData : ScriptableObject
     public Mesh eyelashes;
 
     public Mesh pants;
-
-    public Mesh shirt;
-
-    public Mesh collar;
     
     public Mesh shoes;
 
-    public Mesh belt;
-
     public Mesh suit;
-
-    public Mesh tie;
-
 }

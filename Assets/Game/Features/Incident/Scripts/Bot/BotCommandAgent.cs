@@ -116,13 +116,12 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     [SerializeField] private float pointFireApproachSampleStep = 1.5f;
     [SerializeField] private int pointFireApproachDirections = 12;
     [SerializeField] private float pointFireApproachHeightWeight = 1.5f;
+    [SerializeField] private float extinguishV2LocalSuppressRadius = 4.5f;
 
     [Header("Route Fire")]
     [SerializeField] private bool enableRouteFireClearing = true;
     [SerializeField] private float routeFireDetectionRadius = 4.5f;
     [SerializeField] private float routeFireVerticalTolerance = 2f;
-    [SerializeField] private float interruptRouteFireRetryDelay = 2f;
-    [SerializeField] private float interruptRouteFireRepeatBlockDuration = 1f;
 
     [Header("Path Clearing")]
     [SerializeField] private bool enablePathClearing = true;
@@ -172,6 +171,9 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     [Header("Debug")]
     [SerializeField] private bool enableActivityDebug = false;
     [SerializeField] private bool enablePickupDebug = false;
+    [SerializeField] private bool spawnExtinguishV2MoveTargetMarker = true;
+    [SerializeField] private Color extinguishV2MoveTargetMarkerColor = new Color(0.1f, 1f, 0.9f, 0.45f);
+    [SerializeField] private float extinguishV2MoveTargetMarkerScale = 0.6f;
     [SerializeField] private bool showCommandPlanOverlay = false;
     [SerializeField] private Vector2 commandPlanOverlayScreenOffset = new Vector2(24f, -24f);
     [SerializeField] private float commandPlanOverlayWidth = 300f;
@@ -255,6 +257,9 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     private float baseNavMeshAgentSpeed;
     private float baseOffMeshTraverseSpeed;
     private bool movementSpeedDefaultsCached;
+    private bool hasExtinguishV2MoveTargetMarker;
+    private Vector3 extinguishV2MoveTargetMarkerPosition;
+    private bool suppressPathFlowLogging;
 
     public Vector3 LastIssuedDestination => lastIssuedDestination;
     public bool HasIssuedDestination => hasIssuedDestination;
@@ -334,6 +339,7 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
         UpdateHandAimTarget();
         UpdateHeadAimTarget();
         UpdateSpineAimTarget();
+        DrawExtinguishV2MoveTargetDebugLines();
     }
 
     private void Update()
@@ -355,12 +361,6 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
         if (IsExtinguishV2Active)
         {
             RefreshTaskState();
-            if (IsInterruptV2Active || TryStartInterruptV2ForExtinguish())
-            {
-                TickInterruptV2();
-                return;
-            }
-
             TickExtinguishV2();
             return;
         }
@@ -465,7 +465,7 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     private bool HasActiveExtinguisherPoseRequest()
     {
         return activeExtinguisher != null &&
-               ((behaviorContext != null && behaviorContext.HasExtinguishOrder) || IsRouteFireClearingActive() || IsInterruptV2Active);
+               ((behaviorContext != null && behaviorContext.HasExtinguishOrder) || IsRouteFireClearingActive());
     }
 
     private bool IsInteractionPoseStationary()

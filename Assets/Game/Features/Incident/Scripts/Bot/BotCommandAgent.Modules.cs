@@ -295,9 +295,12 @@ public partial class BotCommandAgent
 
         public bool TryNavigateTo(Vector3 destination, bool allowBlockedPathInterrupt, bool allowRouteFireInterrupt)
         {
-            owner.LogPathClearingFlow(
-                $"move-destination:{BotCommandAgent.FormatFlowVectorKey(destination)}",
-                $"Received Move order to {destination}.");
+            if (!owner.suppressPathFlowLogging)
+            {
+                owner.LogPathClearingFlow(
+                    $"move-destination:{BotCommandAgent.FormatFlowVectorKey(destination)}",
+                    $"Received Move order to {destination}.");
+            }
 
             bool activatedSafeMovementObstacle = owner.TryRefreshSafeMovementObstacles(destination, false);
 
@@ -320,9 +323,12 @@ public partial class BotCommandAgent
                 destination = navMeshHit.position;
             }
 
-            owner.LogPathClearingFlow(
-                $"move-start:{BotCommandAgent.FormatFlowVectorKey(destination)}",
-                "Moving.");
+            if (!owner.suppressPathFlowLogging)
+            {
+                owner.LogPathClearingFlow(
+                    $"move-start:{BotCommandAgent.FormatFlowVectorKey(destination)}",
+                    "Moving.");
+            }
             return owner.navMeshAgent.SetDestination(destination);
         }
 

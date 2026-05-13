@@ -13,6 +13,8 @@ public class MinimapZoomController : MonoBehaviour
     [SerializeField] private StarterAssetsInputs starterAssetsInputs;
 #if ENABLE_INPUT_SYSTEM
     [SerializeField] private PlayerInput playerInput;
+    private InputAction zoomInAction;
+    private InputAction zoomOutAction;
 #endif
 
     [Header("Auto Resolve")]
@@ -34,7 +36,6 @@ public class MinimapZoomController : MonoBehaviour
 
     private void Update()
     {
-        ResolveReferences();
         if (minimapCamera == null || !minimapCamera.orthographic)
         {
             return;
@@ -83,11 +84,13 @@ public class MinimapZoomController : MonoBehaviour
         if (playerInput == null && starterAssetsInputs != null)
         {
             playerInput = starterAssetsInputs.GetComponent<PlayerInput>();
+            CacheInputActions();
         }
 
         if (playerInput == null)
         {
             playerInput = FindAnyObjectByType<PlayerInput>();
+            CacheInputActions();
         }
 #endif
 
@@ -110,7 +113,7 @@ public class MinimapZoomController : MonoBehaviour
         }
 
 #if ENABLE_INPUT_SYSTEM
-        if (TryGetPlayerAction("MinimapZoomIn", out InputAction action) && action.WasPressedThisFrame())
+        if (zoomInAction != null && zoomInAction.WasPressedThisFrame())
         {
             return true;
         }
@@ -132,7 +135,7 @@ public class MinimapZoomController : MonoBehaviour
         }
 
 #if ENABLE_INPUT_SYSTEM
-        if (TryGetPlayerAction("MinimapZoomOut", out InputAction action) && action.WasPressedThisFrame())
+        if (zoomOutAction != null && zoomOutAction.WasPressedThisFrame())
         {
             return true;
         }
@@ -146,16 +149,17 @@ public class MinimapZoomController : MonoBehaviour
     }
 
 #if ENABLE_INPUT_SYSTEM
-    private bool TryGetPlayerAction(string actionName, out InputAction action)
+    private void CacheInputActions()
     {
-        action = null;
         if (playerInput == null || playerInput.actions == null)
         {
-            return false;
+            zoomInAction = null;
+            zoomOutAction = null;
+            return;
         }
 
-        action = playerInput.actions.FindAction(actionName, throwIfNotFound: false);
-        return action != null;
+        zoomInAction = playerInput.actions.FindAction("MinimapZoomIn", throwIfNotFound: false);
+        zoomOutAction = playerInput.actions.FindAction("MinimapZoomOut", throwIfNotFound: false);
     }
 #endif
 }

@@ -246,27 +246,27 @@ namespace StarterAssets
         private void ApplyRealisticLightPreset()
         {
             ConfigureLensDistortion(-0.12f, 1f, 1f, 1f);
-            ConfigureChromaticAberration(0.02f);
-            ConfigureVignette(0.16f, 0.36f, false);
-            ConfigureFilmGrain(0.08f, 0.8f);
+            DisableChromaticAberration();
+            DisableVignette();
+            DisableFilmGrain();
             ConfigurePanini(0.02f, 1f);
         }
 
         private void ApplyBodycamHorrorPreset()
         {
             ConfigureLensDistortion(-0.24f, 1.08f, 0.96f, 1f);
-            ConfigureChromaticAberration(0.085f);
-            ConfigureVignette(0.3f, 0.42f, false);
-            ConfigureFilmGrain(0.22f, 0.85f);
+            DisableChromaticAberration();
+            DisableVignette();
+            DisableFilmGrain();
             ConfigurePanini(0.08f, 1f);
         }
 
         private void ApplyWideActionCamPreset()
         {
             ConfigureLensDistortion(-0.38f, 1.16f, 1.16f, 1f);
-            ConfigureChromaticAberration(0.04f);
-            ConfigureVignette(0.14f, 0.3f, false);
-            ConfigureFilmGrain(0.06f, 0.75f);
+            DisableChromaticAberration();
+            DisableVignette();
+            DisableFilmGrain();
             ConfigurePanini(0.22f, 1f);
         }
 
@@ -296,6 +296,17 @@ namespace StarterAssets
             chromaticAberration.intensity.Override(intensity);
         }
 
+        private void DisableChromaticAberration()
+        {
+            if (chromaticAberration == null)
+            {
+                return;
+            }
+
+            chromaticAberration.active = false;
+            chromaticAberration.intensity.Override(0f);
+        }
+
         private void ConfigureVignette(float intensity, float smoothness, bool rounded)
         {
             if (vignette == null)
@@ -311,6 +322,17 @@ namespace StarterAssets
             vignette.rounded.Override(rounded);
         }
 
+        private void DisableVignette()
+        {
+            if (vignette == null)
+            {
+                return;
+            }
+
+            vignette.active = false;
+            vignette.intensity.Override(0f);
+        }
+
         private void ConfigureFilmGrain(float intensity, float response)
         {
             if (filmGrain == null)
@@ -322,6 +344,17 @@ namespace StarterAssets
             filmGrain.type.Override(FilmGrainLookup.Thin1);
             filmGrain.intensity.Override(intensity);
             filmGrain.response.Override(response);
+        }
+
+        private void DisableFilmGrain()
+        {
+            if (filmGrain == null)
+            {
+                return;
+            }
+
+            filmGrain.active = false;
+            filmGrain.intensity.Override(0f);
         }
 
         private void ConfigurePanini(float distance, float cropToFit)

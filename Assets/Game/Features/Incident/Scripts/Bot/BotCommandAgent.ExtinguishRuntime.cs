@@ -1093,12 +1093,11 @@ public partial class BotCommandAgent
 
     private void ClearExtinguishRuntimeState()
     {
+        ClearExtinguishV2MoveTargetMarker();
         ClearHeadAimFocus();
         ClearHandAimFocus();
         ResetExtinguishCrouchState();
         StopExtinguisher();
-        StopExtinguishV2Tool();
-        StopInterruptV2Tool();
         ClearExtinguisherTargetLock();
         SetPickupWindow(false);
         ReleaseCommittedTool();
@@ -1123,11 +1122,6 @@ public partial class BotCommandAgent
         extinguishSubtaskStartedAtTime = 0f;
         temporarilyRejectedExtinguishTool = null;
         temporarilyRejectedExtinguishToolUntilTime = 0f;
-        extinguishV2State.Reset();
-        interruptV2State.Reset();
-        extinguishV2PauseSnapshot.Reset();
-        isExtinguishV2Paused = false;
         activityDebug?.ResetExtinguish();
-        activityDebug?.ResetInterrupt();
     }
 }

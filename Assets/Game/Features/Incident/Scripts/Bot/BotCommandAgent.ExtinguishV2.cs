@@ -35,6 +35,8 @@ public partial class BotCommandAgent
         public bool HasIssuedFireMove;
         public Vector3 IssuedFireDestination;
         public bool HasComputedFireDestination;
+        public bool HasLockedSuppressTarget;
+        public bool NeedsSuppressAcquire;
         public string FailureReason;
 
         public void Reset()
@@ -54,6 +56,8 @@ public partial class BotCommandAgent
             HasIssuedFireMove = false;
             IssuedFireDestination = default;
             HasComputedFireDestination = false;
+            HasLockedSuppressTarget = false;
+            NeedsSuppressAcquire = false;
             FailureReason = string.Empty;
         }
     }
@@ -79,15 +83,11 @@ public partial class BotCommandAgent
         extinguishV2State.EngagementMode = engagementMode;
         extinguishV2State.FireTarget = pointFireTarget;
         extinguishV2State.FireGroup = fireGroupTarget;
+        ClearExtinguishV2MoveTargetMarker();
     }
 
     private void TickExtinguishV2()
     {
-        if (isExtinguishV2Paused)
-        {
-            return;
-        }
-
         switch (extinguishV2State.Step)
         {
             case BotExtinguishV2Step.ResolveTarget:
@@ -120,6 +120,8 @@ public partial class BotCommandAgent
     private void CompleteExtinguishV2Order()
     {
         StopExtinguishV2Tool();
+        ClearExtinguishV2MoveTargetMarker();
+        LogExtinguishV2Activity("Complete.");
         CompleteCurrentTask("Extinguish V2 complete.");
         behaviorContext?.ClearCommandIntent();
         extinguishV2State.Reset();
@@ -131,6 +133,8 @@ public partial class BotCommandAgent
             ? "Extinguish V2 failed."
             : extinguishV2State.FailureReason;
         StopExtinguishV2Tool();
+        ClearExtinguishV2MoveTargetMarker();
+        LogExtinguishV2Activity($"Failed: {reason}");
         FailCurrentTask(reason);
         behaviorContext?.ClearCommandIntent();
         extinguishV2State.Reset();
@@ -185,6 +189,7 @@ public partial class BotCommandAgent
             extinguishV2State.FirePosition = extinguishV2State.FireTarget != null && extinguishV2State.FireTarget.IsBurning
                 ? extinguishV2State.FireTarget.GetWorldPosition()
                 : fireGroup.GetWorldCenter();
+            LogExtinguishV2Activity($"Resolved precision target at {extinguishV2State.FirePosition}.");
             extinguishV2State.Step = BotExtinguishV2Step.SelectTool;
             return true;
         }
@@ -197,6 +202,7 @@ public partial class BotCommandAgent
         extinguishV2State.FireTarget = fireTarget;
         extinguishV2State.FireGroup = null;
         extinguishV2State.FirePosition = fireTarget.GetWorldPosition();
+        LogExtinguishV2Activity($"Resolved fire target '{GetDebugTargetName(fireTarget)}' at {extinguishV2State.FirePosition}.");
         extinguishV2State.Step = BotExtinguishV2Step.SelectTool;
         return true;
     }
@@ -232,6 +238,7 @@ public partial class BotCommandAgent
 
         extinguishV2State.Tool = bestTool;
         extinguishV2State.PickupTarget = bestTool as IPickupable;
+        LogExtinguishV2Activity($"Selected tool '{GetToolName(bestTool)}'.");
         extinguishV2State.Step = IsExtinguishV2ToolHeldByBot(bestTool)
             ? BotExtinguishV2Step.MoveToFire
             : BotExtinguishV2Step.MoveToTool;
@@ -257,7 +264,9 @@ public partial class BotCommandAgent
 
         extinguishV2State.HasIssuedToolMove = true;
         extinguishV2State.IssuedToolDestination = destination;
-        MoveTo(destination);
+        UpdateExtinguishV2MoveTargetMarker(destination, "MoveToTool");
+        LogExtinguishV2Activity($"Moving to tool at {destination}.");
+        MoveToExtinguishV2ActivityDestination(destination);
         extinguishV2State.Step = BotExtinguishV2Step.PickupTool;
         return true;
     }
@@ -271,6 +280,7 @@ public partial class BotCommandAgent
 
         if (TryEquipExtinguishV2Tool(extinguishV2State.Tool))
         {
+            LogExtinguishV2Activity($"Equipped tool '{GetToolName(extinguishV2State.Tool)}'.");
             extinguishV2State.Step = BotExtinguishV2Step.MoveToFire;
             return true;
         }
@@ -294,6 +304,7 @@ public partial class BotCommandAgent
             return FailExtinguishV2("Failed to pick up selected Extinguish V2 tool.");
         }
 
+        LogExtinguishV2Activity($"Picked up and equipped '{GetToolName(extinguishV2State.Tool)}'.");
         extinguishV2State.Step = BotExtinguishV2Step.MoveToFire;
         return true;
     }
@@ -305,8 +316,13 @@ public partial class BotCommandAgent
             return FailExtinguishV2("No equipped Extinguish V2 tool.");
         }
 
-        if (CanExtinguishV2SuppressFromCurrentPosition())
+        if (extinguishV2State.HasComputedFireDestination &&
+            IsWithinArrivalDistance(extinguishV2State.IssuedFireDestination))
         {
+            StopNavMeshMovement();
+            LogExtinguishV2Activity($"Arrived at suppress position {extinguishV2State.IssuedFireDestination}.");
+            extinguishV2State.HasLockedSuppressTarget = false;
+            extinguishV2State.NeedsSuppressAcquire = true;
             extinguishV2State.Step = BotExtinguishV2Step.SuppressFire;
             return true;
         }
@@ -315,12 +331,15 @@ public partial class BotCommandAgent
         {
             extinguishV2State.IssuedFireDestination = ResolveExtinguishV2FireStandPosition();
             extinguishV2State.HasComputedFireDestination = true;
+            extinguishV2State.HasIssuedFireMove = false;
         }
 
         if (!extinguishV2State.HasIssuedFireMove)
         {
             extinguishV2State.HasIssuedFireMove = true;
-            MoveTo(extinguishV2State.IssuedFireDestination);
+            UpdateExtinguishV2MoveTargetMarker(extinguishV2State.IssuedFireDestination, "MoveToFire");
+            LogExtinguishV2Activity($"Moving to suppress position {extinguishV2State.IssuedFireDestination}.");
+            MoveToExtinguishV2ActivityDestination(extinguishV2State.IssuedFireDestination);
         }
 
         return false;
@@ -333,39 +352,38 @@ public partial class BotCommandAgent
             return FailExtinguishV2("No Extinguish V2 tool during suppression.");
         }
 
-        if (!IsExtinguishV2TargetStillActive())
+        if (extinguishV2State.NeedsSuppressAcquire)
         {
-            StopExtinguishV2Tool();
-            extinguishV2State.Step = BotExtinguishV2Step.Complete;
-            return true;
+            if (!TryAcquireExtinguishV2SuppressTarget())
+            {
+                StopExtinguishV2Tool();
+                ClearExtinguishV2MoveTargetMarker();
+                LogExtinguishV2Activity("No nearby fire found in suppress radius.");
+                extinguishV2State.Step = BotExtinguishV2Step.Complete;
+                return true;
+            }
+
+            extinguishV2State.NeedsSuppressAcquire = false;
         }
 
-        Vector3 aimPoint = extinguishV2State.FirePosition;
-        AimTowards(aimPoint);
-        Vector3 direction = aimPoint - transform.position;
-        if (direction.sqrMagnitude > 0.001f)
-        {
-            extinguishV2State.Tool.SetExternalAimDirection(direction.normalized, gameObject);
-        }
-
-        if (!CanExtinguishV2SuppressFromCurrentPosition())
+        if (!extinguishV2State.HasLockedSuppressTarget ||
+            extinguishV2State.FireTarget == null ||
+            !extinguishV2State.FireTarget.IsBurning)
         {
             StopExtinguishV2Tool();
-            extinguishV2State.Step = BotExtinguishV2Step.MoveToFire;
+            sprayReadyTime = -1f;
+            extinguishV2State.HasLockedSuppressTarget = false;
+            extinguishV2State.NeedsSuppressAcquire = true;
+            ClearExtinguisherTargetLock();
+            LogExtinguishV2Activity("Locked fire extinguished. Reacquiring.");
             return false;
         }
 
-        extinguishV2State.Tool.SetExternalSprayState(true, gameObject);
-        float amount = Mathf.Max(0f, extinguishV2State.Tool.ApplyWaterPerSecond) * Time.deltaTime;
-        if (extinguishV2State.EngagementMode == BotExtinguishEngagementMode.PrecisionFireHose &&
-            extinguishV2State.FireGroup != null)
-        {
-            extinguishV2State.FireGroup.ApplyWater(amount, gameObject, extinguishV2State.Tool.SuppressionAgent);
-        }
-        else
-        {
-            extinguishV2State.FireTarget?.ApplySuppression(amount, extinguishV2State.Tool.SuppressionAgent, gameObject);
-        }
+        activeExtinguisher = extinguishV2State.Tool;
+        IFireTarget fireTarget = extinguishV2State.FireTarget;
+        Vector3 firePosition = extinguishV2State.FirePosition;
+        activeExtinguisher.SetExternalSprayState(true, gameObject);
+        ApplyWaterToFireTarget(activeExtinguisher, fireTarget);
 
         return true;
     }
@@ -559,6 +577,59 @@ public partial class BotCommandAgent
         return true;
     }
 
+    private bool TryAcquireExtinguishV2SuppressTarget()
+    {
+        float suppressRadius = Mathf.Max(
+            0.05f,
+            extinguishV2LocalSuppressRadius,
+            extinguishV2State.Tool != null ? extinguishV2State.Tool.MaxSprayDistance : 0f);
+
+        IFireTarget lockedTarget = GetLockedExtinguisherFireTarget();
+        if (lockedTarget != null &&
+            GetDistanceToFireEdge(transform.position, lockedTarget.GetWorldPosition(), lockedTarget) <= suppressRadius)
+        {
+            extinguishV2State.FireTarget = lockedTarget;
+            extinguishV2State.FirePosition = lockedTarget.GetWorldPosition();
+            extinguishV2State.HasLockedSuppressTarget = true;
+            extinguishV2State.NeedsSuppressAcquire = false;
+            LogExtinguishV2Activity($"Reusing locked target '{GetDebugTargetName(lockedTarget)}'.");
+            return true;
+        }
+
+        IFireTarget candidateTarget = extinguishV2State.FireTarget;
+        if (candidateTarget != null &&
+            candidateTarget.IsBurning &&
+            GetDistanceToFireEdge(transform.position, candidateTarget.GetWorldPosition(), candidateTarget) <= suppressRadius)
+        {
+            activeExtinguisher = extinguishV2State.Tool;
+            extinguishV2State.FirePosition = candidateTarget.GetWorldPosition();
+            sprayReadyTime = -1f;
+            extinguishV2State.HasLockedSuppressTarget = true;
+            extinguishV2State.NeedsSuppressAcquire = false;
+            LogExtinguishV2Activity($"Locked suppress target '{GetDebugTargetName(candidateTarget)}'.");
+            return true;
+        }
+
+        if (TryResolveBurningFireWithinRadius(transform.position, suppressRadius, out IFireTarget nearbyFire) &&
+            nearbyFire != null &&
+            nearbyFire.IsBurning)
+        {
+            activeExtinguisher = extinguishV2State.Tool;
+            extinguishV2State.FireTarget = nearbyFire;
+            extinguishV2State.FirePosition = nearbyFire.GetWorldPosition();
+            sprayReadyTime = -1f;
+            extinguishV2State.HasLockedSuppressTarget = true;
+            extinguishV2State.NeedsSuppressAcquire = false;
+            LogExtinguishV2Activity($"Locked nearest fire '{GetDebugTargetName(nearbyFire)}'.");
+            return true;
+        }
+
+        extinguishV2State.FireTarget = null;
+        extinguishV2State.HasLockedSuppressTarget = false;
+        extinguishV2State.NeedsSuppressAcquire = false;
+        return false;
+    }
+
     private bool IsExtinguishV2TargetStillActive()
     {
         if (extinguishV2State.EngagementMode == BotExtinguishEngagementMode.PrecisionFireHose)
@@ -571,14 +642,24 @@ public partial class BotCommandAgent
 
     private Vector3 ResolveExtinguishV2FireStandPosition()
     {
+        IFireTarget fireTarget = extinguishV2State.FireTarget;
         Vector3 firePosition = extinguishV2State.FirePosition;
+        float preferredDistance = Mathf.Clamp(
+            extinguishV2State.Tool != null ? GetDesiredExtinguisherCenterDistance(extinguishV2State.Tool, fireTarget) : 1f,
+            Mathf.Max(0.5f, MinExtinguisherStandOffDistance),
+            extinguishV2State.Tool != null ? Mathf.Max(1f, extinguishV2State.Tool.MaxSprayDistance) : 2f);
+
+        if (fireTarget != null &&
+            TryResolveExtinguisherStandPosition(extinguishV2State.OrderPoint, firePosition, preferredDistance, out Vector3 standPosition))
+        {
+            return standPosition;
+        }
+
         Vector3 awayFromFire = extinguishV2State.OrderPoint - firePosition;
         awayFromFire.y = 0f;
         if (awayFromFire.sqrMagnitude <= 0.001f)
         {
-            awayFromFire = extinguishV2State.HasIssuedFireMove
-                ? extinguishV2State.IssuedFireDestination - firePosition
-                : transform.position - firePosition;
+            awayFromFire = transform.position - firePosition;
             awayFromFire.y = 0f;
         }
 
@@ -588,10 +669,6 @@ public partial class BotCommandAgent
             awayFromFire.y = 0f;
         }
 
-        float preferredDistance = Mathf.Clamp(
-            extinguishV2State.Tool != null ? extinguishV2State.Tool.PreferredSprayDistance : 1f,
-            0.5f,
-            extinguishV2State.Tool != null ? extinguishV2State.Tool.MaxSprayDistance : 2f);
         Vector3 rawDestination = firePosition + awayFromFire.normalized * preferredDistance;
         return ResolveExtinguishV2NavDestination(rawDestination);
     }
@@ -662,4 +739,58 @@ public partial class BotCommandAgent
         StopExtinguishV2Tool();
         return false;
     }
+
+    private void UpdateExtinguishV2MoveTargetMarker(Vector3 worldPosition, string context)
+    {
+        if (!spawnExtinguishV2MoveTargetMarker)
+        {
+            ClearExtinguishV2MoveTargetMarker();
+            return;
+        }
+
+        hasExtinguishV2MoveTargetMarker = true;
+        extinguishV2MoveTargetMarkerPosition = worldPosition;
+
+        LogExtinguishV2Activity($"Move target '{context}' -> {worldPosition}");
+    }
+
+    private void ClearExtinguishV2MoveTargetMarker()
+    {
+        hasExtinguishV2MoveTargetMarker = false;
+        extinguishV2MoveTargetMarkerPosition = default;
+    }
+
+    private void DrawExtinguishV2MoveTargetDebugLines()
+    {
+        if (!Application.isPlaying ||
+            !spawnExtinguishV2MoveTargetMarker ||
+            !hasExtinguishV2MoveTargetMarker)
+        {
+            return;
+        }
+
+        float scale = Mathf.Max(0.1f, extinguishV2MoveTargetMarkerScale);
+        Vector3 center = extinguishV2MoveTargetMarkerPosition + Vector3.up * 0.05f;
+        Color color = extinguishV2MoveTargetMarkerColor;
+
+        Debug.DrawLine(center + Vector3.left * scale, center + Vector3.right * scale, color, 0f, false);
+        Debug.DrawLine(center + Vector3.forward * scale, center + Vector3.back * scale, color, 0f, false);
+        Debug.DrawLine(center + (Vector3.left + Vector3.forward) * (scale * 0.7f), center + (Vector3.right + Vector3.back) * (scale * 0.7f), color, 0f, false);
+        Debug.DrawLine(center + (Vector3.left + Vector3.back) * (scale * 0.7f), center + (Vector3.right + Vector3.forward) * (scale * 0.7f), color, 0f, false);
+        Debug.DrawLine(transform.position + Vector3.up * 0.15f, center, color, 0f, false);
+    }
+
+    private void LogExtinguishV2Activity(string detail)
+    {
+        activityDebug?.LogExtinguishV2(this, detail);
+    }
+
+    private void MoveToExtinguishV2ActivityDestination(Vector3 destination)
+    {
+        bool previousSuppressPathFlowLogging = suppressPathFlowLogging;
+        suppressPathFlowLogging = true;
+        MoveTo(destination);
+        suppressPathFlowLogging = previousSuppressPathFlowLogging;
+    }
+
 }
