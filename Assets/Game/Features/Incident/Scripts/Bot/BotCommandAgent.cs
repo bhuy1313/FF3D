@@ -121,6 +121,8 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     [SerializeField] private bool enableRouteFireClearing = true;
     [SerializeField] private float routeFireDetectionRadius = 4.5f;
     [SerializeField] private float routeFireVerticalTolerance = 2f;
+    [SerializeField] private float interruptRouteFireRetryDelay = 2f;
+    [SerializeField] private float interruptRouteFireRepeatBlockDuration = 1f;
 
     [Header("Path Clearing")]
     [SerializeField] private bool enablePathClearing = true;
@@ -169,6 +171,7 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
 
     [Header("Debug")]
     [SerializeField] private bool enableActivityDebug = false;
+    [SerializeField] private bool enablePickupDebug = false;
     [SerializeField] private bool showCommandPlanOverlay = false;
     [SerializeField] private Vector2 commandPlanOverlayScreenOffset = new Vector2(24f, -24f);
     [SerializeField] private float commandPlanOverlayWidth = 300f;
@@ -349,6 +352,19 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
             return;
         }
 
+        if (IsExtinguishV2Active)
+        {
+            RefreshTaskState();
+            if (IsInterruptV2Active || TryStartInterruptV2ForExtinguish())
+            {
+                TickInterruptV2();
+                return;
+            }
+
+            TickExtinguishV2();
+            return;
+        }
+
         if (behaviorContext.HasExtinguishOrder)
         {
             RefreshTaskState();
@@ -449,7 +465,7 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     private bool HasActiveExtinguisherPoseRequest()
     {
         return activeExtinguisher != null &&
-               ((behaviorContext != null && behaviorContext.HasExtinguishOrder) || IsRouteFireClearingActive());
+               ((behaviorContext != null && behaviorContext.HasExtinguishOrder) || IsRouteFireClearingActive() || IsInterruptV2Active);
     }
 
     private bool IsInteractionPoseStationary()
@@ -482,8 +498,23 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
         IFireTarget pointFireTarget = null,
         IFireGroupTarget fireGroupTarget = null)
     {
+        return TryIssueExtinguishCommand(
+            scanOrigin,
+            mode,
+            BotExtinguishEngagementMode.DirectBestTool,
+            pointFireTarget,
+            fireGroupTarget);
+    }
+
+    public bool TryIssueExtinguishCommand(
+        Vector3 scanOrigin,
+        BotExtinguishCommandMode mode,
+        BotExtinguishEngagementMode engagementMode,
+        IFireTarget pointFireTarget = null,
+        IFireGroupTarget fireGroupTarget = null)
+    {
         return commandExecutionModule != null &&
-               commandExecutionModule.TryIssueExtinguishCommand(scanOrigin, mode, pointFireTarget, fireGroupTarget);
+               commandExecutionModule.TryIssueExtinguishCommand(scanOrigin, mode, engagementMode, pointFireTarget, fireGroupTarget);
     }
 
     public bool TryIssueMoveToPickup(IPickupable pickupTarget)
@@ -751,7 +782,9 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
             ShouldRefreshPathCheck = ShouldRefreshPathClearingCheckCommand,
             SetPickupWindow = SetPickupWindow,
             TryEnsureExtinguisherEquipped = tool => TryEnsureExtinguisherEquipped(tool, false),
-            TryEnsureBreakToolEquipped = TryEnsureBreakToolEquipped
+            TryEnsureBreakToolEquipped = TryEnsureBreakToolEquipped,
+            EnablePickupDebug = enablePickupDebug,
+            LogPickupDebug = LogPickupDebug
         };
     }
 

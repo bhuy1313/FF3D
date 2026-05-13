@@ -146,7 +146,13 @@ public partial class BotCommandAgent
         return facingDot >= sprayFacingThreshold;
     }
 
-    private float ScoreSuppressionTool(IBotExtinguisherItem tool, Vector3 orderPoint, Vector3 firePosition, Vector3 toolPosition, IFireTarget fireTarget)
+    private float ScoreSuppressionTool(
+        IBotExtinguisherItem tool,
+        Vector3 orderPoint,
+        Vector3 firePosition,
+        Vector3 toolPosition,
+        IFireTarget fireTarget,
+        BotExtinguishEngagementMode engagementMode)
     {
         float requiredHorizontalDistance = GetRequiredHorizontalDistanceForAim(tool, firePosition);
         float desiredHorizontalDistance = Mathf.Max(tool.PreferredSprayDistance, requiredHorizontalDistance);
@@ -158,7 +164,9 @@ public partial class BotCommandAgent
             preferredDistance = GetDesiredExtinguisherStandOffDistance(tool);
         }
 
-        Vector3 attackPosition = ResolveExtinguishPosition(orderPoint, firePosition, desiredHorizontalDistance);
+        Vector3 attackPosition = engagementMode == BotExtinguishEngagementMode.DirectBestTool
+            ? orderPoint
+            : ResolveExtinguishPosition(orderPoint, firePosition, desiredHorizontalDistance);
         float travelToAttack = Vector3.Distance(toolPosition, attackPosition);
         float fitPenalty = Mathf.Abs((!UsesPreciseAim(tool) && fireTarget != null ? GetDesiredExtinguisherStandOffDistance(tool) : desiredHorizontalDistance) - preferredDistance) * 0.35f;
         float rangePenalty = !UsesPreciseAim(tool) && fireTarget != null
@@ -168,7 +176,10 @@ public partial class BotCommandAgent
             : 0f;
         float verticalPenalty = GetVerticalAimPenalty(toolPosition, firePosition);
         float throughputBonus = Mathf.Max(0f, tool.ApplyWaterPerSecond) * 0.1f;
-        return travelToAttack + fitPenalty + rangePenalty + verticalPenalty - throughputBonus;
+        float hosePriorityBonus = engagementMode == BotExtinguishEngagementMode.DirectBestTool && UsesPreciseAim(tool)
+            ? 10000f
+            : 0f;
+        return travelToAttack + fitPenalty + rangePenalty + verticalPenalty - throughputBonus - hosePriorityBonus;
     }
 
     private static bool IsUnsafeSuppressionToolForFire(IBotExtinguisherItem tool, IFireTarget fireTarget)
@@ -178,16 +189,24 @@ public partial class BotCommandAgent
             fireTarget.EvaluateSuppressionOutcome(tool.SuppressionAgent) == FireSuppressionOutcome.UnsafeWorsens;
     }
 
-    private bool CanToolReachFire(IBotExtinguisherItem tool, BotExtinguishCommandMode orderMode, Vector3 orderPoint, Vector3 firePosition, IFireGroupTarget fireGroup, IFireTarget fireTarget)
+    private bool CanToolReachFire(
+        IBotExtinguisherItem tool,
+        BotExtinguishCommandMode orderMode,
+        BotExtinguishEngagementMode engagementMode,
+        Vector3 orderPoint,
+        Vector3 firePosition,
+        IFireGroupTarget fireGroup,
+        IFireTarget fireTarget)
     {
         if (tool == null)
         {
             return false;
         }
 
-        if (UsesPreciseAim(tool))
+        bool usePrecisionRoute = engagementMode == BotExtinguishEngagementMode.PrecisionFireHose;
+        if (usePrecisionRoute)
         {
-            if (fireGroup == null || !fireGroup.HasActiveFires)
+            if (!UsesPreciseAim(tool) || fireGroup == null || !fireGroup.HasActiveFires)
             {
                 return false;
             }
@@ -197,7 +216,7 @@ public partial class BotCommandAgent
             return false;
         }
 
-        if (!UsesPreciseAim(tool))
+        if (!usePrecisionRoute)
         {
             if (orderMode == BotExtinguishCommandMode.PointFire)
             {
@@ -217,6 +236,11 @@ public partial class BotCommandAgent
             if (CanExtinguishFromCurrentPosition(tool, firePosition, fireTarget))
             {
                 return true;
+            }
+
+            if (engagementMode == BotExtinguishEngagementMode.DirectBestTool)
+            {
+                return CanReachDestination(orderPoint) || TryResolvePointFireApproachPosition(orderPoint, out _);
             }
 
             if (TryResolveReachableReferencePosition(orderPoint, out Vector3 reachableOrderPoint) &&
@@ -253,11 +277,24 @@ public partial class BotCommandAgent
         return desiredHorizontalDistance <= tool.MaxSprayDistance;
     }
 
-    private static bool DoesToolMatchExtinguishMode(IBotExtinguisherItem tool, BotExtinguishCommandMode orderMode)
+    private static bool DoesToolMatchExtinguishMode(
+        IBotExtinguisherItem tool,
+        BotExtinguishCommandMode orderMode,
+        BotExtinguishEngagementMode engagementMode)
     {
         if (tool == null)
         {
             return false;
+        }
+
+        if (engagementMode == BotExtinguishEngagementMode.PrecisionFireHose)
+        {
+            return UsesPreciseAim(tool);
+        }
+
+        if (engagementMode == BotExtinguishEngagementMode.DirectBestTool)
+        {
+            return true;
         }
 
         switch (orderMode)
@@ -363,7 +400,8 @@ public partial class BotCommandAgent
 
     private bool HasLineOfSightToFireTarget(Vector3 originPosition, Vector3 firePosition, IFireTarget fireTarget)
     {
-        if (IsExtinguisherTargetLocked(fireTarget))
+        if (extinguishPlanState.EngagementMode == BotExtinguishEngagementMode.PrecisionFireHose &&
+            IsExtinguisherTargetLocked(fireTarget))
         {
             return true;
         }
@@ -1059,6 +1097,8 @@ public partial class BotCommandAgent
         ClearHandAimFocus();
         ResetExtinguishCrouchState();
         StopExtinguisher();
+        StopExtinguishV2Tool();
+        StopInterruptV2Tool();
         ClearExtinguisherTargetLock();
         SetPickupWindow(false);
         ReleaseCommittedTool();
@@ -1083,6 +1123,11 @@ public partial class BotCommandAgent
         extinguishSubtaskStartedAtTime = 0f;
         temporarilyRejectedExtinguishTool = null;
         temporarilyRejectedExtinguishToolUntilTime = 0f;
+        extinguishV2State.Reset();
+        interruptV2State.Reset();
+        extinguishV2PauseSnapshot.Reset();
+        isExtinguishV2Paused = false;
         activityDebug?.ResetExtinguish();
+        activityDebug?.ResetInterrupt();
     }
 }

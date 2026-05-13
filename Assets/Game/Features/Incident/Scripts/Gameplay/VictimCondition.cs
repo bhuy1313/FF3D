@@ -77,6 +77,20 @@ public class VictimCondition : MonoBehaviour
 
     private Rescuable rescuable;
     private int layingPoseType;
+    private Animator parameterCacheAnimator;
+    private RuntimeAnimatorController parameterCacheController;
+    private int urgentAnimatorParameterHash;
+    private int criticalAnimatorParameterHash;
+    private int deceasedAnimatorParameterHash;
+    private int carriedAnimatorParameterHash;
+    private int rescuedAnimatorParameterHash;
+    private int layingPoseTypeParameterHash;
+    private bool hasUrgentAnimatorParameter;
+    private bool hasCriticalAnimatorParameter;
+    private bool hasDeceasedAnimatorParameter;
+    private bool hasCarriedAnimatorParameter;
+    private bool hasRescuedAnimatorParameter;
+    private bool hasLayingPoseTypeParameter;
 
     private void Awake()
     {
@@ -135,6 +149,7 @@ public class VictimCondition : MonoBehaviour
     private void OnValidate()
     {
         CacheReferences();
+        InvalidateAnimatorParameterCache();
         ClampSettings();
         currentCondition = Mathf.Clamp(currentCondition, 0f, maxCondition);
         RefreshTriageState(raiseEvents: false);
@@ -405,28 +420,29 @@ public class VictimCondition : MonoBehaviour
 
     private void ApplyTriageAnimatorParameters()
     {
-        SetAnimatorBoolParameter(carriedAnimatorParameter, rescuable != null && rescuable.IsCarried);
-        SetAnimatorBoolParameter(rescuedAnimatorParameter, rescuable != null && rescuable.IsRescued);
-        SetAnimatorBoolParameter(urgentAnimatorParameter, triageState == TriageState.Urgent);
-        SetAnimatorBoolParameter(criticalAnimatorParameter, triageState == TriageState.Critical);
-        SetAnimatorBoolParameter(deceasedAnimatorParameter, triageState == TriageState.Deceased);
-        SetAnimatorIntParameter(LayingPoseTypeParameter, layingPoseType);
+        EnsureAnimatorParameterCache();
+        SetAnimatorBoolParameter(hasCarriedAnimatorParameter, carriedAnimatorParameterHash, rescuable != null && rescuable.IsCarried);
+        SetAnimatorBoolParameter(hasRescuedAnimatorParameter, rescuedAnimatorParameterHash, rescuable != null && rescuable.IsRescued);
+        SetAnimatorBoolParameter(hasUrgentAnimatorParameter, urgentAnimatorParameterHash, triageState == TriageState.Urgent);
+        SetAnimatorBoolParameter(hasCriticalAnimatorParameter, criticalAnimatorParameterHash, triageState == TriageState.Critical);
+        SetAnimatorBoolParameter(hasDeceasedAnimatorParameter, deceasedAnimatorParameterHash, triageState == TriageState.Deceased);
+        SetAnimatorIntParameter(hasLayingPoseTypeParameter, layingPoseTypeParameterHash, layingPoseType);
     }
 
-    private void SetAnimatorBoolParameter(string parameterName, bool value)
+    private void SetAnimatorBoolParameter(bool hasParameter, int parameterHash, bool value)
     {
-        if (string.IsNullOrWhiteSpace(parameterName) || !CanDriveVictimAnimator() || !HasAnimatorBoolParameter(parameterName))
+        if (!hasParameter)
             return;
 
-        victimAnimator.SetBool(parameterName, value);
+        victimAnimator.SetBool(parameterHash, value);
     }
 
-    private void SetAnimatorIntParameter(string parameterName, int value)
+    private void SetAnimatorIntParameter(bool hasParameter, int parameterHash, int value)
     {
-        if (string.IsNullOrWhiteSpace(parameterName) || !CanDriveVictimAnimator() || !HasAnimatorIntParameter(parameterName))
+        if (!hasParameter)
             return;
 
-        victimAnimator.SetInteger(parameterName, value);
+        victimAnimator.SetInteger(parameterHash, value);
     }
 
     private void RandomizeLayingPoseType()
@@ -443,35 +459,62 @@ public class VictimCondition : MonoBehaviour
                victimAnimator.isInitialized;
     }
 
-    private bool HasAnimatorBoolParameter(string parameterName)
+    private void EnsureAnimatorParameterCache()
     {
+        RuntimeAnimatorController controller = victimAnimator.runtimeAnimatorController;
+        if (parameterCacheAnimator == victimAnimator && parameterCacheController == controller)
+        {
+            return;
+        }
+
+        parameterCacheAnimator = victimAnimator;
+        parameterCacheController = controller;
+        CacheAnimatorParameterHashes();
+        hasUrgentAnimatorParameter = false;
+        hasCriticalAnimatorParameter = false;
+        hasDeceasedAnimatorParameter = false;
+        hasCarriedAnimatorParameter = false;
+        hasRescuedAnimatorParameter = false;
+        hasLayingPoseTypeParameter = false;
+
         AnimatorControllerParameter[] parameters = victimAnimator.parameters;
         for (int i = 0; i < parameters.Length; i++)
         {
             AnimatorControllerParameter parameter = parameters[i];
-            if (parameter.type == AnimatorControllerParameterType.Bool &&
-                string.Equals(parameter.name, parameterName, System.StringComparison.Ordinal))
+            switch (parameter.type)
             {
-                return true;
+                case AnimatorControllerParameterType.Bool:
+                    hasUrgentAnimatorParameter |= parameter.nameHash == urgentAnimatorParameterHash;
+                    hasCriticalAnimatorParameter |= parameter.nameHash == criticalAnimatorParameterHash;
+                    hasDeceasedAnimatorParameter |= parameter.nameHash == deceasedAnimatorParameterHash;
+                    hasCarriedAnimatorParameter |= parameter.nameHash == carriedAnimatorParameterHash;
+                    hasRescuedAnimatorParameter |= parameter.nameHash == rescuedAnimatorParameterHash;
+                    break;
+                case AnimatorControllerParameterType.Int:
+                    hasLayingPoseTypeParameter |= parameter.nameHash == layingPoseTypeParameterHash;
+                    break;
             }
         }
-
-        return false;
     }
 
-    private bool HasAnimatorIntParameter(string parameterName)
+    private void CacheAnimatorParameterHashes()
     {
-        AnimatorControllerParameter[] parameters = victimAnimator.parameters;
-        for (int i = 0; i < parameters.Length; i++)
-        {
-            AnimatorControllerParameter parameter = parameters[i];
-            if (parameter.type == AnimatorControllerParameterType.Int &&
-                string.Equals(parameter.name, parameterName, System.StringComparison.Ordinal))
-            {
-                return true;
-            }
-        }
+        urgentAnimatorParameterHash = StringToAnimatorHash(urgentAnimatorParameter);
+        criticalAnimatorParameterHash = StringToAnimatorHash(criticalAnimatorParameter);
+        deceasedAnimatorParameterHash = StringToAnimatorHash(deceasedAnimatorParameter);
+        carriedAnimatorParameterHash = StringToAnimatorHash(carriedAnimatorParameter);
+        rescuedAnimatorParameterHash = StringToAnimatorHash(rescuedAnimatorParameter);
+        layingPoseTypeParameterHash = StringToAnimatorHash(LayingPoseTypeParameter);
+    }
 
-        return false;
+    private void InvalidateAnimatorParameterCache()
+    {
+        parameterCacheAnimator = null;
+        parameterCacheController = null;
+    }
+
+    private static int StringToAnimatorHash(string parameterName)
+    {
+        return string.IsNullOrWhiteSpace(parameterName) ? 0 : Animator.StringToHash(parameterName);
     }
 }

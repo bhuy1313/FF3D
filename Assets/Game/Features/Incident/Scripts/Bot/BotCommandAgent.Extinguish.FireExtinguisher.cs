@@ -93,6 +93,34 @@ public partial class BotCommandAgent
         }
     }
 
+    private bool CanApplyDirectSuppressionToFireTarget(IBotExtinguisherItem tool, IFireTarget fireTarget, Vector3 firePosition)
+    {
+        if (tool == null || fireTarget == null || !fireTarget.IsBurning)
+        {
+            return false;
+        }
+
+        Vector3 toFire = firePosition - transform.position;
+        toFire.y = 0f;
+        if (toFire.sqrMagnitude <= 0.001f)
+        {
+            return true;
+        }
+
+        Vector3 forward = transform.forward;
+        forward.y = 0f;
+        if (forward.sqrMagnitude <= 0.001f ||
+            Vector3.Dot(forward.normalized, toFire.normalized) < sprayFacingThreshold)
+        {
+            return false;
+        }
+
+        float verticalDistance = Mathf.Abs(firePosition.y - transform.position.y);
+        return GetFireEdgeDistance(transform.position, firePosition, fireTarget) <= GetAllowedExtinguisherEdgeRange(tool) &&
+               verticalDistance <= tool.MaxVerticalReach + ExtinguisherRangeSlack &&
+               HasLineOfSightToFireTarget(transform.position, firePosition, fireTarget);
+    }
+
     private void ProcessFireExtinguisherExtinguishRoute(
         Vector3 orderPoint,
         Vector3 targetSearchPoint,
@@ -100,8 +128,8 @@ public partial class BotCommandAgent
         Vector3 firePosition,
         Vector3 botPosition)
     {
-        float detectionRadius = Mathf.Max(0.05f, routeFireDetectionRadius);
-        if (!TryResolveExtinguisherRouteFireTarget(fireTarget, out IFireTarget routeFireTarget))
+        float detectionRadius = Mathf.Max(0.05f, routeFireDetectionRadius, activeExtinguisher != null ? activeExtinguisher.MaxSprayDistance : 0f);
+        if (!TryResolveExtinguisherRouteFireTarget(fireTarget, detectionRadius, out IFireTarget routeFireTarget))
         {
             currentExtinguishTargetPosition = targetSearchPoint;
             hasCurrentExtinguishTargetPosition = true;
@@ -142,6 +170,14 @@ public partial class BotCommandAgent
             $"distextinguisher:{GetDebugTargetName(fireTarget)}:{horizontalDistanceToFire:F2}:{detectionRadius:F2}",
             $"Extinguisher distance to target. horizontal={horizontalDistanceToFire:F2}, allowed={detectionRadius:F2}, vertical={Mathf.Abs(firePosition.y - botPosition.y):F2}.");
 
+        if (!CanApplyDirectSuppressionToFireTarget(activeExtinguisher, fireTarget, firePosition))
+        {
+            SetExtinguishSubtask(BotExtinguishSubtask.AimAtFire, "Waiting for a clear suppression line.");
+            StopExtinguisher();
+            sprayReadyTime = -1f;
+            return;
+        }
+
         SprayPointFireExtinguisher(fireTarget, firePosition, detectionRadius, true, true, null);
 
         if (fireTarget == null || !fireTarget.IsBurning)
@@ -161,10 +197,10 @@ public partial class BotCommandAgent
         }
     }
 
-    private bool TryResolveExtinguisherRouteFireTarget(IFireTarget preferredFireTarget, out IFireTarget routeFireTarget)
+    private bool TryResolveExtinguisherRouteFireTarget(IFireTarget preferredFireTarget, float detectionRadius, out IFireTarget routeFireTarget)
     {
         routeFireTarget = null;
-        float detectionRadius = Mathf.Max(0.05f, routeFireDetectionRadius);
+        detectionRadius = Mathf.Max(0.05f, detectionRadius);
         float stickyDetectionRadius = detectionRadius + ExtinguisherTargetStickinessRadiusSlack;
 
         IFireTarget lockedTarget = GetLockedExtinguisherFireTarget();

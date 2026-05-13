@@ -784,6 +784,11 @@ public class KeyHintPanelController_All : MonoBehaviour
         if (commandSystem.IsAwaitingDestination)
         {
             AddUniqueHint(hints, "CommandConfirm", "Confirm Command");
+            if (commandSystem.PendingCommandType == BotCommandType.Extinguish)
+            {
+                AddUniqueHint(hints, "CommandAlternateConfirm", "Precision Extinguish");
+            }
+
             AddUniqueHint(hints, "CommandCancel", "Cancel Command");
             return;
         }
@@ -1076,6 +1081,7 @@ public class KeyHintPanelController_All : MonoBehaviour
             "CommandCancelAllFollow" => "Cancel All Follow",
             "ToggleBotOutline" => "Toggle Bot Outline",
             "CommandConfirm" => "Confirm Command",
+            "CommandAlternateConfirm" => "Precision Extinguish",
             "ToggleSprayPattern" => "Toggle Spray",
             "IncreasePressure" => "Increase Pressure",
             "DecreasePressure" => "Decrease Pressure",

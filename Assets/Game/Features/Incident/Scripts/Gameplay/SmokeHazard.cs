@@ -67,6 +67,7 @@ public class SmokeHazard : MonoBehaviour
     [SerializeField] private float minimumDangerousDensity = 0.05f;
     [SerializeField] private float oxygenDrainPerSecond = 12f;
     [SerializeField] private float victimConditionDamagePerSecond = 10f;
+    [SerializeField, Min(0.02f)] private float smokeEffectCheckInterval = 0.08f;
     [Range(0f, 1f)]
     [SerializeField] private float maxVisibilityPenalty = 0.8f;
 
@@ -86,6 +87,10 @@ public class SmokeHazard : MonoBehaviour
     [SerializeField] private float currentSmokeDensity;
 
     private readonly HashSet<Component> processedTargets = new HashSet<Component>();
+    private readonly Dictionary<Collider, SmokeTargetCache> targetCacheByCollider = new Dictionary<Collider, SmokeTargetCache>();
+    private readonly Dictionary<Component, float> nextEffectCheckByTarget = new Dictionary<Component, float>();
+    private readonly Dictionary<Component, float> lastOxygenTickByTarget = new Dictionary<Component, float>();
+    private readonly Dictionary<Component, float> lastVictimDamageTickByTarget = new Dictionary<Component, float>();
     private int processedFrame = -1;
     private bool lastSmokeVfxActiveState;
     private bool smokeVfxParticleBaselineCaptured;
@@ -103,6 +108,14 @@ public class SmokeHazard : MonoBehaviour
 
         public float Relief { get; }
         public float DraftRisk { get; }
+    }
+
+    private sealed class SmokeTargetCache
+    {
+        public PlayerHazardExposure Exposure;
+        public PlayerVitals Vitals;
+        public VictimCondition Victim;
+        public FirstPersonController CrouchingController;
     }
 
     public float CurrentSmokeDensity => currentSmokeDensity;
@@ -205,6 +218,7 @@ public class SmokeHazard : MonoBehaviour
         minimumDangerousDensity = Mathf.Clamp01(minimumDangerousDensity);
         oxygenDrainPerSecond = Mathf.Max(0f, oxygenDrainPerSecond);
         victimConditionDamagePerSecond = Mathf.Max(0f, victimConditionDamagePerSecond);
+        smokeEffectCheckInterval = Mathf.Max(0.02f, smokeEffectCheckInterval);
         maxVisibilityPenalty = Mathf.Clamp01(maxVisibilityPenalty);
         particleShapePadding = Vector3.Max(Vector3.zero, particleShapePadding);
         minimumParticleShapeSize = Mathf.Max(0.01f, minimumParticleShapeSize);
@@ -228,6 +242,7 @@ public class SmokeHazard : MonoBehaviour
         currentSmokeDensity = forceMaximumSmokeDensity
             ? 1f
             : Mathf.Clamp01(startSmokeDensity);
+        ClearSmokeTargetTracking();
 
         ApplySmokeVfxConfiguration();
         ApplySmokeVfxParticleDensity();
@@ -247,8 +262,23 @@ public class SmokeHazard : MonoBehaviour
         if (other == null)
             return;
 
+        SmokeTargetCache targetCache = ResolveSmokeTargetCache(other);
+        float time = Time.time;
+        Component intervalTarget = ResolveIntervalTarget(targetCache, other);
+        if (nextEffectCheckByTarget.TryGetValue(intervalTarget, out float nextCheckTime) && time < nextCheckTime)
+            return;
+
+        nextEffectCheckByTarget[intervalTarget] = time + smokeEffectCheckInterval;
         BeginFrameProcessingIfNeeded();
-        ApplySmokeEffects(other, Time.deltaTime);
+        ApplySmokeEffects(targetCache, time, Time.deltaTime);
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (other == null)
+            return;
+
+        targetCacheByCollider.Remove(other);
     }
 
     private void UpdateSmokeDensity(float deltaTime)
@@ -285,12 +315,13 @@ public class SmokeHazard : MonoBehaviour
         return Mathf.Clamp01(density);
     }
 
-    private void ApplySmokeEffects(Collider other, float deltaTime)
+    private void ApplySmokeEffects(SmokeTargetCache targetCache, float time, float fallbackDeltaTime)
     {
-        float scaledDeltaTime = Mathf.Max(0f, deltaTime);
-        float effectScale = CalculateLocalSmokeEffectScale(other);
+        if (targetCache == null)
+            return;
 
-        PlayerHazardExposure exposure = other.GetComponentInParent<PlayerHazardExposure>();
+        float effectScale = CalculateLocalSmokeEffectScale(targetCache);
+        PlayerHazardExposure exposure = targetCache.Exposure;
         if (exposure != null && effectScale > 0f && processedTargets.Add(exposure))
         {
             exposure.ReportSmokeExposure(effectScale);
@@ -301,16 +332,22 @@ public class SmokeHazard : MonoBehaviour
 
         if (affectPlayers)
         {
-            PlayerVitals vitals = other.GetComponentInParent<PlayerVitals>();
+            PlayerVitals vitals = targetCache.Vitals;
             if (vitals != null && processedTargets.Add(vitals))
-                vitals.ConsumeOxygen(oxygenDrainPerSecond * effectScale * scaledDeltaTime);
+            {
+                float elapsed = ResolveTargetElapsedTime(lastOxygenTickByTarget, vitals, time, fallbackDeltaTime);
+                vitals.ConsumeOxygen(oxygenDrainPerSecond * effectScale * elapsed);
+            }
         }
 
         if (affectVictims)
         {
-            VictimCondition victim = other.GetComponentInParent<VictimCondition>();
+            VictimCondition victim = targetCache.Victim;
             if (victim != null && processedTargets.Add(victim))
-                victim.ApplySmokeExposure(victimConditionDamagePerSecond * effectScale * scaledDeltaTime);
+            {
+                float elapsed = ResolveTargetElapsedTime(lastVictimDamageTickByTarget, victim, time, fallbackDeltaTime);
+                victim.ApplySmokeExposure(victimConditionDamagePerSecond * effectScale * elapsed);
+            }
         }
     }
 
@@ -322,6 +359,79 @@ public class SmokeHazard : MonoBehaviour
 
         processedFrame = frame;
         processedTargets.Clear();
+    }
+
+    private SmokeTargetCache ResolveSmokeTargetCache(Collider other)
+    {
+        if (targetCacheByCollider.TryGetValue(other, out SmokeTargetCache targetCache))
+        {
+            return targetCache;
+        }
+
+        targetCache = new SmokeTargetCache
+        {
+            Exposure = other.GetComponentInParent<PlayerHazardExposure>(),
+            Vitals = other.GetComponentInParent<PlayerVitals>(),
+            Victim = other.GetComponentInParent<VictimCondition>(),
+            CrouchingController = other.GetComponentInParent<FirstPersonController>()
+        };
+        targetCacheByCollider.Add(other, targetCache);
+        return targetCache;
+    }
+
+    private static Component ResolveIntervalTarget(SmokeTargetCache targetCache, Collider fallbackCollider)
+    {
+        if (targetCache == null)
+        {
+            return fallbackCollider;
+        }
+
+        if (targetCache.Exposure != null)
+        {
+            return targetCache.Exposure;
+        }
+
+        if (targetCache.Vitals != null)
+        {
+            return targetCache.Vitals;
+        }
+
+        if (targetCache.Victim != null)
+        {
+            return targetCache.Victim;
+        }
+
+        return fallbackCollider;
+    }
+
+    private static float ResolveTargetElapsedTime(
+        Dictionary<Component, float> lastTickByTarget,
+        Component target,
+        float time,
+        float fallbackDeltaTime)
+    {
+        float elapsed = Mathf.Max(0f, fallbackDeltaTime);
+        if (target != null && lastTickByTarget.TryGetValue(target, out float lastTickTime))
+        {
+            elapsed = Mathf.Max(0f, time - lastTickTime);
+        }
+
+        if (target != null)
+        {
+            lastTickByTarget[target] = time;
+        }
+
+        return elapsed;
+    }
+
+    private void ClearSmokeTargetTracking()
+    {
+        processedTargets.Clear();
+        targetCacheByCollider.Clear();
+        nextEffectCheckByTarget.Clear();
+        lastOxygenTickByTarget.Clear();
+        lastVictimDamageTickByTarget.Clear();
+        processedFrame = -1;
     }
 
     private void ResolveTriggerZone()
@@ -475,26 +585,21 @@ public class SmokeHazard : MonoBehaviour
         riskMultiplier = 1f;
     }
 
-    private float CalculateLocalSmokeEffectScale(Collider other)
+    private float CalculateLocalSmokeEffectScale(SmokeTargetCache targetCache)
     {
-        if (other == null)
+        if (targetCache == null)
             return 0f;
 
         float effectScale = currentSmokeDensity;
         if (reduceSmokeWhileCrouching &&
             currentSmokeDensity < crouchReliefUntilDensity &&
-            TryGetCrouchingController(other, out _))
+            targetCache.CrouchingController != null &&
+            targetCache.CrouchingController.IsCrouching)
         {
             effectScale *= crouchedExposureMultiplier;
         }
 
         return Mathf.Clamp01(effectScale);
-    }
-
-    private bool TryGetCrouchingController(Collider other, out FirstPersonController controller)
-    {
-        controller = other != null ? other.GetComponentInParent<FirstPersonController>() : null;
-        return controller != null && controller.IsCrouching;
     }
 
     private MonoBehaviour[] CollectAutoVentPoints()

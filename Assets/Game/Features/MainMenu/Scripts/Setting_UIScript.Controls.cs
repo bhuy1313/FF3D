@@ -118,6 +118,7 @@ public partial class Setting_UIScript
             new ControlBindingDefinition("CommandCancelAllFollow", "Dừng tất cả follow", "Cancel All Follow"),
             new ControlBindingDefinition("ToggleBotOutline", "Bật tắt viền bot", "Toggle Bot Outline"),
             new ControlBindingDefinition("CommandConfirm", "Xác nhận lệnh", "Confirm Command"),
+            new ControlBindingDefinition("CommandAlternateConfirm", "Xác nhận thay thế", "Alternate Confirm"),
             new ControlBindingDefinition("CommandCyclePage", "Trang lệnh kế tiếp", "Next Command Page"),
             new ControlBindingDefinition("CommandCyclePagePrevious", "Trang lệnh trước", "Previous Command Page")),
         new ControlBindingSection(

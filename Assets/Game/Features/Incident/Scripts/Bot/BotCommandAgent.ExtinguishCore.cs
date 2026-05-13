@@ -10,10 +10,11 @@ public partial class BotCommandAgent
         IFireGroupTarget fireGroup,
         IFireTarget fireTarget,
         BotExtinguishCommandMode orderMode,
+        BotExtinguishEngagementMode engagementMode,
         bool requireNonPreciseTool,
         out IBotExtinguisherItem plannedTool)
     {
-        plannedTool = ResolveCommittedExtinguishTool(orderPoint, firePosition, fireGroup, fireTarget, orderMode);
+        plannedTool = ResolveCommittedExtinguishTool(orderPoint, firePosition, fireGroup, fireTarget, orderMode, engagementMode, requireNonPreciseTool);
         return plannedTool != null && (!requireNonPreciseTool || !BotCommandAgent.UsesPreciseAim(plannedTool));
     }
 
@@ -118,11 +119,16 @@ public partial class BotCommandAgent
 
     private bool TryRestoreHeldSuppressionTool(BotExtinguishCommandMode orderMode, IFireTarget fireTarget, out IBotExtinguisherItem heldTool)
     {
+        return TryRestoreHeldSuppressionTool(orderMode, BotExtinguishEngagementMode.DirectBestTool, fireTarget, out heldTool);
+    }
+
+    private bool TryRestoreHeldSuppressionTool(BotExtinguishCommandMode orderMode, BotExtinguishEngagementMode engagementMode, IFireTarget fireTarget, out IBotExtinguisherItem heldTool)
+    {
         heldTool = ResolveHeldSuppressionTool();
         if (heldTool == null ||
             !heldTool.HasUsableCharge ||
             !heldTool.IsAvailableTo(gameObject) ||
-            !DoesToolMatchExtinguishMode(heldTool, orderMode) ||
+            !DoesToolMatchExtinguishMode(heldTool, orderMode, engagementMode) ||
             IsUnsafeSuppressionToolForFire(heldTool, fireTarget))
         {
             return false;
@@ -133,7 +139,7 @@ public partial class BotCommandAgent
         return true;
     }
 
-    private IBotExtinguisherItem SelectPreferredExtinguishTool(Vector3 orderPoint, Vector3 firePosition, IFireGroupTarget fireGroup, IFireTarget fireTarget, BotExtinguishCommandMode orderMode)
+    private IBotExtinguisherItem SelectPreferredExtinguishTool(Vector3 orderPoint, Vector3 firePosition, IFireGroupTarget fireGroup, IFireTarget fireTarget, BotExtinguishCommandMode orderMode, BotExtinguishEngagementMode engagementMode, bool requireNonPreciseTool)
     {
         IBotExtinguisherItem bestTool = null;
         float bestScore = float.PositiveInfinity;
@@ -144,7 +150,11 @@ public partial class BotCommandAgent
             for (int i = 0; i < inventoryTools.Count; i++)
             {
                 IBotExtinguisherItem candidate = inventoryTools[i];
-                if (candidate == null || IsExtinguishToolTemporarilyRejected(candidate) || !candidate.HasUsableCharge || !candidate.IsAvailableTo(gameObject))
+                if (candidate == null ||
+                    (requireNonPreciseTool && UsesPreciseAim(candidate)) ||
+                    IsExtinguishToolTemporarilyRejected(candidate) ||
+                    !candidate.HasUsableCharge ||
+                    !candidate.IsAvailableTo(gameObject))
                 {
                     continue;
                 }
@@ -154,13 +164,13 @@ public partial class BotCommandAgent
                     continue;
                 }
 
-                if (!DoesToolMatchExtinguishMode(candidate, orderMode) ||
-                    !CanToolReachFire(candidate, orderMode, orderPoint, firePosition, fireGroup, fireTarget))
+                if (!DoesToolMatchExtinguishMode(candidate, orderMode, engagementMode) ||
+                    !CanToolReachFire(candidate, orderMode, engagementMode, orderPoint, firePosition, fireGroup, fireTarget))
                 {
                     continue;
                 }
 
-                float score = ScoreSuppressionTool(candidate, orderPoint, firePosition, transform.position, fireTarget);
+                float score = ScoreSuppressionTool(candidate, orderPoint, firePosition, transform.position, fireTarget, engagementMode);
                 if (score < bestScore)
                 {
                     bestScore = score;
@@ -173,20 +183,20 @@ public partial class BotCommandAgent
 
         foreach (IBotExtinguisherItem extinguisher in BotRuntimeRegistry.ActiveExtinguisherItems)
         {
-            EvaluateWorldToolCandidate(extinguisher, orderPoint, firePosition, fireGroup, fireTarget, orderMode, searchRadiusSq, ref bestTool, ref bestScore);
+            EvaluateWorldToolCandidate(extinguisher, orderPoint, firePosition, fireGroup, fireTarget, orderMode, engagementMode, requireNonPreciseTool, searchRadiusSq, ref bestTool, ref bestScore);
         }
 
         if (bestTool == null &&
             perceptionMemory != null &&
             perceptionMemory.TryGetNearestRecentExtinguisher(transform.position, toolSearchRadius, gameObject, out IBotExtinguisherItem rememberedTool))
         {
-            EvaluateWorldToolCandidate(rememberedTool, orderPoint, firePosition, fireGroup, fireTarget, orderMode, searchRadiusSq, ref bestTool, ref bestScore);
+            EvaluateWorldToolCandidate(rememberedTool, orderPoint, firePosition, fireGroup, fireTarget, orderMode, engagementMode, requireNonPreciseTool, searchRadiusSq, ref bestTool, ref bestScore);
         }
 
         if (bestTool == null &&
             BotRuntimeRegistry.SharedIncidentBlackboard.TryGetNearestRecentExtinguisher(transform.position, toolSearchRadius, gameObject, out IBotExtinguisherItem sharedTool))
         {
-            EvaluateWorldToolCandidate(sharedTool, orderPoint, firePosition, fireGroup, fireTarget, orderMode, searchRadiusSq, ref bestTool, ref bestScore);
+            EvaluateWorldToolCandidate(sharedTool, orderPoint, firePosition, fireGroup, fireTarget, orderMode, engagementMode, requireNonPreciseTool, searchRadiusSq, ref bestTool, ref bestScore);
         }
 
         if (bestTool != null)
@@ -205,12 +215,15 @@ public partial class BotCommandAgent
         IFireGroupTarget fireGroup,
         IFireTarget fireTarget,
         BotExtinguishCommandMode orderMode,
+        BotExtinguishEngagementMode engagementMode,
+        bool requireNonPreciseTool,
         float searchRadiusSq,
         ref IBotExtinguisherItem bestTool,
         ref float bestScore)
     {
         Component candidateComponent = candidate as Component;
         if (candidateComponent == null ||
+            (requireNonPreciseTool && UsesPreciseAim(candidate)) ||
             IsExtinguishToolTemporarilyRejected(candidate) ||
             candidate.IsHeld ||
             candidate.Rigidbody == null ||
@@ -225,8 +238,8 @@ public partial class BotCommandAgent
             return;
         }
 
-        if (!DoesToolMatchExtinguishMode(candidate, orderMode) ||
-            !CanToolReachFire(candidate, orderMode, orderPoint, firePosition, fireGroup, fireTarget))
+        if (!DoesToolMatchExtinguishMode(candidate, orderMode, engagementMode) ||
+            !CanToolReachFire(candidate, orderMode, engagementMode, orderPoint, firePosition, fireGroup, fireTarget))
         {
             return;
         }
@@ -237,7 +250,7 @@ public partial class BotCommandAgent
             return;
         }
 
-        float score = ScoreSuppressionTool(candidate, orderPoint, firePosition, candidateComponent.transform.position, fireTarget) + Mathf.Sqrt(distanceSq);
+        float score = ScoreSuppressionTool(candidate, orderPoint, firePosition, candidateComponent.transform.position, fireTarget, engagementMode) + Mathf.Sqrt(distanceSq);
         if (score < bestScore)
         {
             bestScore = score;
@@ -245,13 +258,14 @@ public partial class BotCommandAgent
         }
     }
 
-    private IBotExtinguisherItem ResolveCommittedExtinguishTool(Vector3 orderPoint, Vector3 firePosition, IFireGroupTarget fireGroup, IFireTarget fireTarget, BotExtinguishCommandMode orderMode)
+    private IBotExtinguisherItem ResolveCommittedExtinguishTool(Vector3 orderPoint, Vector3 firePosition, IFireGroupTarget fireGroup, IFireTarget fireTarget, BotExtinguishCommandMode orderMode, BotExtinguishEngagementMode engagementMode, bool requireNonPreciseTool)
     {
         if (activeExtinguisher != null &&
+            (!requireNonPreciseTool || !UsesPreciseAim(activeExtinguisher)) &&
             activeExtinguisher.CurrentHolder == gameObject &&
             activeExtinguisher.HasUsableCharge &&
             !IsUnsafeSuppressionToolForFire(activeExtinguisher, fireTarget) &&
-            DoesToolMatchExtinguishMode(activeExtinguisher, orderMode))
+            DoesToolMatchExtinguishMode(activeExtinguisher, orderMode, engagementMode))
         {
             committedExtinguishTool = activeExtinguisher;
             return activeExtinguisher;
@@ -259,9 +273,10 @@ public partial class BotCommandAgent
 
         IBotExtinguisherItem heldTool = ResolveHeldSuppressionTool();
         if (heldTool != null &&
+            (!requireNonPreciseTool || !UsesPreciseAim(heldTool)) &&
             heldTool.HasUsableCharge &&
             heldTool.IsAvailableTo(gameObject) &&
-            DoesToolMatchExtinguishMode(heldTool, orderMode) &&
+            DoesToolMatchExtinguishMode(heldTool, orderMode, engagementMode) &&
             !IsUnsafeSuppressionToolForFire(heldTool, fireTarget))
         {
             committedExtinguishTool = heldTool;
@@ -269,13 +284,13 @@ public partial class BotCommandAgent
             return heldTool;
         }
 
-        if (IsToolStillUsable(committedExtinguishTool, orderMode, orderPoint, firePosition, fireGroup, fireTarget))
+        if (IsToolStillUsable(committedExtinguishTool, orderMode, engagementMode, requireNonPreciseTool, orderPoint, firePosition, fireGroup, fireTarget))
         {
             return committedExtinguishTool;
         }
 
         ReleaseCommittedTool();
-        IBotExtinguisherItem selectedTool = SelectPreferredExtinguishTool(orderPoint, firePosition, fireGroup, fireTarget, orderMode);
+        IBotExtinguisherItem selectedTool = SelectPreferredExtinguishTool(orderPoint, firePosition, fireGroup, fireTarget, orderMode, engagementMode, requireNonPreciseTool);
         if (selectedTool == null)
         {
             return null;
@@ -317,7 +332,11 @@ public partial class BotCommandAgent
 
         ClearExtinguishRuntimeState();
         CacheIssuedExtinguishTargets(BotExtinguishCommandMode.PointFire, fireTarget, null);
-        behaviorContext.SetExtinguishOrder(fallbackDestination, scanOrigin, BotExtinguishCommandMode.PointFire);
+        behaviorContext.SetExtinguishOrder(
+            fallbackDestination,
+            scanOrigin,
+            BotExtinguishCommandMode.PointFire,
+            BotExtinguishEngagementMode.DirectBestTool);
         extinguishStartupPending = true;
         lastIssuedDestination = fallbackDestination;
         hasIssuedDestination = true;
@@ -424,14 +443,17 @@ public partial class BotCommandAgent
         return representativeTarget;
     }
 
-    private bool IsToolStillUsable(IBotExtinguisherItem tool, BotExtinguishCommandMode orderMode, Vector3 orderPoint, Vector3 firePosition, IFireGroupTarget fireGroup, IFireTarget fireTarget)
+    private bool IsToolStillUsable(IBotExtinguisherItem tool, BotExtinguishCommandMode orderMode, BotExtinguishEngagementMode engagementMode, bool requireNonPreciseTool, Vector3 orderPoint, Vector3 firePosition, IFireGroupTarget fireGroup, IFireTarget fireTarget)
     {
         if (tool == null)
         {
             return false;
         }
 
-        if (!tool.HasUsableCharge || !tool.IsAvailableTo(gameObject) || !DoesToolMatchExtinguishMode(tool, orderMode))
+        if ((requireNonPreciseTool && UsesPreciseAim(tool)) ||
+            !tool.HasUsableCharge ||
+            !tool.IsAvailableTo(gameObject) ||
+            !DoesToolMatchExtinguishMode(tool, orderMode, engagementMode))
         {
             return false;
         }
@@ -441,7 +463,7 @@ public partial class BotCommandAgent
             return false;
         }
 
-        return CanToolReachFire(tool, orderMode, orderPoint, firePosition, fireGroup, fireTarget);
+        return CanToolReachFire(tool, orderMode, engagementMode, orderPoint, firePosition, fireGroup, fireTarget);
     }
 
     private void ReleaseCommittedToolIfMatches(IBotExtinguisherItem tool)

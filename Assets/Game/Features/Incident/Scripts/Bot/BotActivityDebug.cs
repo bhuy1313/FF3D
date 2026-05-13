@@ -9,9 +9,12 @@ internal sealed class BotActivityDebug
     private string lastPathClearingFlowMessage;
     private string lastRescueActivityKey;
     private string lastRescueActivityMessage;
+    private string lastInterruptActivityKey;
+    private string lastInterruptActivityMessage;
     private readonly HashSet<string> seenPathActivityMessages = new HashSet<string>();
     private readonly HashSet<string> seenRescueActivityMessages = new HashSet<string>();
     private readonly HashSet<string> seenExtinguishActivityMessages = new HashSet<string>();
+    private readonly HashSet<string> seenInterruptActivityMessages = new HashSet<string>();
     private string lastMoveCommandFlowKey;
     private string lastMoveStartFlowKey;
 
@@ -68,6 +71,13 @@ internal sealed class BotActivityDebug
         lastRescueActivityKey = null;
         lastRescueActivityMessage = null;
         seenRescueActivityMessages.Clear();
+    }
+
+    internal void ResetInterrupt()
+    {
+        lastInterruptActivityKey = null;
+        lastInterruptActivityMessage = null;
+        seenInterruptActivityMessages.Clear();
     }
 
     internal void LogExtinguish(MonoBehaviour owner, bool enabled, string normalizedDetail)
@@ -136,5 +146,24 @@ internal sealed class BotActivityDebug
         lastPathClearingFlowKey = key;
         lastPathClearingFlowMessage = normalizedDetail;
         Debug.Log($"[BotPathFlow] [{owner.name}] {normalizedDetail}", owner);
+    }
+
+    internal void LogInterrupt(MonoBehaviour owner, bool enabled, string key, string detail)
+    {
+        if (!enabled || string.IsNullOrEmpty(detail))
+        {
+            return;
+        }
+
+        if (!seenInterruptActivityMessages.Add(detail))
+        {
+            lastInterruptActivityKey = key;
+            lastInterruptActivityMessage = detail;
+            return;
+        }
+
+        lastInterruptActivityKey = key;
+        lastInterruptActivityMessage = detail;
+        Debug.Log($"[BotInterrupt] [{owner.name}] {detail}", owner);
     }
 }

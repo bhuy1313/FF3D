@@ -113,6 +113,7 @@ namespace StarterAssets
         public GameObject HoveredCommandTarget => hoveredCommandTarget;
         public GameObject SelectedCommandTarget => selectedCommandTarget;
         public bool IsAwaitingDestination => commandState.IsAwaitingTarget;
+        public BotCommandType PendingCommandType => commandState.PendingCommand;
 
         private void Awake()
         {
@@ -215,11 +216,18 @@ namespace StarterAssets
 
             UpdatePreviewPoint();
 
-            if (destinationConfirmClickGate.ShouldProcessClick(
-                WasCommandConfirmPressedThisFrame(),
-                IsCommandConfirmPressed()))
+            bool confirmPressed = WasCommandConfirmPressedThisFrame();
+            bool alternateConfirmPressed = WasCommandAlternateConfirmPressedThisFrame();
+            if (alternateConfirmPressed && !confirmPressed && commandState.PendingCommand != BotCommandType.Extinguish)
             {
-                TryConfirmPendingCommand();
+                alternateConfirmPressed = false;
+            }
+
+            if (destinationConfirmClickGate.ShouldProcessClick(
+                confirmPressed || alternateConfirmPressed,
+                IsCommandConfirmPressed() || IsCommandAlternateConfirmPressed()))
+            {
+                TryConfirmPendingCommand(alternateConfirmPressed && !confirmPressed);
             }
         }
 
@@ -530,7 +538,7 @@ namespace StarterAssets
             ApplyActiveCommandPageTheme();
         }
 
-        private void TryConfirmPendingCommand()
+        private void TryConfirmPendingCommand(bool useAlternateExtinguishMode = false)
         {
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
             {
@@ -577,6 +585,9 @@ namespace StarterAssets
             if (commandType == BotCommandType.Extinguish && botCommandAgent != null)
             {
                 SpawnExtinguishScanDebugSphere(primaryHit.point);
+                BotExtinguishEngagementMode engagementMode = useAlternateExtinguishMode
+                    ? BotExtinguishEngagementMode.PrecisionFireHose
+                    : BotExtinguishEngagementMode.DirectBestTool;
 
                 if (!TryResolveExtinguishTargetFromArea(
                     primaryHit.point,
@@ -600,16 +611,33 @@ namespace StarterAssets
                     return;
                 }
 
+                if (engagementMode == BotExtinguishEngagementMode.PrecisionFireHose &&
+                    (fireGroupTarget == null || !fireGroupTarget.HasActiveFires))
+                {
+                    if (logCommandSelection)
+                    {
+                        Debug.LogWarning($"[FPSCommandSystem] Precision FireHose mode requires an active fire group near {primaryHit.point}. Cancelling command.", this);
+                    }
+
+                    commandState.Cancel();
+                    destinationConfirmClickGate.Reset();
+                    selectedCommandTarget = null;
+                    UpdateTargetOutline(null);
+                    hasPreviewPoint = false;
+                    return;
+                }
+
                 if (botCommandAgent.TryIssueExtinguishCommand(
                     extinguishDestination,
                     extinguishMode,
+                    engagementMode,
                     pointFireTarget,
                     fireGroupTarget))
                 {
                     commandState.Cancel();
                     if (logCommandSelection)
                     {
-                        Debug.Log($"[FPSCommandSystem] Issued '{commandType}' to '{GetTargetName(selectedCommandTarget)}' at {extinguishDestination} with mode '{extinguishMode}'.", this);
+                        Debug.Log($"[FPSCommandSystem] Issued '{commandType}' to '{GetTargetName(selectedCommandTarget)}' at {extinguishDestination} with mode '{extinguishMode}/{engagementMode}'.", this);
                     }
 
                     selectedCommandTarget = null;
@@ -1571,6 +1599,44 @@ namespace StarterAssets
 
 #if ENABLE_LEGACY_INPUT_MANAGER
             if (Input.GetMouseButton(0))
+            {
+                return true;
+            }
+#endif
+
+            return false;
+        }
+
+        private bool WasCommandAlternateConfirmPressedThisFrame()
+        {
+#if ENABLE_INPUT_SYSTEM
+            if (TryGetPlayerAction("CommandAlternateConfirm", out InputAction action) && action.WasPressedThisFrame())
+            {
+                return true;
+            }
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+            if (Input.GetMouseButtonDown(1))
+            {
+                return true;
+            }
+#endif
+
+            return false;
+        }
+
+        private bool IsCommandAlternateConfirmPressed()
+        {
+#if ENABLE_INPUT_SYSTEM
+            if (TryGetPlayerAction("CommandAlternateConfirm", out InputAction action) && action.IsPressed())
+            {
+                return true;
+            }
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+            if (Input.GetMouseButton(1))
             {
                 return true;
             }

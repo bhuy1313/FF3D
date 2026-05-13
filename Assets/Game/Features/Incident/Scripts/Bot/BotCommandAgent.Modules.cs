@@ -91,7 +91,7 @@ public partial class BotCommandAgent
                     }
                     break;
                 case BotCommandType.Extinguish:
-                    return TryIssueExtinguishCommand(destination, payload.ExtinguishMode);
+                    return TryIssueExtinguishCommand(destination, payload.ExtinguishMode, payload.ExtinguishEngagementMode);
                 case BotCommandType.Follow:
                     if (owner.behaviorContext == null)
                     {
@@ -194,6 +194,7 @@ public partial class BotCommandAgent
         public bool TryIssueExtinguishCommand(
             Vector3 scanOrigin,
             BotExtinguishCommandMode mode,
+            BotExtinguishEngagementMode engagementMode,
             IFireTarget pointFireTarget = null,
             IFireGroupTarget fireGroupTarget = null)
         {
@@ -202,8 +203,15 @@ public partial class BotCommandAgent
                 return false;
             }
 
+            if (engagementMode == BotExtinguishEngagementMode.PrecisionFireHose &&
+                (fireGroupTarget == null || !fireGroupTarget.HasActiveFires))
+            {
+                return false;
+            }
+
             Vector3 approachDestination = scanOrigin;
-            if (mode == BotExtinguishCommandMode.PointFire &&
+            if (engagementMode == BotExtinguishEngagementMode.DirectBestTool &&
+                mode == BotExtinguishCommandMode.PointFire &&
                 owner.TryResolvePointFireApproachPosition(scanOrigin, out Vector3 sampledDestination))
             {
                 approachDestination = sampledDestination;
@@ -215,9 +223,10 @@ public partial class BotCommandAgent
             }
 
             PrepareForIssuedCommand(BotCommandType.Extinguish);
-            owner.CacheIssuedExtinguishTargets(mode, pointFireTarget, fireGroupTarget);
-            owner.behaviorContext.SetExtinguishOrder(approachDestination, scanOrigin, mode);
-            owner.extinguishStartupPending = true;
+            owner.behaviorContext.ClearExtinguishOrder();
+            owner.ClearExtinguishRuntimeState();
+            owner.BeginExtinguishV2Order(approachDestination, scanOrigin, mode, engagementMode, pointFireTarget, fireGroupTarget);
+            owner.behaviorContext.SetCommandIntent(BotCommandIntentPayload.CreateExtinguish(approachDestination, scanOrigin, mode, engagementMode));
             owner.lastIssuedDestination = approachDestination;
             owner.hasIssuedDestination = true;
             return true;

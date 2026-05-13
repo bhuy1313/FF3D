@@ -12,6 +12,7 @@ public struct BotCommandIntentPayload
     [SerializeField] private string targetTag;
     [SerializeField] private bool allowAssist;
     [SerializeField] private BotExtinguishCommandMode extinguishMode;
+    [SerializeField] private BotExtinguishEngagementMode extinguishEngagementMode;
 
     public BotCommandType CommandType => commandType;
     public BotCommandIntent Intent => intent;
@@ -21,6 +22,7 @@ public struct BotCommandIntentPayload
     public string TargetTag => targetTag;
     public bool AllowAssist => allowAssist;
     public BotExtinguishCommandMode ExtinguishMode => extinguishMode;
+    public BotExtinguishEngagementMode ExtinguishEngagementMode => extinguishEngagementMode;
     public bool IsValid => commandType != BotCommandType.None && intent != BotCommandIntent.None;
 
     public static BotCommandIntentPayload None => default;
@@ -33,11 +35,21 @@ public struct BotCommandIntentPayload
             intent = BotCommandTypeUtility.ResolveIntent(commandType),
             worldPoint = worldPoint,
             hasWorldPoint = true,
-            extinguishMode = BotExtinguishCommandMode.Auto
+            extinguishMode = BotExtinguishCommandMode.Auto,
+            extinguishEngagementMode = BotExtinguishEngagementMode.DirectBestTool
         };
     }
 
     public static BotCommandIntentPayload CreateExtinguish(Vector3 destination, Vector3 scanOrigin, BotExtinguishCommandMode mode)
+    {
+        return CreateExtinguish(destination, scanOrigin, mode, BotExtinguishEngagementMode.DirectBestTool);
+    }
+
+    public static BotCommandIntentPayload CreateExtinguish(
+        Vector3 destination,
+        Vector3 scanOrigin,
+        BotExtinguishCommandMode mode,
+        BotExtinguishEngagementMode engagementMode)
     {
         return new BotCommandIntentPayload
         {
@@ -45,7 +57,8 @@ public struct BotCommandIntentPayload
             intent = BotCommandIntent.Extinguish,
             worldPoint = scanOrigin,
             hasWorldPoint = true,
-            extinguishMode = mode
+            extinguishMode = mode,
+            extinguishEngagementMode = engagementMode
         };
     }
 
@@ -60,7 +73,8 @@ public struct BotCommandIntentPayload
             targetTransform = order.Target,
             targetTag = order.TargetTag,
             allowAssist = order.AllowAssist,
-            extinguishMode = BotExtinguishCommandMode.Auto
+            extinguishMode = BotExtinguishCommandMode.Auto,
+            extinguishEngagementMode = BotExtinguishEngagementMode.DirectBestTool
         };
     }
 }

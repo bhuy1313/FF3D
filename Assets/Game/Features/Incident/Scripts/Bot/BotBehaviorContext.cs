@@ -138,13 +138,18 @@ public class BotBehaviorContext : MonoBehaviour
     public void SetExtinguishOrder(Vector3 destination)
     {
         extinguishOrderState.SetDestination(destination);
-        activeCommandIntent = BotCommandIntentPayload.CreateExtinguish(destination, destination, BotExtinguishCommandMode.Auto);
+        activeCommandIntent = BotCommandIntentPayload.CreateExtinguish(destination, destination, BotExtinguishCommandMode.Auto, BotExtinguishEngagementMode.DirectBestTool);
     }
 
     public void SetExtinguishOrder(Vector3 destination, Vector3 scanOrigin, BotExtinguishCommandMode mode)
     {
-        extinguishOrderState.SetDestination(destination, scanOrigin, mode);
-        activeCommandIntent = BotCommandIntentPayload.CreateExtinguish(destination, scanOrigin, mode);
+        SetExtinguishOrder(destination, scanOrigin, mode, BotExtinguishEngagementMode.DirectBestTool);
+    }
+
+    public void SetExtinguishOrder(Vector3 destination, Vector3 scanOrigin, BotExtinguishCommandMode mode, BotExtinguishEngagementMode engagementMode)
+    {
+        extinguishOrderState.SetDestination(destination, scanOrigin, mode, engagementMode);
+        activeCommandIntent = BotCommandIntentPayload.CreateExtinguish(destination, scanOrigin, mode, engagementMode);
     }
 
     public bool TryGetExtinguishOrder(out Vector3 destination)
@@ -155,6 +160,11 @@ public class BotBehaviorContext : MonoBehaviour
     public bool TryGetExtinguishOrder(out Vector3 destination, out Vector3 scanOrigin, out BotExtinguishCommandMode mode)
     {
         return extinguishOrderState.TryGetDestination(out destination, out scanOrigin, out mode);
+    }
+
+    public bool TryGetExtinguishOrder(out Vector3 destination, out Vector3 scanOrigin, out BotExtinguishCommandMode mode, out BotExtinguishEngagementMode engagementMode)
+    {
+        return extinguishOrderState.TryGetDestination(out destination, out scanOrigin, out mode, out engagementMode);
     }
 
     public void ClearExtinguishOrder()

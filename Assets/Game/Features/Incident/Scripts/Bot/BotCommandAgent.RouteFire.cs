@@ -395,6 +395,14 @@ public partial class BotCommandAgent
             return BotPlanTaskStatus.Success;
         }
 
+        if (HasMovePickupTarget)
+        {
+            movingToPickup = true;
+            return TryCompleteMovePickupTarget()
+                ? BotPlanTaskStatus.Success
+                : BotPlanTaskStatus.Running;
+        }
+
         Vector3 firePosition = blockingFire.GetWorldPosition();
         if (!TryResolveSuppressionTool(
             firePosition,
@@ -402,6 +410,7 @@ public partial class BotCommandAgent
             null,
             blockingFire,
             BotExtinguishCommandMode.PointFire,
+            BotExtinguishEngagementMode.DirectBestTool,
             true,
             out IBotExtinguisherItem routeTool))
         {

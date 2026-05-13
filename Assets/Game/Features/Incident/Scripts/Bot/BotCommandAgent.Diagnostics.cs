@@ -102,6 +102,16 @@ public partial class BotCommandAgent
         activityDebug?.LogPathFlow(this, enableActivityDebug, key, normalizedDetail);
     }
 
+    private void LogPickupDebug(string detail)
+    {
+        if (!enablePickupDebug || string.IsNullOrWhiteSpace(detail))
+        {
+            return;
+        }
+
+        Debug.Log($"[BotPickup] [{name}] {detail}", this);
+    }
+
     private static string FormatFlowVectorKey(Vector3 value)
     {
         return $"{Mathf.RoundToInt(value.x * 10f)}:{Mathf.RoundToInt(value.y * 10f)}:{Mathf.RoundToInt(value.z * 10f)}";
@@ -353,6 +363,14 @@ public partial class BotCommandAgent
                 ? GetDebugTargetName(currentRouteBlockingFire)
                 : "UnknownFire";
             return $"RouteFire/{currentRouteFirePhase} | {fireName}";
+        }
+
+        if (IsInterruptV2Active)
+        {
+            string fireName = interruptV2State.FireTarget != null
+                ? GetDebugTargetName(interruptV2State.FireTarget)
+                : "UnknownFire";
+            return $"InterruptV2/{interruptV2State.Step} | {fireName}";
         }
 
         if (currentBlockedBreakable != null &&

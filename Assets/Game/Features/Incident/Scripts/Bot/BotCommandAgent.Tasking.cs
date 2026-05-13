@@ -64,6 +64,18 @@ public partial class BotCommandAgent
             }
         }
 
+        if (IsInterruptV2Active)
+        {
+            RefreshReservation(interruptV2State.FireGroup);
+            RefreshReservation(interruptV2State.FireTarget);
+            BeginOrRefreshTask(
+                BotTaskType.Extinguish,
+                GetInterruptV2TaskDetail(),
+                GetInterruptV2TaskTargetComponent(),
+                GetInterruptV2TaskPosition());
+            return;
+        }
+
         if (currentBlockedBreakable != null &&
             !currentBlockedBreakable.IsBroken &&
             currentBlockedBreakable.CanBeClearedByBot)
@@ -91,6 +103,18 @@ public partial class BotCommandAgent
                 GetActiveBreakTaskDetail(),
                 currentBlockedPryTarget as Component,
                 currentBlockedPryTarget.GetWorldPosition());
+            return;
+        }
+
+        if (IsExtinguishV2Active)
+        {
+            RefreshReservation(extinguishV2State.FireGroup);
+            RefreshReservation(extinguishV2State.FireTarget);
+            BeginOrRefreshTask(
+                BotTaskType.Extinguish,
+                GetExtinguishV2TaskDetail(),
+                GetExtinguishV2TaskTargetComponent(),
+                GetExtinguishV2TaskPosition());
             return;
         }
 

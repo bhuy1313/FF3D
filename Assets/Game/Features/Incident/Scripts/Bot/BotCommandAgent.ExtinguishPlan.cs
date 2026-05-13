@@ -16,6 +16,7 @@ public partial class BotCommandAgent
         public Vector3 TargetSearchPoint;
         public Vector3 FirePosition;
         public BotExtinguishCommandMode Mode;
+        public BotExtinguishEngagementMode EngagementMode;
         public IFireTarget FireTarget;
         public IFireGroupTarget FireGroup;
         public IBotExtinguisherItem PlannedTool;
@@ -28,6 +29,7 @@ public partial class BotCommandAgent
             TargetSearchPoint = default;
             FirePosition = default;
             Mode = BotExtinguishCommandMode.Auto;
+            EngagementMode = BotExtinguishEngagementMode.DirectBestTool;
             FireTarget = null;
             FireGroup = null;
             PlannedTool = null;
@@ -116,7 +118,7 @@ public partial class BotCommandAgent
             }
 
             BotExtinguishPlanState state = agent.extinguishPlanState;
-            if (agent.TryRestoreHeldSuppressionTool(state.Mode, state.FireTarget, out _))
+            if (agent.TryRestoreHeldSuppressionTool(state.Mode, state.EngagementMode, state.FireTarget, out _))
             {
                 return;
             }
@@ -183,7 +185,7 @@ public partial class BotCommandAgent
 
             BotExtinguishPlanState state = agent.extinguishPlanState;
             if (agent.activeExtinguisher == null &&
-                !agent.TryRestoreHeldSuppressionTool(state.Mode, state.FireTarget, out _))
+                !agent.TryRestoreHeldSuppressionTool(state.Mode, state.EngagementMode, state.FireTarget, out _))
             {
                 agent.planProcessor?.InjectFront(
                     agent,
@@ -210,7 +212,7 @@ public partial class BotCommandAgent
                     : BotPlanTaskStatus.Failure;
             }
 
-            if (state.UsesPreciseAim)
+            if (state.EngagementMode == BotExtinguishEngagementMode.PrecisionFireHose)
             {
                 IFireGroupTarget fireGroup = state.FireGroup != null && state.FireGroup.HasActiveFires
                     ? state.FireGroup
@@ -296,7 +298,11 @@ public partial class BotCommandAgent
     private bool TrySyncExtinguishPlanOrder()
     {
         if (behaviorContext == null ||
-            !behaviorContext.TryGetExtinguishOrder(out Vector3 orderPoint, out Vector3 scanOrigin, out BotExtinguishCommandMode orderMode))
+            !behaviorContext.TryGetExtinguishOrder(
+                out Vector3 orderPoint,
+                out Vector3 scanOrigin,
+                out BotExtinguishCommandMode orderMode,
+                out BotExtinguishEngagementMode engagementMode))
         {
             return false;
         }
@@ -304,6 +310,7 @@ public partial class BotCommandAgent
         extinguishPlanState.OrderPoint = orderPoint;
         extinguishPlanState.ScanOrigin = scanOrigin;
         extinguishPlanState.Mode = orderMode;
+        extinguishPlanState.EngagementMode = engagementMode;
         extinguishPlanState.TargetSearchPoint = orderMode == BotExtinguishCommandMode.PointFire ? scanOrigin : orderPoint;
         return true;
     }
@@ -314,8 +321,9 @@ public partial class BotCommandAgent
         Vector3 scanOrigin = extinguishPlanState.ScanOrigin;
         return string.Format(
             System.Globalization.CultureInfo.InvariantCulture,
-            "{0}:{1:F2}:{2:F2}:{3:F2}:{4:F2}:{5:F2}:{6:F2}",
+            "{0}:{1}:{2:F2}:{3:F2}:{4:F2}:{5:F2}:{6:F2}:{7:F2}",
             extinguishPlanState.Mode,
+            extinguishPlanState.EngagementMode,
             orderPoint.x,
             orderPoint.y,
             orderPoint.z,
@@ -390,6 +398,7 @@ public partial class BotCommandAgent
             state.FireGroup,
             fireTarget,
             state.Mode,
+            state.EngagementMode,
             false,
             out IBotExtinguisherItem replacementTool))
         {
@@ -414,6 +423,14 @@ public partial class BotCommandAgent
             return BotPlanTaskStatus.Failure;
         }
 
+        if (HasMovePickupTarget)
+        {
+            movingToPickup = true;
+            return TryCompleteMovePickupTarget()
+                ? BotPlanTaskStatus.Success
+                : BotPlanTaskStatus.Running;
+        }
+
         BotExtinguishPlanState state = extinguishPlanState;
         if (!TryResolveSuppressionTool(
             state.OrderPoint,
@@ -421,10 +438,12 @@ public partial class BotCommandAgent
             state.FireGroup,
             state.FireTarget,
             state.Mode,
+            state.EngagementMode,
             false,
             out state.PlannedTool))
         {
-            if (state.Mode == BotExtinguishCommandMode.FireGroup &&
+            if (state.EngagementMode == BotExtinguishEngagementMode.DirectBestTool &&
+                state.Mode == BotExtinguishCommandMode.FireGroup &&
                 TryFallbackFireGroupOrderToPointFire(state.FireTarget, out Vector3 fallbackDestination))
             {
                 SetExtinguishSubtask(BotExtinguishSubtask.Recover, $"Replanning extinguish route through point fire at {fallbackDestination}.");
@@ -436,14 +455,8 @@ public partial class BotCommandAgent
             return BotPlanTaskStatus.Failure;
         }
 
-        state.UsesPreciseAim = BotCommandAgent.UsesPreciseAim(state.PlannedTool);
-        if (!state.UsesPreciseAim && TryReplanExtinguishOrderForPointFireTool(state))
-        {
-            SetExtinguishSubtask(BotExtinguishSubtask.Recover, "Replanning handheld extinguisher against a point fire.");
-            InvalidateActiveCommandPlan();
-            return BotPlanTaskStatus.Success;
-        }
-
+        state.UsesPreciseAim = state.EngagementMode == BotExtinguishEngagementMode.PrecisionFireHose &&
+                               BotCommandAgent.UsesPreciseAim(state.PlannedTool);
         if (!TryAdvanceSuppressionToolAcquisition(state.PlannedTool, true))
         {
             if (TryPrepareSuppressionToolMovePickup(state.PlannedTool))
@@ -502,7 +515,11 @@ public partial class BotCommandAgent
         }
 
         CacheIssuedExtinguishTargets(BotExtinguishCommandMode.PointFire, state.FireTarget, null);
-        behaviorContext.SetExtinguishOrder(destination, scanOrigin, BotExtinguishCommandMode.PointFire);
+        behaviorContext.SetExtinguishOrder(
+            destination,
+            scanOrigin,
+            BotExtinguishCommandMode.PointFire,
+            BotExtinguishEngagementMode.DirectBestTool);
         extinguishStartupPending = true;
         lastIssuedDestination = destination;
         hasIssuedDestination = true;
@@ -518,21 +535,35 @@ public partial class BotCommandAgent
 
         BotExtinguishPlanState state = extinguishPlanState;
         if (activeExtinguisher == null &&
-            !TryRestoreHeldSuppressionTool(state.Mode, state.FireTarget, out _))
+            !TryRestoreHeldSuppressionTool(state.Mode, state.EngagementMode, state.FireTarget, out _))
         {
             return MoveTaskDirective.Failure();
         }
 
         Vector3 botPosition = transform.position;
 
-        if (!state.UsesPreciseAim)
+        if (state.EngagementMode == BotExtinguishEngagementMode.DirectBestTool)
         {
             IFireTarget routeFireTarget = ResolveExtinguisherRouteTarget(state.TargetSearchPoint);
             if (routeFireTarget != null && routeFireTarget.IsBurning)
             {
                 state.FireTarget = routeFireTarget;
                 state.FirePosition = routeFireTarget.GetWorldPosition();
-                return MoveTaskDirective.Success();
+                if (CanExtinguishFromCurrentPosition(activeExtinguisher, state.FirePosition, routeFireTarget))
+                {
+                    return MoveTaskDirective.Success();
+                }
+
+                float desiredCenterDistance = GetDesiredExtinguisherCenterDistance(activeExtinguisher, routeFireTarget);
+                Vector3 directApproachPosition = ResolveExtinguisherApproachPosition(state.OrderPoint, state.FirePosition, desiredCenterDistance);
+                if (IsWithinArrivalDistance(directApproachPosition))
+                {
+                    return MoveTaskDirective.Success();
+                }
+
+                return ShouldIssueExtinguisherApproachMove(directApproachPosition)
+                    ? MoveTaskDirective.Running(directApproachPosition)
+                    : MoveTaskDirective.Continue();
             }
 
             if (!IsWithinArrivalDistance(state.OrderPoint))

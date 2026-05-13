@@ -22,7 +22,12 @@ public sealed class KeyHintCommandSource : KeyHintSourceBase
         if (context.IsAwaitingCommandDestination)
         {
             results.Add(CreateHint("CommandConfirm", KeyHintGameplayUtility.GetContextLabelLocalizationKey("Confirm Command"), "Confirm Command", priorityOffset: 40, sortOrder: 40, groupId: "command"));
-            results.Add(CreateHint("CommandCancel", KeyHintGameplayUtility.GetContextLabelLocalizationKey("Cancel Command"), "Cancel Command", priorityOffset: 39, sortOrder: 41, groupId: "command"));
+            if (context.CommandSystem.PendingCommandType == BotCommandType.Extinguish)
+            {
+                results.Add(CreateHint("CommandAlternateConfirm", KeyHintGameplayUtility.GetContextLabelLocalizationKey("Precision Extinguish"), "Precision Extinguish", priorityOffset: 39, sortOrder: 41, groupId: "command"));
+            }
+
+            results.Add(CreateHint("CommandCancel", KeyHintGameplayUtility.GetContextLabelLocalizationKey("Cancel Command"), "Cancel Command", priorityOffset: 38, sortOrder: 42, groupId: "command"));
             return;
         }
 

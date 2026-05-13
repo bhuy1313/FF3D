@@ -205,6 +205,15 @@
                     "initialStateCheck": false
                 },
                 {
+                    "name": "CommandAlternateConfirm",
+                    "type": "Button",
+                    "id": "ff0d0976-5670-4c88-8d06-5bd44ecf98a2",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "ToggleSprayPattern",
                     "type": "Button",
                     "id": "b683acb6-cbc7-4548-8a24-2687ad860356",
@@ -725,6 +734,17 @@
                     "processors": "",
                     "groups": "KeyboardMouse",
                     "action": "CommandConfirm",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "7e3fa214-8438-4d40-ae49-1fc723fc8729",
+                    "path": "<Mouse>/rightButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "KeyboardMouse",
+                    "action": "CommandAlternateConfirm",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },

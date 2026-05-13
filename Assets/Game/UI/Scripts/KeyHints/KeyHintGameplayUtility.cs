@@ -22,6 +22,7 @@ public static class KeyHintGameplayUtility
             "CommandCancelAllFollow" => "keyhint.action.command_cancel_all_follow",
             "ToggleBotOutline" => "keyhint.action.toggle_bot_outline",
             "CommandConfirm" => "keyhint.action.command_confirm",
+            "CommandAlternateConfirm" => "keyhint.action.command_alternate_confirm",
             "ToggleSprayPattern" => "keyhint.action.toggle_spray_pattern",
             "IncreasePressure" => "keyhint.action.increase_pressure",
             "DecreasePressure" => "keyhint.action.decrease_pressure",
@@ -59,6 +60,7 @@ public static class KeyHintGameplayUtility
             "Pick Up Tool" => "keyhint.context.pick_up_tool",
             "Command Bot" => "keyhint.context.command_bot",
             "Confirm Command" => "keyhint.context.confirm_command",
+            "Precision Extinguish" => "keyhint.context.precision_extinguish",
             "Cancel Command" => "keyhint.context.cancel_command",
             _ => string.Empty
         };
@@ -163,6 +165,7 @@ public static class KeyHintGameplayUtility
             "CommandCancelAllFollow" => "Cancel All Follow",
             "ToggleBotOutline" => "Toggle Bot Outline",
             "CommandConfirm" => "Confirm Command",
+            "CommandAlternateConfirm" => "Precision Extinguish",
             "ToggleSprayPattern" => "Toggle Spray",
             "IncreasePressure" => "Increase Pressure",
             "DecreasePressure" => "Decrease Pressure",

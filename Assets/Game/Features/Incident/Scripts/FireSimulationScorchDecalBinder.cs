@@ -39,6 +39,7 @@ public sealed class FireSimulationScorchDecalBinder : MonoBehaviour
     private sealed class RuntimeScorchDecal
     {
         public readonly List<DecalProjector> Projectors = new List<DecalProjector>();
+        public readonly List<SurfacePlacement> Placements = new List<SurfacePlacement>();
         public float ScorchAmount;
         public float LastSeenTime;
     }
@@ -178,7 +179,8 @@ public sealed class FireSimulationScorchDecalBinder : MonoBehaviour
         }
 
         EnsureProjectorCount(decal, ResolveRoot(), -1);
-        List<SurfacePlacement> placements = CollectSurfacePlacements(nodePosition, surfaceNormal);
+        CollectSurfacePlacements(decal.Placements, nodePosition, surfaceNormal);
+        List<SurfacePlacement> placements = decal.Placements;
         int activeCount = Mathf.Min(placements.Count, decal.Projectors.Count);
         for (int i = 0; i < activeCount; i++)
         {
@@ -189,9 +191,9 @@ public sealed class FireSimulationScorchDecalBinder : MonoBehaviour
         return activeCount;
     }
 
-    private List<SurfacePlacement> CollectSurfacePlacements(Vector3 nodePosition, Vector3 surfaceNormal)
+    private void CollectSurfacePlacements(List<SurfacePlacement> placements, Vector3 nodePosition, Vector3 surfaceNormal)
     {
-        List<SurfacePlacement> placements = new List<SurfacePlacement>(maxProjectorsPerNode);
+        placements.Clear();
         Vector3 normal = surfaceNormal.sqrMagnitude > 0.001f ? surfaceNormal.normalized : Vector3.up;
         Vector3 tangent = ResolveTangent(normal);
         Vector3 bitangent = Vector3.Cross(normal, tangent).normalized;
@@ -205,7 +207,6 @@ public sealed class FireSimulationScorchDecalBinder : MonoBehaviour
         TryAddSurfacePlacement(placements, nodePosition, normal, Vector3.Normalize(normal + (tangent - bitangent) * diagonalProbeBias), 0.7f);
         TryAddSurfacePlacement(placements, nodePosition, normal, Vector3.Normalize(normal + (-tangent + bitangent) * diagonalProbeBias), 0.7f);
         TryAddSurfacePlacement(placements, nodePosition, normal, Vector3.Normalize(normal - (tangent + bitangent) * diagonalProbeBias), 0.7f);
-        return placements;
     }
 
     private void TryAddSurfacePlacement(
@@ -236,13 +237,12 @@ public sealed class FireSimulationScorchDecalBinder : MonoBehaviour
             }
 
             float distanceScore = 1f - Mathf.Clamp01(hit.distance / Mathf.Max(0.01f, raycastBackoff + raycastDistance + surfaceProbeRadius));
-            placements.Add(new SurfacePlacement
+            AddPlacementSorted(placements, new SurfacePlacement
             {
                 Position = hit.point,
                 Normal = hitNormal,
                 Score = probeWeight * distanceScore
             });
-            placements.Sort(static (a, b) => b.Score.CompareTo(a.Score));
         }
         else if (requireSurfaceHit)
         {
@@ -423,6 +423,27 @@ public sealed class FireSimulationScorchDecalBinder : MonoBehaviour
         }
 
         return true;
+    }
+
+    private void AddPlacementSorted(List<SurfacePlacement> placements, SurfacePlacement placement)
+    {
+        int insertIndex = placements.Count;
+        for (int i = 0; i < placements.Count; i++)
+        {
+            if (placement.Score > placements[i].Score)
+            {
+                insertIndex = i;
+                break;
+            }
+        }
+
+        placements.Add(placement);
+        for (int i = placements.Count - 1; i > insertIndex; i--)
+        {
+            placements[i] = placements[i - 1];
+        }
+
+        placements[insertIndex] = placement;
     }
 
     private static Vector3 ResolveTangent(Vector3 normal)
