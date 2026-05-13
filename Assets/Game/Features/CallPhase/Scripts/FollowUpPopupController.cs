@@ -22,6 +22,7 @@ public class FollowUpPopupController : MonoBehaviour
     [SerializeField] private bool enableDebugLogs = false;
 
     private readonly List<FollowUpQuestionOptionView> spawnedOptionViews = new List<FollowUpQuestionOptionView>();
+    private readonly List<FollowUpQuestionOptionView> fixedOptionViews = new List<FollowUpQuestionOptionView>();
     private readonly HashSet<string> loggedMissingWarnings = new HashSet<string>();
     private CallPhaseFollowUpQuestionOptionData selectedQuestionOption;
     private Coroutine deferredLayoutRefreshCoroutine;
@@ -52,6 +53,12 @@ public class FollowUpPopupController : MonoBehaviour
     {
         if (!isPopupOpen)
         {
+            return;
+        }
+
+        if (WasPopupShortcutPressed(KeyCode.Escape, KeyCode.Backspace))
+        {
+            ClosePopup();
             return;
         }
 
@@ -125,11 +132,16 @@ public class FollowUpPopupController : MonoBehaviour
             return;
         }
 
-        if (followUpPopupRootObject == null || questionListRoot == null || questionOptionPrefab == null)
+        bool isV2 = IsFollowUpPopupV2();
+        if (followUpPopupRootObject == null
+            || (!isV2 && (questionListRoot == null || questionOptionPrefab == null)))
         {
             LogMissingReference(nameof(followUpPopupRootObject), followUpPopupRootObject);
-            LogMissingReference(nameof(questionListRoot), this);
-            LogMissingReference(nameof(questionOptionPrefab), this);
+            if (!isV2)
+            {
+                LogMissingReference(nameof(questionListRoot), this);
+                LogMissingReference(nameof(questionOptionPrefab), this);
+            }
             return;
         }
 
@@ -194,6 +206,11 @@ public class FollowUpPopupController : MonoBehaviour
         }
 
         RefreshConfirmButtonState();
+
+        if (IsFollowUpPopupV2())
+        {
+            ConfirmSelection();
+        }
     }
 
     private void SelectOptionByIndex(int optionIndex)
@@ -209,13 +226,20 @@ public class FollowUpPopupController : MonoBehaviour
     private void BuildQuestionOptions()
     {
         ClearSpawnedOptions();
-        EnsureQuestionListLayout();
 
         List<CallPhaseFollowUpQuestionOptionData> optionCandidates = followUpController != null
             ? followUpController.GetManualFollowUpQuestionCandidates()
             : new List<CallPhaseFollowUpQuestionOptionData>();
         List<CallPhaseFollowUpQuestionOptionData> displayCandidates = new List<CallPhaseFollowUpQuestionOptionData>(optionCandidates);
         ShuffleQuestionDisplayOrder(displayCandidates);
+
+        if (IsFollowUpPopupV2())
+        {
+            BuildFixedQuestionOptions(displayCandidates);
+            return;
+        }
+
+        EnsureQuestionListLayout();
 
         for (int i = 0; i < displayCandidates.Count; i++)
         {
@@ -277,6 +301,79 @@ public class FollowUpPopupController : MonoBehaviour
         }
     }
 
+    private void BuildFixedQuestionOptions(List<CallPhaseFollowUpQuestionOptionData> displayCandidates)
+    {
+        ResolveFixedOptionViews();
+
+        int optionCount = displayCandidates != null ? displayCandidates.Count : 0;
+        for (int i = 0; i < fixedOptionViews.Count; i++)
+        {
+            FollowUpQuestionOptionView optionView = fixedOptionViews[i];
+            if (optionView == null)
+            {
+                continue;
+            }
+
+            bool hasOption = i < optionCount && displayCandidates[i] != null;
+            optionView.gameObject.SetActive(hasOption);
+            optionView.Clicked -= HandleOptionClicked;
+
+            if (!hasOption)
+            {
+                optionView.SetSelected(false);
+                continue;
+            }
+
+            CallPhaseFollowUpQuestionOptionData questionOption = displayCandidates[i];
+            optionView.Configure(questionOption, GetDisplayText(questionOption));
+            optionView.Clicked += HandleOptionClicked;
+            spawnedOptionViews.Add(optionView);
+        }
+
+        if (spawnedOptionViews.Count <= 0)
+        {
+            Debug.LogWarning($"{nameof(FollowUpPopupController)}: No follow-up options were available to show.", this);
+        }
+    }
+
+    private void ResolveFixedOptionViews()
+    {
+        if (!IsFollowUpPopupV2() || followUpPopupRootObject == null)
+        {
+            return;
+        }
+
+        fixedOptionViews.Clear();
+        Transform container = followUpPopupRootObject.transform.Find("GameObject/Container");
+        if (container == null)
+        {
+            container = followUpPopupRootObject.transform.Find("Container");
+        }
+
+        for (int i = 1; i <= 4; i++)
+        {
+            Transform cell = container != null ? container.Find($"Cell{i}") : null;
+            if (cell == null)
+            {
+                continue;
+            }
+
+            FollowUpQuestionOptionView optionView = cell.GetComponent<FollowUpQuestionOptionView>();
+            if (optionView == null)
+            {
+                optionView = cell.gameObject.AddComponent<FollowUpQuestionOptionView>();
+            }
+
+            fixedOptionViews.Add(optionView);
+        }
+    }
+
+    private bool IsFollowUpPopupV2()
+    {
+        return followUpPopupRootObject != null
+            && string.Equals(followUpPopupRootObject.name, "FollowUpPopupV2", System.StringComparison.Ordinal);
+    }
+
     private void ClearSpawnedOptions()
     {
         for (int i = 0; i < spawnedOptionViews.Count; i++)
@@ -290,6 +387,17 @@ public class FollowUpPopupController : MonoBehaviour
 
         spawnedOptionViews.Clear();
         selectedQuestionOption = null;
+
+        for (int i = 0; i < fixedOptionViews.Count; i++)
+        {
+            FollowUpQuestionOptionView optionView = fixedOptionViews[i];
+            if (optionView != null)
+            {
+                optionView.Clicked -= HandleOptionClicked;
+                optionView.SetSelected(false);
+                optionView.gameObject.SetActive(false);
+            }
+        }
 
         if (questionListRoot == null)
         {
@@ -420,6 +528,15 @@ public class FollowUpPopupController : MonoBehaviour
             askFollowUpButton = FindButtonByName("btnAskFollowUp");
         }
 
+        GameObject v2Root = FindGameObjectByName("FollowUpPopupV2");
+        if (v2Root != null)
+        {
+            followUpPopupRootObject = v2Root;
+            cancelButton = null;
+            confirmButton = null;
+            questionListRoot = null;
+        }
+
         if (followUpPopupRootObject == null)
         {
             followUpPopupRootObject = FindGameObjectByName("FollowUpPopup");
@@ -427,17 +544,24 @@ public class FollowUpPopupController : MonoBehaviour
 
         if (cancelButton == null && followUpPopupRootObject != null)
         {
-            cancelButton = FindButtonByNameWithin(followUpPopupRootObject.transform, "btnBack");
+            cancelButton = IsFollowUpPopupV2()
+                ? FindButtonByNameWithin(followUpPopupRootObject.transform, "Close")
+                : FindButtonByNameWithin(followUpPopupRootObject.transform, "btnBack");
         }
 
-        if (confirmButton == null && followUpPopupRootObject != null)
+        if (confirmButton == null && followUpPopupRootObject != null && !IsFollowUpPopupV2())
         {
             confirmButton = FindButtonByNameWithin(followUpPopupRootObject.transform, "btnConfirm");
         }
 
-        if (questionListRoot == null && followUpPopupRootObject != null)
+        if (questionListRoot == null && followUpPopupRootObject != null && !IsFollowUpPopupV2())
         {
             questionListRoot = FindQuestionListRootFallback(followUpPopupRootObject.transform);
+        }
+
+        if (IsFollowUpPopupV2())
+        {
+            ResolveFixedOptionViews();
         }
     }
 
@@ -478,7 +602,7 @@ public class FollowUpPopupController : MonoBehaviour
             confirmButton.onClick.RemoveListener(ConfirmSelection);
             confirmButton.onClick.AddListener(ConfirmSelection);
         }
-        else
+        else if (!IsFollowUpPopupV2())
         {
             LogMissingReference(nameof(confirmButton), followUpPopupRootObject != null ? followUpPopupRootObject : this);
         }

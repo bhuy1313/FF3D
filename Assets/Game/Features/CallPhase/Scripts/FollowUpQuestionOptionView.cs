@@ -126,18 +126,26 @@ public class FollowUpQuestionOptionView : MonoBehaviour
 
         if (questionText == null)
         {
-            questionText = GetComponentInChildren<TMP_Text>(true);
+            Transform questionRoot = transform.Find("Question");
+            if (questionRoot != null)
+            {
+                questionText = questionRoot.GetComponentInChildren<TMP_Text>(true);
+            }
+        }
+
+        if (questionText == null)
+        {
+            TMP_Text[] allTexts = GetComponentsInChildren<TMP_Text>(true);
+            if (allTexts.Length == 1)
+            {
+                questionText = allTexts[0];
+            }
         }
 
         questionTextTargets.Clear();
-        TMP_Text[] allTexts = GetComponentsInChildren<TMP_Text>(true);
-        for (int i = 0; i < allTexts.Length; i++)
+        if (questionText != null)
         {
-            TMP_Text textTarget = allTexts[i];
-            if (textTarget != null && !questionTextTargets.Contains(textTarget))
-            {
-                questionTextTargets.Add(textTarget);
-            }
+            questionTextTargets.Add(questionText);
         }
     }
 
