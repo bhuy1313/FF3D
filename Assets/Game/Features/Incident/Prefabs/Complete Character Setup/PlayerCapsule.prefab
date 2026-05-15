@@ -517,6 +517,7 @@ GameObject:
   - component: {fileID: 414707341230274163}
   - component: {fileID: 912345678901234568}
   - component: {fileID: 1197355505662425547}
+  - component: {fileID: 2102583906736647967}
   m_Layer: 13
   m_Name: PlayerCapsule
   m_TagString: Player
@@ -584,8 +585,6 @@ MonoBehaviour:
   SprintSpeed: 6
   RotationSpeed: 1
   SpeedChangeRate: 10
-  SprintStaminaCostPerSecond: 12
-  SprintMinStamina: 5
   CrouchSpeed: 2
   CrouchHeight: 1
   CrouchCameraOffset: -0.5
@@ -853,6 +852,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FPSInventorySystem
   allowPickup: 1
   pickupDelay: 0.1
+  smoothPickupEquip: 1
+  pickupEquipDuration: 0.16
   maxSlots: 6
   equipRoot: {fileID: 3813178101224074668}
   inventoryRoot: {fileID: 6645008668361157503}
@@ -871,11 +872,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerVitals
   maxHealth: 100
   healthRegenPerSecond: 5
-  healthRegenDelay: 3
+  healthRegenDelay: 4
   maxStamina: 100
   staminaRegenPerSecond: 15
-  staminaRegenDelay: 2
-  maxOxygen: 10000
+  staminaRegenDelay: 4
+  maxOxygen: 1000
   oxygenRegenPerSecond: 20
   oxygenRegenDelay: 1
   oxygenDamagePerSecond: 5
@@ -985,6 +986,7 @@ MonoBehaviour:
   heldItemNameHashParameter: HeldItemNameHash
   heldItemTypeHashParameter: HeldItemTypeHash
   holdingNamePrefix: IsHolding_
+  holdingItemNamePrefix: IsHoldingItem_
   holdingTypePrefix: IsHoldingType_
   worldVelocity: {x: 0, y: 0, z: 0}
   localVelocity: {x: 0, y: 0, z: 0}
@@ -1008,6 +1010,7 @@ MonoBehaviour:
   isHolding: 0
   itemCount: 0
   heldItemName: 
+  heldItemDisplayName: 
   heldItemTypeName: 
   isCarryingVictim: 0
   isOpeningDoor: 0
@@ -1017,6 +1020,7 @@ MonoBehaviour:
   isConnectingHose: 0
   isRescuing: 0
   isStabilizing: 0
+  suppressLocomotionForInteraction: 0
 --- !u!114 &2491088869697895321
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1177,14 +1181,29 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 20291b03e2b3ab2409847f3a2ed26f59, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StarterAssets.PlayerCameraLookPresetController
-  preset: 0
-  applyOnStart: 1
-  forceEnablePostProcessing: 1
+  preset: 1
+  applyOnStart: 0
+  forceEnablePostProcessing: 0
   volumePriority: 100
   targetCamera: {fileID: 0}
   additionalCameraData: {fileID: 0}
   runtimeVolume: {fileID: 0}
-  lastAppliedPreset: 0
+  lastAppliedPreset: 1
+--- !u!114 &2102583906736647967
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1119617129175808138}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4acef3288462c864fbfd102e8700962c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerTraversalStaminaConfig
+  sprintStaminaCostPerSecond: 12
+  sprintMinStamina: 5
+  climbOverStaminaCost: 30
 --- !u!1 &1245696615049615487
 GameObject:
   m_ObjectHideFlags: 0

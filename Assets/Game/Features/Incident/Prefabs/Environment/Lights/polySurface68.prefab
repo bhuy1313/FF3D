@@ -138,6 +138,8 @@ GameObject:
   - component: {fileID: 6374525409057896425}
   - component: {fileID: 7828272105209979112}
   - component: {fileID: 1896883009996033552}
+  - component: {fileID: 8860315475581056310}
+  - component: {fileID: 3009486449667812733}
   m_Layer: 0
   m_Name: polySurface68
   m_TagString: Untagged
@@ -220,6 +222,45 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!65 &8860315475581056310
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2352780486798000405}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.003, y: 0.003, z: 0.052293893}
+  m_Center: {x: -0.0001809668, y: 0.00000022561285, z: -0.0014092156}
+--- !u!114 &3009486449667812733
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2352780486798000405}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6757b231cedd544c583ef8aeaf773b2a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Obi::Obi.ObiCollider
+  thickness: 0
+  inverted: 0
+  material: {fileID: 0}
+  filter: -65535
+  m_SourceCollider: {fileID: 8860315475581056310}
+  m_DistanceField: {fileID: 0}
 --- !u!1 &5202324965126631686
 GameObject:
   m_ObjectHideFlags: 0

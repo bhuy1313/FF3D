@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using TrueJourney.BotBehavior;
 using UnityEngine;
 using UnityEngine.Events;
@@ -44,6 +45,10 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
     [Header("Completion")]
     [SerializeField] private bool deactivateOnRescue = false;
     [SerializeField] private bool disableRenderersOnRescue = false;
+    [SerializeField] private bool fadeOutOnRescue = true;
+    [SerializeField] private float rescueFadeOutDuration = 1.25f;
+    [SerializeField] private bool releaseSafeZoneSlotWhenFadeStarts = true;
+    [SerializeField] private bool disableCollidersOnSafeZonePlacement = true;
 
     [Header("Events")]
     [SerializeField] private UnityEvent onRescueStarted;
@@ -87,6 +92,7 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
     private Coroutine rescueRoutine;
     private Coroutine stabilizationRoutine;
     private Coroutine extractionRoutine;
+    private Coroutine rescueFadeRoutine;
     private Transform activeCarryAnchor;
     private Transform originalParent;
     private Quaternion originalRotation;
@@ -100,6 +106,8 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
     private PlayerInteractionAnimationState activeAnimationState;
     private bool hasActiveProgressLock;
     private bool hasActiveCarryRestriction;
+    private Vector3 lastRescueDropPosition;
+    private bool hasLastRescueDropPosition;
 
     private void OnEnable()
     {
@@ -112,6 +120,7 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
         rescueRoutine = null;
         stabilizationRoutine = null;
         extractionRoutine = null;
+        rescueFadeRoutine = null;
         activeCarryAnchor = null;
         activePlayerActionLock = null;
         hasActiveProgressLock = false;
@@ -147,6 +156,12 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
         {
             StopCoroutine(extractionRoutine);
             extractionRoutine = null;
+        }
+
+        if (rescueFadeRoutine != null)
+        {
+            StopCoroutine(rescueFadeRoutine);
+            rescueFadeRoutine = null;
         }
 
         isRescueInProgress = false;
@@ -290,12 +305,21 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
         transform.SetParent(originalParent, true);
         transform.position = dropPosition;
         transform.rotation = rotation;
+        lastRescueDropPosition = dropPosition;
+        hasLastRescueDropPosition = true;
         SetCarryState(false);
         activeCarryAnchor = null;
         ReleasePlayerLocks();
 
-        RestoreRigidbodyState();
-        RestoreColliderStates();
+        PrepareRigidbodyForSafeZonePlacement();
+        if (disableCollidersOnSafeZonePlacement)
+        {
+            SetColliderStates(false);
+        }
+        else
+        {
+            RestoreColliderStates();
+        }
         activeRescuer = null;
 
         if (extractionDuration <= 0f)
@@ -502,6 +526,22 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
         cachedRigidbody.angularVelocity = Vector3.zero;
         cachedRigidbody.useGravity = false;
         cachedRigidbody.isKinematic = true;
+    }
+
+    private void PrepareRigidbodyForSafeZonePlacement()
+    {
+        if (cachedRigidbody == null)
+        {
+            CacheRigidbodyState();
+        }
+
+        if (cachedRigidbody == null)
+        {
+            return;
+        }
+
+        cachedRigidbody.isKinematic = true;
+        cachedRigidbody.useGravity = false;
     }
 
     private void RestoreRigidbodyState()
@@ -765,6 +805,17 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
         onRescued?.Invoke();
         RescueCompleted?.Invoke();
 
+        if (fadeOutOnRescue)
+        {
+            if (rescueFadeRoutine != null)
+            {
+                StopCoroutine(rescueFadeRoutine);
+            }
+
+            rescueFadeRoutine = StartCoroutine(FadeOutAfterRescue());
+            return;
+        }
+
         if (disableRenderersOnRescue)
         {
             Renderer[] renderers = GetComponentsInChildren<Renderer>();
@@ -778,5 +829,182 @@ public class Rescuable : MonoBehaviour, IInteractable, IRescuableTarget, IMoveme
         {
             gameObject.SetActive(false);
         }
+    }
+
+    private IEnumerator FadeOutAfterRescue()
+    {
+        if (releaseSafeZoneSlotWhenFadeStarts && hasLastRescueDropPosition)
+        {
+            SafeZone safeZone = FindSafeZoneContainingPosition(lastRescueDropPosition);
+            if (safeZone != null)
+            {
+                safeZone.ReleaseOccupiedSlotAt(lastRescueDropPosition);
+            }
+        }
+
+        List<RendererFadeTarget> fadeTargets = CollectRendererFadeTargets();
+        float duration = Mathf.Max(0.01f, rescueFadeOutDuration);
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float alphaMultiplier = 1f - Mathf.Clamp01(elapsed / duration);
+            ApplyFadeTargetsAlpha(fadeTargets, alphaMultiplier);
+            yield return null;
+        }
+
+        ApplyFadeTargetsAlpha(fadeTargets, 0f);
+        rescueFadeRoutine = null;
+
+        if (disableRenderersOnRescue || fadeTargets.Count > 0)
+        {
+            Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                if (renderers[i] != null)
+                {
+                    renderers[i].enabled = false;
+                }
+            }
+        }
+
+        gameObject.SetActive(false);
+    }
+
+    private List<RendererFadeTarget> CollectRendererFadeTargets()
+    {
+        Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+        List<RendererFadeTarget> targets = new List<RendererFadeTarget>(renderers.Length);
+
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Renderer renderer = renderers[i];
+            if (renderer == null)
+            {
+                continue;
+            }
+
+            Material[] sharedMaterials = renderer.sharedMaterials;
+            string colorPropertyName = ResolveFadeColorPropertyName(sharedMaterials);
+            if (string.IsNullOrEmpty(colorPropertyName))
+            {
+                continue;
+            }
+
+            MaterialPropertyBlock propertyBlock = new MaterialPropertyBlock();
+            renderer.GetPropertyBlock(propertyBlock);
+
+            Color baseColor = Color.white;
+            bool foundColor = false;
+            for (int materialIndex = 0; materialIndex < sharedMaterials.Length; materialIndex++)
+            {
+                Material material = sharedMaterials[materialIndex];
+                if (material == null || !material.HasProperty(colorPropertyName))
+                {
+                    continue;
+                }
+
+                baseColor = material.GetColor(colorPropertyName);
+                foundColor = true;
+                break;
+            }
+
+            if (!foundColor)
+            {
+                continue;
+            }
+
+            targets.Add(new RendererFadeTarget(renderer, propertyBlock, colorPropertyName, baseColor));
+        }
+
+        return targets;
+    }
+
+    private void ApplyFadeTargetsAlpha(List<RendererFadeTarget> fadeTargets, float alphaMultiplier)
+    {
+        for (int i = 0; i < fadeTargets.Count; i++)
+        {
+            RendererFadeTarget target = fadeTargets[i];
+            if (target.Renderer == null)
+            {
+                continue;
+            }
+
+            Color nextColor = target.BaseColor;
+            nextColor.a = target.BaseColor.a * Mathf.Clamp01(alphaMultiplier);
+            target.PropertyBlock.SetColor(target.ColorPropertyName, nextColor);
+            target.Renderer.SetPropertyBlock(target.PropertyBlock);
+        }
+    }
+
+    private SafeZone FindSafeZoneContainingPosition(Vector3 worldPosition)
+    {
+        SafeZone[] safeZones = FindObjectsByType<SafeZone>(FindObjectsInactive.Exclude);
+        SafeZone bestSafeZone = null;
+        float bestDistanceSq = float.MaxValue;
+
+        for (int i = 0; i < safeZones.Length; i++)
+        {
+            SafeZone safeZone = safeZones[i];
+            if (safeZone == null || !safeZone.ContainsPoint(worldPosition))
+            {
+                continue;
+            }
+
+            float distanceSq = (safeZone.GetWorldPosition() - worldPosition).sqrMagnitude;
+            if (distanceSq < bestDistanceSq)
+            {
+                bestDistanceSq = distanceSq;
+                bestSafeZone = safeZone;
+            }
+        }
+
+        return bestSafeZone;
+    }
+
+    private static string ResolveFadeColorPropertyName(Material[] sharedMaterials)
+    {
+        if (sharedMaterials == null)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < sharedMaterials.Length; i++)
+        {
+            Material material = sharedMaterials[i];
+            if (material == null)
+            {
+                continue;
+            }
+
+            if (material.HasProperty("_BaseColor"))
+            {
+                return "_BaseColor";
+            }
+
+            if (material.HasProperty("_Color"))
+            {
+                return "_Color";
+            }
+        }
+
+        return null;
+    }
+
+    private readonly struct RendererFadeTarget
+    {
+        public RendererFadeTarget(Renderer renderer, MaterialPropertyBlock propertyBlock, string colorPropertyName, Color baseColor)
+        {
+            Renderer = renderer;
+            PropertyBlock = propertyBlock;
+            ColorPropertyName = colorPropertyName;
+            BaseColor = baseColor;
+        }
+
+        public Renderer Renderer { get; }
+        public MaterialPropertyBlock PropertyBlock { get; }
+        public string ColorPropertyName { get; }
+        public Color BaseColor { get; }
     }
 }

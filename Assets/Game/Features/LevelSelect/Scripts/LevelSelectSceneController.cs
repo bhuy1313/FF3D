@@ -64,11 +64,14 @@ public partial class LevelSelectSceneController : MonoBehaviour
     private sealed class ScenarioDefinition
     {
         public string scenarioId;
+        public string scenarioFamilyId;
+        public float selectionWeight = 1f;
         public string displayName;
         public string caseId;
         public string targetSceneName;
         public string onsiteSceneName;
         public string scenarioResourcePath;
+        [NonSerialized] public List<ScenarioDefinition> variantDefinitions;
     }
 
     [Serializable]
@@ -1113,14 +1116,21 @@ public partial class LevelSelectSceneController : MonoBehaviour
                 continue;
             }
 
+            ScenarioDefinition[] variantArray = ConvertScenarioDefinitions(
+                scenario.variantDefinitions != null ? scenario.variantDefinitions.ToArray() : null);
             scenarios.Add(new ScenarioDefinition
             {
                 scenarioId = scenario.scenarioId,
+                scenarioFamilyId = scenario.scenarioFamilyId,
+                selectionWeight = scenario.selectionWeight,
                 displayName = scenario.displayName,
                 caseId = scenario.caseId,
                 targetSceneName = scenario.targetSceneName,
                 onsiteSceneName = scenario.onsiteSceneName,
-                scenarioResourcePath = scenario.scenarioResourcePath
+                scenarioResourcePath = scenario.scenarioResourcePath,
+                variantDefinitions = variantArray.Length > 0
+                    ? new List<ScenarioDefinition>(variantArray)
+                    : null
             });
         }
 

@@ -319,6 +319,15 @@ MonoBehaviour:
     linkedStepId: collect_address
     isDistractorQuestion: 0
     authorNote: Primary dispatch-location question.
+  - questionId: laundry_q_address_house_number
+    questionText: Give me the house number and street name.
+    quality: 1
+    relatedFieldId: Address
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_address
+    isDistractorQuestion: 0
+    authorNote: Acceptable alternate address prompt.
   - questionId: laundry_q_anyone_inside
     questionText: Is anyone still inside?
     quality: 0
@@ -328,6 +337,15 @@ MonoBehaviour:
     linkedStepId: collect_occupant_risk
     isDistractorQuestion: 0
     authorNote: Critical life-safety question.
+  - questionId: laundry_q_missing_adult
+    questionText: Is someone unaccounted for inside the house?
+    quality: 1
+    relatedFieldId: OccupantRisk
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_occupant_risk
+    isDistractorQuestion: 0
+    authorNote: Acceptable alternate occupant-risk prompt.
   - questionId: laundry_q_gas_hazard
     questionText: Are there any gas appliances or fuel lines in there?
     quality: 0
@@ -337,6 +355,15 @@ MonoBehaviour:
     linkedStepId: collect_hazard_gas
     isDistractorQuestion: 0
     authorNote: First major hazard question for the laundry scenario.
+  - questionId: laundry_q_appliance_fuel
+    questionText: Is there gas connected to appliances in that room?
+    quality: 1
+    relatedFieldId: hazard
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 0
+    linkedStepId: collect_hazard_gas
+    isDistractorQuestion: 0
+    authorNote: Acceptable alternate gas-hazard prompt.
   - questionId: laundry_q_electrical_hazard
     questionText: Do you see any electrical danger too?
     quality: 1
@@ -355,6 +382,15 @@ MonoBehaviour:
     linkedStepId: collect_spread_status
     isDistractorQuestion: 0
     authorNote: Useful scene-development question.
+  - questionId: laundry_q_smoke_to_kitchen
+    questionText: Is smoke moving toward the kitchen or another room?
+    quality: 1
+    relatedFieldId: SpreadStatus
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_spread_status
+    isDistractorQuestion: 0
+    authorNote: Acceptable alternate spread-status question.
   - questionId: laundry_q_caller_safe
     questionText: Are you somewhere safe right now?
     quality: 1
@@ -364,6 +400,15 @@ MonoBehaviour:
     linkedStepId: collect_caller_safety
     isDistractorQuestion: 0
     authorNote: Important caller-safety follow-up.
+  - questionId: laundry_q_caller_outside
+    questionText: Are you outside and away from the smoke now?
+    quality: 1
+    relatedFieldId: CallerSafety
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_caller_safety
+    isDistractorQuestion: 0
+    authorNote: Acceptable alternate caller-safety wording.
   - questionId: laundry_q_washer_brand
     questionText: What brand is the washing machine?
     quality: 2
@@ -408,6 +453,10 @@ MonoBehaviour:
   dispatchEstimatedVictimCountKnown: 1
   dispatchEstimatedVictimCountMin: 1
   dispatchEstimatedVictimCountMax: 1
+  victimLocationIntelMode: 0
+  initialVisibleVictimIconCount: 0
+  requireOccupantRiskReportValueForVictimIconReveal: 1
+  estimatedVictimIconRevealDistance: 0
   expectedReport:
     address: 52 Pine Street
     fireLocation: Laundry Room

@@ -148,6 +148,8 @@ GameObject:
   - component: {fileID: 6149454474236452101}
   - component: {fileID: 5546122349495465332}
   - component: {fileID: 6795961276938328196}
+  - component: {fileID: 7627129717786560374}
+  - component: {fileID: 2437009668106483764}
   m_Layer: 0
   m_Name: GameMaster
   m_TagString: Untagged
@@ -168,6 +170,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 5029064614531116828}
   - {fileID: 3725515602443661945}
   - {fileID: 3417629101844735201}
   - {fileID: 5835050266681781383}
@@ -186,6 +189,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: '::'
   ensureMovementInputLock: 1
+  ensureUiBlurController: 1
   ensureProcedureDebugOverlay: 0
 --- !u!114 &7923412341234123412
 MonoBehaviour:
@@ -438,6 +442,47 @@ MonoBehaviour:
   - {fileID: 1116706657359872176}
   - {fileID: 7249135862419073113}
   logSetupTasks: 0
+--- !u!114 &7627129717786560374
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1056660501349176053}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5ffb4e24b8da434e9db9712b7d244eb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GameMasterUiMovementInputLock
+  blockingUiRoots: []
+  dispatchNotesUI: {fileID: 0}
+  subMenuPanelController: {fileID: 0}
+  subMenuEscapeHost: {fileID: 0}
+  guideScreenCanvasGroup: {fileID: 0}
+  playerRoot: {fileID: 0}
+  starterAssetsInputs: {fileID: 0}
+  firstPersonController: {fileID: 0}
+  playerActionLock: {fileID: 0}
+  disableFirstPersonController: 0
+  usePlayerActionLock: 1
+  disableLookInput: 1
+--- !u!114 &2437009668106483764
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1056660501349176053}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a577bc4dc8a7e2e47af232a938abae9c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GameMasterUiBlurController
+  blurObject: {fileID: 4059617014232289701}
+  blurObjectName: Blur
+  enableDebugLogs: 0
+  showRuntimeOverlay: 0
+  toggleOverlayKey: 290
 --- !u!1 &3186400958273640190
 GameObject:
   m_ObjectHideFlags: 0
@@ -498,6 +543,7 @@ GameObject:
   - component: {fileID: 3417629101844735201}
   - component: {fileID: 6132078451184493202}
   - component: {fileID: 2446819305174728842}
+  - component: {fileID: 4526139284312076541}
   m_Layer: 0
   m_Name: IncidentIconManagers
   m_TagString: Untagged
@@ -535,11 +581,13 @@ MonoBehaviour:
   simulationManager: {fileID: 9103052700435118138}
   referenceCamera: {fileID: 0}
   showBurningNodeIcons: 1
-  burningNodeIconSprite: {fileID: 0}
+  burningNodeIconSprite: {fileID: 21300000, guid: 8811e890a05dc724ea6baca61d6f2d35, type: 3}
   burningNodeIconOffset: {x: 0, y: 0.85, z: 0}
-  burningNodeIconScreenSize: 42
+  burningNodeIconScreenSize: 20
   burningNodeIconFadeStartDistance: 6
   burningNodeIconVisibleDistance: 18
+  maxVisibleBurningNodeIcons: 6
+  maxBurningNodeIconHeightDifference: 2
   reverseDistanceFade: 0
   burningNodeIconColor: {r: 1, g: 0.96, b: 0.9, a: 0.95}
   debugBurningNodeIcons: 0
@@ -562,18 +610,58 @@ MonoBehaviour:
   m_EditorClassIdentifier: TrueJourney.BotCommands::BotIconManager
   referenceCamera: {fileID: 0}
   showBotIcons: 1
-  botIconSprite: {fileID: 0}
-  botIconOffset: {x: 0, y: 2.1, z: 0}
-  botIconScreenSize: 40
-  botIconFadeStartDistance: 10
+  botIconSprite: {fileID: 21300000, guid: 1ed3f0d6bcc4e464b9c9dd21e8021371, type: 3}
+  botIconOffset: {x: 0, y: 1, z: 0}
+  botIconScreenSize: 20
+  botIconHideDistance: 10
   botIconVisibleDistance: 28
-  reverseDistanceFade: 0
-  botIconColor: {r: 0.82, g: 0.96, b: 1, a: 0.95}
+  botIconColor: {r: 0.04337716, g: 0, b: 1, a: 0.95}
   debugBotIcons: 0
   debugVisibleBotCandidateCount: 0
   debugActiveBotIconCount: 0
   debugResolvedCameraName: 
   debugResolvedDistanceSourceName: 
+  legacyReverseDistanceFade: 0
+--- !u!114 &4526139284312076541
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3417629101844735200}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5a2d2d3550a348fc8bbfb09376a87698, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VictimIconManager
+  referenceCamera: {fileID: 0}
+  explicitMapSetupRoot: {fileID: 0}
+  showVictimIcons: 1
+  victimIconSprite: {fileID: 21300000, guid: e90fb9d7278828c4fa77adc4ca9cb96a, type: 3}
+  victimIconOffset: {x: 0, y: 0.5, z: 0}
+  victimIconScreenSize: 20
+  estimatedVictimIconRevealDistance: 10
+  victimIconFadeStartDistance: 8
+  victimIconVisibleDistance: 32
+  maxVisibleVictimIcons: 8
+  victimCacheRefreshInterval: 0.5
+  hideEstimatedVictimIconsWhenDirectLineOfSightExists: 1
+  victimLineOfSightProbeOffset: {x: 0, y: 1.2, z: 0}
+  victimLineOfSightProbeRadius: 0.15
+  victimLineOfSightBlockerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  estimatedVictimIconColor: {r: 1, g: 0.84, b: 0.28, a: 0.92}
+  confirmedVictimIconColor: {r: 1, g: 0.34, b: 0.34, a: 0.96}
+  debugVictimIcons: 0
+  debugVictimCandidateCount: 0
+  debugActiveVictimIconCount: 0
+  debugResolvedCameraName: 
+  debugResolvedDistanceSourceName: 
+  debugVictimLocationIntelMode: 
+  debugShouldRevealVictimIconsAtStart: 0
+  debugConfiguredVisibleVictimIconCount: 0
+  debugResolvedEstimatedVictimIconRevealDistance: 0
 --- !u!1 &4046201125533456000
 GameObject:
   m_ObjectHideFlags: 0
@@ -623,6 +711,37 @@ MonoBehaviour:
   includeInactiveBindings: 1
   stopAfterFirstAppliedBinding: 0
   warnWhenPresetUnmapped: 0
+--- !u!1 &4379091045030173955
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 908272294718398761}
+  m_Layer: 0
+  m_Name: RuntimeSmokeColumns
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &908272294718398761
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4379091045030173955}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3725515602443661945}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &5901003934070655160
 GameObject:
   m_ObjectHideFlags: 0
@@ -953,7 +1072,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::IncidentSmokeColumnMapSetupTask
   smokeColumnPrefab: {fileID: 8381200415197126533, guid: 506fdd0a18f84299a7b6efa7df700e45, type: 3}
   ventSmokeColumnPrefab: {fileID: 7421803955126301003, guid: 9c7191915fc34348a5a52645c6b60bc5, type: 3}
-  runtimeParent: {fileID: 0}
+  runtimeParent: {fileID: 908272294718398761}
   spawnOnlyWhenAnchorResolved: 1
   mainSmokeColumnScaleMultiplier: 2
   spawnVentSmokeColumns: 1
@@ -1016,7 +1135,7 @@ MonoBehaviour:
   compromisedRiskFallbackVictimCount: 1
   maxVictimCount: 4
   deterministicPlacement: 0
-  clearExistingVictimsBeforeSpawn: 1
+  clearExistingVictimsBeforeSpawn: 0
   removeFireNodesNearSpawnedVictims: 1
   spawnedVictimFireClearRadius: 3
   avoidHazardLinkedFireNodesWhenSelectingSpawnPoints: 1
@@ -1055,7 +1174,8 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 908272294718398761}
   m_Father: {fileID: 8916907086897807096}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &7286251771642285745
@@ -1105,6 +1225,13 @@ MonoBehaviour:
   nodeHeatLogInterval: 0.5
   autoBindSceneConsumers: 1
   autoRegisterBotFireTargets: 1
+  effectSyncInterval: 3
+  simulationSleeping: 0
+  debugActiveSpreadNodeCount: 0
+  debugBurningTrackedNodeCount: 0
+  debugRecoveryTimerNodeCount: 0
+  debugVisualActiveNodeCount: 0
+  activeSpreadNodeDebugEntries: []
 --- !u!114 &9202031649153982278
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1126,10 +1253,11 @@ MonoBehaviour:
   maxVisibleEffects: 4
   referenceCamera: {fileID: 0}
   enableEffectClustering: 1
-  clusterTargetSize: 3
+  clusterMinSize: 2
+  clusterMaxSize: 4
   clusterMergeDistance: 1.9
   clusterHeightTolerance: 0.9
-  clusterScaleBonusPerExtraNode: 0.3
+  clusterScaleBonusPerExtraNode: 0.4
   debugInputSnapshotCount: 0
   debugRenderGroupCount: 0
   debugClusteredGroupCount: 0
@@ -1165,11 +1293,22 @@ MonoBehaviour:
   raycastBackoff: 0.65
   raycastDistance: 1.8
   projectorDepth: 0.18
+  maxProjectorsPerNode: 3
+  surfaceProbeRadius: 0.45
+  sideProbeBias: 0.7
+  diagonalProbeBias: 0.35
+  minSurfaceSeparationAngle: 22
   requireSurfaceHit: 1
   maxSurfaceNormalAngle: 35
   startAngleFade: 40
   endAngleFade: 65
   growthPerSecond: 0.35
+  updateInterval: 0.12
+  placementRefreshInterval: 1.5
+  maxSnapshotsPerUpdate: 32
+  minSnapshotIntensity: 0.08
+  cullByCameraDistance: 1
+  maxCameraDistance: 45
 --- !u!1 &7676517865980041575
 GameObject:
   m_ObjectHideFlags: 0
@@ -1309,3 +1448,74 @@ MonoBehaviour:
   includeInactiveAreas: 1
   warnWhenIsolationDeviceMissing: 1
   logResolvedIgnitionSource: 0
+--- !u!1001 &8889441514021450702
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 8916907086897807096}
+    m_Modifications:
+    - target: {fileID: 4510197153532402898, guid: 32ad10ee6bc8f8d4aa9a82980e503826, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -10.39721
+      objectReference: {fileID: 0}
+    - target: {fileID: 4510197153532402898, guid: 32ad10ee6bc8f8d4aa9a82980e503826, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 11.86831
+      objectReference: {fileID: 0}
+    - target: {fileID: 4510197153532402898, guid: 32ad10ee6bc8f8d4aa9a82980e503826, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -7.125
+      objectReference: {fileID: 0}
+    - target: {fileID: 4510197153532402898, guid: 32ad10ee6bc8f8d4aa9a82980e503826, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4510197153532402898, guid: 32ad10ee6bc8f8d4aa9a82980e503826, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4510197153532402898, guid: 32ad10ee6bc8f8d4aa9a82980e503826, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4510197153532402898, guid: 32ad10ee6bc8f8d4aa9a82980e503826, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4510197153532402898, guid: 32ad10ee6bc8f8d4aa9a82980e503826, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4510197153532402898, guid: 32ad10ee6bc8f8d4aa9a82980e503826, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4510197153532402898, guid: 32ad10ee6bc8f8d4aa9a82980e503826, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4830968077819142763, guid: 32ad10ee6bc8f8d4aa9a82980e503826, type: 3}
+      propertyPath: m_Name
+      value: Blur
+      objectReference: {fileID: 0}
+    - target: {fileID: 4830968077819142763, guid: 32ad10ee6bc8f8d4aa9a82980e503826, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 32ad10ee6bc8f8d4aa9a82980e503826, type: 3}
+--- !u!1 &4059617014232289701 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4830968077819142763, guid: 32ad10ee6bc8f8d4aa9a82980e503826, type: 3}
+  m_PrefabInstance: {fileID: 8889441514021450702}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &5029064614531116828 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4510197153532402898, guid: 32ad10ee6bc8f8d4aa9a82980e503826, type: 3}
+  m_PrefabInstance: {fileID: 8889441514021450702}
+  m_PrefabAsset: {fileID: 0}

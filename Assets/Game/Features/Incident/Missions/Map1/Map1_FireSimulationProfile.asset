@@ -12,20 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8c514f2794fd459ca795f89836f5d629, type: 3}
   m_Name: Map1_FireSimulationProfile
   m_EditorClassIdentifier: 
-  simulationTickInterval: 0.1
-  clusterRefreshInterval: 0.2
-  ambientCoolingPerSecond: 0
-  wetnessCoolingPerSecond: 0
-  wetnessRecoveryPerSecond: 0.2
-  passiveIgnitionThreshold: 1
-  extinguishThreshold: 0.08
-  suppressionRecoveryDelaySeconds: 15
-  suppressionRecoveryHeatMultiplier: 0.005
-  fuelBurnPerSecond: 0
-  burnedOutHeatRetention: 0.15
-  neighborHeatTransferPerSecond: 0.08
-  sameSurfaceTransferMultiplier: 1.2
-  crossSurfaceTransferMultiplier: 0.65
-  verticalSpreadBias: 0.85
-  clusterMergeDistance: 2.5
-  maxNodeEffects: 24
+  simulationTickInterval: 0.2
+  maxHeat: 10
+  extinguishThreshold: 1
+  visualHeatThreshold: 1
+  suppressionRecoveryDelaySeconds: 5
+  neighborHeatTransferPerSecond: 0.05
+  maxNodeEffects: 100
+  effectVisibleDistance: 50

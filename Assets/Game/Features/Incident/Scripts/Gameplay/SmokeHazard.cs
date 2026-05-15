@@ -33,6 +33,8 @@ public class SmokeHazard : MonoBehaviour
     [SerializeField] private bool forceMaximumSmokeDensity;
     [Range(0f, 1f)]
     [SerializeField] private float startSmokeDensity;
+    [SerializeField, Min(0.02f)] private float smokeSimulationUpdateInterval = 0.1f;
+    [SerializeField, Min(0.02f)] private float draftUpdateInterval = 0.1f;
     [SerializeField] private float runtimeSmokeAccumulationMultiplier = 1f;
     [SerializeField] private float smokePerBurningFire = 0.3f;
     [SerializeField] private float smokePerFireIntensity = 0.7f;
@@ -63,6 +65,9 @@ public class SmokeHazard : MonoBehaviour
     [Header("Effects")]
     [SerializeField] private bool affectPlayers = true;
     [SerializeField] private bool affectVictims = true;
+    [SerializeField] private bool skipEffectProcessingAtLowDensity = true;
+    [Range(0f, 1f)]
+    [SerializeField] private float minimumDensityForEffectProcessing = 0.01f;
     [Range(0f, 1f)]
     [SerializeField] private float minimumDangerousDensity = 0.05f;
     [SerializeField] private float oxygenDrainPerSecond = 12f;
@@ -72,6 +77,7 @@ public class SmokeHazard : MonoBehaviour
     [SerializeField] private float maxVisibilityPenalty = 0.8f;
 
     [Header("Smoke VFX")]
+    [SerializeField] private bool enableSmokeVfx = false;
     [SerializeField] private bool autoConfigureSmokeVfx = true;
     [SerializeField] private ParticleSystem smokeParticleSystem;
     [SerializeField] private Vector3 particleShapePadding = new Vector3(0.15f, 0.05f, 0.15f);
@@ -97,6 +103,12 @@ public class SmokeHazard : MonoBehaviour
     private int smokeVfxBaseMaxParticles;
     private ParticleSystem.MinMaxCurve smokeVfxBaseRateOverTime;
     private ParticleSystem.MinMaxCurve smokeVfxBaseRateOverDistance;
+    private float nextSmokeSimulationUpdateTime;
+    private float nextDraftUpdateTime;
+    private float lastSmokeSimulationUpdateTime;
+    private float lastDraftUpdateTime;
+    private VentilationResponse cachedVentilationResponse;
+    private int cachedVentilationFrame = -1;
 
     private readonly struct VentilationResponse
     {
@@ -135,8 +147,15 @@ public class SmokeHazard : MonoBehaviour
             currentSmokeDensity = startSmokeDensity;
         }
 
-        ApplySmokeVfxParticleDensity();
-        UpdateSmokeVfxActiveState();
+        if (enableSmokeVfx)
+        {
+            ApplySmokeVfxParticleDensity();
+            UpdateSmokeVfxActiveState();
+        }
+        else
+        {
+            DisableSmokeVfxImmediate();
+        }
     }
 
     public void SetSmokeAccumulationMultiplier(float multiplier)
@@ -162,6 +181,10 @@ public class SmokeHazard : MonoBehaviour
         ResolveTriggerZone();
         ResolveSmokeVfxReferences();
         ApplySmokeVfxConfiguration();
+        if (!enableSmokeVfx)
+        {
+            DisableSmokeVfxImmediate();
+        }
     }
 
     private void Start()
@@ -188,6 +211,10 @@ public class SmokeHazard : MonoBehaviour
         ResolveSmokeVfxReferences();
         currentSmokeDensity = startSmokeDensity;
         ApplySmokeVfxConfiguration();
+        if (!enableSmokeVfx)
+        {
+            DisableSmokeVfxImmediate();
+        }
     }
 
     private void OnValidate()
@@ -203,6 +230,8 @@ public class SmokeHazard : MonoBehaviour
         smokeAccumulationRate = Mathf.Max(0f, smokeAccumulationRate);
         smokeDissipationRate = Mathf.Max(0f, smokeDissipationRate);
         runtimeSmokeAccumulationMultiplier = Mathf.Max(0f, runtimeSmokeAccumulationMultiplier);
+        smokeSimulationUpdateInterval = Mathf.Max(0.02f, smokeSimulationUpdateInterval);
+        draftUpdateInterval = Mathf.Max(0.02f, draftUpdateInterval);
         fireDraftBoostPerSecond = Mathf.Max(0f, fireDraftBoostPerSecond);
         crouchReliefUntilDensity = Mathf.Clamp01(crouchReliefUntilDensity);
         crouchedExposureMultiplier = Mathf.Clamp01(crouchedExposureMultiplier);
@@ -219,6 +248,7 @@ public class SmokeHazard : MonoBehaviour
         oxygenDrainPerSecond = Mathf.Max(0f, oxygenDrainPerSecond);
         victimConditionDamagePerSecond = Mathf.Max(0f, victimConditionDamagePerSecond);
         smokeEffectCheckInterval = Mathf.Max(0.02f, smokeEffectCheckInterval);
+        minimumDensityForEffectProcessing = Mathf.Clamp01(minimumDensityForEffectProcessing);
         maxVisibilityPenalty = Mathf.Clamp01(maxVisibilityPenalty);
         particleShapePadding = Vector3.Max(Vector3.zero, particleShapePadding);
         minimumParticleShapeSize = Mathf.Max(0.01f, minimumParticleShapeSize);
@@ -235,6 +265,12 @@ public class SmokeHazard : MonoBehaviour
         smokeVfxActiveThreshold = Mathf.Max(0f, smokeVfxActiveThreshold);
         smokeVfxMinMaxParticles = Mathf.Max(1, smokeVfxMinMaxParticles);
         ApplySmokeVfxConfiguration();
+
+        if (!enableSmokeVfx)
+        {
+            lastSmokeVfxActiveState = false;
+            DisableSmokeVfxImmediate();
+        }
     }
 
     private void OnEnable()
@@ -243,23 +279,56 @@ public class SmokeHazard : MonoBehaviour
             ? 1f
             : Mathf.Clamp01(startSmokeDensity);
         ClearSmokeTargetTracking();
+        cachedVentilationFrame = -1;
+        nextSmokeSimulationUpdateTime = Time.time;
+        nextDraftUpdateTime = Time.time;
+        lastSmokeSimulationUpdateTime = Time.time;
+        lastDraftUpdateTime = Time.time;
 
         ApplySmokeVfxConfiguration();
-        ApplySmokeVfxParticleDensity();
-        UpdateSmokeVfxActiveState();
+        if (enableSmokeVfx)
+        {
+            ApplySmokeVfxParticleDensity();
+            UpdateSmokeVfxActiveState();
+        }
+        else
+        {
+            DisableSmokeVfxImmediate();
+        }
     }
 
     private void Update()
     {
-        ApplyVentilationDraftToLinkedFires(Time.deltaTime);
-        UpdateSmokeDensity(Time.deltaTime);
-        ApplySmokeVfxParticleDensity();
-        UpdateSmokeVfxActiveState();
+        float time = Time.time;
+        if (time >= nextDraftUpdateTime)
+        {
+            float draftDelta = Mathf.Max(0f, time - lastDraftUpdateTime);
+            ApplyVentilationDraftToLinkedFires(draftDelta);
+            lastDraftUpdateTime = time;
+            nextDraftUpdateTime = time + draftUpdateInterval;
+        }
+
+        if (time >= nextSmokeSimulationUpdateTime)
+        {
+            float smokeDelta = Mathf.Max(0f, time - lastSmokeSimulationUpdateTime);
+            UpdateSmokeDensity(smokeDelta);
+            lastSmokeSimulationUpdateTime = time;
+            nextSmokeSimulationUpdateTime = time + smokeSimulationUpdateInterval;
+        }
+
+        if (enableSmokeVfx)
+        {
+            ApplySmokeVfxParticleDensity();
+            UpdateSmokeVfxActiveState();
+        }
     }
 
     private void OnTriggerStay(Collider other)
     {
         if (other == null)
+            return;
+
+        if (skipEffectProcessingAtLowDensity && currentSmokeDensity < minimumDensityForEffectProcessing)
             return;
 
         SmokeTargetCache targetCache = ResolveSmokeTargetCache(other);
@@ -301,7 +370,7 @@ public class SmokeHazard : MonoBehaviour
     private float CalculateTargetSmokeDensity()
     {
         float density = 0f;
-        VentilationResponse ventilation = GetVentilationResponse();
+        VentilationResponse ventilation = GetCachedVentilationResponse();
 
         if (fireSimulationManager != null && fireSimulationManager.IsInitialized && triggerZone != null)
         {
@@ -508,7 +577,7 @@ public class SmokeHazard : MonoBehaviour
         if (fireDraftBoostPerSecond <= 0f)
             return;
 
-        float draftRisk = GetVentilationResponse().DraftRisk;
+        float draftRisk = GetCachedVentilationResponse().DraftRisk;
         if (draftRisk <= 0f)
             return;
 
@@ -556,6 +625,17 @@ public class SmokeHazard : MonoBehaviour
         }
 
         return new VentilationResponse(relief, risk);
+    }
+
+    private VentilationResponse GetCachedVentilationResponse()
+    {
+        int frame = Time.frameCount;
+        if (cachedVentilationFrame == frame)
+            return cachedVentilationResponse;
+
+        cachedVentilationResponse = GetVentilationResponse();
+        cachedVentilationFrame = frame;
+        return cachedVentilationResponse;
     }
 
     private void GetVentilationTypeMultipliers(ISmokeVentPoint ventPoint, out float reliefMultiplier, out float riskMultiplier)
@@ -685,6 +765,9 @@ public class SmokeHazard : MonoBehaviour
 
     private void ResolveSmokeVfxReferences()
     {
+        if (!enableSmokeVfx)
+            return;
+
         if (smokeParticleSystem == null)
         {
             smokeParticleSystem = GetComponentInChildren<ParticleSystem>(true);
@@ -695,6 +778,12 @@ public class SmokeHazard : MonoBehaviour
 
     private void ApplySmokeVfxConfiguration()
     {
+        if (!enableSmokeVfx)
+        {
+            DisableSmokeVfxImmediate();
+            return;
+        }
+
         if (!autoConfigureSmokeVfx)
             return;
 
@@ -712,6 +801,12 @@ public class SmokeHazard : MonoBehaviour
 
     private void UpdateSmokeVfxActiveState()
     {
+        if (!enableSmokeVfx)
+        {
+            DisableSmokeVfxImmediate();
+            return;
+        }
+
         if (!Application.isPlaying)
             return;
 
@@ -740,6 +835,12 @@ public class SmokeHazard : MonoBehaviour
 
     private void ApplySmokeVfxParticleDensity()
     {
+        if (!enableSmokeVfx)
+        {
+            DisableSmokeVfxImmediate();
+            return;
+        }
+
         if (!Application.isPlaying)
             return;
 
@@ -783,6 +884,17 @@ public class SmokeHazard : MonoBehaviour
         smokeVfxBaseRateOverTime = emission.rateOverTime;
         smokeVfxBaseRateOverDistance = emission.rateOverDistance;
         smokeVfxParticleBaselineCaptured = true;
+    }
+
+    private void DisableSmokeVfxImmediate()
+    {
+        if (smokeParticleSystem == null)
+            return;
+
+        if (smokeParticleSystem.isPlaying)
+            smokeParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+        lastSmokeVfxActiveState = false;
     }
 
     private static float GetRepresentativeCurveValue(ParticleSystem.MinMaxCurve curve)

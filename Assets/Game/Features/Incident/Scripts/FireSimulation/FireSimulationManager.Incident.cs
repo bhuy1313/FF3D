@@ -40,6 +40,7 @@ public sealed partial class FireSimulationManager
             }
             node.Heat = Mathf.Max(node.Heat, ignitionHeat);
             WakeSimulation();
+            MarkNodeDirty(node);
             RefreshNodeRuntimeMembership(node);
             NotifyStateChanged();
         }
@@ -141,6 +142,7 @@ public sealed partial class FireSimulationManager
         }
 
         WakeSimulation();
+        MarkNodeDirty(node);
         RefreshNodeRuntimeMembership(node);
         MarkVisualStateDirty();
         NotifyStateChanged();
@@ -281,6 +283,7 @@ public sealed partial class FireSimulationManager
         }
 
         WakeSimulation();
+        MarkNodeDirty(node);
         RefreshNodeRuntimeMembership(node);
         MarkVisualStateDirty();
         NotifyStateChanged();
@@ -371,5 +374,6 @@ public sealed partial class FireSimulationManager
         }
 
         RefreshAllRuntimePools();
+        ClearDirtyNodes();
     }
 }

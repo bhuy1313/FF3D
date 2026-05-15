@@ -6,6 +6,8 @@ public class FPSInventorySystem : MonoBehaviour
     [Header("Pickup")]
     [SerializeField] private bool allowPickup = true;
     [SerializeField, Min(0f)] private float pickupDelay = 0f;
+    [SerializeField] private bool smoothPickupEquip = true;
+    [SerializeField, Min(0f)] private float pickupEquipDuration = 0.16f;
     [SerializeField] private int maxSlots = 6;
     [SerializeField] private Transform equipRoot;
     [SerializeField] private Transform inventoryRoot;
@@ -18,11 +20,24 @@ public class FPSInventorySystem : MonoBehaviour
         public bool WasKinematic;
         public bool DetectCollisions;
         public bool WasActive;
+        public bool AnimateNextEquip;
+    }
+
+    private sealed class EquipTransitionState
+    {
+        public Transform ItemTransform;
+        public Vector3 StartLocalPosition;
+        public Quaternion StartLocalRotation;
+        public Vector3 TargetLocalPosition;
+        public Quaternion TargetLocalRotation;
+        public float Duration;
+        public float Elapsed;
     }
 
     private readonly System.Collections.Generic.List<InventorySlot> slots = new System.Collections.Generic.List<InventorySlot>();
     private int activeIndex = -1;
     private Coroutine pendingPickupRoutine;
+    private EquipTransitionState activeEquipTransition;
 
     public bool HasItem => activeIndex >= 0 && activeIndex < slots.Count;
     public int ItemCount => slots.Count;
@@ -53,6 +68,7 @@ public class FPSInventorySystem : MonoBehaviour
     private void LateUpdate()
     {
         TickRuntimeInventoryItems(Time.deltaTime);
+        TickEquipTransition(Time.deltaTime);
     }
 
     public bool TryPickup(GameObject target, GameObject picker)
@@ -124,7 +140,8 @@ public class FPSInventorySystem : MonoBehaviour
             OriginalParent = rb.transform.parent,
             WasKinematic = rb.isKinematic,
             DetectCollisions = rb.detectCollisions,
-            WasActive = rb.gameObject.activeSelf
+            WasActive = rb.gameObject.activeSelf,
+            AnimateNextEquip = true
         };
 
         rb.linearVelocity = Vector3.zero;
@@ -256,9 +273,26 @@ public class FPSInventorySystem : MonoBehaviour
 
     private void EquipSlot(InventorySlot slot)
     {
+        if (slot == null || slot.Item == null || slot.Item.Rigidbody == null)
+        {
+            return;
+        }
+
         Transform itemTransform = slot.Item.Rigidbody.transform;
-        itemTransform.SetParent(equipRoot, false);
-        ApplyEquippedPose(slot.Item, itemTransform);
+        bool animateEquip = slot.AnimateNextEquip;
+        slot.AnimateNextEquip = false;
+
+        itemTransform.SetParent(equipRoot, animateEquip);
+        if (animateEquip)
+        {
+            StartEquipTransition(slot.Item, itemTransform);
+        }
+        else
+        {
+            CancelEquipTransition(itemTransform);
+            ApplyEquippedPose(slot.Item, itemTransform);
+        }
+
         if (hideStoredItems && slot.WasActive)
         {
             slot.Item.Rigidbody.gameObject.SetActive(true);
@@ -272,12 +306,18 @@ public class FPSInventorySystem : MonoBehaviour
 
     private void StowSlot(InventorySlot slot)
     {
+        if (slot == null || slot.Item == null || slot.Item.Rigidbody == null)
+        {
+            return;
+        }
+
         if (slot.Item is IInventoryEquippable equippable)
         {
             equippable.OnStowed(gameObject);
         }
 
         Transform itemTransform = slot.Item.Rigidbody.transform;
+        CancelEquipTransition(itemTransform);
         itemTransform.SetParent(inventoryRoot, false);
         itemTransform.localPosition = Vector3.zero;
         itemTransform.localRotation = Quaternion.identity;
@@ -309,6 +349,7 @@ public class FPSInventorySystem : MonoBehaviour
 
         if (rb != null && !destroyItem)
         {
+            CancelEquipTransition(rb.transform);
             rb.transform.SetParent(slot.OriginalParent, true);
             rb.isKinematic = slot.WasKinematic;
             rb.detectCollisions = slot.DetectCollisions;
@@ -342,7 +383,7 @@ public class FPSInventorySystem : MonoBehaviour
         EquipSlot(slots[activeIndex]);
     }
 
-    private static void RestoreDroppedPickup(InventorySlot slot)
+    private void RestoreDroppedPickup(InventorySlot slot)
     {
         if (slot == null || slot.Item == null || slot.Item.Rigidbody == null)
         {
@@ -350,6 +391,7 @@ public class FPSInventorySystem : MonoBehaviour
         }
 
         Rigidbody rb = slot.Item.Rigidbody;
+        CancelEquipTransition(rb.transform);
         rb.transform.SetParent(slot.OriginalParent, true);
         rb.isKinematic = slot.WasKinematic;
         rb.detectCollisions = slot.DetectCollisions;
@@ -363,18 +405,33 @@ public class FPSInventorySystem : MonoBehaviour
     {
         if (target.TryGetComponent(out IPickupable direct))
         {
+            if (direct is FireHoseHeadPickup connectedHeadPickup && connectedHeadPickup.IsConnected)
+            {
+                return null;
+            }
+
             return direct;
         }
 
         Rigidbody rb = target.GetComponentInParent<Rigidbody>();
         if (rb != null && rb.TryGetComponent(out IPickupable rigidbodyOwner))
         {
+            if (rigidbodyOwner is FireHoseHeadPickup connectedHeadPickup && connectedHeadPickup.IsConnected)
+            {
+                return null;
+            }
+
             return rigidbodyOwner;
         }
 
         Transform parent = target.transform.parent;
         if (parent != null && parent.TryGetComponent(out IPickupable parentPickupable))
         {
+            if (parentPickupable is FireHoseHeadPickup connectedHeadPickup && connectedHeadPickup.IsConnected)
+            {
+                return null;
+            }
+
             return parentPickupable;
         }
 
@@ -445,6 +502,75 @@ public class FPSInventorySystem : MonoBehaviour
         }
 
         return false;
+    }
+
+    private void StartEquipTransition(IPickupable pickupable, Transform itemTransform)
+    {
+        if (!smoothPickupEquip || itemTransform == null || pickupEquipDuration <= 0f)
+        {
+            CancelEquipTransition(itemTransform);
+            ApplyEquippedPose(pickupable, itemTransform);
+            return;
+        }
+
+        if (!TryGetEquippedPose(pickupable, itemTransform, out Vector3 targetLocalPosition, out Vector3 targetLocalEulerAngles))
+        {
+            targetLocalPosition = Vector3.zero;
+            targetLocalEulerAngles = Vector3.zero;
+        }
+
+        activeEquipTransition = new EquipTransitionState
+        {
+            ItemTransform = itemTransform,
+            StartLocalPosition = itemTransform.localPosition,
+            StartLocalRotation = itemTransform.localRotation,
+            TargetLocalPosition = targetLocalPosition,
+            TargetLocalRotation = Quaternion.Euler(targetLocalEulerAngles),
+            Duration = pickupEquipDuration,
+            Elapsed = 0f
+        };
+    }
+
+    private void TickEquipTransition(float deltaTime)
+    {
+        if (activeEquipTransition == null || activeEquipTransition.ItemTransform == null || deltaTime <= 0f)
+        {
+            return;
+        }
+
+        activeEquipTransition.Elapsed += deltaTime;
+        float t = Mathf.Clamp01(activeEquipTransition.Elapsed / activeEquipTransition.Duration);
+        float easedT = t * t * (3f - 2f * t);
+
+        Transform itemTransform = activeEquipTransition.ItemTransform;
+        itemTransform.localPosition = Vector3.LerpUnclamped(
+            activeEquipTransition.StartLocalPosition,
+            activeEquipTransition.TargetLocalPosition,
+            easedT);
+        itemTransform.localRotation = Quaternion.SlerpUnclamped(
+            activeEquipTransition.StartLocalRotation,
+            activeEquipTransition.TargetLocalRotation,
+            easedT);
+
+        if (t >= 1f)
+        {
+            itemTransform.localPosition = activeEquipTransition.TargetLocalPosition;
+            itemTransform.localRotation = activeEquipTransition.TargetLocalRotation;
+            activeEquipTransition = null;
+        }
+    }
+
+    private void CancelEquipTransition(Transform itemTransform)
+    {
+        if (activeEquipTransition == null)
+        {
+            return;
+        }
+
+        if (itemTransform == null || activeEquipTransition.ItemTransform == itemTransform)
+        {
+            activeEquipTransition = null;
+        }
     }
 
 }

@@ -45,6 +45,7 @@ public class VictimCondition : MonoBehaviour
     [SerializeField] private string deceasedAnimatorParameter = "IsDeceased";
     [SerializeField] private string carriedAnimatorParameter = "IsCarried";
     [SerializeField] private string rescuedAnimatorParameter = "IsRescued";
+    [SerializeField] private string extractionAnimatorParameter = "IsExtractionInProgress";
     [SerializeField] private string LayingPoseTypeParameter = "LayingPoseType";
 
     [Header("Events")]
@@ -84,12 +85,14 @@ public class VictimCondition : MonoBehaviour
     private int deceasedAnimatorParameterHash;
     private int carriedAnimatorParameterHash;
     private int rescuedAnimatorParameterHash;
+    private int extractionAnimatorParameterHash;
     private int layingPoseTypeParameterHash;
     private bool hasUrgentAnimatorParameter;
     private bool hasCriticalAnimatorParameter;
     private bool hasDeceasedAnimatorParameter;
     private bool hasCarriedAnimatorParameter;
     private bool hasRescuedAnimatorParameter;
+    private bool hasExtractionAnimatorParameter;
     private bool hasLayingPoseTypeParameter;
 
     private void Awake()
@@ -423,6 +426,7 @@ public class VictimCondition : MonoBehaviour
         EnsureAnimatorParameterCache();
         SetAnimatorBoolParameter(hasCarriedAnimatorParameter, carriedAnimatorParameterHash, rescuable != null && rescuable.IsCarried);
         SetAnimatorBoolParameter(hasRescuedAnimatorParameter, rescuedAnimatorParameterHash, rescuable != null && rescuable.IsRescued);
+        SetAnimatorBoolParameter(hasExtractionAnimatorParameter, extractionAnimatorParameterHash, rescuable != null && rescuable.IsExtractionInProgress);
         SetAnimatorBoolParameter(hasUrgentAnimatorParameter, urgentAnimatorParameterHash, triageState == TriageState.Urgent);
         SetAnimatorBoolParameter(hasCriticalAnimatorParameter, criticalAnimatorParameterHash, triageState == TriageState.Critical);
         SetAnimatorBoolParameter(hasDeceasedAnimatorParameter, deceasedAnimatorParameterHash, triageState == TriageState.Deceased);
@@ -489,6 +493,7 @@ public class VictimCondition : MonoBehaviour
                     hasDeceasedAnimatorParameter |= parameter.nameHash == deceasedAnimatorParameterHash;
                     hasCarriedAnimatorParameter |= parameter.nameHash == carriedAnimatorParameterHash;
                     hasRescuedAnimatorParameter |= parameter.nameHash == rescuedAnimatorParameterHash;
+                    hasExtractionAnimatorParameter |= parameter.nameHash == extractionAnimatorParameterHash;
                     break;
                 case AnimatorControllerParameterType.Int:
                     hasLayingPoseTypeParameter |= parameter.nameHash == layingPoseTypeParameterHash;
@@ -504,6 +509,7 @@ public class VictimCondition : MonoBehaviour
         deceasedAnimatorParameterHash = StringToAnimatorHash(deceasedAnimatorParameter);
         carriedAnimatorParameterHash = StringToAnimatorHash(carriedAnimatorParameter);
         rescuedAnimatorParameterHash = StringToAnimatorHash(rescuedAnimatorParameter);
+        extractionAnimatorParameterHash = StringToAnimatorHash(extractionAnimatorParameter);
         layingPoseTypeParameterHash = StringToAnimatorHash(LayingPoseTypeParameter);
     }
 

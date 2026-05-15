@@ -357,6 +357,16 @@ public partial class BotCommandAgent
             return safeMovementDebugLine;
         }
 
+        if (IsPathClearingV2Active)
+        {
+            return $"PathClearV2/{pathClearingV2State.Step} | {GetPathClearingV2TaskDetail()}";
+        }
+
+        if (IsRouteFireV2Active)
+        {
+            return $"RouteFireV2/{routeFireV2State.Step} | {GetRouteFireV2TaskDetail()}";
+        }
+
         if (IsRouteFireClearingActive())
         {
             string fireName = currentRouteBlockingFire != null
@@ -380,6 +390,11 @@ public partial class BotCommandAgent
         if (behaviorContext != null && behaviorContext.HasRescueOrder && currentRescueSubtask != BotRescueSubtask.None)
         {
             return $"Rescue/{currentRescueSubtask} | {GetActiveRescueTaskDetail()}";
+        }
+
+        if (behaviorContext != null && behaviorContext.HasRescueOrder && IsRescueV2Active)
+        {
+            return $"RescueV2/{rescueV2State.Step} | {GetActiveRescueTaskDetail()}";
         }
 
         return string.Empty;

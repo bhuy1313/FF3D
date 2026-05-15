@@ -232,16 +232,24 @@ public sealed class BotRuntimeDecisionService
 
         ISafeZoneTarget bestTarget = null;
         float bestDistance = float.MaxValue;
+        ISafeZoneTarget fallbackTarget = null;
+        float fallbackDistance = float.MaxValue;
 
         foreach (ISafeZoneTarget candidate in BotRuntimeRegistry.ActiveSafeZones)
         {
-            if (candidate == null || !candidate.HasAvailableSlot())
+            if (candidate == null)
             {
                 continue;
             }
 
             float distance = GetHorizontalDistance(fromPosition, candidate.GetWorldPosition());
-            if (distance >= bestDistance)
+            if (distance < fallbackDistance)
+            {
+                fallbackDistance = distance;
+                fallbackTarget = candidate;
+            }
+
+            if (!candidate.HasAvailableSlot() || distance >= bestDistance)
             {
                 continue;
             }
@@ -250,7 +258,7 @@ public sealed class BotRuntimeDecisionService
             bestTarget = candidate;
         }
 
-        return bestTarget;
+        return bestTarget ?? fallbackTarget;
     }
 
     public IBotHazardIsolationTarget ResolveNearestHazardIsolationTarget(Vector3 fromPosition, GameObject requester, FireHazardType hazardType, float searchRadius)

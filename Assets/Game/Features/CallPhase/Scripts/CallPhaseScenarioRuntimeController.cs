@@ -882,12 +882,52 @@ public class CallPhaseScenarioRuntimeController : MonoBehaviour
     private bool IsValidRuntimeStep(CallPhaseScenarioStepData step)
     {
         return step != null
+            && CanStepRunWithScenarioKnowledge(step)
             && !string.IsNullOrWhiteSpace(step.triggerFieldId)
             && !string.IsNullOrWhiteSpace(step.triggerValue)
             && step.operatorLine != null
             && !string.IsNullOrWhiteSpace(step.operatorLine.text)
             && step.callerLine != null
             && !string.IsNullOrWhiteSpace(step.callerLine.text);
+    }
+
+    private bool CanStepRunWithScenarioKnowledge(CallPhaseScenarioStepData step)
+    {
+        if (step == null)
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(step.triggerFieldId) && !CanCallerProvideField(step.triggerFieldId))
+        {
+            return false;
+        }
+
+        if (step.stepType == CallPhaseScenarioStepType.ConfirmationReadBack)
+        {
+            return CanCallerProvideField(step.confirmationFieldId);
+        }
+
+        if (step.callerLine == null || step.callerLine.extractableSpans == null || step.callerLine.extractableSpans.Count <= 0)
+        {
+            return true;
+        }
+
+        for (int i = 0; i < step.callerLine.extractableSpans.Count; i++)
+        {
+            CallPhaseExtractableSpanData span = step.callerLine.extractableSpans[i];
+            if (span == null || string.IsNullOrWhiteSpace(span.targetFieldId))
+            {
+                continue;
+            }
+
+            if (CanCallerProvideField(span.targetFieldId))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private bool DoesStepTriggerMatch(CallPhaseScenarioStepData step, SelectableSpan span)
@@ -1156,6 +1196,7 @@ public class CallPhaseScenarioRuntimeController : MonoBehaviour
         }
 
         RefreshAskFollowUpAvailability();
+
     }
 
     private void TrackSelectedFollowUpQuestion(CallPhaseFollowUpQuestionOptionData questionOption)
@@ -1229,6 +1270,7 @@ public class CallPhaseScenarioRuntimeController : MonoBehaviour
         }
 
         RefreshAskFollowUpAvailability();
+
     }
 
     private List<CallPhaseFollowUpQuestionOptionData> GetEligibleQuestionPoolOptions()
@@ -1259,6 +1301,11 @@ public class CallPhaseScenarioRuntimeController : MonoBehaviour
         }
 
         bool hasRelatedField = !string.IsNullOrWhiteSpace(questionOption.relatedFieldId);
+        if (hasRelatedField && !CanCallerProvideField(questionOption.relatedFieldId))
+        {
+            return false;
+        }
+
         bool fieldKnown = hasRelatedField
             && incidentReportController != null
             && incidentReportController.HasCollectedValue(questionOption.relatedFieldId);
@@ -1431,6 +1478,11 @@ public class CallPhaseScenarioRuntimeController : MonoBehaviour
     private int GetQuestionDisplayScore(CallPhaseFollowUpQuestionOptionData questionOption)
     {
         if (questionOption == null)
+        {
+            return int.MinValue;
+        }
+
+        if (!string.IsNullOrWhiteSpace(questionOption.relatedFieldId) && !CanCallerProvideField(questionOption.relatedFieldId))
         {
             return int.MinValue;
         }
@@ -1852,6 +1904,12 @@ public class CallPhaseScenarioRuntimeController : MonoBehaviour
     {
         return string.Equals(left, right, System.StringComparison.OrdinalIgnoreCase);
     }
+
+    private bool CanCallerProvideField(string fieldId)
+    {
+        return scenarioData == null || scenarioData.CanCallerProvideField(fieldId);
+    }
+
 }
 
 public enum CallPhaseFollowUpMode

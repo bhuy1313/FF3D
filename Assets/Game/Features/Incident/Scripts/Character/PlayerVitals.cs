@@ -19,6 +19,7 @@ public class PlayerVitals : MonoBehaviour
     [SerializeField] private float oxygenRegenDelay = 0f;
     [SerializeField] private float oxygenDamagePerSecond = 5f;
 
+    [Header("Runtime")]
     [SerializeField] private float currentHealth;
     [SerializeField] private float currentStamina;
     [SerializeField] private float currentOxygen;

@@ -3421,7 +3421,6 @@ GameObject:
   m_Component:
   - component: {fileID: 8101540096316562352}
   - component: {fileID: 8309091924209200148}
-  - component: {fileID: 7457305010747750881}
   - component: {fileID: 2163574921374969589}
   m_Layer: 0
   m_Name: model
@@ -3470,92 +3469,6 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
---- !u!114 &7457305010747750881
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8008883350262417182}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b2d8418b0b9634b1892b0268dd9c2743, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.Animation.Rigging::UnityEngine.Animations.Rigging.BoneRenderer
-  boneShape: 1
-  drawBones: 1
-  drawTripods: 0
-  boneSize: 1
-  tripodSize: 1
-  boneColor: {r: 0, g: 0, b: 1, a: 0.5}
-  m_Transforms:
-  - {fileID: 7789071775580469101}
-  - {fileID: 7929111754422930002}
-  - {fileID: 7782588284042872629}
-  - {fileID: 5160102765148384817}
-  - {fileID: 6008317075707012983}
-  - {fileID: 6738415227758737834}
-  - {fileID: 8711395406589848454}
-  - {fileID: 8313438510483643505}
-  - {fileID: 6563919484446681977}
-  - {fileID: 1962200397781033273}
-  - {fileID: 6133067240568683546}
-  - {fileID: 2587954634864109004}
-  - {fileID: 8577591391311735300}
-  - {fileID: 3881620291188440356}
-  - {fileID: 1199579963972389298}
-  - {fileID: 1269994406894795575}
-  - {fileID: 4112273713558721777}
-  - {fileID: 1099773163392758715}
-  - {fileID: 4442722597698797837}
-  - {fileID: 4462705434539175979}
-  - {fileID: 2042745901541153243}
-  - {fileID: 6809961186156920212}
-  - {fileID: 7027101350679002827}
-  - {fileID: 1001334980125824586}
-  - {fileID: 2033247505460522719}
-  - {fileID: 7620211695997975814}
-  - {fileID: 3321220006038330230}
-  - {fileID: 7004907652491642718}
-  - {fileID: 8066618368765041917}
-  - {fileID: 6591100603381242933}
-  - {fileID: 5230247148837894209}
-  - {fileID: 312725880287022908}
-  - {fileID: 8747814869574035193}
-  - {fileID: 1995559098099578881}
-  - {fileID: 6592213145015112627}
-  - {fileID: 6295089122321802151}
-  - {fileID: 4831021069586192460}
-  - {fileID: 672686474566434412}
-  - {fileID: 1948704397138168270}
-  - {fileID: 8482586476461171701}
-  - {fileID: 332866062945752838}
-  - {fileID: 741273138496844693}
-  - {fileID: 7944770695301043686}
-  - {fileID: 7036634827749718767}
-  - {fileID: 7082364345776270589}
-  - {fileID: 679464589284893093}
-  - {fileID: 453230265429765795}
-  - {fileID: 2620923282770022728}
-  - {fileID: 1258349218605668869}
-  - {fileID: 3185711506839498125}
-  - {fileID: 61622330216727008}
-  - {fileID: 3541233935789848965}
-  - {fileID: 8358833442324338286}
-  - {fileID: 9170207749528182908}
-  - {fileID: 1727299835078077435}
-  - {fileID: 1438944848109743488}
-  - {fileID: 8961244148271318964}
-  - {fileID: 5669396377189084337}
-  - {fileID: 8687215152908068670}
-  - {fileID: 3259796657699446087}
-  - {fileID: 8135502893109836921}
-  - {fileID: 5831741978003781969}
-  - {fileID: 3064317046428236974}
-  - {fileID: 4299326959402006776}
-  - {fileID: 7946891656925400978}
-  - {fileID: 328506783848446321}
-  - {fileID: 16502612169251918}
 --- !u!114 &2163574921374969589
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3781,6 +3694,7 @@ GameObject:
   - component: {fileID: 7962027411762718406}
   - component: {fileID: 5468104335320908824}
   - component: {fileID: 1135309908745278832}
+  - component: {fileID: 4824113224045346530}
   m_Layer: 0
   m_Name: Joe
   m_TagString: Untagged
@@ -3838,6 +3752,10 @@ MonoBehaviour:
   restrictPlayerActionsWhileCarried: 1
   deactivateOnRescue: 0
   disableRenderersOnRescue: 0
+  fadeOutOnRescue: 1
+  rescueFadeOutDuration: 1.25
+  releaseSafeZoneSlotWhenFadeStarts: 1
+  disableCollidersOnSafeZonePlacement: 1
   onRescueStarted:
     m_PersistentCalls:
       m_Calls: []
@@ -3930,6 +3848,7 @@ MonoBehaviour:
   deceasedAnimatorParameter: IsDeceased
   carriedAnimatorParameter: IsCarried
   rescuedAnimatorParameter: IsRescued
+  extractionAnimatorParameter: IsExtractionInProgress
   LayingPoseTypeParameter: LayingPoseType
   onConditionChanged:
     m_PersistentCalls:
@@ -3975,6 +3894,27 @@ CapsuleCollider:
   m_Height: 1.8
   m_Direction: 1
   m_Center: {x: 0, y: 0.9, z: 0}
+--- !u!114 &4824113224045346530
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8675152600097378572}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1db839fd9a3b17d468a6658268a9f971, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CharacterSkinApplicator
+  skinData: {fileID: 11400000, guid: c09861f953506c24485d6cdf717cc76e, type: 2}
+  applyOnAwake: 1
+  applyInEditorOnValidate: 1
+  bodyRenderer: {fileID: 1139330345111447054}
+  hairRenderer: {fileID: 8223458969723454341}
+  eyelashesRenderer: {fileID: 3191276890159749300}
+  pantsRenderer: {fileID: 2482542142449568880}
+  shoesRenderer: {fileID: 4062872816496488394}
+  suitRenderer: {fileID: 2122575816261648694}
 --- !u!1 &8946740016861836280
 GameObject:
   m_ObjectHideFlags: 0

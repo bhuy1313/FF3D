@@ -2054,42 +2054,39 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
 
     private List<string> GetRequiredAssessRiskFields()
     {
-        if (
+        List<string> source = (
             scenarioData != null
             && scenarioData.assessRisk != null
             && scenarioData.assessRisk.requiredForAssessRisk != null
             && scenarioData.assessRisk.requiredForAssessRisk.Count > 0
         )
-        {
-            return scenarioData.assessRisk.requiredForAssessRisk;
-        }
+            ? scenarioData.assessRisk.requiredForAssessRisk
+            : requiredForAssessRisk;
 
-        return requiredForAssessRisk;
+        return FilterScenarioUnavailableFields(source);
     }
 
     private List<string> GetRecommendedAssessRiskFields()
     {
-        if (
+        List<string> source = (
             scenarioData != null
             && scenarioData.assessRisk != null
             && scenarioData.assessRisk.recommendedForAssessRisk != null
             && scenarioData.assessRisk.recommendedForAssessRisk.Count > 0
         )
-        {
-            return scenarioData.assessRisk.recommendedForAssessRisk;
-        }
+            ? scenarioData.assessRisk.recommendedForAssessRisk
+            : recommendedForAssessRisk;
 
-        return recommendedForAssessRisk;
+        return FilterScenarioUnavailableFields(source);
     }
 
     private int GetMinimumRecommendedCount()
     {
-        if (scenarioData != null && scenarioData.assessRisk != null)
-        {
-            return Mathf.Max(0, scenarioData.assessRisk.minimumRecommendedCount);
-        }
+        int configuredCount = scenarioData != null && scenarioData.assessRisk != null
+            ? Mathf.Max(0, scenarioData.assessRisk.minimumRecommendedCount)
+            : Mathf.Max(0, minimumRecommendedCount);
 
-        return Mathf.Max(0, minimumRecommendedCount);
+        return Mathf.Min(configuredCount, GetRecommendedAssessRiskFields().Count);
     }
 
     private string GetExpectedSeverityValue()
@@ -2107,6 +2104,28 @@ public partial class AssessRiskPopupEntryController : MonoBehaviour
         return !string.IsNullOrWhiteSpace(expectedSeverity)
             ? expectedSeverity
             : ExpectedSeverityValue;
+    }
+
+    private List<string> FilterScenarioUnavailableFields(List<string> source)
+    {
+        if (source == null || source.Count <= 0 || scenarioData == null || scenarioData.callerUnavailableFieldIds == null || scenarioData.callerUnavailableFieldIds.Count <= 0)
+        {
+            return source ?? new List<string>();
+        }
+
+        List<string> filtered = new List<string>(source.Count);
+        for (int i = 0; i < source.Count; i++)
+        {
+            string fieldId = source[i];
+            if (string.IsNullOrWhiteSpace(fieldId) || !scenarioData.CanCallerProvideField(fieldId))
+            {
+                continue;
+            }
+
+            filtered.Add(fieldId);
+        }
+
+        return filtered;
     }
 
     private string GetExpectedFieldValue(string fieldId)

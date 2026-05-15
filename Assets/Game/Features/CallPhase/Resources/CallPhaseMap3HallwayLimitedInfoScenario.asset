@@ -1,0 +1,518 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f14c3d1b58a44b9a8d668ed8888e3fb4, type: 3}
+  m_Name: CallPhaseMap3HallwayLimitedInfoScenario
+  m_EditorClassIdentifier: 
+  scenarioId: hallway_fire_limited_info
+  displayName: Hallway Fire - Limited Info
+  displayNameLocalizationKey: 
+  caseId: CT-HW-01-LI
+  category: City Building Fire
+  categoryLocalizationKey: 
+  description: A hallway fire producing heavy smoke through a research center corridor.
+  descriptionLocalizationKey: 
+  initialTranscriptLines:
+  - lineId: intro_operator_open
+    speaker: 0
+    text: 911, where is your emergency?
+    isExtractable: 0
+    startsAsActiveChunk: 0
+    isConfirmationLine: 0
+    extractableSpans: []
+  - lineId: intro_caller_open
+    speaker: 1
+    text: The corridor in the research center is on fire and the smoke is getting worse!
+    isExtractable: 0
+    startsAsActiveChunk: 0
+    isConfirmationLine: 0
+    extractableSpans: []
+  - lineId: intro_operator_fire_location
+    speaker: 0
+    text: Where is the fire right now?
+    isExtractable: 0
+    startsAsActiveChunk: 0
+    isConfirmationLine: 0
+    extractableSpans: []
+  - lineId: intro_caller_fire_location
+    speaker: 1
+    text: It's in the main hallway outside the lab rooms!
+    isExtractable: 1
+    startsAsActiveChunk: 1
+    isConfirmationLine: 0
+    extractableSpans:
+    - displayText: main hallway outside the lab rooms
+      normalizedValue: Hallway
+      targetFieldId: fire_location
+      infoType: FireLocation
+      exactSelection: 1
+      hasExtraContext: 0
+  followUpSteps:
+  - stepId: collect_address
+    stepType: 0
+    triggerFieldId: fire_location
+    triggerValue: Hallway
+    confirmationFieldId: 
+    expectedConfirmedValue: 
+    operatorLine:
+      lineId: ask_address
+      speaker: 0
+      text: What is the address?
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 0
+      extractableSpans: []
+    callerLine:
+      lineId: reply_address
+      speaker: 1
+      text: It's Westbridge Research Center, 100 Main Street!
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 0
+      extractableSpans:
+      - displayText: Westbridge Research Center, 100 Main Street
+        normalizedValue: Westbridge Research Center, 100 Main Street
+        targetFieldId: Address
+        infoType: Address
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: collect_occupant_risk
+    stepType: 0
+    triggerFieldId: Address
+    triggerValue: Westbridge Research Center, 100 Main Street
+    confirmationFieldId: 
+    expectedConfirmedValue: 
+    operatorLine:
+      lineId: ask_occupant_risk
+      speaker: 0
+      text: Is anyone still inside or blocked by the hallway smoke?
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 0
+      extractableSpans: []
+    callerLine:
+      lineId: reply_occupant_risk
+      speaker: 1
+      text: People were near the labs, but I can't tell where anyone is through this smoke!
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 0
+      extractableSpans:
+      - displayText: People were near the labs
+        normalizedValue: Researchers behind lab doors
+        targetFieldId: OccupantRisk
+        infoType: OccupantRisk
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: collect_hazard
+    stepType: 0
+    triggerFieldId: OccupantRisk
+    triggerValue: Researchers behind lab doors
+    confirmationFieldId: 
+    expectedConfirmedValue: 
+    operatorLine:
+      lineId: ask_hazard
+      speaker: 0
+      text: Do you see any specific hazard or fuel feeding the fire?
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 0
+      extractableSpans: []
+    callerLine:
+      lineId: reply_hazard
+      speaker: 1
+      text: Packing materials and wall panels in the research corridor are burning!
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 0
+      extractableSpans:
+      - displayText: Packing materials and wall panels
+        normalizedValue: Burning corridor materials
+        targetFieldId: hazard
+        infoType: Hazard
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: collect_spread_status
+    stepType: 0
+    triggerFieldId: hazard
+    triggerValue: Burning corridor materials
+    confirmationFieldId: 
+    expectedConfirmedValue: 
+    operatorLine:
+      lineId: ask_spread_status
+      speaker: 0
+      text: Is the fire or smoke spreading from the hallway?
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 0
+      extractableSpans: []
+    callerLine:
+      lineId: reply_spread_status
+      speaker: 1
+      text: The smoke is pushing into nearby labs and toward the stairwell!
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 0
+      extractableSpans:
+      - displayText: pushing into nearby labs and toward the stairwell
+        normalizedValue: Smoke spreading into labs and stairwell
+        targetFieldId: SpreadStatus
+        infoType: SpreadStatus
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: collect_caller_safety
+    stepType: 0
+    triggerFieldId: SpreadStatus
+    triggerValue: Smoke spreading into labs and stairwell
+    confirmationFieldId: 
+    expectedConfirmedValue: 
+    operatorLine:
+      lineId: ask_caller_safety
+      speaker: 0
+      text: Are you somewhere safe right now?
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 0
+      extractableSpans: []
+    callerLine:
+      lineId: reply_caller_safety
+      speaker: 1
+      text: I backed out to the stair landing, but I can't get through the hallway!
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 0
+      extractableSpans:
+      - displayText: backed out to the stair landing
+        normalizedValue: On stair landing
+        targetFieldId: CallerSafety
+        infoType: CallerSafety
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: confirm_address
+    stepType: 1
+    triggerFieldId: CallerSafety
+    triggerValue: On stair landing
+    confirmationFieldId: Address
+    expectedConfirmedValue: Westbridge Research Center, 100 Main Street
+    operatorLine:
+      lineId: confirm_address_operator
+      speaker: 0
+      text: Let me confirm, this is Westbridge Research Center at 100 Main Street?
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 1
+      extractableSpans: []
+    callerLine:
+      lineId: confirm_address_caller
+      speaker: 1
+      text: Yes, exactly! Please hurry!
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 1
+      extractableSpans:
+      - displayText: Yes, exactly!
+        normalizedValue: Westbridge Research Center, 100 Main Street
+        targetFieldId: Address
+        infoType: Address
+        exactSelection: 1
+        hasExtraContext: 0
+  - stepId: confirm_caller_safety
+    stepType: 1
+    triggerFieldId: Address
+    triggerValue: Westbridge Research Center, 100 Main Street
+    confirmationFieldId: CallerSafety
+    expectedConfirmedValue: On stair landing
+    operatorLine:
+      lineId: confirm_safety_operator
+      speaker: 0
+      text: You are on the stair landing and cannot pass through the hallway, correct?
+      isExtractable: 0
+      startsAsActiveChunk: 0
+      isConfirmationLine: 1
+      extractableSpans: []
+    callerLine:
+      lineId: confirm_safety_caller
+      speaker: 1
+      text: Yes, the hallway smoke is too thick!
+      isExtractable: 1
+      startsAsActiveChunk: 1
+      isConfirmationLine: 1
+      extractableSpans:
+      - displayText: Yes
+        normalizedValue: On stair landing
+        targetFieldId: CallerSafety
+        infoType: CallerSafety
+        exactSelection: 1
+        hasExtraContext: 0
+  followUpQuestionPool:
+  - questionId: hallway_q_address_exact
+    questionText: What is the exact address?
+    quality: 0
+    relatedFieldId: Address
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_address
+    isDistractorQuestion: 0
+    authorNote: Primary location-identification question.
+  - questionId: hallway_q_address_building
+    questionText: Give me the building name and street address.
+    quality: 1
+    relatedFieldId: Address
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_address
+    isDistractorQuestion: 0
+    authorNote: Acceptable alternate location prompt.
+  - questionId: hallway_q_anyone_inside
+    questionText: Is anyone still inside or blocked by the hallway smoke?
+    quality: 0
+    relatedFieldId: OccupantRisk
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_occupant_risk
+    isDistractorQuestion: 0
+    authorNote: Critical life-safety follow-up.
+  - questionId: hallway_q_people_behind_doors
+    questionText: Do you think anyone is still behind those lab doors?
+    quality: 1
+    relatedFieldId: OccupantRisk
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_occupant_risk
+    isDistractorQuestion: 0
+    authorNote: Acceptable alternate framing for uncertain occupant intel.
+  - questionId: hallway_q_hazard_fuel
+    questionText: Do you see any specific hazard or fuel feeding the fire?
+    quality: 0
+    relatedFieldId: hazard
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_hazard
+    isDistractorQuestion: 0
+    authorNote: High-priority hazard-identification question.
+  - questionId: hallway_q_burning_materials
+    questionText: What exactly is burning in the corridor?
+    quality: 1
+    relatedFieldId: hazard
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_hazard
+    isDistractorQuestion: 0
+    authorNote: Acceptable alternate hazard/fuel identification question.
+  - questionId: hallway_q_fire_spread
+    questionText: Is the fire or smoke spreading from the hallway?
+    quality: 1
+    relatedFieldId: SpreadStatus
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_spread_status
+    isDistractorQuestion: 0
+    authorNote: Useful but secondary to immediate life-safety questions.
+  - questionId: hallway_q_smoke_to_stairs
+    questionText: Is smoke moving into the labs or stairwell now?
+    quality: 1
+    relatedFieldId: SpreadStatus
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_spread_status
+    isDistractorQuestion: 0
+    authorNote: Acceptable alternate spread-status question.
+  - questionId: hallway_q_caller_safe
+    questionText: Are you somewhere safe right now?
+    quality: 0
+    relatedFieldId: CallerSafety
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_caller_safety
+    isDistractorQuestion: 0
+    authorNote: Critical life-safety for trapped caller.
+  - questionId: hallway_q_caller_blocked
+    questionText: Are you clear of the smoke, or still stuck near it?
+    quality: 1
+    relatedFieldId: CallerSafety
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_caller_safety
+    isDistractorQuestion: 0
+    authorNote: Acceptable alternate caller-safety wording for corridor entrapment.
+  - questionId: hallway_q_distractor_1
+    questionText: Are the sprinklers going off?
+    quality: 2
+    relatedFieldId: 
+    suggestedWhenFieldMissing: 0
+    hideIfFieldAlreadyKnown: 0
+    linkedStepId: 
+    distractorCallerReplyText: I don't know, I only see smoke in the research hallway!
+    isDistractorQuestion: 1
+    authorNote: Lower-priority distractor.
+  - questionId: hallway_q_distractor_2
+    questionText: What color are the lab doors near the fire?
+    quality: 2
+    relatedFieldId: 
+    suggestedWhenFieldMissing: 0
+    hideIfFieldAlreadyKnown: 0
+    linkedStepId: 
+    distractorCallerReplyText: I can't tell, the smoke in the hallway is too heavy!
+    isDistractorQuestion: 1
+    authorNote: Visual-detail distractor with poor dispatch value.
+  - questionId: hallway_q_distractor_3
+    questionText: Do you know what department uses those lab rooms?
+    quality: 2
+    relatedFieldId: 
+    suggestedWhenFieldMissing: 0
+    hideIfFieldAlreadyKnown: 0
+    linkedStepId: 
+    distractorCallerReplyText: No, I just know people may still be behind those doors!
+    isDistractorQuestion: 1
+    authorNote: Plausible but non-actionable building-usage distractor.
+  - questionId: hallway_q_distractor_4
+    questionText: Was the hallway under maintenance earlier today?
+    quality: 2
+    relatedFieldId: 
+    suggestedWhenFieldMissing: 0
+    hideIfFieldAlreadyKnown: 0
+    linkedStepId: 
+    distractorCallerReplyText: I don't know, I just need the fire department here now!
+    isDistractorQuestion: 1
+    authorNote: Timeline/background distractor.
+  incidentSeed:
+    fireOrigin: Hallway
+    hazardType: OrdinaryCombustibles
+    requiresIsolation: 0
+    initialFireIntensity: 0.85
+    initialFireCount: 2
+    fireSpreadPreset: Aggressive
+    startSmokeDensity: 0.60
+    smokeAccumulationMultiplier: 1.50
+    ventilationPreset: Confined
+  actualVictimCount: 2
+  dispatchEstimatedVictimCountKnown: 1
+  dispatchEstimatedVictimCountMin: 2
+  dispatchEstimatedVictimCountMax: 2
+  victimLocationIntelMode: 0
+  initialVisibleVictimIconCount: 0
+  requireOccupantRiskReportValueForVictimIconReveal: 1
+  estimatedVictimIconRevealDistance: 12
+  expectedReport:
+    address: Westbridge Research Center, 100 Main Street
+    fireLocation: Hallway
+    occupantRisk: Researchers behind lab doors
+    hazard: Burning corridor materials
+    spreadStatus: Smoke spreading into labs and stairwell
+    callerSafety: On stair landing
+    severity: High
+  assessRisk:
+    requiredForAssessRisk:
+    - Address
+    - fire_location
+    recommendedForAssessRisk:
+    - OccupantRisk
+    - hazard
+    - SpreadStatus
+    - CallerSafety
+    minimumRecommendedCount: 2
+    expectedSeverity: High
+  resultReview:
+    criticalFieldIds:
+    - Address
+    - fire_location
+    - OccupantRisk
+    - CallerSafety
+    expectedConfirmedFields:
+    - fieldId: Address
+      displayName: Address
+      scoreWeight: 8
+      issueText: 
+    - fieldId: CallerSafety
+      displayName: Caller Safety
+      scoreWeight: 8
+      issueText: 
+    correctnessFields:
+    - fieldId: Address
+      displayName: Address
+      scoreWeight: 8
+      issueText: Address was incorrect or missing.
+    - fieldId: fire_location
+      displayName: Fire Location
+      scoreWeight: 6
+      issueText: Fire location was incorrect or missing.
+    - fieldId: OccupantRisk
+      displayName: Occupant Risk
+      scoreWeight: 8
+      issueText: Occupant risk was incomplete.
+    - fieldId: hazard
+      displayName: Hazard
+      scoreWeight: 6
+      issueText: Hazard information was incomplete.
+    - fieldId: SpreadStatus
+      displayName: Spread Status
+      scoreWeight: 6
+      issueText: Spread status was incomplete.
+    - fieldId: CallerSafety
+      displayName: Caller Safety
+      scoreWeight: 8
+      issueText: Caller safety information was incomplete.
+    readinessFields:
+    - fieldId: Address
+      displayName: Address
+      scoreWeight: 4
+      issueText: 
+    - fieldId: fire_location
+      displayName: Fire Location
+      scoreWeight: 3
+      issueText: 
+    - fieldId: OccupantRisk
+      displayName: Occupant Risk
+      scoreWeight: 3
+      issueText: 
+    - fieldId: hazard
+      displayName: Hazard
+      scoreWeight: 3
+      issueText: 
+    - fieldId: SpreadStatus
+      displayName: Spread Status
+      scoreWeight: 3
+      issueText: 
+    - fieldId: CallerSafety
+      displayName: Caller Safety
+      scoreWeight: 3
+      issueText: 
+    - fieldId: Severity
+      displayName: Severity
+      scoreWeight: 2
+      issueText: 
+    severityCorrectScore: 20
+    severityPartialScore: 10
+    severityPartialValue: Medium
+    followUpOptimalScore: 2
+    followUpAcceptableScore: 1
+    followUpPoorPenalty: 1
+    followUpMaxScore: 8
+    followUpGoodThreshold: 4
+    followUpMixedThreshold: 1
+    targetCallTimeSeconds: 90
+    acceptableCallTimeSeconds: 150
+    callTimeMaxScore: 4
+    strongCorrectnessThreshold: 35
+    readySubmissionThreshold: 20
+    feedback:
+      positiveSeverity: Good risk assessment.
+      missingSeverity: Severity assessment was missing.
+      incorrectSeverity: Severity was lower than expected for a research-center hallway fire blocking evacuation routes.
+      strongFollowUp: You generally prioritized relevant follow-up questions.
+      mixedFollowUp: Some follow-up questions were useful, but prioritization was uneven.
+      poorFollowUp: Some follow-up questions were lower priority than the situation required.
+      allConfirmed: Address and caller safety were confirmed.
+      noneConfirmed: No critical facts were confirmed.
+      partialConfirmed: More read-back confirmation was needed for critical facts.
+      strongCorrectness: Key incident details matched the scenario well.
+      readyToSubmit: Report was ready to submit.
+      incompleteSubmission: Some report details were missing at submission.

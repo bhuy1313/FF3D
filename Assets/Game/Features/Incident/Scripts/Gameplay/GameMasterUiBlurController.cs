@@ -61,9 +61,13 @@ public sealed class GameMasterUiBlurController : MonoBehaviour
         GameMasterUiBlurController controller = GetExistingInstance();
         if (controller == null)
         {
-            Debug.LogWarning(
-                $"GameMasterUiBlurController: No active instance found while processing blur request from '{requester.name}'."
-            );
+            if (requested)
+            {
+                Debug.LogWarning(
+                    $"GameMasterUiBlurController: No active instance found while processing blur request from '{requester.name}'."
+                );
+            }
+
             return;
         }
 

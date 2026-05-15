@@ -5,6 +5,7 @@ public class MinimapDisplayController : MonoBehaviour
 {
     [SerializeField] private GameObject minimapSquare;
     [SerializeField] private GameObject minimapCircle;
+    [SerializeField] private MinimapCompassController minimapCompassController;
     [SerializeField] private string minimapSquareObjectName = "MinimapSquare";
     [SerializeField] private string minimapCircleObjectName = "MinimapCircle";
 
@@ -42,6 +43,11 @@ public class MinimapDisplayController : MonoBehaviour
 
     private void ResolveReferences()
     {
+        if (minimapCompassController == null)
+        {
+            minimapCompassController = GetComponent<MinimapCompassController>();
+        }
+
         if (minimapSquare == null)
         {
             Transform squareTransform = transform.Find(minimapSquareObjectName);
@@ -63,6 +69,11 @@ public class MinimapDisplayController : MonoBehaviour
 
     private void Apply(MinimapDisplayType displayType, bool enabled)
     {
+        if (minimapCompassController != null)
+        {
+            minimapCompassController.enabled = enabled;
+        }
+
         if (minimapSquare != null)
         {
             minimapSquare.SetActive(enabled && displayType == MinimapDisplayType.Square);

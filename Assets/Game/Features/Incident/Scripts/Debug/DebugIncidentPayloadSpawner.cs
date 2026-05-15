@@ -9,10 +9,15 @@ public class DebugIncidentPayloadSpawner : MonoBehaviour
 {
     private enum DebugIncidentPreset
     {
-        Map3EquipmentRoom = 0,
-        Map3Hallway = 1,
-        Map3StorageRoom = 2,
-        Custom = 3
+        Map1Kitchen = 0,
+        Map1Laundry = 1,
+        Map3EquipmentRoom = 2,
+        Map3Hallway = 3,
+        Map3StorageRoom = 4,
+        Map3HallwayEstimatedVictimIntel = 5,
+        Map3HallwayConfirmedVictimIntel = 6,
+        Map3StorageRoomConfirmedVictimIntel = 7,
+        Custom = 8
     }
 
     [Header("Debug Settings")]
@@ -42,6 +47,10 @@ public class DebugIncidentPayloadSpawner : MonoBehaviour
     [SerializeField] private bool estimatedTrappedCountKnown;
     [SerializeField, Min(0)] private int estimatedTrappedCountMin;
     [SerializeField, Min(0)] private int estimatedTrappedCountMax;
+    [SerializeField] private CallPhaseVictimLocationIntelMode victimLocationIntelMode =
+        CallPhaseVictimLocationIntelMode.None;
+    [SerializeField, Min(0)] private int visibleVictimIconCount;
+    [SerializeField, Min(0f)] private float estimatedVictimIconRevealDistance = 10f;
 
     [Header("Report Snapshot")]
     [SerializeField] private string reportAddress = "Westbridge Research Center, 100 Main Street";
@@ -96,6 +105,10 @@ public class DebugIncidentPayloadSpawner : MonoBehaviour
             estimatedTrappedCountKnown = estimatedTrappedCountKnown,
             estimatedTrappedCountMin = estimatedTrappedCountKnown ? Mathf.Max(0, estimatedTrappedCountMin) : 0,
             estimatedTrappedCountMax = estimatedTrappedCountKnown ? Mathf.Max(estimatedTrappedCountMin, estimatedTrappedCountMax) : 0,
+            victimLocationIntelMode = victimLocationIntelMode.ToString(),
+            shouldRevealVictimIconsAtStart = victimLocationIntelMode != CallPhaseVictimLocationIntelMode.None,
+            visibleVictimIconCount = Mathf.Max(0, visibleVictimIconCount),
+            estimatedVictimIconRevealDistance = Mathf.Max(0f, estimatedVictimIconRevealDistance),
             confidenceScore = 1f,
             reportSnapshot = BuildReportSnapshot(),
             appliedSignals = BuildAppliedSignals()
@@ -157,6 +170,8 @@ public class DebugIncidentPayloadSpawner : MonoBehaviour
         initialFireCount = Mathf.Max(1, initialFireCount);
         estimatedTrappedCountMin = Mathf.Max(0, estimatedTrappedCountMin);
         estimatedTrappedCountMax = Mathf.Max(estimatedTrappedCountMin, estimatedTrappedCountMax);
+        visibleVictimIconCount = Mathf.Max(0, visibleVictimIconCount);
+        estimatedVictimIconRevealDistance = Mathf.Max(0f, estimatedVictimIconRevealDistance);
         startSmokeDensity = Mathf.Max(0f, startSmokeDensity);
         smokeAccumulationMultiplier = Mathf.Max(0f, smokeAccumulationMultiplier);
 
@@ -173,36 +188,129 @@ public class DebugIncidentPayloadSpawner : MonoBehaviour
 
         switch (preset)
         {
+            case DebugIncidentPreset.Map1Kitchen:
+                caseId = "SH-HK-01";
+                scenarioId = "kitchen_fire_house_call";
+                fireOrigin = "Kitchen_StoveTop";
+                logicalFireLocation = "Kitchen";
+                hazardType = "Gas";
+                isolationType = "Gas";
+                requiresIsolation = true;
+                severityBand = "High";
+                initialFireIntensity = 0.8f;
+                initialFireCount = 2;
+                fireSpreadPreset = "Moderate";
+                startSmokeDensity = 0.55f;
+                smokeAccumulationMultiplier = 1.25f;
+                ventilationPreset = "Neutral";
+                occupantRiskPreset = "High";
+                estimatedTrappedCountKnown = true;
+                estimatedTrappedCountMin = 1;
+                estimatedTrappedCountMax = 1;
+                victimLocationIntelMode = CallPhaseVictimLocationIntelMode.Estimated;
+                visibleVictimIconCount = 1;
+                estimatedVictimIconRevealDistance = 10f;
+                reportAddress = "27 Maple Street";
+                reportFireLocation = "Kitchen";
+                reportOccupantRisk = "Child trapped upstairs";
+                reportHazard = "Gas cylinder near kitchen";
+                reportSpreadStatus = "Spreading toward dining area";
+                reportCallerSafety = "Outside house";
+                break;
+
+            case DebugIncidentPreset.Map1Laundry:
+                caseId = "SH-LD-01";
+                scenarioId = "suburban_house_laundry_fire";
+                fireOrigin = "Laundry_WasherOutlet";
+                logicalFireLocation = "Laundry Room";
+                hazardType = "Electrical";
+                isolationType = "Electrical";
+                requiresIsolation = true;
+                severityBand = "High";
+                initialFireIntensity = 0.78f;
+                initialFireCount = 2;
+                fireSpreadPreset = "Moderate";
+                startSmokeDensity = 0.5f;
+                smokeAccumulationMultiplier = 1.2f;
+                ventilationPreset = "Neutral";
+                occupantRiskPreset = "High";
+                estimatedTrappedCountKnown = true;
+                estimatedTrappedCountMin = 1;
+                estimatedTrappedCountMax = 1;
+                victimLocationIntelMode = CallPhaseVictimLocationIntelMode.None;
+                visibleVictimIconCount = 0;
+                estimatedVictimIconRevealDistance = 0f;
+                reportAddress = "52 Pine Street";
+                reportFireLocation = "Laundry Room";
+                reportOccupantRisk = "Adult still inside";
+                reportHazard = "Gas dryer line and exposed wiring";
+                reportSpreadStatus = "Spreading toward kitchen";
+                reportCallerSafety = "Outside front yard";
+                break;
+
             case DebugIncidentPreset.Map3EquipmentRoom:
                 caseId = "CT-EQ-01";
                 scenarioId = "equipment_room_fire";
-                fireOrigin = "EquipmentRoom_Panel";
+                fireOrigin = "EquipmentRoom";
                 logicalFireLocation = "Equipment Room";
                 hazardType = "Electrical";
                 isolationType = "Electrical";
                 requiresIsolation = true;
-                severityBand = "Medium";
-                initialFireIntensity = 0.65f;
-                initialFireCount = 3;
+                severityBand = "High";
+                initialFireIntensity = 0.9f;
+                initialFireCount = 1;
                 fireSpreadPreset = "Moderate";
-                startSmokeDensity = 0.2f;
-                smokeAccumulationMultiplier = 1f;
-                ventilationPreset = "Neutral";
-                occupantRiskPreset = "Manageable";
-                estimatedTrappedCountKnown = false;
-                estimatedTrappedCountMin = 0;
-                estimatedTrappedCountMax = 0;
+                startSmokeDensity = 0.9f;
+                smokeAccumulationMultiplier = 2f;
+                ventilationPreset = "Confined";
+                occupantRiskPreset = "High";
+                estimatedTrappedCountKnown = true;
+                estimatedTrappedCountMin = 2;
+                estimatedTrappedCountMax = 6;
+                victimLocationIntelMode = CallPhaseVictimLocationIntelMode.None;
+                visibleVictimIconCount = 0;
+                estimatedVictimIconRevealDistance = 0f;
                 reportAddress = "Westbridge Research Center, 100 Main Street";
                 reportFireLocation = "Equipment Room";
-                reportOccupantRisk = "Unknown";
+                reportOccupantRisk = "Researchers trapped on upper floors";
                 reportHazard = "High-voltage electrical panel";
-                reportSpreadStatus = "Contained";
-                reportCallerSafety = "Caller outside";
+                reportSpreadStatus = "Smoke in research wing stairwell";
+                reportCallerSafety = "Outside research center";
                 break;
 
             case DebugIncidentPreset.Map3Hallway:
                 caseId = "CT-HW-01";
                 scenarioId = "hallway_fire";
+                fireOrigin = "Hallway";
+                logicalFireLocation = "Hallway";
+                hazardType = "OrdinaryCombustibles";
+                isolationType = "None";
+                requiresIsolation = false;
+                severityBand = "High";
+                initialFireIntensity = 0.85f;
+                initialFireCount = 2;
+                fireSpreadPreset = "Aggressive";
+                startSmokeDensity = 0.6f;
+                smokeAccumulationMultiplier = 1.5f;
+                ventilationPreset = "Confined";
+                occupantRiskPreset = "High";
+                estimatedTrappedCountKnown = true;
+                estimatedTrappedCountMin = 2;
+                estimatedTrappedCountMax = 2;
+                victimLocationIntelMode = CallPhaseVictimLocationIntelMode.Estimated;
+                visibleVictimIconCount = 2;
+                estimatedVictimIconRevealDistance = 12f;
+                reportAddress = "Westbridge Research Center, 100 Main Street";
+                reportFireLocation = "Hallway";
+                reportOccupantRisk = "Researchers behind lab doors";
+                reportHazard = "Burning corridor materials";
+                reportSpreadStatus = "Smoke spreading into labs and stairwell";
+                reportCallerSafety = "On stair landing";
+                break;
+
+            case DebugIncidentPreset.Map3HallwayEstimatedVictimIntel:
+                caseId = "CT-HW-EST-01";
+                scenarioId = "hallway_fire_estimated_victim_intel";
                 fireOrigin = "Hallway_MainCorridor";
                 logicalFireLocation = "Hallway";
                 hazardType = "OrdinaryCombustibles";
@@ -219,9 +327,42 @@ public class DebugIncidentPayloadSpawner : MonoBehaviour
                 estimatedTrappedCountKnown = true;
                 estimatedTrappedCountMin = 1;
                 estimatedTrappedCountMax = 3;
+                victimLocationIntelMode = CallPhaseVictimLocationIntelMode.Estimated;
+                visibleVictimIconCount = 2;
+                estimatedVictimIconRevealDistance = 12f;
                 reportAddress = "Westbridge Research Center, 100 Main Street";
                 reportFireLocation = "Hallway";
-                reportOccupantRisk = "Researchers behind lab doors";
+                reportOccupantRisk = "Researchers reported somewhere near the corridor";
+                reportHazard = "Heavy smoke in corridor";
+                reportSpreadStatus = "Spreading";
+                reportCallerSafety = "Caller outside";
+                break;
+
+            case DebugIncidentPreset.Map3HallwayConfirmedVictimIntel:
+                caseId = "CT-HW-CONF-01";
+                scenarioId = "hallway_fire_confirmed_victim_intel";
+                fireOrigin = "Hallway_MainCorridor";
+                logicalFireLocation = "Hallway";
+                hazardType = "OrdinaryCombustibles";
+                isolationType = "None";
+                requiresIsolation = false;
+                severityBand = "High";
+                initialFireIntensity = 0.75f;
+                initialFireCount = 4;
+                fireSpreadPreset = "Fast";
+                startSmokeDensity = 0.45f;
+                smokeAccumulationMultiplier = 1.35f;
+                ventilationPreset = "Neutral";
+                occupantRiskPreset = "High";
+                estimatedTrappedCountKnown = true;
+                estimatedTrappedCountMin = 1;
+                estimatedTrappedCountMax = 3;
+                victimLocationIntelMode = CallPhaseVictimLocationIntelMode.Confirmed;
+                visibleVictimIconCount = 3;
+                estimatedVictimIconRevealDistance = 0f;
+                reportAddress = "Westbridge Research Center, 100 Main Street";
+                reportFireLocation = "Hallway";
+                reportOccupantRisk = "Victims confirmed behind lab doors off the main corridor";
                 reportHazard = "Heavy smoke in corridor";
                 reportSpreadStatus = "Spreading";
                 reportCallerSafety = "Caller outside";
@@ -230,6 +371,36 @@ public class DebugIncidentPayloadSpawner : MonoBehaviour
             case DebugIncidentPreset.Map3StorageRoom:
                 caseId = "CT-ST-01";
                 scenarioId = "storage_room_fire";
+                fireOrigin = "StorageRoom";
+                logicalFireLocation = "Storage Room";
+                hazardType = "OrdinaryCombustibles";
+                isolationType = "None";
+                requiresIsolation = false;
+                severityBand = "High";
+                initialFireIntensity = 0.85f;
+                initialFireCount = 2;
+                fireSpreadPreset = "Aggressive";
+                startSmokeDensity = 0.5f;
+                smokeAccumulationMultiplier = 1.5f;
+                ventilationPreset = "Confined";
+                occupantRiskPreset = "High";
+                estimatedTrappedCountKnown = true;
+                estimatedTrappedCountMin = 2;
+                estimatedTrappedCountMax = 4;
+                victimLocationIntelMode = CallPhaseVictimLocationIntelMode.Confirmed;
+                visibleVictimIconCount = 1;
+                estimatedVictimIconRevealDistance = 0f;
+                reportAddress = "Westbridge Research Center, 100 Main Street";
+                reportFireLocation = "Storage Room";
+                reportOccupantRisk = "Possible lab technician inside";
+                reportHazard = "Combustible lab storage contents";
+                reportSpreadStatus = "Smoke spreading into research corridor";
+                reportCallerSafety = "Outside storage room";
+                break;
+
+            case DebugIncidentPreset.Map3StorageRoomConfirmedVictimIntel:
+                caseId = "CT-ST-CONF-01";
+                scenarioId = "storage_room_fire_confirmed_victim_intel";
                 fireOrigin = "StorageRoom_BackWing";
                 logicalFireLocation = "Storage Room";
                 hazardType = "OrdinaryCombustibles";
@@ -243,12 +414,15 @@ public class DebugIncidentPayloadSpawner : MonoBehaviour
                 smokeAccumulationMultiplier = 1.2f;
                 ventilationPreset = "Neutral";
                 occupantRiskPreset = "Manageable";
-                estimatedTrappedCountKnown = false;
-                estimatedTrappedCountMin = 0;
-                estimatedTrappedCountMax = 0;
+                estimatedTrappedCountKnown = true;
+                estimatedTrappedCountMin = 1;
+                estimatedTrappedCountMax = 1;
+                victimLocationIntelMode = CallPhaseVictimLocationIntelMode.Confirmed;
+                visibleVictimIconCount = 1;
+                estimatedVictimIconRevealDistance = 0f;
                 reportAddress = "Westbridge Research Center, 100 Main Street";
                 reportFireLocation = "Storage Room";
-                reportOccupantRisk = "Unknown";
+                reportOccupantRisk = "One staff member confirmed inside the storage room";
                 reportHazard = "Combustible lab storage contents";
                 reportSpreadStatus = "Spreading";
                 reportCallerSafety = "Caller outside";
@@ -297,7 +471,10 @@ public class DebugIncidentPayloadSpawner : MonoBehaviour
             $"Debug preset injected: {preset}",
             $"Scenario: {scenarioId}",
             $"Location: {logicalFireLocation}",
-            $"Hazard: {hazardType}"
+            $"Hazard: {hazardType}",
+            $"VictimIntel: {victimLocationIntelMode}",
+            $"VictimIconCount: {visibleVictimIconCount}",
+            $"VictimRevealDistance: {estimatedVictimIconRevealDistance:0.##}"
         };
     }
 

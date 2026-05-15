@@ -79,6 +79,9 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
     [SerializeField] private ParticleSystem waterParticles;
     [SerializeField] private AudioSource sprayAudio;
     [SerializeField] private FireSimulationManager fireSimulationManager;
+    [SerializeField] private Transform headAttachPoint;
+    [SerializeField] private bool snapHeadPositionOnAttach = true;
+    [SerializeField] private bool snapHeadRotationOnAttach = true;
     [SerializeField] private bool enableParticle = true;
     [SerializeField] private float particleGravityModifier = 0.35f;
     [SerializeField] private string waterTag = "Water";
@@ -96,6 +99,7 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
     [SerializeField] private GameObject currentUser;
     [SerializeField] private bool currentUserIsBot;
     [SerializeField] private GameObject claimOwner;
+    [SerializeField] private FireHoseAssembly connectedAssembly;
     [SerializeField] private FireHoseConnectionPoint currentConnectionPoint;
 
     [Header("Ballistics")]
@@ -135,6 +139,11 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
     public GameObject CurrentHolder => currentHolder;
     public GameObject ClaimOwner => claimOwner;
     public bool IsConnectedToSupply => connectionState.IsConnected;
+    public FireHoseConnectionPoint CurrentConnectionPoint => ResolveActiveConnectionPoint();
+    public FireHoseAssembly ConnectedAssembly => connectedAssembly;
+    public FireApparatusPumpSystem ConnectedPumpSystem => connectedAssembly != null && connectedAssembly.OwnerPickupPointLite != null
+        ? connectedAssembly.OwnerPickupPointLite.PumpSystem
+        : null;
 
     private Rigidbody cachedRigidbody;
     private readonly FireHoseConnectionState connectionState = new FireHoseConnectionState();
@@ -239,9 +248,10 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         else if (maxWater > 0f && currentWater < maxWater)
         {
             float passiveRechargeRate = rechargePerSecond;
-            if (currentConnectionPoint != null)
+            FireHoseConnectionPoint activeConnectionPoint = ResolveActiveConnectionPoint();
+            if (activeConnectionPoint != null)
             {
-                passiveRechargeRate += currentConnectionPoint.RefillInternalTankPerSecond;
+                passiveRechargeRate += activeConnectionPoint.RefillInternalTankPerSecond;
             }
 
             if (passiveRechargeRate > 0f)
@@ -253,6 +263,33 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
 
     public void Interact(GameObject interactor)
     {
+        if (interactor == null || !interactor.TryGetComponent(out FPSInventorySystem inventory))
+        {
+            return;
+        }
+
+        GameObject heldObject = inventory.HeldObject;
+        if (heldObject == null)
+        {
+            return;
+        }
+
+        FireHoseHeadPickup heldHead =
+            heldObject.GetComponent<FireHoseHeadPickup>() ??
+            heldObject.GetComponentInParent<FireHoseHeadPickup>();
+        if (heldHead == null || heldHead.Assembly == null)
+        {
+            return;
+        }
+
+        Transform attachTarget = headAttachPoint != null ? headAttachPoint : transform;
+        heldHead.Assembly.TryAttachHeadToMount(
+            attachTarget,
+            interactor,
+            inventory,
+            this,
+            snapHeadPositionOnAttach,
+            snapHeadRotationOnAttach);
     }
 
     public void OnPickup(GameObject picker)
@@ -278,9 +315,25 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
         currentUser = null;
         currentUserIsBot = false;
         SetSprayState(false);
+        SnapToConnectedHeadDropPose();
         if (!keepConnectionOnDrop)
         {
             DisconnectFromSupply();
+        }
+    }
+
+    public void ConfigureConnectedAssembly(FireHoseAssembly assembly)
+    {
+        connectedAssembly = assembly;
+        FireHoseConnectionPoint ownerConnectionPoint = ResolveOwnerConnectionPoint();
+        if (ownerConnectionPoint != null)
+        {
+            currentConnectionPoint = ownerConnectionPoint;
+            if (!connectionState.IsConnected)
+            {
+                connectionState.TryConnect(ownerConnectionPoint);
+            }
+            RecalculateSprayRuntimeValues();
         }
     }
 
@@ -428,17 +481,18 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
 
     public bool DisconnectFromSupply(FireHoseConnectionPoint expectedConnectionPoint = null)
     {
-        if (!connectionState.IsConnected || currentConnectionPoint == null)
+        FireHoseConnectionPoint activeConnectionPoint = currentConnectionPoint;
+        if (!connectionState.IsConnected || activeConnectionPoint == null)
         {
             return false;
         }
 
-        if (expectedConnectionPoint != null && !ReferenceEquals(currentConnectionPoint, expectedConnectionPoint))
+        if (expectedConnectionPoint != null && !ReferenceEquals(activeConnectionPoint, expectedConnectionPoint))
         {
             return false;
         }
 
-        FireHoseConnectionPoint previousConnectionPoint = currentConnectionPoint;
+        FireHoseConnectionPoint previousConnectionPoint = activeConnectionPoint;
         currentConnectionPoint = null;
         connectionState.TryDisconnect(previousConnectionPoint);
         previousConnectionPoint.ClearConnection(this);
@@ -471,7 +525,8 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
 
     private bool HasConnectedPressurizedSupply()
     {
-        return currentConnectionPoint != null && currentConnectionPoint.ProvidesPressurizedWater;
+        FireHoseConnectionPoint activeConnectionPoint = ResolveActiveConnectionPoint();
+        return activeConnectionPoint != null && activeConnectionPoint.ProvidesPressurizedWater;
     }
 
     private float GetLocalSupplyPressureMultiplier()
@@ -486,8 +541,9 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
 
     private float GetConnectedSupplyPressureMultiplier()
     {
-        return currentConnectionPoint != null
-            ? currentConnectionPoint.SupplyPressureMultiplier
+        FireHoseConnectionPoint activeConnectionPoint = ResolveActiveConnectionPoint();
+        return activeConnectionPoint != null
+            ? activeConnectionPoint.SupplyPressureMultiplier
             : 0f;
     }
 
@@ -532,7 +588,8 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
             return false;
         }
 
-        if (currentConnectionPoint != null && !currentConnectionPoint.ProvidesPressurizedWater)
+        FireHoseConnectionPoint activeConnectionPoint = ResolveActiveConnectionPoint();
+        if (activeConnectionPoint != null && !activeConnectionPoint.ProvidesPressurizedWater)
         {
             reason = "Connected source has no pressurized water";
             return false;
@@ -552,6 +609,57 @@ public class FireHose : MonoBehaviour, IInteractable, IPickupable, IUsable, IBot
 
         reason = "No local water supply";
         return false;
+    }
+
+    private FireHoseConnectionPoint ResolveActiveConnectionPoint()
+    {
+        FireHoseConnectionPoint ownerConnectionPoint = ResolveOwnerConnectionPoint();
+        return ownerConnectionPoint != null ? ownerConnectionPoint : currentConnectionPoint;
+    }
+
+    private FireHoseConnectionPoint ResolveOwnerConnectionPoint()
+    {
+        if (connectedAssembly == null)
+        {
+            return null;
+        }
+
+        FireTruckHosePickupPointLite ownerPickupPoint = connectedAssembly.OwnerPickupPointLite;
+        if (ownerPickupPoint == null)
+        {
+            return null;
+        }
+
+        FireApparatusPumpSystem pumpSystem = ownerPickupPoint.PumpSystem;
+        if (pumpSystem != null)
+        {
+            return pumpSystem.GetSupplyHydrant();
+        }
+
+        return currentConnectionPoint;
+    }
+
+    private void SnapToConnectedHeadDropPose()
+    {
+        if (connectedAssembly == null || !connectedAssembly.TryGetLatestHeadPose(out Vector3 targetPosition, out Quaternion targetRotation))
+        {
+            return;
+        }
+
+        Transform attachTransform = headAttachPoint != null ? headAttachPoint : transform;
+        Vector3 localAttachPosition = transform.InverseTransformPoint(attachTransform.position);
+        Quaternion localAttachRotation = Quaternion.Inverse(transform.rotation) * attachTransform.rotation;
+
+        Quaternion desiredRootRotation = targetRotation * Quaternion.Inverse(localAttachRotation);
+        Vector3 desiredRootPosition = targetPosition - (desiredRootRotation * localAttachPosition);
+
+        transform.SetPositionAndRotation(desiredRootPosition, desiredRootRotation);
+
+        if (cachedRigidbody != null)
+        {
+            cachedRigidbody.linearVelocity = Vector3.zero;
+            cachedRigidbody.angularVelocity = Vector3.zero;
+        }
     }
 
     private void SetSprayState(bool enable)

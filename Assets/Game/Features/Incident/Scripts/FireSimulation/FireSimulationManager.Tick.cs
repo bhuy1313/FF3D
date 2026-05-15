@@ -15,7 +15,11 @@ public sealed partial class FireSimulationManager
                 continue;
             }
 
-            changed |= TickNode(node, deltaTime);
+            if (TickNode(node, deltaTime))
+            {
+                MarkNodeDirty(node);
+                changed = true;
+            }
         }
 
         // Phase 1b: queue spread only from burning nodes that still have valid targets.
@@ -36,13 +40,13 @@ public sealed partial class FireSimulationManager
             }
         }
 
+        BeginProcessingDirtyNodes();
+
         // Phase 2: apply queued heat deltas, clamp, mark saturation, remove if extinguished.
         float maxHeat = simulationProfile != null ? simulationProfile.MaxHeat : 2f;
-        float extinguishThreshold = simulationProfile != null ? simulationProfile.ExtinguishThreshold : 0.08f;
-
-        for (int i = 0; i < runtimeGraph.Count; i++)
+        for (int i = 0; i < processingNodeIndices.Count; i++)
         {
-            FireRuntimeNode node = runtimeGraph.GetNode(i);
+            FireRuntimeNode node = runtimeGraph.GetNode(processingNodeIndices[i]);
             if (node == null || node.IsRemoved)
             {
                 continue;
@@ -92,6 +96,7 @@ public sealed partial class FireSimulationManager
             RefreshNodeRuntimeMembership(node);
         }
 
+        ClearDirtyNodes();
         UpdateSimulationSleepState();
         return changed;
     }
@@ -154,7 +159,12 @@ public sealed partial class FireSimulationManager
             }
 
             float spreadHeat = source.Heat * transferPerSecond * deltaTime;
-            target.PendingHeatDelta = Mathf.Max(target.PendingHeatDelta, spreadHeat);
+            float nextPendingHeat = Mathf.Max(target.PendingHeatDelta, spreadHeat);
+            if (!Mathf.Approximately(nextPendingHeat, target.PendingHeatDelta))
+            {
+                target.PendingHeatDelta = nextPendingHeat;
+                MarkNodeDirty(target);
+            }
         }
     }
 

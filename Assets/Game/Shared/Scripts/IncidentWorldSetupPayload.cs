@@ -22,6 +22,10 @@ public class IncidentWorldSetupPayload
     public bool estimatedTrappedCountKnown;
     public int estimatedTrappedCountMin;
     public int estimatedTrappedCountMax;
+    public string victimLocationIntelMode;
+    public bool shouldRevealVictimIconsAtStart;
+    public int visibleVictimIconCount;
+    public float estimatedVictimIconRevealDistance;
     public float confidenceScore;
     /// <summary>
     /// If non-zero, fire spawn placement RNG uses this explicit seed (combined with a discriminator per pass).

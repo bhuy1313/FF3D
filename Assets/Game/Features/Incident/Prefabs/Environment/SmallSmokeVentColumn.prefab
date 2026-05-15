@@ -53,11 +53,15 @@ MonoBehaviour:
   placeAtAnchorBoundsCenter: 0
   exteriorDirection: {x: 0, y: 0, z: -1}
   exteriorOffset: 2.5
+  heightPlacementMode: 0
   verticalBoundsBias: 0.72
+  roofRaycastDistance: 100
+  roofClearanceOffset: 0.15
+  roofRaycastStartOffset: 0.05
   placementOffset: {x: 0, y: 0.35, z: 0}
   placementRetryDuration: 4
-  smokeMaterial: {fileID: 0}
-  coreOcclusionMaterial: {fileID: 0}
+  smokeMaterial: {fileID: 2100000, guid: bcf8f8d4c7a4474499f4f329d5f28d4d, type: 2}
+  coreOcclusionMaterial: {fileID: 2100000, guid: 1cbb00c7b7e6406f9f4a4d4b616eaf71, type: 2}
   includeCoreOcclusion: 1
   alignParticleShapeToLocalY: 1
   smokeLifetimeMultiplier: 0.32
@@ -81,9 +85,7 @@ MonoBehaviour:
   disableParticlesWhenViewerNear: 0
   nearViewerDisableDistance: 18
   nearViewerEnableDistance: 24
-  viewerDistanceCheckInterval: 0.25
-  viewerOverride: {fileID: 0}
-  viewerTag: Player
+  playerDistanceCheckInterval: 1
   coreOcclusionSmoke: {fileID: 0}
   baseDenseSmoke: {fileID: 0}
   upperBillowsSmoke: {fileID: 0}

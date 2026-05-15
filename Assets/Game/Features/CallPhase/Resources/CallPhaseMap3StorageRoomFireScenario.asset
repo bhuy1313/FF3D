@@ -262,6 +262,15 @@ MonoBehaviour:
     linkedStepId: collect_address
     isDistractorQuestion: 0
     authorNote: Primary location-identification question.
+  - questionId: storage_q_address_building
+    questionText: Tell me the building name and full address.
+    quality: 1
+    relatedFieldId: Address
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_address
+    isDistractorQuestion: 0
+    authorNote: Acceptable alternate dispatch-location prompt.
   - questionId: storage_q_anyone_inside
     questionText: Is anyone still inside or near that storage area?
     quality: 0
@@ -271,6 +280,15 @@ MonoBehaviour:
     linkedStepId: collect_occupant_risk
     isDistractorQuestion: 0
     authorNote: Critical life-safety follow-up.
+  - questionId: storage_q_missing_worker
+    questionText: Is someone unaccounted for near that room?
+    quality: 1
+    relatedFieldId: OccupantRisk
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_occupant_risk
+    isDistractorQuestion: 0
+    authorNote: Acceptable alternate wording for possible trapped occupant.
   - questionId: storage_q_hazard_contents
     questionText: What is stored in that room? Any special hazards?
     quality: 0
@@ -280,6 +298,15 @@ MonoBehaviour:
     linkedStepId: collect_hazard
     isDistractorQuestion: 0
     authorNote: Important for research storage-room fuel load and material hazard.
+  - questionId: storage_q_fuel_load
+    questionText: What kinds of materials are burning or stored there?
+    quality: 1
+    relatedFieldId: hazard
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_hazard
+    isDistractorQuestion: 0
+    authorNote: Acceptable alternate material-hazard question.
   - questionId: storage_q_fire_spread
     questionText: Is the fire or smoke spreading out of the storage room?
     quality: 0
@@ -289,6 +316,15 @@ MonoBehaviour:
     linkedStepId: collect_spread_status
     isDistractorQuestion: 0
     authorNote: Critical for research corridor smoke spread risk.
+  - questionId: storage_q_smoke_corridor
+    questionText: Is smoke getting into the corridor outside that room?
+    quality: 1
+    relatedFieldId: SpreadStatus
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_spread_status
+    isDistractorQuestion: 0
+    authorNote: Acceptable alternate spread-status question.
   - questionId: storage_q_caller_safe
     questionText: Are you in a safe location right now?
     quality: 0
@@ -298,6 +334,15 @@ MonoBehaviour:
     linkedStepId: collect_caller_safety
     isDistractorQuestion: 0
     authorNote: Standard life-safety check.
+  - questionId: storage_q_caller_clear
+    questionText: Are you clear of the room and out of the smoke now?
+    quality: 1
+    relatedFieldId: CallerSafety
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_caller_safety
+    isDistractorQuestion: 0
+    authorNote: Acceptable alternate caller-safety check.
   - questionId: storage_q_distractor_1
     questionText: Do you know who owns the items in storage?
     quality: 2
@@ -308,6 +353,36 @@ MonoBehaviour:
     distractorCallerReplyText: I don't know, the research storage room is full of smoke!
     isDistractorQuestion: 1
     authorNote: Lower-priority ownership question.
+  - questionId: storage_q_distractor_2
+    questionText: Do you know what brand the cleaning supplies are?
+    quality: 2
+    relatedFieldId: 
+    suggestedWhenFieldMissing: 0
+    hideIfFieldAlreadyKnown: 0
+    linkedStepId: 
+    distractorCallerReplyText: No, I only know there are chemicals and burning storage bins in there!
+    isDistractorQuestion: 1
+    authorNote: Overly specific material-brand distractor.
+  - questionId: storage_q_distractor_3
+    questionText: Were there delivery boxes moved into storage today?
+    quality: 2
+    relatedFieldId: 
+    suggestedWhenFieldMissing: 0
+    hideIfFieldAlreadyKnown: 0
+    linkedStepId: 
+    distractorCallerReplyText: I don't know, I just saw the smoke and flames coming out of that room!
+    isDistractorQuestion: 1
+    authorNote: Plausible logistics distractor with weak dispatch value.
+  - questionId: storage_q_distractor_4
+    questionText: Can you tell whether the storage labels are color-coded?
+    quality: 2
+    relatedFieldId: 
+    suggestedWhenFieldMissing: 0
+    hideIfFieldAlreadyKnown: 0
+    linkedStepId: 
+    distractorCallerReplyText: No, the room is too smoky to see details like that!
+    isDistractorQuestion: 1
+    authorNote: Fine-grained visual distractor.
   incidentSeed:
     fireOrigin: StorageRoom
     hazardType: OrdinaryCombustibles
@@ -322,6 +397,10 @@ MonoBehaviour:
   dispatchEstimatedVictimCountKnown: 1
   dispatchEstimatedVictimCountMin: 2
   dispatchEstimatedVictimCountMax: 4
+  victimLocationIntelMode: 2
+  initialVisibleVictimIconCount: 1
+  requireOccupantRiskReportValueForVictimIconReveal: 1
+  estimatedVictimIconRevealDistance: 0
   expectedReport:
     address: Westbridge Research Center, 100 Main Street
     fireLocation: Storage Room

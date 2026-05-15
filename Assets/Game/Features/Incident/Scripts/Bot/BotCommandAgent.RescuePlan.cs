@@ -89,9 +89,9 @@ public partial class BotCommandAgent
 
             if (!agent.CurrentSafeZoneTarget.TryClaimSlot(agent.gameObject, out Vector3 slotPosition))
             {
-                agent.LogRescueActivityMessage("rescue-no-slot", "Safe zone has no available slots.");
-                agent.FailActiveRescueOrder("Safe zone has no available slots.", BotTaskStatus.Blocked);
-                return BotPlanTaskStatus.Failure;
+                agent.LogRescueActivityMessage("rescue-no-slot", "Safe zone slot is currently occupied; proceeding without reservation.");
+                agent.ClaimedSlotPosition = null;
+                return BotPlanTaskStatus.Success;
             }
 
             agent.ClaimedSlotPosition = slotPosition;
@@ -319,10 +319,17 @@ public partial class BotCommandAgent
 
         PrepareCarryRescueCommand();
 
-        Vector3 safeZonePosition = claimedSlotPosition ?? safeZone.GetWorldPosition();
-        float distanceToSafeZone = BotCommandAgent.GetHorizontalDistance(transform.position, safeZonePosition);
+        if (!claimedSlotPosition.HasValue && safeZone.TryClaimSlot(gameObject, out Vector3 claimedSlot))
+        {
+            claimedSlotPosition = claimedSlot;
+        }
+
+        Vector3 fallbackDropPosition = transform.position + transform.TransformDirection(rescueDropOffset);
+        Vector3 targetDropPosition = claimedSlotPosition ?? safeZone.GetDropPoint(fallbackDropPosition);
+        float distanceToSafeZone = BotCommandAgent.GetHorizontalDistance(transform.position, targetDropPosition);
         bool hasReachedSafeZone =
-            safeZone.ContainsPoint(transform.position) ||
+            IsWithinHorizontalDistance(targetDropPosition, rescueSafeZoneArrivalDistance) ||
+            (claimedSlotPosition.HasValue && safeZone.ContainsPoint(transform.position)) ||
             distanceToSafeZone <= rescueSafeZoneArrivalDistance;
         if (hasReachedSafeZone)
         {
@@ -331,7 +338,7 @@ public partial class BotCommandAgent
         }
 
         LogRescueActivityMessage("rescue-carry", "Carrying casualty to safe zone.");
-        return MoveTaskDirective.Running(safeZonePosition);
+        return MoveTaskDirective.Running(targetDropPosition);
     }
 
 }

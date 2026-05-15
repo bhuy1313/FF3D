@@ -72,9 +72,6 @@ public class LargeSmokeColumnVfx : MonoBehaviour
     [SerializeField] private ParticleSystem emberSparks;
     [SerializeField] private Light baseGlowLight;
 
-    private Material runtimeSmokeMaterial;
-    private Material runtimeCoreOcclusionMaterial;
-    private Texture2D runtimeSmokeTexture;
     private Coroutine placementRoutine;
     private SmokeHazard linkedSmokeHazard;
     private ISmokeVentPoint linkedVentPoint;
@@ -150,30 +147,37 @@ public class LargeSmokeColumnVfx : MonoBehaviour
             placementRoutine = null;
         }
 
-        ReleaseRuntimeAssets();
     }
 
     [ContextMenu("Rebuild Smoke Column")]
     public void BuildOrRefresh()
     {
         Material resolvedSmokeMaterial = ResolveSmokeMaterial();
+        Material resolvedCoreOcclusionMaterial = ResolveCoreOcclusionMaterial();
 
         if (includeCoreOcclusion)
         {
             coreOcclusionSmoke = EnsureParticleSystem("Core Occlusion Smoke", coreOcclusionSmoke);
-            ConfigureSmokeParticleSystem(
-                coreOcclusionSmoke,
-                ResolveCoreOcclusionMaterial(),
-                coreSmokeColor,
-                lifetime: new Vector2(7f, 12f),
-                speed: new Vector2(4.5f, 7f),
-                size: new Vector2(5.5f, 11.5f),
-                rate: 10f,
-                shapeRadius: 2.6f,
-                shapeAngle: 8f,
-                upwardMultiplier: 0.85f,
-                windMultiplier: 0.18f,
-                maxParticles: 180);
+            if (resolvedCoreOcclusionMaterial != null)
+            {
+                ConfigureSmokeParticleSystem(
+                    coreOcclusionSmoke,
+                    resolvedCoreOcclusionMaterial,
+                    coreSmokeColor,
+                    lifetime: new Vector2(7f, 12f),
+                    speed: new Vector2(4.5f, 7f),
+                    size: new Vector2(5.5f, 11.5f),
+                    rate: 10f,
+                    shapeRadius: 2.6f,
+                    shapeAngle: 8f,
+                    upwardMultiplier: 0.85f,
+                    windMultiplier: 0.18f,
+                    maxParticles: 180);
+            }
+            else
+            {
+                coreOcclusionSmoke.gameObject.SetActive(false);
+            }
         }
         else if (coreOcclusionSmoke != null)
         {
@@ -191,49 +195,61 @@ public class LargeSmokeColumnVfx : MonoBehaviour
             windTrailSmoke.gameObject.SetActive(false);
         }
 
-        ConfigureSmokeParticleSystem(
-            baseDenseSmoke,
-            resolvedSmokeMaterial,
-            baseSmokeColor,
-            lifetime: new Vector2(8f, 14f),
-            speed: new Vector2(5.5f, 9f),
-            size: new Vector2(7f, 15f),
-            rate: 18f,
-            shapeRadius: 4f,
-            shapeAngle: 13f,
-            upwardMultiplier: 1f,
-            windMultiplier: 0.35f,
-            maxParticles: 360);
-
-        ConfigureSmokeParticleSystem(
-            upperBillowsSmoke,
-            resolvedSmokeMaterial,
-            upperSmokeColor,
-            lifetime: new Vector2(16f, 26f),
-            speed: new Vector2(3.5f, 6f),
-            size: new Vector2(18f, 38f),
-            rate: 5.5f,
-            shapeRadius: 8f,
-            shapeAngle: 20f,
-            upwardMultiplier: 0.8f,
-            windMultiplier: 0.9f,
-            maxParticles: 180);
-
-        if (includeWindTrail)
+        if (resolvedSmokeMaterial != null)
         {
             ConfigureSmokeParticleSystem(
-                windTrailSmoke,
+                baseDenseSmoke,
                 resolvedSmokeMaterial,
-                trailSmokeColor,
-                lifetime: new Vector2(20f, 34f),
-                speed: new Vector2(2f, 4.5f),
-                size: new Vector2(28f, 58f),
-                rate: 2.4f,
-                shapeRadius: 10f,
-                shapeAngle: 28f,
-                upwardMultiplier: 0.45f,
-                windMultiplier: 1.65f,
-                maxParticles: 110);
+                baseSmokeColor,
+                lifetime: new Vector2(8f, 14f),
+                speed: new Vector2(5.5f, 9f),
+                size: new Vector2(7f, 15f),
+                rate: 18f,
+                shapeRadius: 4f,
+                shapeAngle: 13f,
+                upwardMultiplier: 1f,
+                windMultiplier: 0.35f,
+                maxParticles: 360);
+
+            ConfigureSmokeParticleSystem(
+                upperBillowsSmoke,
+                resolvedSmokeMaterial,
+                upperSmokeColor,
+                lifetime: new Vector2(16f, 26f),
+                speed: new Vector2(3.5f, 6f),
+                size: new Vector2(18f, 38f),
+                rate: 5.5f,
+                shapeRadius: 8f,
+                shapeAngle: 20f,
+                upwardMultiplier: 0.8f,
+                windMultiplier: 0.9f,
+                maxParticles: 180);
+
+            if (includeWindTrail)
+            {
+                ConfigureSmokeParticleSystem(
+                    windTrailSmoke,
+                    resolvedSmokeMaterial,
+                    trailSmokeColor,
+                    lifetime: new Vector2(20f, 34f),
+                    speed: new Vector2(2f, 4.5f),
+                    size: new Vector2(28f, 58f),
+                    rate: 2.4f,
+                    shapeRadius: 10f,
+                    shapeAngle: 28f,
+                    upwardMultiplier: 0.45f,
+                    windMultiplier: 1.65f,
+                    maxParticles: 110);
+            }
+        }
+        else
+        {
+            baseDenseSmoke.gameObject.SetActive(false);
+            upperBillowsSmoke.gameObject.SetActive(false);
+            if (windTrailSmoke != null)
+            {
+                windTrailSmoke.gameObject.SetActive(false);
+            }
         }
 
         if (includeEmbers)
@@ -894,55 +910,22 @@ public class LargeSmokeColumnVfx : MonoBehaviour
 
     private Material ResolveSmokeMaterial()
     {
-        if (smokeMaterial != null)
+        if (smokeMaterial == null)
         {
-            return smokeMaterial;
+            Debug.LogWarning("LargeSmokeColumnVfx requires a smokeMaterial asset reference.", this);
         }
 
-        if (runtimeSmokeMaterial == null)
-        {
-            Shader shader = ResolveParticleShader();
-
-            runtimeSmokeMaterial = new Material(shader)
-            {
-                name = "Runtime Large Smoke Material",
-                hideFlags = HideFlags.DontSave
-            };
-            runtimeSmokeTexture = CreateSmokeTexture();
-            ApplyTexture(runtimeSmokeMaterial, runtimeSmokeTexture);
-            ConfigureTransparentParticleMaterial(runtimeSmokeMaterial, Color.white);
-        }
-
-        return runtimeSmokeMaterial;
+        return smokeMaterial;
     }
 
     private Material ResolveCoreOcclusionMaterial()
     {
-        if (coreOcclusionMaterial != null)
+        if (coreOcclusionMaterial == null && includeCoreOcclusion)
         {
-            return coreOcclusionMaterial;
+            Debug.LogWarning("LargeSmokeColumnVfx requires a coreOcclusionMaterial asset reference when core occlusion is enabled.", this);
         }
 
-        if (runtimeCoreOcclusionMaterial == null)
-        {
-            Shader shader = ResolveParticleShader();
-
-            runtimeCoreOcclusionMaterial = new Material(shader)
-            {
-                name = "Runtime Core Smoke Occlusion Material",
-                hideFlags = HideFlags.DontSave
-            };
-
-            if (runtimeSmokeTexture == null)
-            {
-                runtimeSmokeTexture = CreateSmokeTexture();
-            }
-
-            ApplyTexture(runtimeCoreOcclusionMaterial, runtimeSmokeTexture);
-            ConfigureCutoutParticleMaterial(runtimeCoreOcclusionMaterial, coreSmokeColor, coreAlphaCutoff);
-        }
-
-        return runtimeCoreOcclusionMaterial;
+        return coreOcclusionMaterial;
     }
 
     private Material ResolveEmberMaterial()
@@ -1008,41 +991,6 @@ public class LargeSmokeColumnVfx : MonoBehaviour
         }
     }
 
-    private static void ConfigureCutoutParticleMaterial(Material material, Color color, float cutoff)
-    {
-        if (material == null)
-        {
-            return;
-        }
-
-        material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.AlphaTest;
-        material.SetOverrideTag("RenderType", "TransparentCutout");
-        material.SetOverrideTag("Queue", "AlphaTest");
-
-        SetMaterialFloat(material, "_Surface", 0f);
-        SetMaterialFloat(material, "_AlphaClip", 1f);
-        SetMaterialFloat(material, "_Cutoff", cutoff);
-        SetMaterialFloat(material, "_AlphaCutoff", cutoff);
-        SetMaterialFloat(material, "_SrcBlend", (float)UnityEngine.Rendering.BlendMode.One);
-        SetMaterialFloat(material, "_DstBlend", (float)UnityEngine.Rendering.BlendMode.Zero);
-        SetMaterialFloat(material, "_ZWrite", 1f);
-        SetMaterialFloat(material, "_Cull", (float)UnityEngine.Rendering.CullMode.Off);
-
-        material.DisableKeyword("_SURFACE_TYPE_TRANSPARENT");
-        material.EnableKeyword("_ALPHATEST_ON");
-        material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-
-        if (material.HasProperty("_BaseColor"))
-        {
-            material.SetColor("_BaseColor", color);
-        }
-
-        if (material.HasProperty("_Color"))
-        {
-            material.SetColor("_Color", color);
-        }
-    }
-
     private static void SetMaterialFloat(Material material, string propertyName, float value)
     {
         if (material.HasProperty(propertyName))
@@ -1051,94 +999,4 @@ public class LargeSmokeColumnVfx : MonoBehaviour
         }
     }
 
-    private static void ApplyTexture(Material material, Texture texture)
-    {
-        if (material == null || texture == null)
-        {
-            return;
-        }
-
-        if (material.HasProperty("_BaseMap"))
-        {
-            material.SetTexture("_BaseMap", texture);
-        }
-
-        if (material.HasProperty("_MainTex"))
-        {
-            material.SetTexture("_MainTex", texture);
-        }
-    }
-
-    private static Texture2D CreateSmokeTexture()
-    {
-        const int size = 128;
-        Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, true)
-        {
-            name = "Runtime Soft Smoke Texture",
-            wrapMode = TextureWrapMode.Clamp,
-            filterMode = FilterMode.Trilinear
-        };
-
-        for (int y = 0; y < size; y++)
-        {
-            for (int x = 0; x < size; x++)
-            {
-                float u = (x + 0.5f) / size;
-                float v = (y + 0.5f) / size;
-                float dx = (u - 0.5f) * 2f;
-                float dy = (v - 0.5f) * 2f;
-                float distance = Mathf.Sqrt(dx * dx + dy * dy);
-                float softEdge = Mathf.SmoothStep(1f, 0f, Mathf.InverseLerp(0.62f, 1f, distance));
-                float core = Mathf.SmoothStep(1f, 0f, Mathf.InverseLerp(0.18f, 0.72f, distance));
-                float noise = Mathf.PerlinNoise(u * 6.5f + 17.3f, v * 6.5f + 41.7f);
-                float alpha = Mathf.Clamp01(Mathf.Lerp(softEdge * 0.62f, core, 0.72f) * Mathf.Lerp(0.82f, 1f, noise));
-                texture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
-            }
-        }
-
-        texture.Apply(true, true);
-        return texture;
-    }
-
-    private void ReleaseRuntimeAssets()
-    {
-        if (Application.isPlaying)
-        {
-            if (runtimeSmokeMaterial != null)
-            {
-                Destroy(runtimeSmokeMaterial);
-            }
-
-            if (runtimeCoreOcclusionMaterial != null)
-            {
-                Destroy(runtimeCoreOcclusionMaterial);
-            }
-
-            if (runtimeSmokeTexture != null)
-            {
-                Destroy(runtimeSmokeTexture);
-            }
-        }
-        else
-        {
-            if (runtimeSmokeMaterial != null)
-            {
-                DestroyImmediate(runtimeSmokeMaterial);
-            }
-
-            if (runtimeCoreOcclusionMaterial != null)
-            {
-                DestroyImmediate(runtimeCoreOcclusionMaterial);
-            }
-
-            if (runtimeSmokeTexture != null)
-            {
-                DestroyImmediate(runtimeSmokeTexture);
-            }
-        }
-
-        runtimeSmokeMaterial = null;
-        runtimeCoreOcclusionMaterial = null;
-        runtimeSmokeTexture = null;
-    }
 }

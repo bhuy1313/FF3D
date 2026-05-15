@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -52,6 +53,7 @@ namespace TrueJourney.BotBehavior
 
         [Header("Dynamic Parameter Prefixes")]
         [SerializeField] private string holdingNamePrefix = "IsHolding_";
+        [SerializeField] private string holdingItemNamePrefix = "IsHoldingItem_";
         [SerializeField] private string holdingTypePrefix = "IsHoldingType_";
         [SerializeField] private string commandTypePrefix = "IsCommand_";
 
@@ -83,6 +85,7 @@ namespace TrueJourney.BotBehavior
         [SerializeField] private BotCommandType activeCommandType;
         [SerializeField] private int itemCount;
         [SerializeField] private string heldItemName;
+        [SerializeField] private string heldItemDisplayName;
         [SerializeField] private string heldItemTypeName;
 
         private readonly Dictionary<string, int> parameterHashes = new Dictionary<string, int>();
@@ -327,6 +330,7 @@ namespace TrueJourney.BotBehavior
             if (isHolding)
             {
                 EnableDynamicBoolParameter(holdingNamePrefix, heldItemName);
+                EnableDynamicBoolParameter(holdingItemNamePrefix, heldItemDisplayName);
                 EnableDynamicBoolParameter(holdingTypePrefix, heldItemTypeName);
             }
 
@@ -382,6 +386,7 @@ namespace TrueJourney.BotBehavior
         private void ResolveHeldItemInfo(out string itemName, out string itemTypeName)
         {
             itemName = string.Empty;
+            heldItemDisplayName = string.Empty;
             itemTypeName = string.Empty;
 
             IPickupable activeItem = inventorySystem != null ? inventorySystem.ActiveItem : null;
@@ -391,6 +396,7 @@ namespace TrueJourney.BotBehavior
             }
 
             itemName = activeItem.Rigidbody.gameObject.name;
+            heldItemDisplayName = ResolveItemDisplayName(activeItem.Rigidbody.gameObject);
             MonoBehaviour[] components = activeItem.Rigidbody.GetComponents<MonoBehaviour>();
             for (int i = 0; i < components.Length; i++)
             {
@@ -406,11 +412,57 @@ namespace TrueJourney.BotBehavior
                 }
 
                 itemName = component.gameObject.name;
+                heldItemDisplayName = ResolveItemDisplayName(component.gameObject);
                 itemTypeName = component.GetType().Name;
                 return;
             }
 
             itemTypeName = activeItem.GetType().Name;
+        }
+
+        private static string ResolveItemDisplayName(GameObject itemObject)
+        {
+            if (itemObject == null)
+            {
+                return string.Empty;
+            }
+
+            Component itemComponent = FindComponentInParents(itemObject.transform, TypeCache.ItemComponentTypeName);
+            if (itemComponent != null &&
+                itemComponent.GetType().GetProperty(TypeCache.ItemNamePropertyName, BindingFlags.Instance | BindingFlags.Public) is PropertyInfo itemNameProperty &&
+                itemNameProperty.PropertyType == typeof(string))
+            {
+                string itemName = itemNameProperty.GetValue(itemComponent) as string;
+                if (!string.IsNullOrWhiteSpace(itemName))
+                {
+                    return itemName;
+                }
+            }
+
+            return itemObject.name;
+        }
+
+        private static Component FindComponentInParents(Transform start, string componentTypeName)
+        {
+            Transform current = start;
+            while (current != null)
+            {
+                Component component = current.GetComponent(componentTypeName);
+                if (component != null)
+                {
+                    return component;
+                }
+
+                current = current.parent;
+            }
+
+            return null;
+        }
+
+        private static class TypeCache
+        {
+            public const string ItemComponentTypeName = "Item";
+            public const string ItemNamePropertyName = "ItemName";
         }
 
         private void SetFloat(string parameterName, float value)

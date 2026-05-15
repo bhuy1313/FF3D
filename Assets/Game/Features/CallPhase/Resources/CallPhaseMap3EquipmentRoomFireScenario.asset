@@ -262,6 +262,15 @@ MonoBehaviour:
     linkedStepId: collect_address
     isDistractorQuestion: 0
     authorNote: Primary location-identification question.
+  - questionId: equipment_q_address_site_name
+    questionText: Tell me the building name and street address.
+    quality: 1
+    relatedFieldId: Address
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_address
+    isDistractorQuestion: 0
+    authorNote: Acceptable alternate way to gather the full dispatch location.
   - questionId: equipment_q_anyone_inside
     questionText: Are there researchers or staff still inside the center?
     quality: 0
@@ -271,6 +280,15 @@ MonoBehaviour:
     linkedStepId: collect_occupant_risk
     isDistractorQuestion: 0
     authorNote: Critical life-safety follow-up for occupied research facilities.
+  - questionId: equipment_q_people_cut_off
+    questionText: Is anyone trapped or cut off above the smoke?
+    quality: 1
+    relatedFieldId: OccupantRisk
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_occupant_risk
+    isDistractorQuestion: 0
+    authorNote: Acceptable alternate framing for occupant-risk information.
   - questionId: equipment_q_hazard_elec
     questionText: Are there any specific hazards like gas or high voltage?
     quality: 0
@@ -280,6 +298,15 @@ MonoBehaviour:
     linkedStepId: collect_hazard
     isDistractorQuestion: 0
     authorNote: Extremely critical for equipment-room electrical fires.
+  - questionId: equipment_q_power_status
+    questionText: Is the power still live in that equipment room?
+    quality: 1
+    relatedFieldId: hazard
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_hazard
+    isDistractorQuestion: 0
+    authorNote: Acceptable alternate question that still reveals the electrical hazard.
   - questionId: equipment_q_fire_spread
     questionText: Is the fire spreading out of the equipment room?
     quality: 0
@@ -289,6 +316,15 @@ MonoBehaviour:
     linkedStepId: collect_spread_status
     isDistractorQuestion: 0
     authorNote: Crucial to know if research wing evacuation routes are compromised.
+  - questionId: equipment_q_smoke_extension
+    questionText: Is smoke pushing into the stairs or nearby corridors?
+    quality: 1
+    relatedFieldId: SpreadStatus
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_spread_status
+    isDistractorQuestion: 0
+    authorNote: Acceptable alternate spread-status wording for smoke-driven extension.
   - questionId: equipment_q_caller_safe
     questionText: Are you in a safe location right now?
     quality: 1
@@ -298,6 +334,15 @@ MonoBehaviour:
     linkedStepId: collect_caller_safety
     isDistractorQuestion: 0
     authorNote: Standard safety check.
+  - questionId: equipment_q_caller_clear
+    questionText: Have you fully evacuated away from the building?
+    quality: 1
+    relatedFieldId: CallerSafety
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_caller_safety
+    isDistractorQuestion: 0
+    authorNote: Acceptable alternate caller-safety check.
   - questionId: equipment_q_distractor_1
     questionText: Did you try using a fire extinguisher?
     quality: 2
@@ -308,6 +353,36 @@ MonoBehaviour:
     distractorCallerReplyText: No, it's high voltage, I wasn't going to touch it!
     isDistractorQuestion: 1
     authorNote: Lower-priority distractor.
+  - questionId: equipment_q_distractor_2
+    questionText: Do you know which brand of electrical panel is burning?
+    quality: 2
+    relatedFieldId: 
+    suggestedWhenFieldMissing: 0
+    hideIfFieldAlreadyKnown: 0
+    linkedStepId: 
+    distractorCallerReplyText: No, I just know it's the main panel and it's on fire!
+    isDistractorQuestion: 1
+    authorNote: Overly detailed equipment question that does not improve dispatch quality.
+  - questionId: equipment_q_distractor_3
+    questionText: Were the researchers working on a specific experiment today?
+    quality: 2
+    relatedFieldId: 
+    suggestedWhenFieldMissing: 0
+    hideIfFieldAlreadyKnown: 0
+    linkedStepId: 
+    distractorCallerReplyText: I don't know, I'm trying to get help for the people trapped upstairs!
+    isDistractorQuestion: 1
+    authorNote: Plausible but low-value operational distraction.
+  - questionId: equipment_q_distractor_4
+    questionText: Can you estimate how expensive the damaged equipment is?
+    quality: 2
+    relatedFieldId: 
+    suggestedWhenFieldMissing: 0
+    hideIfFieldAlreadyKnown: 0
+    linkedStepId: 
+    distractorCallerReplyText: I can't think about that right now, the fire and smoke are getting worse!
+    isDistractorQuestion: 1
+    authorNote: Property-loss distractor.
   incidentSeed:
     fireOrigin: EquipmentRoom
     hazardType: Electrical
@@ -322,6 +397,10 @@ MonoBehaviour:
   dispatchEstimatedVictimCountKnown: 1
   dispatchEstimatedVictimCountMin: 2
   dispatchEstimatedVictimCountMax: 6
+  victimLocationIntelMode: 0
+  initialVisibleVictimIconCount: 0
+  requireOccupantRiskReportValueForVictimIconReveal: 1
+  estimatedVictimIconRevealDistance: 0
   expectedReport:
     address: Westbridge Research Center, 100 Main Street
     fireLocation: Equipment Room

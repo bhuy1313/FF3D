@@ -28,6 +28,9 @@ public class MinimapCompassController : MonoBehaviour
     private TextMeshProUGUI eastLabel;
     private TextMeshProUGUI southLabel;
     private TextMeshProUGUI westLabel;
+    private Vector2 lastHostSize = new Vector2(float.MinValue, float.MinValue);
+    private float lastYaw = float.NaN;
+    private bool visualsDirty = true;
 
     private void Awake()
     {
@@ -42,12 +45,13 @@ public class MinimapCompassController : MonoBehaviour
         EnsureCompassVisuals();
         LanguageManager.LanguageChanged -= HandleLanguageChanged;
         LanguageManager.LanguageChanged += HandleLanguageChanged;
-        UpdateCompass(true);
+        visualsDirty = true;
+        UpdateCompass(force: true);
     }
 
     private void LateUpdate()
     {
-        UpdateCompass(ignoreTimeScale);
+        UpdateCompass(force: !ignoreTimeScale && Time.timeScale <= 0f);
     }
 
     private void OnDisable()
@@ -64,7 +68,8 @@ public class MinimapCompassController : MonoBehaviour
 
         ResolveReferences();
         EnsureCompassVisuals();
-        UpdateCompass(true);
+        visualsDirty = true;
+        UpdateCompass(force: true);
     }
 
     private void HandleLanguageChanged(AppLanguage _)
@@ -73,6 +78,7 @@ public class MinimapCompassController : MonoBehaviour
         ApplyLabelStyle(eastLabel, "E");
         ApplyLabelStyle(southLabel, "S");
         ApplyLabelStyle(westLabel, "W");
+        visualsDirty = true;
     }
 
     private void ResolveReferences()
@@ -108,7 +114,9 @@ public class MinimapCompassController : MonoBehaviour
             return;
         }
 
-        RectTransform existingCompassRoot = FindChildRect(transform as RectTransform, "CompassOverlay");
+        RectTransform existingCompassRoot = compassRoot != null
+            ? compassRoot
+            : FindChildRect(transform as RectTransform, "CompassOverlay");
         compassRoot = existingCompassRoot != null ? existingCompassRoot : FindChildRect(hostRoot, "CompassOverlay");
         if (compassRoot == null)
         {
@@ -132,12 +140,28 @@ public class MinimapCompassController : MonoBehaviour
         eastLabel = EnsureLabel(eastLabel, "EastLabel", "E");
         southLabel = EnsureLabel(southLabel, "SouthLabel", "S");
         westLabel = EnsureLabel(westLabel, "WestLabel", "W");
+        visualsDirty = true;
     }
 
-    private void UpdateCompass(bool _)
+    private void UpdateCompass(bool force)
     {
-        ResolveReferences();
-        EnsureCompassVisuals();
+        if (rotationSource == null)
+        {
+            ResolveReferences();
+        }
+
+        RectTransform resolvedHostRoot = autoResolveActiveHostRoot ? ResolveActiveHostRoot() : hostRoot;
+        if (resolvedHostRoot != null && resolvedHostRoot != hostRoot)
+        {
+            hostRoot = resolvedHostRoot;
+            compassRoot = null;
+            visualsDirty = true;
+        }
+
+        if (compassRoot == null || northLabel == null || eastLabel == null || southLabel == null || westLabel == null)
+        {
+            EnsureCompassVisuals();
+        }
 
         if (rotationSource == null || compassRoot == null)
         {
@@ -145,13 +169,28 @@ public class MinimapCompassController : MonoBehaviour
         }
 
         float yaw = rotationSource.eulerAngles.y;
-        UpdateLabelPosition(northLabel, Vector2.up, yaw);
-        UpdateLabelPosition(eastLabel, Vector2.right, yaw);
-        UpdateLabelPosition(southLabel, Vector2.down, yaw);
-        UpdateLabelPosition(westLabel, Vector2.left, yaw);
+        Vector2 hostSize = hostRoot != null ? hostRoot.rect.size : Vector2.zero;
+        if (!force &&
+            !visualsDirty &&
+            Mathf.Abs(Mathf.DeltaAngle(lastYaw, yaw)) <= 0.05f &&
+            hostSize == lastHostSize)
+        {
+            return;
+        }
+
+        float radians = yaw * Mathf.Deg2Rad;
+        float cosine = Mathf.Cos(radians);
+        float sine = Mathf.Sin(radians);
+        UpdateLabelPosition(northLabel, Vector2.up, cosine, sine);
+        UpdateLabelPosition(eastLabel, Vector2.right, cosine, sine);
+        UpdateLabelPosition(southLabel, Vector2.down, cosine, sine);
+        UpdateLabelPosition(westLabel, Vector2.left, cosine, sine);
+        lastYaw = yaw;
+        lastHostSize = hostSize;
+        visualsDirty = false;
     }
 
-    private void UpdateLabelPosition(TextMeshProUGUI label, Vector2 baseDirection, float yawDegrees)
+    private void UpdateLabelPosition(TextMeshProUGUI label, Vector2 baseDirection, float cosine, float sine)
     {
         if (label == null)
         {
@@ -159,10 +198,6 @@ public class MinimapCompassController : MonoBehaviour
         }
 
         RectTransform labelRect = label.rectTransform;
-        float radians = yawDegrees * Mathf.Deg2Rad;
-        float cosine = Mathf.Cos(radians);
-        float sine = Mathf.Sin(radians);
-
         Vector2 rotated = new Vector2(
             (baseDirection.x * cosine) - (baseDirection.y * sine),
             (baseDirection.x * sine) + (baseDirection.y * cosine));
@@ -271,6 +306,7 @@ public class MinimapCompassController : MonoBehaviour
     public void SetVisualScale(float scale)
     {
         visualScale = Mathf.Max(0.5f, scale);
+        visualsDirty = true;
     }
 
     private static RectTransform FindChildRect(RectTransform root, string objectName)

@@ -66,8 +66,8 @@ public partial class AssessRiskPopupEntryController
     private bool MeetsSubmitFieldRequirements()
     {
         return incidentReportController != null
-            && incidentReportController.HasCollectedValue("Address")
-            && incidentReportController.HasCollectedValue(FireLocationFieldId)
+            && HasCollectedValueIfScenarioAllows("Address")
+            && HasCollectedValueIfScenarioAllows(FireLocationFieldId)
             && incidentReportController.HasCollectedValue(SeverityFieldId);
     }
 
@@ -91,7 +91,7 @@ public partial class AssessRiskPopupEntryController
                 continue;
             }
 
-            if (!incidentReportController.HasCollectedValue(fieldId))
+            if (!HasCollectedValueIfScenarioAllows(fieldId))
             {
                 return false;
             }
@@ -116,7 +116,7 @@ public partial class AssessRiskPopupEntryController
                 continue;
             }
 
-            if (incidentReportController.HasCollectedValue(fieldId))
+            if (HasCollectedValueIfScenarioAllows(fieldId))
             {
                 count++;
             }
@@ -134,6 +134,21 @@ public partial class AssessRiskPopupEntryController
     {
         return transcriptStateController == null
             || transcriptStateController.CurrentState == TranscriptPanelState.Normal;
+    }
+
+    private bool HasCollectedValueIfScenarioAllows(string fieldId)
+    {
+        if (string.IsNullOrWhiteSpace(fieldId))
+        {
+            return true;
+        }
+
+        if (scenarioData != null && !scenarioData.CanCallerProvideField(fieldId))
+        {
+            return true;
+        }
+
+        return incidentReportController != null && incidentReportController.HasCollectedValue(fieldId);
     }
 
     private void SetAssessRiskButtonInteractable(bool interactable)

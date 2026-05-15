@@ -21,6 +21,12 @@ public partial class BotCommandAgent
 
     internal bool TryRefreshSafeMovementObstacles(Vector3 destination, bool forceRepath)
     {
+        if (IsV2TacticalNavigationActive())
+        {
+            ClearSafeMovementBlockedState();
+            return false;
+        }
+
         if (!enableSafeMovement ||
             navMeshAgent == null ||
             !navMeshAgent.enabled ||
@@ -78,6 +84,11 @@ public partial class BotCommandAgent
 
         RefreshSafeMovementPathState(destination);
         return activatedAnyObstacle;
+    }
+
+    private bool IsV2TacticalNavigationActive()
+    {
+        return IsExtinguishV2Active || IsRouteFireV2Active || IsPathClearingV2Active;
     }
 
     internal bool IsSafeMovementPathBlocked => isSafeMovementPathBlocked;

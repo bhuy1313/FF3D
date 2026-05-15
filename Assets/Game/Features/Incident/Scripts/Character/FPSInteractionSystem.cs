@@ -98,8 +98,6 @@ namespace StarterAssets
         private GameObject grabbedPreviewRoot;
         private Material grabbedPreviewMaterial;
         private ICustomGrabPlacement grabbedPlacementOverride;
-        private readonly List<MonoBehaviour> grabbedBurnableSources = new List<MonoBehaviour>();
-        private bool hasLoggedLegacyGrabFireWarning;
         private IRescuableTarget cachedCarriedRescuable;
         private bool isCarryingVictim;
         private Vector3 lastFocusSamplePosition;
@@ -163,7 +161,6 @@ namespace StarterAssets
                 WasPressed(input != null && input.drop, ref previousDrop);
                 WasPressed(input != null && input.climbOver, ref previousClimbOver);
 
-                ApplyHeldBurnDamage();
                 UpdateGrabPlacementPreview();
 
                 if (usePressedWhileGrabbed)
@@ -654,7 +651,6 @@ namespace StarterAssets
             grabbedTransform.localPosition = Vector3.zero;
             grabbedTransform.localRotation = Quaternion.identity;
             grabbedPlacementOverride = FindCustomGrabPlacement(grabbedTransform);
-            CacheGrabbedBurnSources(grabbedTransform);
             grabbedPlacementOverride?.OnGrabStarted();
             RebuildGrabPreview();
         }
@@ -685,7 +681,6 @@ namespace StarterAssets
             grabbedPlacementOverride?.OnGrabCancelled();
 
             DestroyGrabPreview();
-            grabbedBurnableSources.Clear();
             grabbedBody = null;
             grabbedOriginalParent = null;
             grabbedPlacementOverride = null;
@@ -894,7 +889,6 @@ namespace StarterAssets
             }
 
             DestroyGrabPreview();
-            grabbedBurnableSources.Clear();
             grabbedBody = null;
             grabbedOriginalParent = null;
             grabbedPlacementOverride = null;
@@ -1380,76 +1374,6 @@ namespace StarterAssets
             }
 
             relay?.NotifyInteracted(interactor);
-        }
-
-        private void ApplyHeldBurnDamage()
-        {
-            if (playerVitals == null || !playerVitals.IsAlive || grabbedBody == null)
-            {
-                return;
-            }
-
-            if (grabbedBurnableSources.Count == 0)
-            {
-                CacheGrabbedBurnSources(grabbedBody.transform);
-                if (grabbedBurnableSources.Count == 0)
-                {
-                    return;
-                }
-            }
-
-            float maxDamagePerSecond = 0f;
-            for (int i = grabbedBurnableSources.Count - 1; i >= 0; i--)
-            {
-                MonoBehaviour source = grabbedBurnableSources[i];
-                if (source == null || source is not IBurnable burnable)
-                {
-                    grabbedBurnableSources.RemoveAt(i);
-                    continue;
-                }
-
-                maxDamagePerSecond = Mathf.Max(maxDamagePerSecond, burnable.CurrentFireContactDamagePerSecond);
-            }
-
-            if (maxDamagePerSecond > 0f)
-            {
-                playerVitals.TakeDamage(maxDamagePerSecond * Time.deltaTime);
-            }
-        }
-
-        private void CacheGrabbedBurnSources(Transform grabbedTransform)
-        {
-            grabbedBurnableSources.Clear();
-            if (grabbedTransform == null)
-            {
-                return;
-            }
-
-            if (grabbedTransform.TryGetComponent(out MonoBehaviour directBurnableBehaviour) &&
-                directBurnableBehaviour is IBurnable directBurnable &&
-                directBurnable.CurrentFireContactDamagePerSecond > 0f)
-            {
-                grabbedBurnableSources.Add(directBurnableBehaviour);
-                return;
-            }
-
-            MonoBehaviour[] behaviours = grabbedTransform.GetComponentsInChildren<MonoBehaviour>(true);
-            for (int i = 0; i < behaviours.Length; i++)
-            {
-                MonoBehaviour behaviour = behaviours[i];
-                if (behaviour is IBurnable burnable && burnable.CurrentFireContactDamagePerSecond > 0f)
-                {
-                    grabbedBurnableSources.Add(behaviour);
-                }
-            }
-
-            if (!hasLoggedLegacyGrabFireWarning && grabbedBurnableSources.Count > 0)
-            {
-                hasLoggedLegacyGrabFireWarning = true;
-                Debug.LogWarning(
-                    $"{nameof(FPSInteractionSystem)} detected burnable sources on grabbed objects through legacy-compatible paths. Prefer node-based fire integrations for new interactable content.",
-                    this);
-            }
         }
 
         private static ICustomGrabPlacement FindCustomGrabPlacement(Transform grabbedTransform)

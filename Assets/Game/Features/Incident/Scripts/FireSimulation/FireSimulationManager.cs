@@ -51,6 +51,10 @@ public sealed partial class FireSimulationManager : MonoBehaviour
     private readonly HashSet<int> recoveryTimerNodeIndexLookup = new HashSet<int>();
     private readonly List<int> visualActiveNodeIndices = new List<int>();
     private readonly HashSet<int> visualActiveNodeIndexLookup = new HashSet<int>();
+    private readonly List<int> dirtyNodeIndices = new List<int>();
+    private readonly HashSet<int> dirtyNodeIndexLookup = new HashSet<int>();
+    private readonly List<int> processingNodeIndices = new List<int>();
+    private readonly HashSet<int> processingNodeIndexLookup = new HashSet<int>();
     [SerializeField] private List<string> activeSpreadNodeDebugEntries = new List<string>();
     private FireRuntimeGraph runtimeGraph;
     private float simulationTickAccumulator;
@@ -143,6 +147,7 @@ public sealed partial class FireSimulationManager : MonoBehaviour
         nodeHeatLogAccumulator = 0f;
         effectSyncAccumulator = 0f;
         nodeSnapshots.Clear();
+        ClearDirtyNodes();
 
         if (surfaceGraph == null || simulationProfile == null)
         {
@@ -251,5 +256,67 @@ public sealed partial class FireSimulationManager : MonoBehaviour
     private void MarkVisualStateDirty()
     {
         nodeSnapshotsDirty = true;
+    }
+
+    private void MarkNodeDirty(FireRuntimeNode node)
+    {
+        if (node == null)
+        {
+            return;
+        }
+
+        MarkNodeDirty(node.Index);
+    }
+
+    private void MarkNodeDirty(int nodeIndex)
+    {
+        if (nodeIndex < 0)
+        {
+            return;
+        }
+
+        if (dirtyNodeIndexLookup.Add(nodeIndex))
+        {
+            dirtyNodeIndices.Add(nodeIndex);
+        }
+
+        AddProcessingNode(nodeIndex);
+    }
+
+    private void BeginProcessingDirtyNodes()
+    {
+        processingNodeIndices.Clear();
+        processingNodeIndexLookup.Clear();
+
+        for (int i = 0; i < dirtyNodeIndices.Count; i++)
+        {
+            AddProcessingNode(dirtyNodeIndices[i]);
+        }
+
+        for (int i = 0; i < activeSpreadNodeIndices.Count; i++)
+        {
+            AddProcessingNode(activeSpreadNodeIndices[i]);
+        }
+
+        for (int i = 0; i < recoveryTimerNodeIndices.Count; i++)
+        {
+            AddProcessingNode(recoveryTimerNodeIndices[i]);
+        }
+    }
+
+    private void AddProcessingNode(int nodeIndex)
+    {
+        if (nodeIndex >= 0 && processingNodeIndexLookup.Add(nodeIndex))
+        {
+            processingNodeIndices.Add(nodeIndex);
+        }
+    }
+
+    private void ClearDirtyNodes()
+    {
+        dirtyNodeIndices.Clear();
+        dirtyNodeIndexLookup.Clear();
+        processingNodeIndices.Clear();
+        processingNodeIndexLookup.Clear();
     }
 }

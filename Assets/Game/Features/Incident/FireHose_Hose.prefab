@@ -86,10 +86,14 @@ MonoBehaviour:
   normalThreshold: 15
   heightThreshold: 0.3
   minDistanceBeforeBreak: 0.3
-  raycastHeight: 4
+  edgeProbeStepDistance: 0.2
+  edgeHeightDeltaThreshold: 0.2
+  edgeBinarySearchIterations: 5
+  edgeTransitionInset: 0.08
+  raycastHeight: 1.5
   groundMask:
     serializedVersion: 2
-    m_Bits: 16383
+    m_Bits: 64
   useCustomProbeDistances: 0
   lookAheadDistance: 0.75
   farLookAheadDistance: 1.5
@@ -107,6 +111,7 @@ GameObject:
   - component: {fileID: 7710755006941898614}
   - component: {fileID: 1895203857438365315}
   - component: {fileID: 17767697252185414}
+  - component: {fileID: 6463523701684102150}
   m_Layer: 0
   m_Name: FireHoseVisual
   m_TagString: Untagged
@@ -199,9 +204,38 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FireHoseDeployed
   source: {fileID: 7047130709057454104}
-  sampleSpacing: 0.0625
+  sampleSpacing: 0.2
   segmentMaxLength: 30
-  radius: 0.12
+  radius: 0.08
   radialSegments: 12
-  surfaceOffset: 0.03
+  surfaceOffset: 0.05
   hoseMaterial: {fileID: 2100000, guid: bd28bc93a4cec434e95bac76e08d91c3, type: 2}
+--- !u!114 &6463523701684102150
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8890468099825147160}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c94f1917dc84f84b454e2457d0eb0d2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FireHoseTailVisual
+  startPoint: {fileID: 0}
+  endPoint: {fileID: 0}
+  hoseMaterial: {fileID: 2100000, guid: bd28bc93a4cec434e95bac76e08d91c3, type: 2}
+  sampleSpacing: 0.15
+  radius: 0.08
+  radialSegments: 12
+  particleCount: 9
+  constraintIterations: 16
+  slackLength: 0.05
+  gravity: 14
+  damping: 0.08
+  maxTimestep: 0.033
+  collisionMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  collisionIterations: 2
+  collisionSkin: 0.01

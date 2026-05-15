@@ -41,8 +41,6 @@ public class BotBehaviorContext : MonoBehaviour
     [SerializeField] private bool driveLoadedLowerBodyLayer = true;
     [SerializeField] private string loadedLowerBodyLayer = "Lower Body Layer";
     [SerializeField] private float loadedLowerBodyLayerWeightLerpSpeed = 10f;
-    [SerializeField] private bool loadedLowerBodyOnlyWhileMoving = true;
-    [SerializeField] private float loadedLowerBodyMinCarryWeight = 1f;
     [SerializeField] private bool loadedLowerBodyLayerActive;
 
     private readonly BotMoveOrderState moveOrderState = new BotMoveOrderState();
@@ -587,17 +585,7 @@ public class BotBehaviorContext : MonoBehaviour
 
     private bool ShouldUseLoadedLowerBodyLayer()
     {
-        if (commandAgent == null)
-        {
-            return false;
-        }
-
-        if (commandAgent.CurrentCarryWeightKg < Mathf.Max(0f, loadedLowerBodyMinCarryWeight))
-        {
-            return false;
-        }
-
-        return !loadedLowerBodyOnlyWhileMoving || movementAnimationActive;
+        return movementAnimationActive;
     }
 
     private void ApplyLoadedLowerBodyLayerWeight(float targetWeight)

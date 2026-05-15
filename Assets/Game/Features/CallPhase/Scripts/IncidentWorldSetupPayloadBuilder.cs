@@ -44,6 +44,10 @@ public static class IncidentWorldSetupPayloadBuilder
         string spreadPreset = Sanitize(baseSeed.fireSpreadPreset, "Moderate");
         string ventilationPreset = ResolveVentilationPreset(baseSeed.ventilationPreset, snapshot, logicalFireLocation, appliedSignals);
         string occupantRiskPreset = ResolveOccupantRiskPreset(snapshot.occupantRisk, appliedSignals);
+        string victimLocationIntelMode = ResolveVictimLocationIntelMode(scenarioData);
+        bool shouldRevealVictimIconsAtStart = ResolveShouldRevealVictimIconsAtStart(scenarioData, snapshot, victimLocationIntelMode, appliedSignals);
+        int visibleVictimIconCount = ResolveVisibleVictimIconCount(scenarioData, shouldRevealVictimIconsAtStart);
+        float estimatedVictimIconRevealDistance = ResolveEstimatedVictimIconRevealDistance(scenarioData, victimLocationIntelMode);
         bool estimatedTrappedCountKnown = scenarioData != null && scenarioData.dispatchEstimatedVictimCountKnown;
         int estimatedTrappedCountMin = 0;
         int estimatedTrappedCountMax = 0;
@@ -85,6 +89,10 @@ public static class IncidentWorldSetupPayloadBuilder
             estimatedTrappedCountKnown = estimatedTrappedCountKnown,
             estimatedTrappedCountMin = estimatedTrappedCountMin,
             estimatedTrappedCountMax = estimatedTrappedCountMax,
+            victimLocationIntelMode = victimLocationIntelMode,
+            shouldRevealVictimIconsAtStart = shouldRevealVictimIconsAtStart,
+            visibleVictimIconCount = visibleVictimIconCount,
+            estimatedVictimIconRevealDistance = estimatedVictimIconRevealDistance,
             confidenceScore = ComputeConfidenceScore(incidentReportController, snapshot),
             reportSnapshot = snapshot,
             appliedSignals = appliedSignals
@@ -323,6 +331,63 @@ public static class IncidentWorldSetupPayloadBuilder
         }
 
         return string.IsNullOrWhiteSpace(normalizedRisk) ? "Unknown" : "Manageable";
+    }
+
+    private static string ResolveVictimLocationIntelMode(CallPhaseScenarioData scenarioData)
+    {
+        if (scenarioData == null)
+        {
+            return CallPhaseVictimLocationIntelMode.None.ToString();
+        }
+
+        return scenarioData.victimLocationIntelMode.ToString();
+    }
+
+    private static bool ResolveShouldRevealVictimIconsAtStart(
+        CallPhaseScenarioData scenarioData,
+        IncidentWorldSetupReportSnapshot snapshot,
+        string victimLocationIntelMode,
+        List<string> appliedSignals)
+    {
+        if (string.Equals(victimLocationIntelMode, CallPhaseVictimLocationIntelMode.None.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        bool requiresOccupantRiskValue = scenarioData == null || scenarioData.requireOccupantRiskReportValueForVictimIconReveal;
+        bool hasOccupantRiskValue = snapshot != null && !string.IsNullOrWhiteSpace(snapshot.occupantRisk);
+        if (requiresOccupantRiskValue && !hasOccupantRiskValue)
+        {
+            appliedSignals.Add("Victim location intel existed in scenario, but no occupant-risk detail was captured during call phase.");
+            return false;
+        }
+
+        appliedSignals.Add(
+            string.Equals(victimLocationIntelMode, CallPhaseVictimLocationIntelMode.Confirmed.ToString(), StringComparison.OrdinalIgnoreCase)
+                ? "Call phase provided confirmed victim location intel."
+                : "Call phase provided estimated victim location intel.");
+        return true;
+    }
+
+    private static int ResolveVisibleVictimIconCount(CallPhaseScenarioData scenarioData, bool shouldRevealVictimIconsAtStart)
+    {
+        if (!shouldRevealVictimIconsAtStart || scenarioData == null)
+        {
+            return 0;
+        }
+
+        return Mathf.Max(0, scenarioData.initialVisibleVictimIconCount);
+    }
+
+    private static float ResolveEstimatedVictimIconRevealDistance(CallPhaseScenarioData scenarioData, string victimLocationIntelMode)
+    {
+        if (scenarioData == null ||
+            !string.Equals(victimLocationIntelMode, CallPhaseVictimLocationIntelMode.Estimated.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            return 0f;
+        }
+
+        return Mathf.Max(0f, scenarioData.estimatedVictimIconRevealDistance);
     }
 
     private static string ResolveIsolationType(string hazardType)

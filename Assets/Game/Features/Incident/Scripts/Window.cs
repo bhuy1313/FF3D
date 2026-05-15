@@ -293,6 +293,17 @@ if (lockedShakeTimer > 0f)
         if (!TryResolveClimbTraversal(interactor, out Vector3 startPosition, out Quaternion startRotation, out Vector3 endPosition, out Quaternion endRotation))
             return false;
 
+        float climbStaminaCost = 0f;
+        if (interactor != null && interactor.TryGetComponent(out PlayerTraversalStaminaConfig traversalConfig))
+            climbStaminaCost = traversalConfig.ClimbOverStaminaCost;
+
+        if (climbStaminaCost > 0f)
+        {
+            PlayerVitals vitals = interactor != null ? interactor.GetComponent<PlayerVitals>() : null;
+            if (vitals != null && !vitals.TryUseStamina(climbStaminaCost))
+                return false;
+        }
+
         PlayerInteractionAnimationState.GetOrCreate(interactor)?.PulseAction(PlayerInteractionAnimationAction.ClimbOver, 0.2f, this);
         activeClimbRoutine = StartCoroutine(PerformClimbOverRoutine(interactor, startPosition, startRotation, endPosition, endRotation));
         return true;

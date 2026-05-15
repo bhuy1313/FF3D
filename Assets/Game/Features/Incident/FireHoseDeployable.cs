@@ -14,6 +14,10 @@ public class FireHoseDeployable : MonoBehaviour
     public float normalThreshold = 15f;
     public float heightThreshold = 0.3f;
     public float minDistanceBeforeBreak = 0.3f;
+    public float edgeProbeStepDistance = 0.2f;
+    public float edgeHeightDeltaThreshold = 0.2f;
+    public int edgeBinarySearchIterations = 5;
+    public float edgeTransitionInset = 0.08f;
 
     public float raycastHeight = 2f;
     public LayerMask groundMask;
@@ -29,6 +33,7 @@ public class FireHoseDeployable : MonoBehaviour
 
     public event Action<Knot> OnKnotAdded;
 
+    private FireHoseHeadPickup cachedHeadPickup;
     private Vector3 lastKnotPos;
     private Vector3 lastNormal;
     private Vector3 lastSamplePoint;
@@ -40,6 +45,7 @@ public class FireHoseDeployable : MonoBehaviour
 
     void Start()
     {
+        ResolveHeadPickup();
         if (head != null)
         {
             lastObservedHeadPosition = head.position;
@@ -187,6 +193,36 @@ public class FireHoseDeployable : MonoBehaviour
             distanceSinceLastKnot > minDistanceBeforeBreak &&
             (predictedAngle > normalThreshold || predictedHeightDelta > heightThreshold);
 
+        bool shouldResolveStepEdge =
+            distanceSinceLastKnot > minDistanceBeforeBreak &&
+            (localHeightDelta > edgeHeightDeltaThreshold || predictedHeightDelta > edgeHeightDeltaThreshold);
+
+        if (shouldResolveStepEdge &&
+            TryResolveStepEdge(
+                lastKnotPos,
+                currentPoint,
+                out Vector3 lowerEdgePoint,
+                out Vector3 lowerEdgeNormal,
+                out Vector3 upperEdgePoint,
+                out Vector3 upperEdgeNormal))
+        {
+            bool lowerEdgeIsDistinctFromLast = Vector3.Distance(lastKnotPos, lowerEdgePoint) > 0.05f;
+            bool lowerEdgeIsDistinctFromCurrent = Vector3.Distance(lowerEdgePoint, currentPoint) > 0.05f;
+            bool upperEdgeIsDistinctFromLast = Vector3.Distance(lastKnotPos, upperEdgePoint) > 0.05f;
+            bool upperEdgeIsDistinctFromCurrent = Vector3.Distance(upperEdgePoint, currentPoint) > 0.05f;
+            bool lowerUpperAreDistinct = Vector3.Distance(lowerEdgePoint, upperEdgePoint) > 0.05f;
+
+            if (lowerEdgeIsDistinctFromLast && lowerEdgeIsDistinctFromCurrent)
+            {
+                AddKnot(lowerEdgePoint, lowerEdgeNormal);
+            }
+
+            if (lowerUpperAreDistinct && upperEdgeIsDistinctFromLast && upperEdgeIsDistinctFromCurrent)
+            {
+                AddKnot(upperEdgePoint, upperEdgeNormal);
+            }
+        }
+
         if (spacingRule || breakRule || predictiveBreakRule)
         {
             AddKnot(currentPoint, currentNormal);
@@ -195,8 +231,8 @@ public class FireHoseDeployable : MonoBehaviour
 
     bool TryProbeGround(Vector3 worldPosition, out RaycastHit hit)
     {
-        Vector3 origin = worldPosition + Vector3.up * raycastHeight;
-        return Physics.Raycast(origin, Vector3.down, out hit, raycastHeight * 2f, groundMask);
+        Vector3 origin = worldPosition;
+        return Physics.Raycast(origin, Vector3.down, out hit, raycastHeight, groundMask);
     }
 
     bool TryProbeAheadGround(float distance, out RaycastHit hit)
@@ -220,7 +256,7 @@ public class FireHoseDeployable : MonoBehaviour
 
         Vector3 forward = GetProbeForward();
         Vector3 moveDirection = GetMovementDirection();
-        Vector3 origin = head.position + Vector3.up * 0.2f;
+        Vector3 origin = head.position + Vector3.up * raycastHeight;
 
         Debug.DrawRay(origin, forward * 1.5f, Color.blue);
 
@@ -243,8 +279,7 @@ public class FireHoseDeployable : MonoBehaviour
 
     void DrawProbeRay(Vector3 probePosition, Color color)
     {
-        Vector3 rayOrigin = probePosition + Vector3.up * raycastHeight;
-        Debug.DrawRay(rayOrigin, Vector3.down * (raycastHeight * 2f), color);
+        Debug.DrawRay(probePosition, Vector3.down * raycastHeight, color);
     }
 
     Vector3 GetProbeForward()
@@ -290,16 +325,164 @@ public class FireHoseDeployable : MonoBehaviour
         return Mathf.Max(0f, knotSpacing * 1.5f);
     }
 
+    bool TryResolveStepEdge(
+        Vector3 startPoint,
+        Vector3 endPoint,
+        out Vector3 lowerEdgePoint,
+        out Vector3 lowerEdgeNormal,
+        out Vector3 upperEdgePoint,
+        out Vector3 upperEdgeNormal)
+    {
+        lowerEdgePoint = default;
+        lowerEdgeNormal = Vector3.up;
+        upperEdgePoint = default;
+        upperEdgeNormal = Vector3.up;
+
+        Vector3 horizontalDelta = endPoint - startPoint;
+        horizontalDelta.y = 0f;
+        float horizontalDistance = horizontalDelta.magnitude;
+        if (horizontalDistance <= 0.001f)
+        {
+            return false;
+        }
+
+        Vector3 direction = horizontalDelta / horizontalDistance;
+        float stepDistance = Mathf.Max(0.05f, edgeProbeStepDistance);
+        int sampleCount = Mathf.Max(2, Mathf.CeilToInt(horizontalDistance / stepDistance));
+
+        Vector3 previousSamplePoint = startPoint;
+        if (!TryProbeGround(previousSamplePoint, out RaycastHit previousHit))
+        {
+            return false;
+        }
+
+        for (int sampleIndex = 1; sampleIndex <= sampleCount; sampleIndex++)
+        {
+            float distance = Mathf.Min(horizontalDistance, sampleIndex * stepDistance);
+            Vector3 samplePosition = startPoint + direction * distance;
+
+            if (!TryProbeGround(samplePosition, out RaycastHit currentHit))
+            {
+                continue;
+            }
+
+            float heightDelta = Mathf.Abs(currentHit.point.y - previousHit.point.y);
+            if (heightDelta > Mathf.Max(0.01f, edgeHeightDeltaThreshold))
+            {
+                return RefineStepEdge(
+                    previousSamplePoint,
+                    samplePosition,
+                    direction,
+                    previousHit,
+                    currentHit,
+                    out lowerEdgePoint,
+                    out lowerEdgeNormal,
+                    out upperEdgePoint,
+                    out upperEdgeNormal);
+            }
+
+            previousSamplePoint = samplePosition;
+            previousHit = currentHit;
+        }
+
+        return false;
+    }
+
+    bool RefineStepEdge(
+        Vector3 lowSamplePosition,
+        Vector3 highSamplePosition,
+        Vector3 direction,
+        RaycastHit lowHit,
+        RaycastHit highHit,
+        out Vector3 lowerEdgePoint,
+        out Vector3 lowerEdgeNormal,
+        out Vector3 upperEdgePoint,
+        out Vector3 upperEdgeNormal)
+    {
+        lowerEdgePoint = lowHit.point;
+        lowerEdgeNormal = lowHit.normal;
+        upperEdgePoint = highHit.point;
+        upperEdgeNormal = highHit.normal;
+
+        Vector3 lowPosition = lowSamplePosition;
+        Vector3 highPosition = highSamplePosition;
+        RaycastHit resolvedLowHit = lowHit;
+        RaycastHit resolvedHighHit = highHit;
+
+        for (int i = 0; i < Mathf.Max(1, edgeBinarySearchIterations); i++)
+        {
+            Vector3 midPosition = Vector3.Lerp(lowPosition, highPosition, 0.5f);
+            if (!TryProbeGround(midPosition, out RaycastHit midHit))
+            {
+                break;
+            }
+
+            float lowToMidHeightDelta = Mathf.Abs(midHit.point.y - resolvedLowHit.point.y);
+            if (lowToMidHeightDelta > Mathf.Max(0.01f, edgeHeightDeltaThreshold))
+            {
+                highPosition = midPosition;
+                resolvedHighHit = midHit;
+            }
+            else
+            {
+                lowPosition = midPosition;
+                resolvedLowHit = midHit;
+            }
+        }
+
+        float inset = Mathf.Max(0f, edgeTransitionInset);
+        Vector3 safeDirection = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector3.zero;
+
+        lowerEdgePoint = resolvedLowHit.point - safeDirection * inset;
+        lowerEdgeNormal = resolvedLowHit.normal.sqrMagnitude > 0.0001f ? resolvedLowHit.normal.normalized : Vector3.up;
+        upperEdgePoint = resolvedHighHit.point + safeDirection * inset;
+        upperEdgeNormal = resolvedHighHit.normal.sqrMagnitude > 0.0001f ? resolvedHighHit.normal.normalized : Vector3.up;
+        return true;
+    }
+
     void AddKnot(Vector3 pos, Vector3 normal)
     {
-        Knot k = new Knot(pos, normal);
-
-        Path.AddKnot(pos, normal);
+        Knot k = Path.AddKnot(pos, normal);
+        ApplyLatestKnotRotation(k);
         OnKnotAdded?.Invoke(k);
 
         lastKnotPos = pos;
         lastNormal = normal;
         lastSamplePoint = pos;
         distanceSinceLastKnot = 0f;
+    }
+
+    private void ResolveHeadPickup()
+    {
+        if (head == null)
+        {
+            cachedHeadPickup = null;
+            return;
+        }
+
+        cachedHeadPickup = head.GetComponent<FireHoseHeadPickup>() ?? head.GetComponentInParent<FireHoseHeadPickup>();
+    }
+
+    private void ApplyLatestKnotRotation(Knot knot)
+    {
+        if (head == null)
+        {
+            return;
+        }
+
+        ResolveHeadPickup();
+        if (cachedHeadPickup != null && (cachedHeadPickup.IsHeld || cachedHeadPickup.Assembly != null && cachedHeadPickup.Assembly.IsAttached))
+        {
+            return;
+        }
+
+        if (cachedHeadPickup != null && cachedHeadPickup.Assembly != null)
+        {
+            cachedHeadPickup.Assembly.SnapHeadToLatestKnot();
+            return;
+        }
+
+        Transform headRoot = cachedHeadPickup != null ? cachedHeadPickup.transform : head;
+        headRoot.SetPositionAndRotation(knot.Position, knot.Rotation);
     }
 }

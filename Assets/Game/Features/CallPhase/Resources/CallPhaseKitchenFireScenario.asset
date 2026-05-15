@@ -297,6 +297,15 @@ MonoBehaviour:
     linkedStepId: collect_address
     isDistractorQuestion: 0
     authorNote: Primary location-identification question.
+  - questionId: kitchen_q_address_house_number
+    questionText: Give me the house number and street name.
+    quality: 1
+    relatedFieldId: Address
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_address
+    isDistractorQuestion: 0
+    authorNote: Acceptable alternate dispatch-location prompt.
   - questionId: kitchen_q_anyone_inside
     questionText: Is anyone still inside?
     quality: 0
@@ -306,6 +315,15 @@ MonoBehaviour:
     linkedStepId: collect_occupant_risk
     isDistractorQuestion: 0
     authorNote: Critical life-safety follow-up.
+  - questionId: kitchen_q_child_location
+    questionText: Where is your child in the house right now?
+    quality: 1
+    relatedFieldId: OccupantRisk
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_occupant_risk
+    isDistractorQuestion: 0
+    authorNote: Acceptable alternate occupant-risk question with rough location value.
   - questionId: kitchen_q_hazard_gas
     questionText: Is there any gas leak or gas cylinder nearby?
     quality: 0
@@ -315,6 +333,15 @@ MonoBehaviour:
     linkedStepId: collect_hazard
     isDistractorQuestion: 0
     authorNote: High-priority hazard-identification question.
+  - questionId: kitchen_q_stove_fuel
+    questionText: Is there gas still feeding the stove or nearby cylinder?
+    quality: 1
+    relatedFieldId: hazard
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_hazard
+    isDistractorQuestion: 0
+    authorNote: Acceptable alternate hazard prompt focused on gas involvement.
   - questionId: kitchen_q_fire_spread
     questionText: Is the fire spreading anywhere else?
     quality: 1
@@ -324,6 +351,15 @@ MonoBehaviour:
     linkedStepId: collect_spread_status
     isDistractorQuestion: 0
     authorNote: Useful but secondary to immediate life-safety questions.
+  - questionId: kitchen_q_smoke_to_dining
+    questionText: Is smoke or flame moving toward another room?
+    quality: 1
+    relatedFieldId: SpreadStatus
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_spread_status
+    isDistractorQuestion: 0
+    authorNote: Acceptable alternate spread-status question.
   - questionId: kitchen_q_caller_safe
     questionText: Are you somewhere safe right now?
     quality: 1
@@ -333,6 +369,15 @@ MonoBehaviour:
     linkedStepId: collect_caller_safety
     isDistractorQuestion: 0
     authorNote: Good safety check once core fire details are known.
+  - questionId: kitchen_q_caller_outside
+    questionText: Are you outside and clear of the house now?
+    quality: 1
+    relatedFieldId: CallerSafety
+    suggestedWhenFieldMissing: 1
+    hideIfFieldAlreadyKnown: 1
+    linkedStepId: collect_caller_safety
+    isDistractorQuestion: 0
+    authorNote: Acceptable alternate caller-safety check.
   - questionId: kitchen_q_pet_inside
     questionText: Are any pets still inside the house?
     quality: 2
@@ -377,6 +422,10 @@ MonoBehaviour:
   dispatchEstimatedVictimCountKnown: 1
   dispatchEstimatedVictimCountMin: 1
   dispatchEstimatedVictimCountMax: 1
+  victimLocationIntelMode: 1
+  initialVisibleVictimIconCount: 1
+  requireOccupantRiskReportValueForVictimIconReveal: 1
+  estimatedVictimIconRevealDistance: 10
   expectedReport:
     address: 27 Maple Street
     fireLocation: Kitchen

@@ -117,6 +117,10 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     [SerializeField] private int pointFireApproachDirections = 12;
     [SerializeField] private float pointFireApproachHeightWeight = 1.5f;
     [SerializeField] private float extinguishV2LocalSuppressRadius = 4.5f;
+    [SerializeField] private float extinguishV2CloseModeStandOffDistance = 1.5f;
+
+    [Header("V2 Flow")]
+    [SerializeField] private float v2FlowStepTransitionDelay = 0.12f;
 
     [Header("Route Fire")]
     [SerializeField] private bool enableRouteFireClearing = true;
@@ -146,6 +150,7 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     [SerializeField] private bool followAllowAssist;
 
     [Header("Rescue")]
+    [SerializeField] private bool enableRescueV2 = true;
     [SerializeField] private float rescueSearchRadius = 12f;
     [SerializeField] private float rescueInteractionDistance = 1.5f;
     [SerializeField] private float rescueSafeZoneArrivalDistance = 2f;
@@ -358,6 +363,20 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
             return;
         }
 
+        if (IsPathClearingV2Active)
+        {
+            RefreshTaskState();
+            TickPathClearingV2();
+            return;
+        }
+
+        if (IsRouteFireV2Active)
+        {
+            RefreshTaskState();
+            TickRouteFireV2();
+            return;
+        }
+
         if (IsExtinguishV2Active)
         {
             RefreshTaskState();
@@ -376,11 +395,23 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
         {
             PrepareNonExtinguishCommandRuntime();
             RefreshTaskState();
+
+            if (enableRescueV2)
+            {
+                if (!IsRescueV2Active && behaviorContext.TryGetRescueOrder(out Vector3 rescueOrderPoint))
+                {
+                    BeginRescueV2Order(rescueOrderPoint);
+                }
+
+                TickRescueV2();
+                return;
+            }
+
             RunActiveCommandPlan();
             return;
         }
 
-        if ((currentRescueTarget != null || (activityDebug != null && activityDebug.HasRescueActivity)) &&
+        if ((currentRescueTarget != null || IsRescueV2Active || (activityDebug != null && activityDebug.HasRescueActivity)) &&
             !ShouldPreserveRescueRuntimeState())
         {
             ClearRescueRuntimeState();
@@ -465,7 +496,7 @@ public partial class BotCommandAgent : MonoBehaviour, IIntentCommandable, IInter
     private bool HasActiveExtinguisherPoseRequest()
     {
         return activeExtinguisher != null &&
-               ((behaviorContext != null && behaviorContext.HasExtinguishOrder) || IsRouteFireClearingActive());
+               ((behaviorContext != null && behaviorContext.HasExtinguishOrder) || IsRouteFireClearingActive() || IsExtinguishV2Active);
     }
 
     private bool IsInteractionPoseStationary()

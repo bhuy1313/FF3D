@@ -7,6 +7,7 @@ public class RescuableCarryPoseRigDriver : MonoBehaviour
 {
     [SerializeField] private Rescuable rescuable;
     [SerializeField] private Transform carryPoseRigRoot;
+    [SerializeField] private RigBuilder carryPoseRigBuilder;
 
     [Header("Runtime")]
     [SerializeField] private bool isCarryPoseActive;
@@ -68,6 +69,7 @@ public class RescuableCarryPoseRigDriver : MonoBehaviour
     {
         rescuable ??= GetComponent<Rescuable>();
         carryPoseRigRoot ??= FindCarryPoseRigRoot();
+        carryPoseRigBuilder ??= GetComponentInChildren<RigBuilder>(true);
         CacheConstraintReferences();
     }
 
@@ -180,6 +182,11 @@ public class RescuableCarryPoseRigDriver : MonoBehaviour
         CacheConfiguredWeights(false);
         isCarryPoseActive = carried;
 
+        if (carried)
+        {
+            SetCarryPoseRigEnabled(true);
+        }
+
         for (int i = 0; i < carryPoseConstraints.Length; i++)
         {
             MultiRotationConstraint constraint = carryPoseConstraints[i];
@@ -190,5 +197,36 @@ public class RescuableCarryPoseRigDriver : MonoBehaviour
 
             constraint.weight = carried ? configuredWeights[i] : 0f;
         }
+
+        if (!carried)
+        {
+            SetCarryPoseRigEnabled(false);
+        }
+    }
+
+    private void SetCarryPoseRigEnabled(bool enabled)
+    {
+        if (carryPoseRigRoot != null && carryPoseRigRoot.gameObject.activeSelf != enabled)
+        {
+            carryPoseRigRoot.gameObject.SetActive(enabled);
+        }
+
+        if (carryPoseRigBuilder == null)
+        {
+            return;
+        }
+
+        if (enabled)
+        {
+            carryPoseRigBuilder.enabled = true;
+            if (Application.isPlaying)
+            {
+                carryPoseRigBuilder.Build();
+            }
+
+            return;
+        }
+
+        carryPoseRigBuilder.enabled = false;
     }
 }

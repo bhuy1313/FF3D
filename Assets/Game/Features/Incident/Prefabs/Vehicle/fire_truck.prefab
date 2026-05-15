@@ -1848,9 +1848,8 @@ GameObject:
   - component: {fileID: 4526234694069746674}
   - component: {fileID: 9104680913224289246}
   - component: {fileID: 8592132813343185595}
-  - component: {fileID: 2839516263083362028}
-  - component: {fileID: 7012088159597466617}
   - component: {fileID: 251313720950569885}
+  - component: {fileID: 2839516263083362028}
   m_Layer: 0
   m_Name: fire_truck
   m_TagString: Untagged
@@ -1935,43 +1934,6 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!208 &2839516263083362028
-NavMeshObstacle:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3854445215284361970}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Shape: 1
-  m_Extents: {x: 1.3540001, y: 4.366, z: 1.5330001}
-  m_MoveThreshold: 0.1
-  m_Carve: 0
-  m_CarveOnlyStationary: 1
-  m_Center: {x: 0, y: -0.017, z: 1.5230001}
-  m_TimeToStationary: 0.5
---- !u!65 &7012088159597466617
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3854445215284361970}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 2.7077339, y: 8.732213, z: 3.0660653}
-  m_Center: {x: 0.00000005960467, y: -0.017214188, z: 1.5228077}
 --- !u!65 &251313720950569885
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -1993,6 +1955,22 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 2.7077327, y: 8.732212, z: 3.0660632}
   m_Center: {x: 0.000000021043327, y: -0.017213829, z: 1.5228077}
+--- !u!208 &2839516263083362028
+NavMeshObstacle:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3854445215284361970}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Shape: 1
+  m_Extents: {x: 1.3540001, y: 4.366, z: 1.5330001}
+  m_MoveThreshold: 0.1
+  m_Carve: 0
+  m_CarveOnlyStationary: 1
+  m_Center: {x: 0, y: -0.017, z: 1.5230001}
+  m_TimeToStationary: 0.5
 --- !u!1 &4572534541560586867
 GameObject:
   m_ObjectHideFlags: 0

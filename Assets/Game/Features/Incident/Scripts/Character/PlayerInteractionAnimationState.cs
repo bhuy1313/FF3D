@@ -58,10 +58,9 @@ public sealed class PlayerInteractionAnimationState : MonoBehaviour
     public void PulseAction(PlayerInteractionAnimationAction action, float duration = 0.18f, Object source = null)
     {
         BeginAction(action, source, duration);
-        if (source == null)
-        {
-            currentSource = null;
-        }
+        // Pulse actions are short-lived animator nudges. They should always expire on time
+        // instead of waiting for the source object to call EndAction.
+        currentSource = null;
     }
 
     public void EndAction(PlayerInteractionAnimationAction action, Object source, bool force = false)

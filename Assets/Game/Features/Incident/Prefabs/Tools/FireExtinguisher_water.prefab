@@ -146,7 +146,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1559601979303164607}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8f585d5ab3b74e20a45f38bc7b169630, type: 3}
   m_Name: 
@@ -158,18 +158,18 @@ MonoBehaviour:
     pose:
       equippedLocalPosition: {x: 0.53, y: 0.15, z: 0.05}
       equippedLocalEulerAngles: {x: 270, y: 90, z: 0}
-      useRightHandIkTarget: 1
+      useRightHandIkTarget: 0
       rightHandIkWeight: 1
       rightHandIkLocalPosition: {x: 0.227, y: 0.155, z: 0.284}
       rightHandIkLocalEulerAngles: {x: 0, y: 270, z: 260}
-      useRightHandIkHint: 1
+      useRightHandIkHint: 0
       rightHandIkHintLocalPosition: {x: 0.49626923, y: 1.1094639, z: -0.47478485}
       useLeftHandIkTarget: 0
       leftHandIkWeight: 0
       leftHandIkLocalPosition: {x: 0, y: 0, z: 0}
       useLeftHandIkHint: 0
       leftHandIkHintLocalPosition: {x: 0, y: 0, z: 0}
-      overrideSpineAimMaxWeight: 1
+      overrideSpineAimMaxWeight: 0
       spineAimMaxWeight: 0.4
   - key: 3
     pose:
@@ -181,12 +181,12 @@ MonoBehaviour:
       rightHandIkLocalEulerAngles: {x: 0, y: 0, z: 0}
       useRightHandIkHint: 0
       rightHandIkHintLocalPosition: {x: 0, y: 0, z: 0}
-      useLeftHandIkTarget: 1
+      useLeftHandIkTarget: 0
       leftHandIkWeight: 1
       leftHandIkLocalPosition: {x: 0.111, y: 0.977, z: 0.401}
       useLeftHandIkHint: 0
       leftHandIkHintLocalPosition: {x: 0, y: 0, z: 0}
-      overrideSpineAimMaxWeight: 1
+      overrideSpineAimMaxWeight: 0
       spineAimMaxWeight: 0.4
 --- !u!114 &5452969581965160436
 MonoBehaviour:
@@ -205,6 +205,7 @@ MonoBehaviour:
   sprayingModelRoot: {fileID: 6818524701426570916}
   hideIdleModelWhileSpraying: 1
   showSprayingModelOnlyWhileSpraying: 1
+  forcePlayerHolderToUseSprayingModel: 1
 --- !u!114 &4183776417950287684
 MonoBehaviour:
   m_ObjectHideFlags: 0

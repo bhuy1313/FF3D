@@ -13,7 +13,6 @@ GameObject:
   - component: {fileID: 8954996310710914237}
   - component: {fileID: 4257662955579682057}
   - component: {fileID: 2335594383182363747}
-  - component: {fileID: 390411750766551594}
   m_Layer: 0
   m_Name: Door
   m_TagString: Untagged
@@ -212,23 +211,6 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 0
---- !u!114 &390411750766551594
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4128770094663092947}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 731917776111cfd4e8e238be7a676f44, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  open: 0
-  smooth: 1
-  asource: {fileID: 0}
-  openDoor: {fileID: 8300000, guid: 44b63b0db16ce624b97e45ebde0a0971, type: 3}
-  closeDoor: {fileID: 8300000, guid: bc37ad25465405a428a26ff0facd9a7b, type: 3}
 --- !u!1 &6162564235504825650
 GameObject:
   m_ObjectHideFlags: 0
@@ -377,8 +359,8 @@ MonoBehaviour:
   startsOpen: 0
   interactOpenDelay: 0.5
   legacyRequiresCrowbarToOpenWhenClosed: 0
-  lockMode: 0
-  startsLocked: 0
+  lockMode: 1
+  startsLocked: 1
   pryOpenDuration: 5
   unlockOnSuccessfulPry: 1
   lockPlayerWhilePrying: 1

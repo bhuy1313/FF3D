@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using TrueJourney.BotBehavior;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [DisallowMultipleComponent]
 public class SafeZone : MonoBehaviour, ISafeZoneTarget, IInteractable
@@ -13,15 +14,17 @@ public class SafeZone : MonoBehaviour, ISafeZoneTarget, IInteractable
     }
 
     [Header("Zone")]
-    [SerializeField] private Transform dropPoint;
     [SerializeField] private Collider zoneCollider;
     [SerializeField] private float fallbackRadius = 2f;
 
-    [Header("Slots")]
-    [SerializeField] private List<Transform> slotPoints = new List<Transform>();
+    [Header("Drop Point")]
+    [SerializeField] private Transform dropPoint;
+    [FormerlySerializedAs("slotPoints")]
+    [SerializeField, HideInInspector] private List<Transform> legacySlotPoints = new List<Transform>();
+    [SerializeField] private bool occupiedSlotBlocksClaims = false;
 
-    private SlotState[] slotStates;
-    private GameObject[] slotClaimers;
+    private SlotState slotState;
+    private GameObject slotClaimer;
 
     public Vector3 GetWorldPosition()
     {
@@ -50,153 +53,75 @@ public class SafeZone : MonoBehaviour, ISafeZoneTarget, IInteractable
 
     public bool HasAvailableSlot()
     {
-        if (slotPoints == null || slotPoints.Count == 0)
+        if (dropPoint == null)
         {
             return true;
         }
 
-        EnsureSlotArrays();
-        for (int i = 0; i < slotStates.Length; i++)
-        {
-            if (slotStates[i] == SlotState.Free)
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return IsSlotClaimable();
     }
 
     public bool TryClaimSlot(GameObject claimer, out Vector3 slotPosition)
     {
         slotPosition = GetWorldPosition();
 
-        if (slotPoints == null || slotPoints.Count == 0)
+        if (dropPoint == null)
         {
             return true;
         }
 
-        EnsureSlotArrays();
-
-        // Release any previous claim by this claimer first.
         ReleaseSlotInternal(claimer);
-
-        int bestIndex = -1;
-        float bestDistance = float.MaxValue;
-        Vector3 claimerPosition = claimer != null ? claimer.transform.position : GetWorldPosition();
-
-        for (int i = 0; i < slotStates.Length; i++)
-        {
-            if (slotStates[i] != SlotState.Free)
-            {
-                continue;
-            }
-
-            Transform slotTransform = slotPoints[i];
-            if (slotTransform == null)
-            {
-                continue;
-            }
-
-            float distance = Vector3.Distance(claimerPosition, slotTransform.position);
-            if (distance < bestDistance)
-            {
-                bestDistance = distance;
-                bestIndex = i;
-            }
-        }
-
-        if (bestIndex < 0)
+        if (!IsSlotClaimable())
         {
             return false;
         }
 
-        slotStates[bestIndex] = SlotState.Claimed;
-        slotClaimers[bestIndex] = claimer;
-        slotPosition = slotPoints[bestIndex].position;
+        slotState = SlotState.Claimed;
+        slotClaimer = claimer;
+        slotPosition = dropPoint.position;
         return true;
     }
 
     public void ReleaseSlot(GameObject claimer)
     {
-        if (slotPoints == null || slotPoints.Count == 0)
+        if (dropPoint == null)
         {
             return;
         }
 
-        EnsureSlotArrays();
         ReleaseSlotInternal(claimer);
     }
 
     public void OccupySlotAt(Vector3 position)
     {
-        if (slotPoints == null || slotPoints.Count == 0)
+        if (dropPoint == null || !IsDropPointMatch(position))
         {
             return;
         }
 
-        EnsureSlotArrays();
+        slotState = SlotState.Occupied;
+        slotClaimer = null;
+    }
 
-        int bestIndex = -1;
-        float bestDistanceSq = float.MaxValue;
-
-        for (int i = 0; i < slotStates.Length; i++)
+    public void ReleaseOccupiedSlotAt(Vector3 position)
+    {
+        if (dropPoint == null || slotState != SlotState.Occupied || !IsDropPointMatch(position))
         {
-            Transform slotTransform = slotPoints[i];
-            if (slotTransform == null)
-            {
-                continue;
-            }
-
-            float distanceSq = (slotTransform.position - position).sqrMagnitude;
-            if (distanceSq < bestDistanceSq)
-            {
-                bestDistanceSq = distanceSq;
-                bestIndex = i;
-            }
+            return;
         }
 
-        if (bestIndex >= 0)
-        {
-            slotStates[bestIndex] = SlotState.Occupied;
-            slotClaimers[bestIndex] = null;
-        }
+        slotState = SlotState.Free;
+        slotClaimer = null;
     }
 
     public Quaternion GetSlotRotation(Vector3 slotPosition)
     {
-        if (slotPoints == null || slotPoints.Count == 0)
+        if (dropPoint == null || !IsDropPointMatch(slotPosition))
         {
             return Quaternion.identity;
         }
 
-        EnsureSlotArrays();
-
-        int bestIndex = -1;
-        float bestDistanceSq = float.MaxValue;
-
-        for (int i = 0; i < slotStates.Length; i++)
-        {
-            Transform slotTransform = slotPoints[i];
-            if (slotTransform == null)
-            {
-                continue;
-            }
-
-            float distanceSq = (slotTransform.position - slotPosition).sqrMagnitude;
-            if (distanceSq < bestDistanceSq)
-            {
-                bestDistanceSq = distanceSq;
-                bestIndex = i;
-            }
-        }
-
-        if (bestIndex < 0 || slotPoints[bestIndex] == null)
-        {
-            return Quaternion.identity;
-        }
-
-        RescuedSlotPoseProfile profile = slotPoints[bestIndex].GetComponent<RescuedSlotPoseProfile>();
+        RescuedSlotPoseProfile profile = dropPoint.GetComponent<RescuedSlotPoseProfile>();
         return profile != null ? profile.Rotation : Quaternion.identity;
     }
 
@@ -207,7 +132,7 @@ public class SafeZone : MonoBehaviour, ISafeZoneTarget, IInteractable
     private void OnEnable()
     {
         ResolveZoneCollider();
-        EnsureSlotArrays();
+        MigrateLegacySlotPointIfNeeded();
         BotRuntimeRegistry.RegisterSafeZone(this);
     }
 
@@ -219,6 +144,7 @@ public class SafeZone : MonoBehaviour, ISafeZoneTarget, IInteractable
     private void OnValidate()
     {
         ResolveZoneCollider();
+        MigrateLegacySlotPointIfNeeded();
     }
 
     private void ResolveZoneCollider()
@@ -229,39 +155,46 @@ public class SafeZone : MonoBehaviour, ISafeZoneTarget, IInteractable
         }
     }
 
-    private void EnsureSlotArrays()
+    private void MigrateLegacySlotPointIfNeeded()
     {
-        int count = slotPoints != null ? slotPoints.Count : 0;
-        if (count == 0)
-        {
-            slotStates = null;
-            slotClaimers = null;
-            return;
-        }
-
-        if (slotStates != null && slotStates.Length == count)
+        if (dropPoint != null || legacySlotPoints == null || legacySlotPoints.Count == 0)
         {
             return;
         }
 
-        slotStates = new SlotState[count];
-        slotClaimers = new GameObject[count];
+        for (int i = 0; i < legacySlotPoints.Count; i++)
+        {
+            if (legacySlotPoints[i] != null)
+            {
+                dropPoint = legacySlotPoints[i];
+                return;
+            }
+        }
     }
 
     private void ReleaseSlotInternal(GameObject claimer)
     {
-        if (claimer == null || slotClaimers == null)
+        if (claimer == null || slotClaimer != claimer)
         {
             return;
         }
 
-        for (int i = 0; i < slotClaimers.Length; i++)
+        slotState = SlotState.Free;
+        slotClaimer = null;
+    }
+
+    private bool IsSlotClaimable()
+    {
+        if (slotState == SlotState.Free)
         {
-            if (slotClaimers[i] == claimer)
-            {
-                slotStates[i] = SlotState.Free;
-                slotClaimers[i] = null;
-            }
+            return true;
         }
+
+        return slotState == SlotState.Occupied && !occupiedSlotBlocksClaims;
+    }
+
+    private bool IsDropPointMatch(Vector3 position)
+    {
+        return (dropPoint.position - position).sqrMagnitude <= 0.25f;
     }
 }

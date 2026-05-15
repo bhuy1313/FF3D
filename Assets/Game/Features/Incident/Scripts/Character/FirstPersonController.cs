@@ -22,10 +22,6 @@ namespace StarterAssets
 		public float RotationSpeed = 1.0f;
 		[Tooltip("Acceleration and deceleration")]
 		public float SpeedChangeRate = 10.0f;
-		[Tooltip("Stamina used per second while sprinting")]
-		public float SprintStaminaCostPerSecond = 12.0f;
-		[Tooltip("Minimum stamina required to start sprinting")]
-		public float SprintMinStamina = 5.0f;
 
 		[Header("Crouch")]
 		[Tooltip("Crouch move speed of the character in m/s")]
@@ -195,6 +191,7 @@ namespace StarterAssets
 		private StarterAssetsInputs _input;
 		private GameObject _mainCamera;
 		private PlayerVitals _vitals;
+		private PlayerTraversalStaminaConfig _traversalStaminaConfig;
 		private FPSInteractionSystem _interactionSystem;
 		private FPSInventorySystem _inventorySystem;
 		private PlayerFlashlightController _flashlightController;
@@ -304,6 +301,7 @@ namespace StarterAssets
 			_controller = GetComponent<CharacterController>();
 			_input = GetComponent<StarterAssetsInputs>();
 			_vitals = GetComponent<PlayerVitals>();
+			_traversalStaminaConfig = GetComponent<PlayerTraversalStaminaConfig>();
 			_interactionSystem = GetComponent<FPSInteractionSystem>();
 			_inventorySystem = GetComponent<FPSInventorySystem>();
 			_flashlightController = GetComponent<PlayerFlashlightController>();
@@ -337,6 +335,8 @@ namespace StarterAssets
 			EnsureFootstepAudioComponent();
 			EnsureFlashlightComponent();
 			EnsureCameraLookPresetComponent();
+			EnsureTraversalStaminaConfigComponent();
+			_traversalStaminaConfig = GetComponent<PlayerTraversalStaminaConfig>();
 		}
 
 		private void EnsureFootstepAudioComponent()
@@ -370,6 +370,14 @@ namespace StarterAssets
 			if (_cameraLookPresetController == null)
 			{
 				_cameraLookPresetController = gameObject.AddComponent<PlayerCameraLookPresetController>();
+			}
+		}
+
+		private void EnsureTraversalStaminaConfigComponent()
+		{
+			if (GetComponent<PlayerTraversalStaminaConfig>() == null)
+			{
+				gameObject.AddComponent<PlayerTraversalStaminaConfig>();
 			}
 		}
 
@@ -870,13 +878,15 @@ namespace StarterAssets
 				return;
 			}
 
-			if (_vitals.CurrentStamina < SprintMinStamina)
+			float sprintMinStamina = _traversalStaminaConfig != null ? _traversalStaminaConfig.SprintMinStamina : 0f;
+			if (_vitals.CurrentStamina < sprintMinStamina)
 			{
 				_wantsSprint = false;
 				return;
 			}
 
-			float staminaCost = SprintStaminaCostPerSecond * Time.deltaTime;
+			float sprintStaminaCostPerSecond = _traversalStaminaConfig != null ? _traversalStaminaConfig.SprintStaminaCostPerSecond : 0f;
+			float staminaCost = sprintStaminaCostPerSecond * Time.deltaTime;
 			_wantsSprint = _vitals.TryUseStamina(staminaCost);
 		}
 

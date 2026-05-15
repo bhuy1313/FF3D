@@ -2259,7 +2259,7 @@ Transform:
   m_GameObject: {fileID: 3499819477736356723}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: -1, z: 0}
+  m_LocalPosition: {x: 0, y: -1.05, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -3987,6 +3987,11 @@ MonoBehaviour:
   rescueTaskDetail: Awaiting rescue assignment.
   lastRescueFailureReason: 
   rescueSubtaskStartedAtTime: 0
+  enableSafeMovement: 1
+  safeMovementFireScanRadius: 8
+  safeMovementScanInterval: 0.15
+  safeMovementBlockedTimeout: 1
+  drawSafeMovementGizmo: 0
   taskReservationDuration: 1.5
   currentTask:
     taskType: 0
@@ -4005,7 +4010,7 @@ MonoBehaviour:
   spineAimConstraint: {fileID: 0}
   headAimRigBuilder: {fileID: 0}
   navMeshSampleDistance: 2
-  turnSpeed: 360
+  turnSpeed: 720
   enableManualOffMeshTraversal: 1
   offMeshTraverseSpeed: 2.25
   offMeshArrivalDistance: 0.05
@@ -4024,7 +4029,7 @@ MonoBehaviour:
   spineAimWeightLerpSpeed: 12
   toolSearchRadius: 30
   fireSearchRadius: 6
-  pickupDistance: 1.5
+  pickupDistance: 3
   bulkyToolDropOffset: {x: 0.65, y: 0, z: 0.75}
   bulkyToolDropGroundProbeDistance: 2
   sprayFacingThreshold: 0.9
@@ -4033,10 +4038,14 @@ MonoBehaviour:
   fireHoseCrouchDelay: 0.35
   extinguisherRouteCorridorWidth: 6
   extinguisherApproachRetargetDistance: 0.75
+  blockedExtinguishToolRetryDelay: 1
   pointFireApproachSearchRadius: 8
   pointFireApproachSampleStep: 1.5
   pointFireApproachDirections: 12
   pointFireApproachHeightWeight: 1.5
+  extinguishV2LocalSuppressRadius: 4.5
+  extinguishV2CloseModeStandOffDistance: 1.5
+  v2FlowStepTransitionDelay: 0.25
   enableRouteFireClearing: 1
   routeFireDetectionRadius: 3
   routeFireVerticalTolerance: 2
@@ -4058,6 +4067,7 @@ MonoBehaviour:
   escortFollowOffset: {x: 1.4, y: 0, z: -2.2}
   escortSlotPreferenceBias: 1.1
   followAllowAssist: 0
+  enableRescueV2: 1
   rescueSearchRadius: 12
   rescueInteractionDistance: 1.5
   rescueSafeZoneArrivalDistance: 2
@@ -4073,7 +4083,11 @@ MonoBehaviour:
   drawDestinationGizmo: 0
   drawAimGizmo: 0
   aimGizmoLength: 2.5
-  enableActivityDebug: 0
+  enableActivityDebug: 1
+  enablePickupDebug: 1
+  spawnExtinguishV2MoveTargetMarker: 1
+  extinguishV2MoveTargetMarkerColor: {r: 0.1, g: 1, b: 0.9, a: 0.45}
+  extinguishV2MoveTargetMarkerScale: 0.6
   showCommandPlanOverlay: 0
   commandPlanOverlayScreenOffset: {x: 24, y: -24}
   commandPlanOverlayWidth: 300
@@ -4117,8 +4131,6 @@ MonoBehaviour:
   driveLoadedLowerBodyLayer: 1
   loadedLowerBodyLayer: Lower Body Layer
   loadedLowerBodyLayerWeightLerpSpeed: 10
-  loadedLowerBodyOnlyWhileMoving: 1
-  loadedLowerBodyMinCarryWeight: 1
   loadedLowerBodyLayerActive: 0
   activeCommandIntent:
     commandType: 0
@@ -4129,6 +4141,7 @@ MonoBehaviour:
     targetTag: 
     allowAssist: 0
     extinguishMode: 0
+    extinguishEngagementMode: 0
 --- !u!114 &7589112556218404922
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4202,6 +4215,8 @@ MonoBehaviour:
   equippedRoot: {fileID: 5378183908437730005}
   commandAgent: {fileID: 0}
   equippedPoseKey: 0
+  equippedPoseSettledUntilTime: -1
+  equippedPoseRevision: 0
   equippedLocalPosition: {x: 0, y: 0, z: 0}
   equippedLocalEulerAngles: {x: 0, y: 0, z: 0}
   driveRightHandIk: 1
@@ -4233,6 +4248,7 @@ MonoBehaviour:
   commandAgent: {fileID: 5442345780187076574}
   navMeshAgent: {fileID: 7122702489324680403}
   fallbackMovementThreshold: 0.1
+  suppressMovePoseUntilSettledAfterEquip: 1
   enableCarryPose: 1
   carryPoseWeightLerpSpeed: 12
   carrySpineConstraint: {fileID: 4632095233209633575}
@@ -4249,6 +4265,7 @@ MonoBehaviour:
   isMoving: 0
   isCarryingVictim: 0
   resolvedPoseKey: 0
+  suppressingMovePoseAfterEquip: 0
 --- !u!114 &5580254689201413862
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4289,19 +4306,6 @@ MonoBehaviour:
   movingThreshold: 0.1
   directionalMoveThreshold: 0.05
   parameterDampTime: 0.1
-  speedParameter: Speed
-  horizontalSpeedParameter: HorizontalSpeed
-  desiredSpeedParameter: DesiredSpeed
-  velocityXParameter: VelocityX
-  velocityYParameter: VelocityY
-  velocityZParameter: VelocityZ
-  moveXParameter: MoveX
-  moveYParameter: MoveY
-  moveForwardParameter: MoveForward
-  moveRightParameter: MoveRight
-  turnParameter: Turn
-  movementBurdenParameter: MovementBurden
-  extinguishStanceParameter: ExtinguishStance
   isGroundedParameter: IsGrounded
   isMovingParameter: IsMoving
   isIdleParameter: IsIdle
@@ -4325,6 +4329,7 @@ MonoBehaviour:
   heldItemTypeHashParameter: HeldItemTypeHash
   activeCommandTypeParameter: ActiveCommandType
   holdingNamePrefix: IsHolding_
+  holdingItemNamePrefix: IsHoldingItem_
   holdingTypePrefix: IsHoldingType_
   commandTypePrefix: IsCommand_
   worldVelocity: {x: 0, y: 0, z: 0}
@@ -4354,6 +4359,7 @@ MonoBehaviour:
   activeCommandType: 0
   itemCount: 0
   heldItemName: 
+  heldItemDisplayName: 
   heldItemTypeName: 
 --- !u!1 &8080815507665081034
 GameObject:

@@ -8,12 +8,19 @@ public partial class BotCommandAgent
         Vector3 firePosition,
         Vector3 botPosition)
     {
+        bool shouldRefreshPose = ShouldRefreshPointFireSuppressionPose(fireTarget, firePosition);
         currentExtinguishTargetPosition = firePosition;
         hasCurrentExtinguishTargetPosition = true;
         UpdateCurrentExtinguishAimData(activeExtinguisher, firePosition);
         PrimeExtinguisherTargetLock(activeExtinguisher, fireTarget);
 
         float horizontalDistanceToFire = GetHorizontalDistance(botPosition, firePosition);
+        if (!shouldRefreshPose)
+        {
+            AimTowards(firePosition);
+            return horizontalDistanceToFire;
+        }
+
         StopNavMeshMovement();
         currentExtinguishAimPoint = firePosition;
         hasCurrentExtinguishAimPoint = true;
@@ -23,6 +30,26 @@ public partial class BotCommandAgent
         SetHeadAimFocus(firePosition);
         ResetExtinguishCrouchState();
         return horizontalDistanceToFire;
+    }
+
+    private bool ShouldRefreshPointFireSuppressionPose(IFireTarget fireTarget, Vector3 firePosition)
+    {
+        const float PoseRefreshDistanceThreshold = 0.05f;
+        IFireTarget lockedTarget = GetLockedExtinguisherFireTarget();
+        if (!ReferenceEquals(lockedTarget, fireTarget))
+        {
+            return true;
+        }
+
+        if (!hasCurrentExtinguishTargetPosition ||
+            !hasCurrentExtinguishAimPoint)
+        {
+            return true;
+        }
+
+        float thresholdSq = PoseRefreshDistanceThreshold * PoseRefreshDistanceThreshold;
+        return (currentExtinguishTargetPosition - firePosition).sqrMagnitude > thresholdSq ||
+               (currentExtinguishAimPoint - firePosition).sqrMagnitude > thresholdSq;
     }
 
     private bool IsPointFireExtinguisherSprayReady(Vector3 firePosition, bool emitVerboseLogs)

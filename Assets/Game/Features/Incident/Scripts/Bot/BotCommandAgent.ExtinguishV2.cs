@@ -10,17 +10,30 @@ public partial class BotCommandAgent
         None = 0,
         ResolveTarget = 1,
         SelectTool = 2,
-        MoveToTool = 3,
-        PickupTool = 4,
-        MoveToFire = 5,
-        SuppressFire = 6,
-        Complete = 7,
-        Failed = 8
+        PrepareHeldTool = 3,
+        MoveToTool = 4,
+        PickupTool = 5,
+        MoveToFire = 6,
+        ReadyToSuppress = 7,
+        SuppressFire = 8,
+        Complete = 9,
+        Failed = 10
+    }
+
+    internal enum BotExtinguishV2PauseReason
+    {
+        None = 0,
+        BlockedPath = 1,
+        RouteFire = 2
     }
 
     private sealed class BotExtinguishV2State
     {
         public BotExtinguishV2Step Step;
+        public bool IsPaused;
+        public BotExtinguishV2PauseReason PauseReason;
+        public string PauseDetail;
+        public float PausedAtTime;
         public Vector3 OrderPoint;
         public Vector3 ScanOrigin;
         public BotExtinguishCommandMode CommandMode;
@@ -37,11 +50,16 @@ public partial class BotCommandAgent
         public bool HasComputedFireDestination;
         public bool HasLockedSuppressTarget;
         public bool NeedsSuppressAcquire;
+        public float StepReadyTime;
         public string FailureReason;
 
         public void Reset()
         {
             Step = BotExtinguishV2Step.None;
+            IsPaused = false;
+            PauseReason = BotExtinguishV2PauseReason.None;
+            PauseDetail = string.Empty;
+            PausedAtTime = 0f;
             OrderPoint = default;
             ScanOrigin = default;
             CommandMode = BotExtinguishCommandMode.Auto;
@@ -58,6 +76,7 @@ public partial class BotCommandAgent
             HasComputedFireDestination = false;
             HasLockedSuppressTarget = false;
             NeedsSuppressAcquire = false;
+            StepReadyTime = 0f;
             FailureReason = string.Empty;
         }
     }
@@ -66,6 +85,28 @@ public partial class BotCommandAgent
     private readonly List<IBotExtinguisherItem> extinguishV2InventoryTools = new List<IBotExtinguisherItem>(4);
 
     private bool IsExtinguishV2Active => extinguishV2State.Step != BotExtinguishV2Step.None;
+
+    internal bool TryPauseExtinguishV2(BotExtinguishV2PauseReason reason, string detail = null)
+    {
+        if (!IsExtinguishV2Active || extinguishV2State.IsPaused)
+        {
+            return false;
+        }
+
+        PauseExtinguishV2(reason, detail);
+        return true;
+    }
+
+    internal bool TryResumeExtinguishV2()
+    {
+        if (!IsExtinguishV2Active || !extinguishV2State.IsPaused)
+        {
+            return false;
+        }
+
+        ResumeExtinguishV2();
+        return true;
+    }
 
     private void BeginExtinguishV2Order(
         Vector3 orderPoint,
@@ -83,11 +124,28 @@ public partial class BotCommandAgent
         extinguishV2State.EngagementMode = engagementMode;
         extinguishV2State.FireTarget = pointFireTarget;
         extinguishV2State.FireGroup = fireGroupTarget;
+        extinguishV2State.StepReadyTime = 0f;
         ClearExtinguishV2MoveTargetMarker();
     }
 
     private void TickExtinguishV2()
     {
+        if (extinguishV2State.IsPaused)
+        {
+            ApplyPausedExtinguishV2State();
+            return;
+        }
+
+        if (Time.time < extinguishV2State.StepReadyTime)
+        {
+            return;
+        }
+
+        if (TryPauseExtinguishV2ForInterrupts())
+        {
+            return;
+        }
+
         switch (extinguishV2State.Step)
         {
             case BotExtinguishV2Step.ResolveTarget:
@@ -95,6 +153,9 @@ public partial class BotCommandAgent
                 break;
             case BotExtinguishV2Step.SelectTool:
                 TrySelectExtinguishV2Tool();
+                break;
+            case BotExtinguishV2Step.PrepareHeldTool:
+                TryPrepareExtinguishV2HeldTool();
                 break;
             case BotExtinguishV2Step.MoveToTool:
                 TryIssueExtinguishV2MoveToTool();
@@ -104,6 +165,9 @@ public partial class BotCommandAgent
                 break;
             case BotExtinguishV2Step.MoveToFire:
                 TryIssueExtinguishV2MoveToFire();
+                break;
+            case BotExtinguishV2Step.ReadyToSuppress:
+                TryPrepareExtinguishV2Suppression();
                 break;
             case BotExtinguishV2Step.SuppressFire:
                 TryApplyExtinguishV2Suppression();
@@ -115,6 +179,291 @@ public partial class BotCommandAgent
                 FailExtinguishV2Order();
                 break;
         }
+    }
+
+    private bool TryPauseExtinguishV2ForInterrupts()
+    {
+        if (!TryDetectExtinguishV2PauseReason(
+            out BotExtinguishV2PauseReason reason,
+            out string detail,
+            out IBotBreakableTarget blockedBreakable,
+            out IBotPryTarget blockedPryTarget,
+            out IFireTarget routeFireTarget,
+            out IFireGroupTarget routeFireGroup,
+            out Vector3 pauseDestination))
+        {
+            return false;
+        }
+
+        if (!TryPauseExtinguishV2(reason, detail))
+        {
+            return false;
+        }
+
+        if (reason == BotExtinguishV2PauseReason.BlockedPath)
+        {
+            BeginPathClearingV2(
+                BotPathClearingV2Caller.ExtinguishV2,
+                pauseDestination,
+                blockedBreakable,
+                blockedPryTarget);
+        }
+        else if (reason == BotExtinguishV2PauseReason.RouteFire)
+        {
+            BeginRouteFireV2(
+                BotRouteFireV2Caller.ExtinguishV2,
+                pauseDestination,
+                routeFireTarget,
+                routeFireGroup);
+        }
+
+        return true;
+    }
+
+    private bool TryDetectExtinguishV2PauseReason(
+        out BotExtinguishV2PauseReason reason,
+        out string detail,
+        out IBotBreakableTarget blockedBreakable,
+        out IBotPryTarget blockedPryTarget,
+        out IFireTarget routeFireTarget,
+        out IFireGroupTarget routeFireGroup,
+        out Vector3 pauseDestination)
+    {
+        if (TryDetectExtinguishV2BlockedPathPause(
+            out detail,
+            out blockedBreakable,
+            out blockedPryTarget,
+            out pauseDestination))
+        {
+            reason = BotExtinguishV2PauseReason.BlockedPath;
+            routeFireTarget = null;
+            routeFireGroup = null;
+            return true;
+        }
+
+        if (TryDetectExtinguishV2RouteFirePause(
+            out detail,
+            out routeFireTarget,
+            out routeFireGroup,
+            out pauseDestination))
+        {
+            reason = BotExtinguishV2PauseReason.RouteFire;
+            blockedBreakable = null;
+            blockedPryTarget = null;
+            return true;
+        }
+
+        reason = BotExtinguishV2PauseReason.None;
+        blockedBreakable = null;
+        blockedPryTarget = null;
+        routeFireTarget = null;
+        routeFireGroup = null;
+        detail = null;
+        pauseDestination = default;
+        return false;
+    }
+
+    private bool TryDetectExtinguishV2BlockedPathPause(
+        out string detail,
+        out IBotBreakableTarget blockedBreakable,
+        out IBotPryTarget blockedPryTarget,
+        out Vector3 pauseDestination)
+    {
+        detail = null;
+        blockedBreakable = null;
+        blockedPryTarget = null;
+        pauseDestination = default;
+        if (!enablePathClearing ||
+            navMeshAgent == null ||
+            !navMeshAgent.enabled ||
+            !navMeshAgent.isOnNavMesh ||
+            !ShouldRefreshPathClearingCheckCommand() ||
+            !TryGetExtinguishV2PauseMovementDestination(out Vector3 destination))
+        {
+            return false;
+        }
+
+        pauseDestination = destination;
+
+        if (currentBlockedPryTarget != null &&
+            !currentBlockedPryTarget.IsBreached &&
+            (currentBlockedPryTarget.CanBePriedOpen || currentBlockedPryTarget.IsPryInProgress))
+        {
+            blockedPryTarget = currentBlockedPryTarget;
+            detail = $"Pry target '{GetDebugTargetName(currentBlockedPryTarget)}' blocks the current route.";
+            return true;
+        }
+
+        if (currentBlockedBreakable != null &&
+            !currentBlockedBreakable.IsBroken &&
+            currentBlockedBreakable.CanBeClearedByBot)
+        {
+            blockedBreakable = currentBlockedBreakable;
+            detail = $"Breakable '{GetDebugTargetName(currentBlockedBreakable)}' blocks the current route.";
+            return true;
+        }
+
+        if (TryResolveBlockedPryTarget(destination, out IBotPryTarget pryTarget))
+        {
+            blockedPryTarget = pryTarget;
+            detail = $"Pry target '{GetDebugTargetName(pryTarget)}' blocks the current route.";
+            return true;
+        }
+
+        if (TryResolveBlockedBreakable(destination, out IBotBreakableTarget breakableTarget))
+        {
+            blockedBreakable = breakableTarget;
+            detail = $"Breakable '{GetDebugTargetName(breakableTarget)}' blocks the current route.";
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryDetectExtinguishV2RouteFirePause(
+        out string detail,
+        out IFireTarget routeFireTarget,
+        out IFireGroupTarget routeFireGroup,
+        out Vector3 pauseDestination)
+    {
+        detail = null;
+        routeFireTarget = null;
+        routeFireGroup = null;
+        pauseDestination = default;
+        if (!enableRouteFireClearing ||
+            navMeshAgent == null ||
+            !navMeshAgent.enabled ||
+            !navMeshAgent.isOnNavMesh ||
+            !TryGetExtinguishV2PauseMovementDestination(out Vector3 destination))
+        {
+            return false;
+        }
+
+        pauseDestination = destination;
+        if (!TryResolveNearbyRouteFire(out IFireTarget detectedBlockingFire))
+        {
+            return false;
+        }
+
+        routeFireTarget = detectedBlockingFire;
+        routeFireGroup = FindClosestActiveFireGroup(detectedBlockingFire.GetWorldPosition());
+        detail = $"Fire '{GetDebugTargetName(detectedBlockingFire)}' blocks the current route.";
+        return true;
+    }
+
+    private bool TryGetExtinguishV2PauseMovementDestination(out Vector3 destination)
+    {
+        destination = default;
+        switch (extinguishV2State.Step)
+        {
+            case BotExtinguishV2Step.MoveToTool:
+            case BotExtinguishV2Step.PickupTool:
+                if (extinguishV2State.PickupTarget?.Rigidbody == null)
+                {
+                    return false;
+                }
+
+                destination = ResolveExtinguishV2NavDestination(extinguishV2State.PickupTarget.Rigidbody.transform.position);
+                return true;
+            case BotExtinguishV2Step.MoveToFire:
+                if (!extinguishV2State.HasIssuedFireMove)
+                {
+                    return false;
+                }
+
+                destination = extinguishV2State.IssuedFireDestination;
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private void PauseExtinguishV2(BotExtinguishV2PauseReason reason, string detail)
+    {
+        if (!IsExtinguishV2Active || extinguishV2State.IsPaused)
+        {
+            return;
+        }
+
+        extinguishV2State.IsPaused = true;
+        extinguishV2State.PauseReason = reason;
+        extinguishV2State.PauseDetail = string.IsNullOrWhiteSpace(detail) ? string.Empty : detail;
+        extinguishV2State.PausedAtTime = Time.time;
+        ApplyPausedExtinguishV2State();
+        LogExtinguishV2Activity($"Paused: {GetExtinguishV2PauseSummary()}");
+    }
+
+    private void ResumeExtinguishV2()
+    {
+        if (!extinguishV2State.IsPaused)
+        {
+            return;
+        }
+
+        BotExtinguishV2PauseReason resumeReason = extinguishV2State.PauseReason;
+        RestartExtinguishV2FromPausedOrder();
+        extinguishV2State.IsPaused = false;
+        extinguishV2State.PauseReason = BotExtinguishV2PauseReason.None;
+        extinguishV2State.PauseDetail = string.Empty;
+        extinguishV2State.PausedAtTime = 0f;
+        LogExtinguishV2Activity(resumeReason switch
+        {
+            BotExtinguishV2PauseReason.BlockedPath => "Resumed after blocked-path clearing.",
+            BotExtinguishV2PauseReason.RouteFire => "Resumed after route-fire clearing.",
+            _ => "Resumed."
+        });
+    }
+
+    private void ApplyPausedExtinguishV2State()
+    {
+        StopExtinguishV2Tool();
+        StopNavMeshMovement();
+        ClearHandAimFocus();
+        ClearHeadAimFocus();
+        ResetExtinguishCrouchState();
+    }
+
+    private string GetExtinguishV2PauseSummary()
+    {
+        string label = extinguishV2State.PauseReason switch
+        {
+            BotExtinguishV2PauseReason.BlockedPath => "Blocked path",
+            BotExtinguishV2PauseReason.RouteFire => "Route fire",
+            _ => "Paused"
+        };
+
+        return string.IsNullOrWhiteSpace(extinguishV2State.PauseDetail)
+            ? label
+            : $"{label}: {extinguishV2State.PauseDetail}";
+    }
+
+    private void RestartExtinguishV2FromPausedOrder()
+    {
+        Vector3 orderPoint = extinguishV2State.OrderPoint;
+        Vector3 scanOrigin = extinguishV2State.ScanOrigin;
+        BotExtinguishCommandMode commandMode = extinguishV2State.CommandMode;
+        BotExtinguishEngagementMode engagementMode = extinguishV2State.EngagementMode;
+        IFireTarget fireTarget = extinguishV2State.FireTarget;
+        IFireGroupTarget fireGroup = extinguishV2State.FireGroup;
+        BeginExtinguishV2Order(orderPoint, scanOrigin, commandMode, engagementMode, fireTarget, fireGroup);
+    }
+
+    private void SetExtinguishV2Step(BotExtinguishV2Step nextStep, bool applyDelay = true)
+    {
+        if (extinguishV2State.Step == nextStep)
+        {
+            return;
+        }
+
+        extinguishV2State.Step = nextStep;
+        bool shouldDelay =
+            applyDelay &&
+            nextStep != BotExtinguishV2Step.None &&
+            nextStep != BotExtinguishV2Step.Complete &&
+            nextStep != BotExtinguishV2Step.Failed;
+        extinguishV2State.StepReadyTime = shouldDelay
+            ? Time.time + Mathf.Max(0f, v2FlowStepTransitionDelay)
+            : 0f;
     }
 
     private void CompleteExtinguishV2Order()
@@ -142,13 +491,20 @@ public partial class BotCommandAgent
 
     private string GetExtinguishV2TaskDetail()
     {
+        if (extinguishV2State.IsPaused)
+        {
+            return $"Extinguish V2 paused: {GetExtinguishV2PauseSummary()}";
+        }
+
         return extinguishV2State.Step switch
         {
             BotExtinguishV2Step.ResolveTarget => "Resolving Extinguish V2 target.",
             BotExtinguishV2Step.SelectTool => "Selecting Extinguish V2 tool.",
+            BotExtinguishV2Step.PrepareHeldTool => "Preparing held tool for Extinguish V2.",
             BotExtinguishV2Step.MoveToTool => "Moving to Extinguish V2 tool.",
             BotExtinguishV2Step.PickupTool => "Picking up Extinguish V2 tool.",
             BotExtinguishV2Step.MoveToFire => "Moving to Extinguish V2 fire position.",
+            BotExtinguishV2Step.ReadyToSuppress => "Ready to suppress with Extinguish V2.",
             BotExtinguishV2Step.SuppressFire => "Suppressing fire with Extinguish V2.",
             BotExtinguishV2Step.Failed => extinguishV2State.FailureReason,
             _ => "Executing Extinguish V2."
@@ -190,7 +546,7 @@ public partial class BotCommandAgent
                 ? extinguishV2State.FireTarget.GetWorldPosition()
                 : fireGroup.GetWorldCenter();
             LogExtinguishV2Activity($"Resolved precision target at {extinguishV2State.FirePosition}.");
-            extinguishV2State.Step = BotExtinguishV2Step.SelectTool;
+            SetExtinguishV2Step(BotExtinguishV2Step.SelectTool);
             return true;
         }
 
@@ -203,7 +559,7 @@ public partial class BotCommandAgent
         extinguishV2State.FireGroup = null;
         extinguishV2State.FirePosition = fireTarget.GetWorldPosition();
         LogExtinguishV2Activity($"Resolved fire target '{GetDebugTargetName(fireTarget)}' at {extinguishV2State.FirePosition}.");
-        extinguishV2State.Step = BotExtinguishV2Step.SelectTool;
+        SetExtinguishV2Step(BotExtinguishV2Step.SelectTool);
         return true;
     }
 
@@ -239,9 +595,34 @@ public partial class BotCommandAgent
         extinguishV2State.Tool = bestTool;
         extinguishV2State.PickupTarget = bestTool as IPickupable;
         LogExtinguishV2Activity($"Selected tool '{GetToolName(bestTool)}'.");
-        extinguishV2State.Step = IsExtinguishV2ToolHeldByBot(bestTool)
-            ? BotExtinguishV2Step.MoveToFire
-            : BotExtinguishV2Step.MoveToTool;
+        SetExtinguishV2Step(BotExtinguishV2Step.PrepareHeldTool);
+        return true;
+    }
+
+    private bool TryPrepareExtinguishV2HeldTool()
+    {
+        if (extinguishV2State.Tool == null)
+        {
+            return FailExtinguishV2("No selected Extinguish V2 tool to prepare.");
+        }
+
+        if (!TryPrepareActiveSuppressionItemForToolSwitch(extinguishV2State.Tool))
+        {
+            return FailExtinguishV2("Failed to prepare held item for Extinguish V2 tool switching.");
+        }
+
+        if (IsExtinguishV2ToolHeldByBot(extinguishV2State.Tool))
+        {
+            if (!TryEquipExtinguishV2Tool(extinguishV2State.Tool))
+            {
+                return FailExtinguishV2("Failed to equip prepared Extinguish V2 tool.");
+            }
+
+            SetExtinguishV2Step(BotExtinguishV2Step.MoveToFire);
+            return true;
+        }
+
+        SetExtinguishV2Step(BotExtinguishV2Step.MoveToTool);
         return true;
     }
 
@@ -258,7 +639,7 @@ public partial class BotCommandAgent
         if (extinguishV2State.HasIssuedToolMove &&
             (destination - extinguishV2State.IssuedToolDestination).sqrMagnitude <= 0.04f)
         {
-            extinguishV2State.Step = BotExtinguishV2Step.PickupTool;
+            SetExtinguishV2Step(BotExtinguishV2Step.PickupTool);
             return true;
         }
 
@@ -267,7 +648,7 @@ public partial class BotCommandAgent
         UpdateExtinguishV2MoveTargetMarker(destination, "MoveToTool");
         LogExtinguishV2Activity($"Moving to tool at {destination}.");
         MoveToExtinguishV2ActivityDestination(destination);
-        extinguishV2State.Step = BotExtinguishV2Step.PickupTool;
+        SetExtinguishV2Step(BotExtinguishV2Step.PickupTool);
         return true;
     }
 
@@ -281,7 +662,7 @@ public partial class BotCommandAgent
         if (TryEquipExtinguishV2Tool(extinguishV2State.Tool))
         {
             LogExtinguishV2Activity($"Equipped tool '{GetToolName(extinguishV2State.Tool)}'.");
-            extinguishV2State.Step = BotExtinguishV2Step.MoveToFire;
+            SetExtinguishV2Step(BotExtinguishV2Step.MoveToFire);
             return true;
         }
 
@@ -305,7 +686,7 @@ public partial class BotCommandAgent
         }
 
         LogExtinguishV2Activity($"Picked up and equipped '{GetToolName(extinguishV2State.Tool)}'.");
-        extinguishV2State.Step = BotExtinguishV2Step.MoveToFire;
+        SetExtinguishV2Step(BotExtinguishV2Step.MoveToFire);
         return true;
     }
 
@@ -319,11 +700,8 @@ public partial class BotCommandAgent
         if (extinguishV2State.HasComputedFireDestination &&
             IsWithinArrivalDistance(extinguishV2State.IssuedFireDestination))
         {
-            StopNavMeshMovement();
             LogExtinguishV2Activity($"Arrived at suppress position {extinguishV2State.IssuedFireDestination}.");
-            extinguishV2State.HasLockedSuppressTarget = false;
-            extinguishV2State.NeedsSuppressAcquire = true;
-            extinguishV2State.Step = BotExtinguishV2Step.SuppressFire;
+            SetExtinguishV2Step(BotExtinguishV2Step.ReadyToSuppress);
             return true;
         }
 
@@ -345,6 +723,15 @@ public partial class BotCommandAgent
         return false;
     }
 
+    private bool TryPrepareExtinguishV2Suppression()
+    {
+        StopNavMeshMovement();
+        extinguishV2State.HasLockedSuppressTarget = false;
+        extinguishV2State.NeedsSuppressAcquire = true;
+        SetExtinguishV2Step(BotExtinguishV2Step.SuppressFire);
+        return true;
+    }
+
     private bool TryApplyExtinguishV2Suppression()
     {
         if (extinguishV2State.Tool == null)
@@ -359,7 +746,7 @@ public partial class BotCommandAgent
                 StopExtinguishV2Tool();
                 ClearExtinguishV2MoveTargetMarker();
                 LogExtinguishV2Activity("No nearby fire found in suppress radius.");
-                extinguishV2State.Step = BotExtinguishV2Step.Complete;
+                SetExtinguishV2Step(BotExtinguishV2Step.Complete, false);
                 return true;
             }
 
@@ -379,13 +766,56 @@ public partial class BotCommandAgent
             return false;
         }
 
+        if (extinguishV2State.EngagementMode == BotExtinguishEngagementMode.PrecisionFireHose)
+        {
+            return TryApplyExtinguishV2PrecisionSuppression();
+        }
+
         activeExtinguisher = extinguishV2State.Tool;
         IFireTarget fireTarget = extinguishV2State.FireTarget;
         Vector3 firePosition = extinguishV2State.FirePosition;
+        PrepareExtinguishV2CloseRangeSuppression(fireTarget, firePosition);
+        if (!IsAimSettled(activeExtinguisher, firePosition))
+        {
+            StopExtinguishV2Tool();
+            return false;
+        }
+
+        if (!IsPointFireExtinguisherSprayReady(firePosition, false))
+        {
+            return false;
+        }
+
         activeExtinguisher.SetExternalSprayState(true, gameObject);
         ApplyWaterToFireTarget(activeExtinguisher, fireTarget);
 
         return true;
+    }
+
+    private bool TryApplyExtinguishV2PrecisionSuppression()
+    {
+        if (extinguishV2State.Tool == null ||
+            extinguishV2State.FireGroup == null ||
+            !extinguishV2State.FireGroup.HasActiveFires)
+        {
+            return FailExtinguishV2("Precision FireHose requires an active fire group.");
+        }
+
+        activeExtinguisher = extinguishV2State.Tool;
+        Vector3 firePosition = extinguishV2State.FirePosition;
+        ProcessFireHoseExtinguishRoute(
+            extinguishV2State.ScanOrigin,
+            extinguishV2State.FireGroup,
+            firePosition,
+            transform.position);
+
+        if (extinguishV2State.FireGroup == null || !extinguishV2State.FireGroup.HasActiveFires)
+        {
+            SetExtinguishV2Step(BotExtinguishV2Step.Complete, false);
+            return true;
+        }
+
+        return false;
     }
 
     private void StopExtinguishV2Tool()
@@ -496,10 +926,10 @@ public partial class BotCommandAgent
         }
 
         float distanceScore = Vector3.Distance(transform.position, toolPosition);
-        float directHoseBonus = extinguishV2State.EngagementMode == BotExtinguishEngagementMode.DirectBestTool &&
-            candidate.RequiresPreciseAim ? -10000f : 0f;
         float heldBonus = IsExtinguishV2ToolHeldByBot(candidate) ? -20000f : 0f;
-        float score = distanceScore + directHoseBonus + heldBonus;
+        float score = extinguishV2State.EngagementMode == BotExtinguishEngagementMode.DirectBestTool
+            ? distanceScore + heldBonus
+            : distanceScore + heldBonus;
         if (score < bestScore)
         {
             bestScore = score;
@@ -579,17 +1009,17 @@ public partial class BotCommandAgent
 
     private bool TryAcquireExtinguishV2SuppressTarget()
     {
-        float suppressRadius = Mathf.Max(
-            0.05f,
-            extinguishV2LocalSuppressRadius,
-            extinguishV2State.Tool != null ? extinguishV2State.Tool.MaxSprayDistance : 0f);
+        float suppressRadius = GetExtinguishV2SuppressRadius(extinguishV2State.Tool);
 
         IFireTarget lockedTarget = GetLockedExtinguisherFireTarget();
         if (lockedTarget != null &&
             GetDistanceToFireEdge(transform.position, lockedTarget.GetWorldPosition(), lockedTarget) <= suppressRadius)
         {
+            activeExtinguisher = extinguishV2State.Tool;
             extinguishV2State.FireTarget = lockedTarget;
             extinguishV2State.FirePosition = lockedTarget.GetWorldPosition();
+            PrepareExtinguishV2CloseRangeSuppression(lockedTarget, extinguishV2State.FirePosition);
+            sprayReadyTime = -1f;
             extinguishV2State.HasLockedSuppressTarget = true;
             extinguishV2State.NeedsSuppressAcquire = false;
             LogExtinguishV2Activity($"Reusing locked target '{GetDebugTargetName(lockedTarget)}'.");
@@ -602,7 +1032,9 @@ public partial class BotCommandAgent
             GetDistanceToFireEdge(transform.position, candidateTarget.GetWorldPosition(), candidateTarget) <= suppressRadius)
         {
             activeExtinguisher = extinguishV2State.Tool;
+            extinguishV2State.FireTarget = candidateTarget;
             extinguishV2State.FirePosition = candidateTarget.GetWorldPosition();
+            PrepareExtinguishV2CloseRangeSuppression(candidateTarget, extinguishV2State.FirePosition);
             sprayReadyTime = -1f;
             extinguishV2State.HasLockedSuppressTarget = true;
             extinguishV2State.NeedsSuppressAcquire = false;
@@ -617,6 +1049,7 @@ public partial class BotCommandAgent
             activeExtinguisher = extinguishV2State.Tool;
             extinguishV2State.FireTarget = nearbyFire;
             extinguishV2State.FirePosition = nearbyFire.GetWorldPosition();
+            PrepareExtinguishV2CloseRangeSuppression(nearbyFire, extinguishV2State.FirePosition);
             sprayReadyTime = -1f;
             extinguishV2State.HasLockedSuppressTarget = true;
             extinguishV2State.NeedsSuppressAcquire = false;
@@ -644,10 +1077,7 @@ public partial class BotCommandAgent
     {
         IFireTarget fireTarget = extinguishV2State.FireTarget;
         Vector3 firePosition = extinguishV2State.FirePosition;
-        float preferredDistance = Mathf.Clamp(
-            extinguishV2State.Tool != null ? GetDesiredExtinguisherCenterDistance(extinguishV2State.Tool, fireTarget) : 1f,
-            Mathf.Max(0.5f, MinExtinguisherStandOffDistance),
-            extinguishV2State.Tool != null ? Mathf.Max(1f, extinguishV2State.Tool.MaxSprayDistance) : 2f);
+        float preferredDistance = GetExtinguishV2PreferredStandDistance(extinguishV2State.Tool, fireTarget);
 
         if (fireTarget != null &&
             TryResolveExtinguisherStandPosition(extinguishV2State.OrderPoint, firePosition, preferredDistance, out Vector3 standPosition))
@@ -671,6 +1101,41 @@ public partial class BotCommandAgent
 
         Vector3 rawDestination = firePosition + awayFromFire.normalized * preferredDistance;
         return ResolveExtinguishV2NavDestination(rawDestination);
+    }
+
+    private float GetExtinguishV2SuppressRadius(IBotExtinguisherItem tool)
+    {
+        float closeRangeRadius = Mathf.Max(0.05f, extinguishV2LocalSuppressRadius);
+        if (extinguishV2State.EngagementMode != BotExtinguishEngagementMode.PrecisionFireHose)
+        {
+            return closeRangeRadius;
+        }
+
+        return Mathf.Max(
+            closeRangeRadius,
+            tool != null ? tool.MaxSprayDistance : 0f);
+    }
+
+    private float GetExtinguishV2PreferredStandDistance(IBotExtinguisherItem tool, IFireTarget fireTarget)
+    {
+        if (tool == null)
+        {
+            return 1f;
+        }
+
+        if (extinguishV2State.EngagementMode == BotExtinguishEngagementMode.PrecisionFireHose)
+        {
+            return Mathf.Clamp(
+                GetDesiredExtinguisherCenterDistance(tool, fireTarget),
+                Mathf.Max(0.5f, MinExtinguisherStandOffDistance),
+                Mathf.Max(1f, tool.MaxSprayDistance));
+        }
+
+        float fireRadius = fireTarget != null ? Mathf.Max(0f, fireTarget.GetWorldRadius()) : 0f;
+        float closeStandOffDistance = Mathf.Max(
+            MinExtinguisherStandOffDistance,
+            Mathf.Min(GetDesiredExtinguisherStandOffDistance(tool), extinguishV2CloseModeStandOffDistance));
+        return fireRadius + closeStandOffDistance;
     }
 
     private bool CanExtinguishV2SuppressFromCurrentPosition()
@@ -791,6 +1256,30 @@ public partial class BotCommandAgent
         suppressPathFlowLogging = true;
         MoveTo(destination);
         suppressPathFlowLogging = previousSuppressPathFlowLogging;
+    }
+
+    private void PrepareExtinguishV2CloseRangeSuppression(IFireTarget fireTarget, Vector3 firePosition)
+    {
+        bool shouldRefreshPose = ShouldRefreshPointFireSuppressionPose(fireTarget, firePosition);
+        currentExtinguishTargetPosition = firePosition;
+        hasCurrentExtinguishTargetPosition = true;
+        currentExtinguishAimPoint = firePosition;
+        hasCurrentExtinguishAimPoint = true;
+        currentExtinguishLaunchDirection = Vector3.zero;
+        hasCurrentExtinguishLaunchDirection = false;
+        currentExtinguishTrajectoryPointCount = 0;
+        PrimeExtinguisherTargetLock(activeExtinguisher, fireTarget);
+        if (!shouldRefreshPose)
+        {
+            return;
+        }
+
+        StopNavMeshMovement();
+        activeExtinguisher?.ClearExternalAimDirection(gameObject);
+        AimTowards(firePosition);
+        SetHandAimFocus(firePosition);
+        SetHeadAimFocus(firePosition);
+        ResetExtinguishCrouchState();
     }
 
 }

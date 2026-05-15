@@ -71,6 +71,7 @@ namespace StarterAssets
 
         [Header("Holding Parameter Prefixes")]
         [SerializeField] private string holdingNamePrefix = "IsHolding_";
+        [SerializeField] private string holdingItemNamePrefix = "IsHoldingItem_";
         [SerializeField] private string holdingTypePrefix = "IsHoldingType_";
 
         [Header("Runtime Debug")]
@@ -96,6 +97,7 @@ namespace StarterAssets
         [SerializeField] private bool isHolding;
         [SerializeField] private int itemCount;
         [SerializeField] private string heldItemName;
+        [SerializeField] private string heldItemDisplayName;
         [SerializeField] private string heldItemTypeName;
         [SerializeField] private bool isCarryingVictim;
         [SerializeField] private bool isOpeningDoor;
@@ -105,6 +107,7 @@ namespace StarterAssets
         [SerializeField] private bool isConnectingHose;
         [SerializeField] private bool isRescuing;
         [SerializeField] private bool isStabilizing;
+        [SerializeField] private bool suppressLocomotionForInteraction;
 
         private readonly Dictionary<string, int> parameterHashes = new Dictionary<string, int>();
         private readonly Dictionary<string, int> dynamicHoldingParameterHashes = new Dictionary<string, int>();
@@ -319,6 +322,7 @@ namespace StarterAssets
             isFalling = !isGrounded && !isClimbing && worldVelocity.y < fallVerticalVelocityThreshold;
 
             heldItemName = isHolding ? heldObject.name : string.Empty;
+            heldItemDisplayName = ResolveHeldItemDisplayName(heldObject);
             heldItemTypeName = ResolveHeldItemTypeName(heldObject);
             isCarryingVictim = interactionSystem != null && interactionSystem.IsCarryingVictim;
             isOpeningDoor = interactionAnimationState != null && interactionAnimationState.IsActionActive(PlayerInteractionAnimationAction.OpeningDoor);
@@ -328,6 +332,20 @@ namespace StarterAssets
             isConnectingHose = interactionAnimationState != null && interactionAnimationState.IsActionActive(PlayerInteractionAnimationAction.ConnectingHose);
             isRescuing = interactionAnimationState != null && interactionAnimationState.IsActionActive(PlayerInteractionAnimationAction.Rescuing);
             isStabilizing = interactionAnimationState != null && interactionAnimationState.IsActionActive(PlayerInteractionAnimationAction.Stabilizing);
+
+            // Priority interaction animations should not compete with locomotion on the hands-only controller.
+            suppressLocomotionForInteraction = isOpeningDoor || isOpeningWindow;
+            if (suppressLocomotionForInteraction)
+            {
+                isMoving = false;
+                isIdle = isGrounded && !isClimbing;
+                isStrafing = false;
+                isMovingForward = false;
+                isMovingBackward = false;
+                isMovingRight = false;
+                isMovingLeft = false;
+                isSprinting = false;
+            }
         }
 
         private void PushAnimatorParameters()
@@ -406,6 +424,7 @@ namespace StarterAssets
             }
 
             EnableDynamicHoldingParameter(holdingNamePrefix, heldItemName);
+            EnableDynamicHoldingParameter(holdingItemNamePrefix, heldItemDisplayName);
             EnableDynamicHoldingParameter(holdingTypePrefix, heldItemTypeName);
             DisableUnusedDynamicHoldingParameters();
         }
@@ -577,6 +596,22 @@ namespace StarterAssets
             }
 
             triggerHashesToReset.Clear();
+        }
+
+        private static string ResolveHeldItemDisplayName(GameObject heldObject)
+        {
+            if (heldObject == null)
+            {
+                return string.Empty;
+            }
+
+            Item item = heldObject.GetComponent<Item>() ?? heldObject.GetComponentInParent<Item>();
+            if (item != null && !string.IsNullOrWhiteSpace(item.ItemName))
+            {
+                return item.ItemName;
+            }
+
+            return heldObject.name;
         }
 
         private static string ResolveHeldItemTypeName(GameObject heldObject)

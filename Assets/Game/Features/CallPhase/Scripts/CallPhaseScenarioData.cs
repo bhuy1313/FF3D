@@ -16,11 +16,12 @@ public class CallPhaseScenarioData : ScriptableObject
     public string displayName = "Call Phase Scenario";
     public string displayNameLocalizationKey;
     public string caseId;
+    public string scenarioFamilyId;
+    [Min(0.01f)] public float selectionWeight = 1f;
     public string category = "Prototype";
     public string categoryLocalizationKey;
     [TextArea(2, 5)] public string description;
     public string descriptionLocalizationKey;
-
     [Header("Transcript")]
     public List<CallPhaseScenarioLineData> initialTranscriptLines = new List<CallPhaseScenarioLineData>();
 
@@ -37,6 +38,14 @@ public class CallPhaseScenarioData : ScriptableObject
     public bool dispatchEstimatedVictimCountKnown;
     [Min(0)] public int dispatchEstimatedVictimCountMin;
     [Min(0)] public int dispatchEstimatedVictimCountMax;
+    public CallPhaseVictimLocationIntelMode victimLocationIntelMode = CallPhaseVictimLocationIntelMode.None;
+    [Min(0)] public int initialVisibleVictimIconCount;
+    public bool requireOccupantRiskReportValueForVictimIconReveal = true;
+    [Min(0f)] public float estimatedVictimIconRevealDistance = 10f;
+
+    [Header("Caller Knowledge Limits")]
+    [Tooltip("Fields listed here are intentionally unavailable from the caller in this scenario.")]
+    public List<string> callerUnavailableFieldIds = new List<string>();
 
     [Header("Scenario Expectations")]
     public CallPhaseScenarioExpectedReportData expectedReport = new CallPhaseScenarioExpectedReportData();
@@ -97,6 +106,46 @@ public class CallPhaseScenarioData : ScriptableObject
             default:
                 return string.Empty;
         }
+    }
+
+    public bool CanCallerProvideField(string fieldId)
+    {
+        if (string.IsNullOrWhiteSpace(fieldId) || callerUnavailableFieldIds == null || callerUnavailableFieldIds.Count <= 0)
+        {
+            return true;
+        }
+
+        string trimmedFieldId = fieldId.Trim();
+        for (int i = 0; i < callerUnavailableFieldIds.Count; i++)
+        {
+            string unavailableFieldId = callerUnavailableFieldIds[i];
+            if (string.IsNullOrWhiteSpace(unavailableFieldId))
+            {
+                continue;
+            }
+
+            if (string.Equals(unavailableFieldId.Trim(), trimmedFieldId, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public string GetScenarioFamilyId()
+    {
+        if (!string.IsNullOrWhiteSpace(scenarioFamilyId))
+        {
+            return scenarioFamilyId.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(scenarioId) && scenarioId.EndsWith("_limited_info", StringComparison.OrdinalIgnoreCase))
+        {
+            return scenarioId.Substring(0, scenarioId.Length - "_limited_info".Length);
+        }
+
+        return !string.IsNullOrWhiteSpace(scenarioId) ? scenarioId.Trim() : string.Empty;
     }
 
     public string GetLocalizedDisplayName()
@@ -375,6 +424,13 @@ public enum CallPhaseFollowUpQuestionQuality
     Optimal,
     Acceptable,
     Poor
+}
+
+public enum CallPhaseVictimLocationIntelMode
+{
+    None = 0,
+    Estimated = 1,
+    Confirmed = 2
 }
 
 [Serializable]

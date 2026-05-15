@@ -29,12 +29,22 @@ public sealed class FireSimulationScorchDecalBinder : MonoBehaviour
     [SerializeField] [Range(0f, 180f)] private float startAngleFade = 40f;
     [SerializeField] [Range(0f, 180f)] private float endAngleFade = 65f;
     [SerializeField] private float growthPerSecond = 0.35f;
+    [SerializeField] [Min(0.02f)] private float updateInterval = 0.12f;
+    [SerializeField] [Min(0f)] private float placementRefreshInterval = 1.5f;
+    [SerializeField] [Min(1)] private int maxSnapshotsPerUpdate = 32;
+    [SerializeField] [Range(0f, 1f)] private float minSnapshotIntensity = 0.08f;
+    [SerializeField] private bool cullByCameraDistance = true;
+    [SerializeField] [Min(0f)] private float maxCameraDistance = 45f;
 
     private readonly Dictionary<int, RuntimeScorchDecal> decalsByNodeIndex = new Dictionary<int, RuntimeScorchDecal>();
     private readonly List<int> staleNodeIndices = new List<int>();
     private Transform decalRoot;
     private Material runtimeScorchMaterial;
     private bool warnedMissingMaterial;
+    private float updateTimer;
+    private int nextSnapshotStartIndex;
+    private Camera cachedMainCamera;
+    private float nextCameraResolveTime;
 
     private sealed class RuntimeScorchDecal
     {
@@ -42,6 +52,8 @@ public sealed class FireSimulationScorchDecalBinder : MonoBehaviour
         public readonly List<SurfacePlacement> Placements = new List<SurfacePlacement>();
         public float ScorchAmount;
         public float LastSeenTime;
+        public float NextPlacementRefreshTime;
+        public bool HasResolvedPlacements;
     }
 
     private struct SurfacePlacement
@@ -112,18 +124,47 @@ public sealed class FireSimulationScorchDecalBinder : MonoBehaviour
             return;
         }
 
-        IReadOnlyList<FireNodeSnapshot> snapshots = simulationManager.NodeSnapshots;
-        for (int i = 0; i < snapshots.Count; i++)
+        updateTimer += Time.deltaTime;
+        if (updateTimer < updateInterval)
         {
-            SyncSnapshot(snapshots[i]);
+            return;
         }
 
-        HideStaleDecals();
+        float deltaTime = updateTimer;
+        updateTimer = 0f;
+        float currentTime = Time.time;
+
+        IReadOnlyList<FireNodeSnapshot> snapshots = simulationManager.NodeSnapshots;
+        int snapshotCount = snapshots.Count;
+        if (snapshotCount <= 0)
+        {
+            HideStaleDecals(currentTime);
+            return;
+        }
+
+        int startIndex = snapshotCount > 0 ? nextSnapshotStartIndex % snapshotCount : 0;
+        int processedCount = 0;
+        int maxCount = Mathf.Min(snapshotCount, Mathf.Max(1, maxSnapshotsPerUpdate));
+        for (int offset = 0; offset < snapshotCount && processedCount < maxCount; offset++)
+        {
+            int snapshotIndex = (startIndex + offset) % snapshotCount;
+            SyncSnapshot(snapshots[snapshotIndex], deltaTime, currentTime);
+            processedCount++;
+        }
+
+        nextSnapshotStartIndex = snapshotCount > 0 ? (startIndex + processedCount) % snapshotCount : 0;
+
+        HideStaleDecals(currentTime);
     }
 
-    private void SyncSnapshot(FireNodeSnapshot snapshot)
+    private void SyncSnapshot(FireNodeSnapshot snapshot, float deltaTime, float currentTime)
     {
-        if (snapshot.Intensity <= 0.01f)
+        if (snapshot.Intensity < minSnapshotIntensity)
+        {
+            return;
+        }
+
+        if (cullByCameraDistance && !IsWithinCameraDistance(snapshot.Position, currentTime))
         {
             return;
         }
@@ -134,9 +175,9 @@ public sealed class FireSimulationScorchDecalBinder : MonoBehaviour
             return;
         }
 
-        decal.LastSeenTime = Time.time;
-        decal.ScorchAmount = Mathf.Clamp01(decal.ScorchAmount + Time.deltaTime * growthPerSecond * Mathf.Max(0.2f, snapshot.Intensity));
-        int activeProjectorCount = TryPlaceProjectors(decal, snapshot.Position, snapshot.SurfaceNormal);
+        decal.LastSeenTime = currentTime;
+        decal.ScorchAmount = Mathf.Clamp01(decal.ScorchAmount + deltaTime * growthPerSecond * Mathf.Max(0.2f, snapshot.Intensity));
+        int activeProjectorCount = TryPlaceProjectors(decal, snapshot.Position, snapshot.SurfaceNormal, currentTime);
         if (activeProjectorCount <= 0)
         {
             SetProjectorsActive(decal, 0, false);
@@ -171,7 +212,7 @@ public sealed class FireSimulationScorchDecalBinder : MonoBehaviour
         return decal;
     }
 
-    private int TryPlaceProjectors(RuntimeScorchDecal decal, Vector3 nodePosition, Vector3 surfaceNormal)
+    private int TryPlaceProjectors(RuntimeScorchDecal decal, Vector3 nodePosition, Vector3 surfaceNormal, float currentTime)
     {
         if (decal == null)
         {
@@ -179,7 +220,19 @@ public sealed class FireSimulationScorchDecalBinder : MonoBehaviour
         }
 
         EnsureProjectorCount(decal, ResolveRoot(), -1);
-        CollectSurfacePlacements(decal.Placements, nodePosition, surfaceNormal);
+
+        bool shouldRefreshPlacements =
+            !decal.HasResolvedPlacements ||
+            decal.Placements.Count <= 0 ||
+            (placementRefreshInterval > 0f && currentTime >= decal.NextPlacementRefreshTime);
+
+        if (shouldRefreshPlacements)
+        {
+            CollectSurfacePlacements(decal.Placements, nodePosition, surfaceNormal);
+            decal.HasResolvedPlacements = true;
+            decal.NextPlacementRefreshTime = currentTime + placementRefreshInterval;
+        }
+
         List<SurfacePlacement> placements = decal.Placements;
         int activeCount = Mathf.Min(placements.Count, decal.Projectors.Count);
         for (int i = 0; i < activeCount; i++)
@@ -250,7 +303,7 @@ public sealed class FireSimulationScorchDecalBinder : MonoBehaviour
         }
     }
 
-    private void HideStaleDecals()
+    private void HideStaleDecals(float currentTime)
     {
         staleNodeIndices.Clear();
         foreach (KeyValuePair<int, RuntimeScorchDecal> pair in decalsByNodeIndex)
@@ -262,7 +315,7 @@ public sealed class FireSimulationScorchDecalBinder : MonoBehaviour
                 continue;
             }
 
-            if (Time.time - decal.LastSeenTime > 0.5f)
+            if (currentTime - decal.LastSeenTime > 0.5f)
             {
                 if (decal.ScorchAmount <= 0.001f)
                 {
@@ -317,6 +370,40 @@ public sealed class FireSimulationScorchDecalBinder : MonoBehaviour
 
         decalRoot = rootObject.transform;
         return decalRoot;
+    }
+
+    private bool IsWithinCameraDistance(Vector3 worldPosition, float currentTime)
+    {
+        Camera mainCamera = ResolveMainCamera(currentTime);
+        if (mainCamera == null)
+        {
+            return true;
+        }
+
+        float maxDistance = Mathf.Max(0f, maxCameraDistance);
+        if (maxDistance <= 0f)
+        {
+            return true;
+        }
+
+        return (mainCamera.transform.position - worldPosition).sqrMagnitude <= maxDistance * maxDistance;
+    }
+
+    private Camera ResolveMainCamera(float currentTime)
+    {
+        if (cachedMainCamera != null && cachedMainCamera.isActiveAndEnabled)
+        {
+            return cachedMainCamera;
+        }
+
+        if (currentTime < nextCameraResolveTime)
+        {
+            return cachedMainCamera;
+        }
+
+        cachedMainCamera = Camera.main;
+        nextCameraResolveTime = currentTime + 1f;
+        return cachedMainCamera;
     }
 
     private void EnsureProjectorCount(RuntimeScorchDecal decal, Transform root, int nodeIndex)
@@ -471,6 +558,11 @@ public sealed class FireSimulationScorchDecalBinder : MonoBehaviour
         minSurfaceSeparationAngle = Mathf.Clamp(minSurfaceSeparationAngle, 0f, 180f);
         endAngleFade = Mathf.Max(startAngleFade, endAngleFade);
         growthPerSecond = Mathf.Max(0f, growthPerSecond);
+        updateInterval = Mathf.Max(0.02f, updateInterval);
+        placementRefreshInterval = Mathf.Max(0f, placementRefreshInterval);
+        maxSnapshotsPerUpdate = Mathf.Max(1, maxSnapshotsPerUpdate);
+        minSnapshotIntensity = Mathf.Clamp01(minSnapshotIntensity);
+        maxCameraDistance = Mathf.Max(0f, maxCameraDistance);
     }
 
     private void ApplyScorchMaterialSettings(Material material)

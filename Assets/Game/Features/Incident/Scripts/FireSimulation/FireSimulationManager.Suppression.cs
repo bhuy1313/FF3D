@@ -22,6 +22,7 @@ public sealed partial class FireSimulationManager
 
             float intensityScale = Mathf.Max(0.35f, Mathf.Clamp01(node.Heat / Mathf.Max(0.01f, node.IgnitionThreshold)));
             node.Heat += amount * intensityScale;
+            MarkNodeDirty(node);
             RefreshNodeRuntimeMembership(node);
         }
 
@@ -64,6 +65,7 @@ public sealed partial class FireSimulationManager
         }
 
         WakeSimulation();
+        MarkNodeDirty(node);
         RefreshNodeRuntimeMembership(node);
         NotifyStateChanged();
         return true;
@@ -124,6 +126,7 @@ public sealed partial class FireSimulationManager
             }
 
             WakeSimulation();
+            MarkNodeDirty(node);
             RefreshNodeRuntimeMembership(node);
             affectedNodeCount++;
         }
@@ -215,5 +218,6 @@ public sealed partial class FireSimulationManager
         node.SuppressionRecoveryTimer = Mathf.Max(
             node.SuppressionRecoveryTimer,
             simulationProfile.SuppressionRecoveryDelaySeconds);
+        MarkNodeDirty(node);
     }
 }

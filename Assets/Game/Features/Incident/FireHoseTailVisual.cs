@@ -34,6 +34,12 @@ public class FireHoseTailVisual : MonoBehaviour
     private bool hasSimulation;
     private static readonly Collider[] collisionHits = new Collider[32];
 
+    public void SetEndpoints(Transform start, Transform end)
+    {
+        startPoint = start;
+        endPoint = end;
+    }
+
     void LateUpdate()
     {
         EnsureTailObject();

@@ -14,8 +14,8 @@ AnimatorStateTransition:
   - m_ConditionMode: 2
     m_ConditionEvent: IsHolding_Crowbar
     m_EventTreshold: 0
-  - m_ConditionMode: 2
-    m_ConditionEvent: IsHoldingType_FireHose
+  - m_ConditionMode: 1
+    m_ConditionEvent: IsHoldingItem_FireHose
     m_EventTreshold: 0
   - m_ConditionMode: 2
     m_ConditionEvent: IsHoldingType_FireExtinguisher
@@ -99,7 +99,7 @@ AnimatorStateTransition:
   m_Name: 
   m_Conditions:
   - m_ConditionMode: 1
-    m_ConditionEvent: IsHoldingType_FireHose
+    m_ConditionEvent: IsHoldingItem_FireHose
     m_EventTreshold: 0
   m_DstStateMachine: {fileID: 0}
   m_DstState: {fileID: 1245275961385460716}
@@ -260,14 +260,14 @@ AnimatorStateTransition:
   - m_ConditionMode: 2
     m_ConditionEvent: IsHolding_Crowbar
     m_EventTreshold: 0
+  - m_ConditionMode: 1
+    m_ConditionEvent: IsMoving
+    m_EventTreshold: 0
   - m_ConditionMode: 2
-    m_ConditionEvent: IsHoldingType_FireHose
+    m_ConditionEvent: IsHoldingItem_FireHose
     m_EventTreshold: 0
   - m_ConditionMode: 2
     m_ConditionEvent: IsHoldingType_FireExtinguisher
-    m_EventTreshold: 0
-  - m_ConditionMode: 1
-    m_ConditionEvent: IsMoving
     m_EventTreshold: 0
   m_DstStateMachine: {fileID: 0}
   m_DstState: {fileID: 6188031628654407721}
@@ -380,7 +380,7 @@ AnimatorStateMachine:
     m_Position: {x: 30, y: 180, z: 0}
   - serializedVersion: 1
     m_State: {fileID: 8070220131876086361}
-    m_Position: {x: -160, y: 130, z: 0}
+    m_Position: {x: -180, y: 130, z: 0}
   - serializedVersion: 1
     m_State: {fileID: -1992559182668347775}
     m_Position: {x: 90, y: 280, z: 0}
@@ -586,7 +586,7 @@ AnimatorStateTransition:
   m_Name: 
   m_Conditions:
   - m_ConditionMode: 2
-    m_ConditionEvent: IsHoldingType_FireHose
+    m_ConditionEvent: IsHoldingItem_FireHose
     m_EventTreshold: 0
   m_DstStateMachine: {fileID: 0}
   m_DstState: {fileID: 2287250825922567340}
@@ -703,7 +703,7 @@ AnimatorController:
     m_DefaultInt: 0
     m_DefaultBool: 0
     m_Controller: {fileID: 9100000}
-  - m_Name: IsHoldingType_FireHose
+  - m_Name: IsHoldingItem_FireHose
     m_Type: 4
     m_DefaultFloat: 0
     m_DefaultInt: 0
@@ -1109,10 +1109,10 @@ AnimatorStateTransition:
     m_ConditionEvent: IsHolding_Crowbar
     m_EventTreshold: 0
   - m_ConditionMode: 2
-    m_ConditionEvent: IsHoldingType_FireHose
-    m_EventTreshold: 0
-  - m_ConditionMode: 2
     m_ConditionEvent: IsHoldingType_FireExtinguisher
+    m_EventTreshold: 0
+  - m_ConditionMode: 1
+    m_ConditionEvent: IsHoldingItem_FireHose
     m_EventTreshold: 0
   - m_ConditionMode: 1
     m_ConditionEvent: IsMoving

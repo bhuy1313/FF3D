@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -10,9 +11,7 @@ public partial class LevelSelectSceneController
             return;
         }
 
-        ScenarioDefinition scenario = IsPlayableScenario(selectedLevelDefinition, selectedScenarioOverride)
-            ? selectedScenarioOverride
-            : GetRandomPlayableScenario(selectedLevelDefinition);
+        ScenarioDefinition scenario = ResolveScenarioForPlay(selectedLevelDefinition);
         string targetSceneName = ResolveTargetSceneName(selectedLevelDefinition, scenario);
         if (!IsPlayableScene(targetSceneName))
         {
@@ -64,6 +63,62 @@ public partial class LevelSelectSceneController
 
         CloseLevelInfo();
         SceneManager.LoadScene(LoadingSceneName);
+    }
+
+    private ScenarioDefinition ResolveScenarioForPlay(LevelDefinition definition)
+    {
+        ScenarioDefinition scenario = IsPlayableScenario(definition, selectedScenarioOverride)
+            ? selectedScenarioOverride
+            : GetRandomPlayableScenario(definition);
+        if (scenario == null)
+        {
+            return null;
+        }
+
+        List<ScenarioDefinition> variants = scenario.variantDefinitions;
+        if (variants == null || variants.Count <= 0)
+        {
+            return scenario;
+        }
+
+        List<ScenarioDefinition> playableVariants = new List<ScenarioDefinition>(variants.Count + 1);
+        if (IsPlayableScenario(definition, scenario))
+        {
+            playableVariants.Add(scenario);
+        }
+
+        for (int i = 0; i < variants.Count; i++)
+        {
+            ScenarioDefinition variant = variants[i];
+            if (IsPlayableScenario(definition, variant))
+            {
+                playableVariants.Add(variant);
+            }
+        }
+
+        if (playableVariants.Count <= 0)
+        {
+            return scenario;
+        }
+
+        float totalWeight = 0f;
+        for (int i = 0; i < playableVariants.Count; i++)
+        {
+            totalWeight += Mathf.Max(0.01f, playableVariants[i].selectionWeight);
+        }
+
+        float roll = Random.Range(0f, totalWeight);
+        for (int i = 0; i < playableVariants.Count; i++)
+        {
+            ScenarioDefinition variant = playableVariants[i];
+            roll -= Mathf.Max(0.01f, variant.selectionWeight);
+            if (roll <= 0f)
+            {
+                return variant;
+            }
+        }
+
+        return playableVariants[playableVariants.Count - 1];
     }
 
     private bool HasPlayableRoute(LevelDefinition definition)
